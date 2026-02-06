@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @custom-variant dark (&:is(.dark *));
 
@@ -79,6 +82,13 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+    --primary: #D4AF37;
+  --primary-dark: #AA8C2C;
+  --accent-red: #8B0000;
+  --sky-blue: #00A3E0;
+  --bg-dark: #050608;
+  --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #F1D592 50%, #D4AF37 100%);
+  --red-gold-gradient: linear-gradient(135deg, #8B0000 0%, #D4AF37 100%);
 }
 
 .dark {
@@ -114,6 +124,42 @@
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
+@layer base {
+  body {
+    @apply bg-[#050608] text-slate-200 overflow-x-hidden;
+  }
+  
+  .font-display {
+    font-family: var(--font-cinzel), serif;
+  }
+  
+  .font-heritage {
+    font-family: var(--font-marcellus), serif;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+  
+  .hero-bg {
+    background: 
+      linear-gradient(to bottom, rgba(5, 6, 8, 0.4), rgba(5, 6, 8, 1)), 
+      url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2070&auto=format&fit=crop');
+    @apply bg-cover bg-center;
+  }
+  
+  .text-gradient-gold {
+    background: var(--gold-gradient);
+    @apply bg-clip-text text-transparent;
+  }
+  
+  .red-gold-btn {
+    background: var(--red-gold-gradient);
+    @apply shadow-lg shadow-red-900/30;
+  }
+}
 
 @layer base {
   * {
@@ -123,3 +169,4 @@
     @apply bg-background text-foreground;
   }
 }
+

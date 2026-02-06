@@ -1,0 +1,80 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@theme {
+  --color-primary: #D4AF37;
+  --color-primary-dark: #AA8C2C;
+  --color-accent-red: #8B0000;
+  --color-bg-dark: #07090C;
+  --color-bg-card: rgba(15, 18, 25, 0.7);
+  
+  --gradient-gold: linear-gradient(135deg, #D4AF37 0%, #F1D592 50%, #D4AF37 100%);
+  
+  --font-display: 'Cinzel', serif;
+  --font-heritage: 'Marcellus', serif;
+}
+
+@layer base {
+  body {
+    @apply bg-[#07090C] text-slate-200 font-sans overflow-hidden;
+  }
+  
+  .font-display {
+    font-family: var(--font-display);
+  }
+  
+  .font-heritage {
+    font-family: var(--font-heritage);
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(15, 18, 25, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+  }
+  
+  .hero-bg {
+    background: linear-gradient(to bottom, rgba(7, 9, 12, 0.1), rgba(7, 9, 12, 1)), 
+                url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2070&auto=format&fit=crop');
+    @apply bg-cover bg-center;
+  }
+  
+  .pattern-border {
+    border-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm20 20l10-10H10l10 10zm0 0l10 10H10l10-10z' fill='%23D4AF37' fill-opacity='0.2'/%3E%3C/svg%3E") 30 repeat;
+  }
+  
+  .stamp-ui {
+    border: 2px dashed rgba(212, 175, 55, 0.4);
+    padding: 4px;
+    background-clip: content-box;
+  }
+  
+  .text-gradient-gold {
+    background: var(--gradient-gold);
+    @apply bg-clip-text text-transparent;
+  }
+  
+  .red-highlight {
+    box-shadow: 0 0 20px rgba(139, 0, 0, 0.3);
+  }
+}
+
+@layer utilities {
+  .hero-carousel::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .hero-carousel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+  }
+  
+  .hero-carousel::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 10px;
+  }
+}
