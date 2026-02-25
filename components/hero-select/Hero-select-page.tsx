@@ -1,0 +1,203 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useApp } from "@/components/AppContext";
+import { HEROES, loadPlayer, savePlayer } from "./hero-data";
+import { HERO_STRINGS } from "./hero-strings";
+import type { HeroId, Lang } from "./hero-strings";
+import { StarField } from "./StarField";
+import { HeroToast } from "./HeroToast";
+import { NameEntryScreen } from "./NameEntryScreen";
+import { HeroChooseScreen } from "./HeroChooseScreen";
+
+async function checkEmailExists(email: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return !!data.exists;
+  } catch {
+    return false;
+  }
+}
+
+async function registerEmail(email: string, heroId: HeroId): Promise<void> {
+  try {
+    await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, heroId }),
+    });
+  } catch {}
+}
+
+export default function HeroSelectPage() {
+  const router = useRouter();
+  const { language, heroSelectOpen, setHeroSelectOpen } = useApp();
+  const lang = language as Lang;
+  const t = HERO_STRINGS[lang];
+
+  const [mounted, setMounted]       = useState(false);
+  const [screen, setScreen]         = useState<"email" | "hero">("email");
+  const [email, setEmail]           = useState("");
+  const [isChecking, setIsChecking] = useState(false);
+  const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
+  const [toast, setToast]           = useState({ msg: "", visible: false });
+
+  const selectedHero = HEROES.find((h) => h.id === selectedId)!;
+  const activeColor  = screen === "hero" ? selectedHero.color : "#C8A84B";
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = heroSelectOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [heroSelectOpen]);
+
+  useEffect(() => {
+    const saved = loadPlayer();
+    if (!saved) {
+      setHeroSelectOpen(true);
+      setScreen("email");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!heroSelectOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHeroSelectOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [heroSelectOpen, setHeroSelectOpen]);
+
+  const showToast = (msg: string) => {
+    setToast({ msg, visible: true });
+    setTimeout(() => setToast((p) => ({ ...p, visible: false })), 2800);
+  };
+
+  const handleEnter = useCallback(async () => {
+    const trimmed = email.trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+
+    if (!valid) {
+      showToast(lang === "mn" ? "И-мэйл хаягаа зөв оруулна уу" : "Please enter a valid email");
+      return;
+    }
+
+    setIsChecking(true);
+    const exists = await checkEmailExists(trimmed);
+    setIsChecking(false);
+
+    if (exists) {
+      savePlayer({ name: trimmed, heroId: selectedId });
+      setHeroSelectOpen(false);
+      router.push("/dashboard");
+    } else {
+      setScreen("hero");
+    }
+  }, [email, lang, router, selectedId, setHeroSelectOpen]);
+
+  const handlePlay = useCallback(async () => {
+    if (!selectedHero.available) return;
+
+    await registerEmail(email.trim(), selectedId);
+    savePlayer({ name: email.trim(), heroId: selectedId });
+
+    setHeroSelectOpen(false);
+    router.push("/dashboard");
+  }, [email, selectedHero, selectedId, setHeroSelectOpen, router]);
+
+  const handleGuest = () => {
+    const name = lang === "mn" ? "Зочин" : "Guest";
+    showToast(t.toast(name, t.name[selectedId]));
+  };
+
+  if (!mounted || !heroSelectOpen) return null;
+
+  return createPortal(
+    <>
+      <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+        <div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setHeroSelectOpen(false)}
+        />
+
+        <StarField color={activeColor} />
+
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-all duration-700">
+          <div
+            className="w-[700px] h-[700px] rounded-full blur-[140px] transition-all duration-700"
+            style={{ background: `radial-gradient(ellipse, ${activeColor}16 0%, transparent 70%)` }}
+          />
+        </div>
+
+        <div
+          className="relative w-full max-w-3xl rounded-[2rem] overflow-hidden overflow-y-auto max-h-[100vh]"
+          style={{
+            zIndex: 10,
+            background: "color-mix(in oklch, var(--background) 10%, transparent)",
+            backdropFilter: "blur(70px)",
+            WebkitBackdropFilter: "blur(30px)",
+            border: `1px solid ${activeColor}60`,
+            boxShadow: `0 0 100px ${activeColor}20, 0 0 0 1px ${activeColor}10, inset 0 1px 0 ${activeColor}20`,
+            transition: "border-color 0.5s, box-shadow 0.5s",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setHeroSelectOpen(false)}
+            className="absolute top-4 right-4 z-20 p-1.5 rounded-full transition-all duration-200"
+            style={{
+              color: "rgba(255,255,255,0.35)",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.9)";
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
+              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+            }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          {screen === "email" ? (
+            <NameEntryScreen
+              t={t}
+              playerName={email}
+              setPlayerName={setEmail}
+              email={email}
+              setEmail={setEmail}
+              isChecking={isChecking}
+              onEnter={handleEnter}
+            />
+          ) : (
+            <HeroChooseScreen
+              t={t}
+              lang={lang}
+              playerName={email}
+              selectedId={selectedId}
+              setSelectedId={setSelectedId}
+              onPlay={handlePlay}
+              onGuest={handleGuest}
+            />
+          )}
+        </div>
+      </div>
+
+      <HeroToast msg={toast.msg} visible={toast.visible} />
+    </>,
+    document.body,
+  );
+}

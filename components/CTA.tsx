@@ -1,20 +1,34 @@
-import { CheckCheckIcon } from "lucide-react";
+"use client";
+
+import { useApp } from "./AppContext";
+
 export default function CTA() {
+  const { t } = useApp();
+
   return (
-    <section className="py-40 px-6 text-center relative overflow-hidden bg-[#050608]">
-      <div className="absolute inset-0 bg-gradient-to-t from-[#8B0000]/20 to-transparent pointer-events-none"></div>
+    <section className="py-40 px-6 text-center relative overflow-hidden bg-background">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[80%] h-[200%] bg-[radial-gradient(ellipse,color-mix(in_oklch,var(--primary)_10%,transparent)_0%,transparent_70%)]" />
+      </div>
+
       <div className="max-w-4xl mx-auto relative z-10">
-        <h2 className="font-display text-5xl md:text-7xl font-black mb-12 leading-tight">
-          Start Your Mongolian<br/>
-          Adventure Today
+
+        <h2 className="font-display text-5xl md:text-5xl font-black mb-12 leading-tight text-foreground">
+          {t.cta.heading1}
+          <br />
+          <span className="text-gradient-gold">
+            {t.cta.heading2}
+          </span>
         </h2>
-        <button className="group relative px-16 py-8 bg-white text-black font-black text-xl rounded-full hover:scale-110 transition-transform shadow-[0_20px_60px_rgba(212,175,55,0.2)] flex items-center gap-4 mx-auto">
-          <span className="material-symbols-outlined text-3xl"></span>
-          <span>Start Playing</span>
+
+        <button className="btn-gold px-16 py-8 text-xl rounded-full flex items-center gap-4 mx-auto">
+          <span>{t.cta.button}</span>
         </button>
-        <p className="mt-12 text-slate-500 uppercase tracking-[0.5em] text-[10px] font-bold">
-          Free access for beta explorers
+
+        <p className="mt-12 text-muted-foreground uppercase tracking-[0.5em] text-[10px] font-bold">
+          {t.cta.note}
         </p>
+
       </div>
     </section>
   );

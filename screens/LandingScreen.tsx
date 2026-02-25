@@ -26,8 +26,8 @@ export default function HomePage() {
           </div>
         </div>
       </section> */}
-      <Features />
-      <CTA />
+      {/* <Features /> */}
+      {/* <CTA /> */}
       <Footer />
     </main>
   );
