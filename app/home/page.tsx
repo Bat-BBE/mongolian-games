@@ -1,5 +1,5 @@
 import FullScreenLoader from "@/components/FullScreenLoader";
-import HomeScreen from "@/screens/HomeScreen";
+import HomeScreen from "@/screens/DashboardScreen";
 import { Suspense } from "react";
 
 export default function HomePage() {

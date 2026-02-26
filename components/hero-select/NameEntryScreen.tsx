@@ -46,7 +46,7 @@ export function NameEntryScreen({
 
       <Ornament />
 
-      <div className="flex flex-col gap-1.5 w-90">
+      <div className="flex flex-col gap-1 w-100">
         <InputField
           type="email"
           placeholder={t.emailPlaceholder ?? "И-мэйл хаяг"}

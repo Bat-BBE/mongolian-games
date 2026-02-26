@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Hero Editor — Three.js</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --accent: #ff6b35;
+    --accent2: #00d4ff;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --panel-w: 300px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+    height: 48px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .badge {
+    font-size: 9px;
+    background: var(--accent);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .topbar-info {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    background: #00ff88;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* CANVAS */
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    background: radial-gradient(ellipse at 30% 40%, #0d1a2e 0%, var(--bg) 70%);
+    overflow: hidden;
+  }
+
+  canvas { display: block; width: 100% !important; height: 100% !important; }
+
+  /* Hero text overlay */
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 40px;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(32px, 5vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    color: #fff;
+    text-shadow: 0 0 60px rgba(255,107,53,0.3);
+    transition: all 0.3s;
+  }
+
+  .hero-title span { color: var(--accent); }
+
+  .hero-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.3s;
+  }
+
+  /* Grid overlay */
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(255,107,53,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,107,53,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .grid-overlay.show { opacity: 1; }
+
+  /* Loading overlay */
+  #loading {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 100;
+    transition: opacity 0.5s;
+  }
+
+  .loader-ring {
+    width: 60px; height: 60px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-text { font-size: 11px; color: var(--muted); letter-spacing: 2px; }
+
+  /* PANEL */
+  .panel {
+    width: var(--panel-w);
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    flex-shrink: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .panel-section {
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .panel-section-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ctrl-label {
+    font-size: 10px;
+    color: var(--muted);
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .ctrl-value {
+    font-size: 10px;
+    color: var(--accent2);
+    width: 40px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.4); }
+
+  input[type=color] {
+    width: 32px; height: 24px;
+    border: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 1px;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    flex: 1;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  textarea.hero-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px;
+    border-radius: 2px;
+    resize: none;
+    height: 60px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  textarea.hero-input:focus { border-color: var(--accent2); }
+
+  .hint {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 6px;
+    line-height: 1.6;
+  }
+
+  /* Info bar at bottom of canvas */
+  .info-bar {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: flex;
+    gap: 20px;
+  }
+
+  .info-item span { color: var(--accent2); }
+
+  /* Upload area */
+  .upload-area {
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 14px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .upload-area:hover { border-color: var(--accent); color: var(--accent); }
+
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">Hero<span style="color:var(--accent2)">3D</span> Editor</div>
+  <div class="badge">THREE.JS</div>
+  <div class="topbar-info">
+    <div class="status-dot"></div>
+    <span>FBX Viewer + Hero Editor</span>
+  </div>
+</div>
+
+<div class="main">
+  <!-- CANVAS AREA -->
+  <div id="canvas-wrap">
+    <div class="grid-overlay" id="gridOverlay"></div>
+    <canvas id="c"></canvas>
+
+    <div class="hero-overlay">
+      <div class="hero-title" id="heroTitle">Standing<br><span>Torch</span></div>
+      <div class="hero-sub" id="heroSub">3D Interactive Experience</div>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-item">X: <span id="camX">0</span></div>
+      <div class="info-item">Y: <span id="camY">0</span></div>
+      <div class="info-item">ZOOM: <span id="camZ">1.0</span></div>
+      <div class="info-item">FPS: <span id="fps">60</span></div>
+    </div>
+
+    <div id="loading">
+      <div class="loader-ring"></div>
+      <div class="loader-text">INITIALIZING THREE.JS...</div>
+    </div>
+  </div>
+
+  <!-- CONTROL PANEL -->
+  <div class="panel">
+
+    <!-- MODEL -->
+    <div class="panel-section">
+      <div class="panel-section-title">Model</div>
+
+      <label class="upload-area" for="fbxUpload">
+        📁 FBX файл оруулах
+        <input type="file" id="fbxUpload" accept=".fbx">
+      </label>
+      <div class="hint" style="margin-top:8px">Таны Standing_Torch FBX ачааллагдсан байна</div>
+
+      <div class="ctrl-row" style="margin-top:12px">
+        <div class="ctrl-label">Scale</div>
+        <input type="range" id="scaleSlider" min="0.001" max="0.1" step="0.001" value="0.02">
+        <div class="ctrl-value" id="scaleVal">0.02</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Rot X</div>
+        <input type="range" id="rotX" min="-180" max="180" step="1" value="0">
+        <div class="ctrl-value" id="rotXVal">0°</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Rot Y</div>
+        <input type="range" id="rotY" min="-180" max="180" step="1" value="0">
+        <div class="ctrl-value" id="rotYVal">0°</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Rot Z</div>
+        <input type="range" id="rotZ" min="-180" max="180" step="1" value="0">
+        <div class="ctrl-value" id="rotZVal">0°</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Pos X</div>
+        <input type="range" id="posX" min="-500" max="500" step="1" value="0">
+        <div class="ctrl-value" id="posXVal">0</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Pos Y</div>
+        <input type="range" id="posY" min="-500" max="500" step="1" value="0">
+        <div class="ctrl-value" id="posYVal">0</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Auto Rotate</div>
+        <div class="btn-row" style="flex:1">
+          <button class="btn active" id="autoRotBtn" onclick="toggleAutoRot()">ON</button>
+        </div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Render Mode</div>
+      </div>
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn active" id="btnSolid" onclick="setRenderMode('solid')">SOLID</button>
+        <button class="btn" id="btnWire" onclick="setRenderMode('wire')">WIRE</button>
+        <button class="btn" id="btnFlat" onclick="setRenderMode('flat')">FLAT</button>
+      </div>
+
+      <div class="ctrl-row" id="solidColorRow">
+        <div class="ctrl-label">Mat Color</div>
+        <input type="color" id="solidColor" value="#b87333">
+        <div style="font-size:10px;color:var(--muted)">Override color</div>
+      </div>
+      <div class="ctrl-row" id="solidMetalRow">
+        <div class="ctrl-label">Metalness</div>
+        <input type="range" id="solidMetal" min="0" max="1" step="0.01" value="0.6">
+        <div class="ctrl-value" id="solidMetalVal">0.60</div>
+      </div>
+      <div class="ctrl-row" id="solidRoughRow">
+        <div class="ctrl-label">Roughness</div>
+        <input type="range" id="solidRough" min="0" max="1" step="0.01" value="0.4">
+        <div class="ctrl-value" id="solidRoughVal">0.40</div>
+      </div>
+      <div class="btn-row" style="margin-bottom:4px">
+        <button class="btn" onclick="resetMaterials()">ORIG MAT</button>
+      </div>
+    </div>
+
+    <!-- LIGHTING -->
+    <div class="panel-section">
+      <div class="panel-section-title">Lighting</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Ambient</div>
+        <input type="range" id="ambLight" min="0" max="3" step="0.05" value="0.4">
+        <div class="ctrl-value" id="ambVal">0.4</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Dir Light</div>
+        <input type="range" id="dirLight" min="0" max="5" step="0.1" value="1.5">
+        <div class="ctrl-value" id="dirVal">1.5</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Torch Glow</div>
+        <input type="range" id="torchLight" min="0" max="5" step="0.1" value="2">
+        <div class="ctrl-value" id="torchVal">2.0</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Light Color</div>
+        <input type="color" id="lightColor" value="#ff8833">
+        <div style="font-size:10px;color:var(--muted)">Torch color</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Bg Fog</div>
+        <input type="range" id="fogDensity" min="0" max="0.01" step="0.0001" value="0.002">
+        <div class="ctrl-value" id="fogVal">0.002</div>
+      </div>
+    </div>
+
+    <!-- HERO TEXT -->
+    <div class="panel-section">
+      <div class="panel-section-title">Hero Text</div>
+
+      <div class="ctrl-label" style="margin-bottom:6px">Title</div>
+      <textarea class="hero-input" id="titleInput">Standing
+Torch</textarea>
+
+      <div class="ctrl-label" style="margin-top:10px;margin-bottom:6px">Subtitle</div>
+      <textarea class="hero-input" id="subInput" style="height:40px">3D Interactive Experience</textarea>
+
+      <div class="ctrl-row" style="margin-top:10px">
+        <div class="ctrl-label">Text Size</div>
+        <input type="range" id="textSize" min="24" max="120" step="2" value="60">
+        <div class="ctrl-value" id="textSizeVal">60px</div>
+      </div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">Accent</div>
+        <input type="color" id="accentColor" value="#ff6b35">
+      </div>
+
+      <div class="btn-row" style="margin-top:8px">
+        <button class="btn" id="gridBtn" onclick="toggleGrid()">GRID</button>
+        <button class="btn" onclick="resetAll()">RESET</button>
+      </div>
+    </div>
+
+    <!-- CAMERA -->
+    <div class="panel-section">
+      <div class="panel-section-title">Camera</div>
+
+      <div class="ctrl-row">
+        <div class="ctrl-label">FOV</div>
+        <input type="range" id="fovSlider" min="20" max="120" step="1" value="60">
+        <div class="ctrl-value" id="fovVal">60°</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" onclick="setView('front')">FRONT</button>
+        <button class="btn" onclick="setView('side')">SIDE</button>
+        <button class="btn" onclick="setView('top')">TOP</button>
+      </div>
+      <div class="hint" style="margin-top:10px">🖱 Drag: эргүүлэх<br>Scroll: zoom<br>Right-drag: шилжүүлэх</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- THREE.JS + FBXLoader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── We can't use FBXLoader from CDN easily without module system,
+//     so we'll load it via importmap shim approach or raw URL
+// Use a direct CDN that serves the FBXLoader as a script
+
+// Three.js r128 doesn't have FBXLoader on cdnjs; we'll load from unpkg
+const loaderScript = document.createElement('script');
+loaderScript.src = 'https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js';
+document.head.appendChild(loaderScript);
+
+const inflateScript = document.createElement('script');
+inflateScript.src = 'https://unpkg.com/three@0.128.0/examples/js/libs/fflate.module.js';
+// Actually we need: zlib.min.js for FBXLoader binary
+const fflateScript = document.createElement('script');
+fflateScript.src = 'https://unpkg.com/fflate@0.7.4/umd/index.js';
+document.head.appendChild(fflateScript);
+
+const orbitScript = document.createElement('script');
+orbitScript.src = 'https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js';
+document.head.appendChild(orbitScript);
+
+loaderScript.onload = () => {
+  orbitScript.onload = () => {
+    init();
+  };
+  // If orbitscript already loaded
+  if (window.THREE && THREE.OrbitControls) init();
+};
+
+orbitScript.onload = () => {
+  if (window.THREE && THREE.FBXLoader) init();
+};
+
+// Fallback init after all scripts
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if (!window.scene) init();
+  }, 2000);
+});
+
+// ─────────────────────────────────────
+let scene, camera, renderer, controls, model;
+let ambientLight, dirLight, pointLight;
+let autoRot = true;
+let gridVisible = false;
+let lastTime = performance.now();
+let frameCount = 0;
+
+function init() {
+  const canvas = document.getElementById('c');
+  const wrap = document.getElementById('canvas-wrap');
+
+  // Scene
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a0f);
+  scene.fog = new THREE.FogExp2(0x0a0a0f, 0.002);
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(60, wrap.clientWidth / wrap.clientHeight, 0.1, 10000);
+  camera.position.set(0, 200, 500);
+
+  // Renderer
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+
+  // Controls
+  controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.minDistance = 50;
+  controls.maxDistance = 3000;
+
+  // Lights
+  ambientLight = new THREE.AmbientLight(0x334466, 0.4);
+  scene.add(ambientLight);
+
+  dirLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+  dirLight.position.set(200, 400, 200);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
+  scene.add(dirLight);
+
+  pointLight = new THREE.PointLight(0xff8833, 2, 1000);
+  pointLight.position.set(0, 200, 0);
+  scene.add(pointLight);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(2000, 2000),
+    new THREE.MeshStandardMaterial({ color: 0x0d0d14, roughness: 1 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Load FBX
+  loadFBX('Standing Torch Light Torch.fbx');
+
+  // Resize
+  window.addEventListener('resize', () => {
+    camera.aspect = wrap.clientWidth / wrap.clientHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  });
+
+  // Update camera info
+  controls.addEventListener('change', updateInfo);
+
+  animate();
+}
+
+function loadFBX(url) {
+  if (!THREE.FBXLoader) {
+    showError('FBXLoader дуусаагүй байна, дахин оролдоно уу');
+    return;
+  }
+
+  const loader = new THREE.FBXLoader();
+  loader.load(
+    url,
+    (fbx) => {
+      model = fbx;
+
+      // Auto scale
+      const box = new THREE.Box3().setFromObject(fbx);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const scale = 200 / maxDim;
+      fbx.scale.setScalar(scale);
+
+      // Center
+      const center = box.getCenter(new THREE.Vector3());
+      fbx.position.sub(center.multiplyScalar(scale));
+      fbx.position.y = 0;
+
+      fbx.traverse(child => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
+      scene.add(fbx);
+      saveMaterials(fbx);
+      // Apply solid by default
+      setRenderMode('solid');
+
+      // Point light at top of torch
+      pointLight.position.set(fbx.position.x, size.y * scale * 0.9, fbx.position.z);
+
+      document.getElementById('loading').style.opacity = '0';
+      setTimeout(() => document.getElementById('loading').style.display = 'none', 600);
+
+      // Sync sliders
+      document.getElementById('scaleSlider').value = scale.toFixed(4);
+      document.getElementById('scaleVal').textContent = scale.toFixed(3);
+    },
+    (xhr) => {
+      const pct = (xhr.loaded / xhr.total * 100).toFixed(0);
+      document.querySelector('.loader-text').textContent = `LOADING ${pct}%`;
+    },
+    (err) => {
+      console.error(err);
+      showError('FBX ачаалахад алдаа гарлаа');
+    }
+  );
+}
+
+function showError(msg) {
+  document.querySelector('.loader-ring').style.display = 'none';
+  document.querySelector('.loader-text').textContent = msg;
+}
+
+let frameT = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  const delta = (now - lastTime);
+  frameT += delta;
+  frameCount++;
+  lastTime = now;
+
+  if (frameT > 500) {
+    document.getElementById('fps').textContent = Math.round(frameCount / (frameT / 1000));
+    frameT = 0; frameCount = 0;
+  }
+
+  controls.update();
+
+  if (model && autoRot) {
+    model.rotation.y += 0.005;
+  }
+
+  if (pointLight) {
+    pointLight.intensity = document.getElementById('torchLight').valueAsNumber + Math.sin(now * 0.01) * 0.15;
+  }
+
+  renderer.render(scene, camera);
+}
+
+function updateInfo() {
+  if (!camera) return;
+  document.getElementById('camX').textContent = camera.position.x.toFixed(0);
+  document.getElementById('camY').textContent = camera.position.y.toFixed(0);
+  const dist = camera.position.length();
+  document.getElementById('camZ').textContent = (500 / dist).toFixed(2);
+}
+
+
+function bind(id, label, suffix, cb) {
+  const slider = document.getElementById(id);
+  const val = document.getElementById(label);
+  slider.addEventListener('input', () => {
+    val.textContent = parseFloat(slider.value).toFixed(slider.step.includes('.') ? 2 : 0) + (suffix || '');
+    cb(parseFloat(slider.value));
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  bind('scaleSlider','scaleVal','', v => model && model.scale.setScalar(v));
+  bind('rotX','rotXVal','°', v => model && (model.rotation.x = v * Math.PI/180));
+  bind('rotY','rotYVal','°', v => model && (model.rotation.y = v * Math.PI/180));
+  bind('rotZ','rotZVal','°', v => model && (model.rotation.z = v * Math.PI/180));
+  bind('posX','posXVal','', v => model && (model.position.x = v));
+  bind('posY','posYVal','', v => model && (model.position.y = v));
+  bind('ambLight','ambVal','', v => ambientLight && (ambientLight.intensity = v));
+  bind('dirLight','dirVal','', v => dirLight && (dirLight.intensity = v));
+  bind('torchLight','torchVal','', v => pointLight && (pointLight.intensity = v));
+  bind('fogDensity','fogVal','', v => scene && scene.fog && (scene.fog.density = v));
+  bind('fovSlider','fovVal','°', v => { camera.fov = v; camera.updateProjectionMatrix(); });
+
+  bind('textSize','textSizeVal','px', v => {
+    document.getElementById('heroTitle').style.fontSize = v + 'px';
+  });
+
+  document.getElementById('lightColor').addEventListener('input', e => {
+    if (pointLight) pointLight.color.set(e.target.value);
+  });
+
+  document.getElementById('accentColor').addEventListener('input', e => {
+    document.documentElement.style.setProperty('--accent', e.target.value);
+    const spans = document.querySelectorAll('#heroTitle span');
+    spans.forEach(s => s.style.color = e.target.value);
+  });
+
+  document.getElementById('titleInput').addEventListener('input', e => {
+    const lines = e.target.value.split('\n');
+    document.getElementById('heroTitle').innerHTML = 
+      lines.map((l, i) => i === 1 ? `<span>${l}</span>` : l).join('<br>');
+  });
+
+  document.getElementById('subInput').addEventListener('input', e => {
+    document.getElementById('heroSub').textContent = e.target.value;
+  });
+
+  // Solid mat controls
+  document.getElementById('solidColor').addEventListener('input', refreshOverrideMat);
+  bind('solidMetal','solidMetalVal','', () => refreshOverrideMat());
+  bind('solidRough','solidRoughVal','', () => refreshOverrideMat());
+
+  document.getElementById('fbxUpload').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (model) { scene.remove(model); model = null; }
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('loading').style.opacity = '1';
+    loadFBX(url);
+  });
+});
+
+function toggleAutoRot() {
+  autoRot = !autoRot;
+  const btn = document.getElementById('autoRotBtn');
+  btn.textContent = autoRot ? 'ON' : 'OFF';
+  btn.classList.toggle('active', autoRot);
+}
+
+let renderMode = 'solid';
+let originalMaterials = new Map();
+let overrideMat = null;
+
+function saveMaterials(fbx) {
+  fbx.traverse(c => {
+    if (c.isMesh) originalMaterials.set(c.uuid, c.material);
+  });
+}
+
+function getOverrideMat(wire, flat) {
+  const color = document.getElementById('solidColor').value;
+  const metal = parseFloat(document.getElementById('solidMetal').value);
+  const rough = parseFloat(document.getElementById('solidRough').value);
+  if (overrideMat) overrideMat.dispose();
+  overrideMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(color),
+    metalness: metal,
+    roughness: rough,
+    wireframe: wire,
+    flatShading: flat,
+  });
+  return overrideMat;
+}
+
+function setRenderMode(mode) {
+  renderMode = mode;
+  ['btnSolid','btnWire','btnFlat'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(mode === 'solid' ? 'btnSolid' : mode === 'wire' ? 'btnWire' : 'btnFlat').classList.add('active');
+  if (!model) return;
+  const mat = getOverrideMat(mode === 'wire', mode === 'flat');
+  model.traverse(c => { if (c.isMesh) c.material = mat; });
+}
+
+function resetMaterials() {
+  if (!model) return;
+  renderMode = 'orig';
+  ['btnSolid','btnWire','btnFlat'].forEach(id => document.getElementById(id).classList.remove('active'));
+  model.traverse(c => {
+    if (c.isMesh && originalMaterials.has(c.uuid)) {
+      c.material = originalMaterials.get(c.uuid);
+    }
+  });
+}
+
+function refreshOverrideMat() {
+  if (renderMode === 'solid' || renderMode === 'wire' || renderMode === 'flat') {
+    setRenderMode(renderMode);
+  }
+}
+
+function toggleGrid() {
+  gridVisible = !gridVisible;
+  document.getElementById('gridOverlay').classList.toggle('show', gridVisible);
+  const btn = document.getElementById('gridBtn');
+  btn.classList.toggle('active', gridVisible);
+}
+
+function setView(v) {
+  if (!camera || !controls) return;
+  const d = 600;
+  if (v === 'front') camera.position.set(0, 150, d);
+  if (v === 'side') camera.position.set(d, 150, 0);
+  if (v === 'top') camera.position.set(0, d, 1);
+  controls.update();
+}
+
+function resetAll() {
+  if (model) {
+    model.rotation.set(0, 0, 0);
+    model.position.set(0, 0, 0);
+  }
+  ['rotX','rotY','rotZ','posX','posY'].forEach(id => {
+    document.getElementById(id).value = 0;
+  });
+  ['rotXVal','rotYVal','rotZVal'].forEach(id => document.getElementById(id).textContent = '0°');
+  ['posXVal','posYVal'].forEach(id => document.getElementById(id).textContent = '0');
+  setView('front');
+}
+</script>
+</body>
+</html>

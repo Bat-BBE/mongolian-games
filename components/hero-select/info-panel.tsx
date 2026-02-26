@@ -34,7 +34,7 @@ export function InfoPanel({ hero, selectedId, t }: InfoPanelProps) {
           </h3>
           <p
             className="font-heritage italic text-[10px] tracking-[0.2em] uppercase mt-1"
-            style={{ color: "rgb(200, 169, 75)" }}
+            style={{ color: hero.color }}
           >
             {t.role[selectedId]}
           </p>

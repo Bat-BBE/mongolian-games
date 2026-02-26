@@ -18,7 +18,6 @@ interface HeroCardProps {
   onClick?: () => void;
 }
 
-// ─── Mini 3D Viewer (embedded) ───────────────────────────────────────────────
 function HeroViewer({
   modelPath,
   accentColor = '#3b82f6',
@@ -40,16 +39,13 @@ function HeroViewer({
     const W = el.clientWidth;
     const H = el.clientHeight;
 
-    // Scene
     const scene = new THREE.Scene();
-    scene.background = null; // transparent — card bg shows through
+    scene.background = null;
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 500);
     camera.position.set(0, 1.4, 5.5);
     camera.lookAt(0, 0.9, 0);
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -60,7 +56,6 @@ function HeroViewer({
     el.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lights
     scene.add(new THREE.AmbientLight(0x8899bb, 1.2));
 
     const key = new THREE.DirectionalLight(0xffffff, 2.2);
@@ -73,12 +68,10 @@ function HeroViewer({
     fill.position.set(-4, 2, 3);
     scene.add(fill);
 
-    // Accent rim light (hero color)
     const rim = new THREE.DirectionalLight(new THREE.Color(accentColor), 1.4);
     rim.position.set(0, 3, -6);
     scene.add(rim);
 
-    // Ground disc
     const disc = new THREE.Mesh(
       new THREE.CircleGeometry(2.5, 48),
       new THREE.MeshStandardMaterial({
@@ -94,7 +87,6 @@ function HeroViewer({
     disc.receiveShadow = true;
     scene.add(disc);
 
-    // Glowing ring on ground
     const ringGeo = new THREE.RingGeometry(1.15, 1.35, 64);
     const ringMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(accentColor),
@@ -107,7 +99,6 @@ function HeroViewer({
     ring.position.y = -1.0;
     scene.add(ring);
 
-    // OrbitControls (auto-rotate only, no user interaction on card)
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableZoom = false;
     controls.enablePan = false;
@@ -116,7 +107,6 @@ function HeroViewer({
     controls.autoRotateSpeed = 1.8;
     controls.target.set(0, 0.9, 0);
 
-    // Load model
     const loader = new FBXLoader();
     let mixer: THREE.AnimationMixer | null = null;
     const clock = new THREE.Clock();
@@ -134,7 +124,6 @@ function HeroViewer({
 
       mixer = new THREE.AnimationMixer(obj);
 
-      // Try to load idle animation
       loader.load('/models/standing idle 01.fbx', (animObj) => {
         if (animObj.animations[0]) {
           mixer!.clipAction(animObj.animations[0]).play();
@@ -143,13 +132,11 @@ function HeroViewer({
       });
     });
 
-    // Animate
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate);
       const dt = clock.getDelta();
       mixer?.update(dt);
       controls.update();
-      // Pulse ring opacity
       ringMat.opacity = 0.3 + 0.2 * Math.sin(clock.elapsedTime * 2);
       renderer.render(scene, camera);
     };
@@ -176,7 +163,6 @@ function HeroViewer({
   );
 }
 
-// ─── Main HeroCard ────────────────────────────────────────────────────────────
 export default function HeroCard({
   name,
   title,
@@ -203,7 +189,6 @@ export default function HeroCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* ── Card frame ── */}
       <div
         className="relative aspect-[3/4] rounded-2xl overflow-hidden transition-all duration-300"
         style={{
@@ -218,7 +203,6 @@ export default function HeroCard({
           background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)',
         }}
       >
-        {/* Locked state */}
         {locked ? (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
             <div
@@ -231,7 +215,6 @@ export default function HeroCard({
           </div>
         ) : (
           <>
-            {/* Static image (shown when not hovered/selected) */}
             <img
               src={imageUrl}
               alt={name}
@@ -241,7 +224,6 @@ export default function HeroCard({
               )}
             />
 
-            {/* 3D viewer (shown on hover/select) */}
             {modelPath && (hovered || selected) && (
               <div
                 className={cn(
@@ -257,18 +239,13 @@ export default function HeroCard({
               </div>
             )}
 
-            {/* Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent pointer-events-none" />
-
-            {/* Selected corner accent */}
             {selected && (
               <div
                 className="absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse"
                 style={{ background: accentColor, boxShadow: `0 0 6px 2px ${accentColor}` }}
               />
             )}
-
-            {/* Title badge */}
             <div className="absolute bottom-3 left-0 right-0 text-center px-1 pointer-events-none">
               <span
                 className="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300"
@@ -281,7 +258,6 @@ export default function HeroCard({
         )}
       </div>
 
-      {/* Name */}
       <div className="mt-2.5 text-center px-1">
         <h4
           className="text-sm font-bold uppercase tracking-wide transition-colors duration-300 truncate"

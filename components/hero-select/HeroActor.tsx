@@ -169,16 +169,13 @@ export default function HeroActor({
       
       animationFiles.forEach((file) => {
         loader.load(file.path, (animObject) => {
-          // Extract the animation clip
           if (animObject.animations && animObject.animations.length > 0) {
             const clip = animObject.animations[0];
             loadedAnimations[file.name] = clip;
-            
-            // Create action
+
             const action = mixer.clipAction(clip);
             animationsRef.current.set(file.name, action);
-            
-            // If this is idle, play it
+
             if (file.name === 'idle') {
               action.play();
             }
@@ -279,7 +276,6 @@ export default function HeroActor({
         setIsLocked(false);
       }
       
-      // Return to idle when keys are released
       if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE'].includes(e.code)) {
         const idle = animationsRef.current.get('idle');
         const current = animationsRef.current.get(currentAction);

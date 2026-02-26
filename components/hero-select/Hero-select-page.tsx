@@ -99,7 +99,7 @@ export default function HeroSelectPage() {
     if (exists) {
       savePlayer({ name: trimmed, heroId: selectedId });
       setHeroSelectOpen(false);
-      router.push("/dashboard");
+      router.push("/home");
     } else {
       setScreen("hero");
     }
@@ -112,7 +112,7 @@ export default function HeroSelectPage() {
     savePlayer({ name: email.trim(), heroId: selectedId });
 
     setHeroSelectOpen(false);
-    router.push("/dashboard");
+    router.push("/");
   }, [email, selectedHero, selectedId, setHeroSelectOpen, router]);
 
   const handleGuest = () => {
