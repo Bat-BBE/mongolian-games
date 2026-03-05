@@ -2,908 +2,776 @@
 <html lang="mn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Hero Editor — Three.js</title>
+<title>Монгол нутаг — Three.js</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
-
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --border: #1e1e2e;
-    --accent: #ff6b35;
-    --accent2: #00d4ff;
-    --text: #e8e8f0;
-    --muted: #5a5a7a;
-    --panel-w: 300px;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000000; overflow: hidden; font-family: serif; }
+  canvas { display: block; }
+  #ui {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    color: #f5e6c8; font-size: 22px; letter-spacing: 6px; text-align: center;
+    text-shadow: 0 2px 12px rgba(200,120,30,0.8);
+    pointer-events: none; z-index: 10;
+    font-family: 'Georgia', serif;
   }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+  #ui small { display: block; font-size: 11px; letter-spacing: 3px; color: #c8a06a; margin-top: 4px; }
+  #hint {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    color: #c8a06a88; font-size: 11px; letter-spacing: 2px; pointer-events: none;
   }
-
-  /* TOP BAR */
-  .topbar {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    padding: 0 20px;
-    height: 48px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    z-index: 10;
-  }
-
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 14px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-
-  .badge {
-    font-size: 9px;
-    background: var(--accent);
-    color: #000;
-    padding: 2px 6px;
-    border-radius: 2px;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-
-  .topbar-info {
-    margin-left: auto;
-    font-size: 10px;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .status-dot {
-    width: 6px; height: 6px;
-    background: #00ff88;
-    border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-
-  /* MAIN LAYOUT */
-  .main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  /* CANVAS */
-  #canvas-wrap {
-    flex: 1;
-    position: relative;
-    background: radial-gradient(ellipse at 30% 40%, #0d1a2e 0%, var(--bg) 70%);
-    overflow: hidden;
-  }
-
-  canvas { display: block; width: 100% !important; height: 100% !important; }
-
-  /* Hero text overlay */
-  .hero-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 40px;
-  }
-
-  .hero-title {
-    font-family: 'Syne', sans-serif;
-    font-size: clamp(32px, 5vw, 72px);
-    font-weight: 800;
-    line-height: 1;
-    color: #fff;
-    text-shadow: 0 0 60px rgba(255,107,53,0.3);
-    transition: all 0.3s;
-  }
-
-  .hero-title span { color: var(--accent); }
-
-  .hero-sub {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 12px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    transition: all 0.3s;
-  }
-
-  /* Grid overlay */
-  .grid-overlay {
-    position: absolute;
-    inset: 0;
-    background-image: 
-      linear-gradient(rgba(255,107,53,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,107,53,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
-
-  .grid-overlay.show { opacity: 1; }
-
-  /* Loading overlay */
-  #loading {
-    position: absolute;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    z-index: 100;
-    transition: opacity 0.5s;
-  }
-
-  .loader-ring {
-    width: 60px; height: 60px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loader-text { font-size: 11px; color: var(--muted); letter-spacing: 2px; }
-
-  /* PANEL */
-  .panel {
-    width: var(--panel-w);
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    overflow-y: auto;
-    flex-shrink: 0;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
-  }
-
-  .panel-section {
-    border-bottom: 1px solid var(--border);
-    padding: 16px;
-  }
-
-  .panel-section-title {
-    font-size: 9px;
-    letter-spacing: 3px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .panel-section-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .ctrl-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .ctrl-label {
-    font-size: 10px;
-    color: var(--muted);
-    width: 80px;
-    flex-shrink: 0;
-  }
-
-  .ctrl-value {
-    font-size: 10px;
-    color: var(--accent2);
-    width: 40px;
-    text-align: right;
-    flex-shrink: 0;
-  }
-
-  input[type=range] {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 2px;
-    background: var(--border);
-    border-radius: 2px;
-    outline: none;
-  }
-
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px; height: 12px;
-    background: var(--accent);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: transform 0.15s;
-  }
-
-  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.4); }
-
-  input[type=color] {
-    width: 32px; height: 24px;
-    border: 1px solid var(--border);
-    background: none;
-    cursor: pointer;
-    border-radius: 3px;
-    padding: 1px;
-  }
-
-  .btn-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    padding: 6px 12px;
-    font-family: 'Space Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    border: 1px solid var(--border);
-    background: none;
-    color: var(--text);
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
-    flex: 1;
-  }
-
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-
-  textarea.hero-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    padding: 8px;
-    border-radius: 2px;
-    resize: none;
-    height: 60px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  textarea.hero-input:focus { border-color: var(--accent2); }
-
-  .hint {
-    font-size: 9px;
-    color: var(--muted);
-    margin-top: 6px;
-    line-height: 1.6;
-  }
-
-  /* Info bar at bottom of canvas */
-  .info-bar {
-    position: absolute;
-    bottom: 16px;
-    left: 16px;
-    font-size: 9px;
-    color: var(--muted);
-    letter-spacing: 1px;
-    display: flex;
-    gap: 20px;
-  }
-
-  .info-item span { color: var(--accent2); }
-
-  /* Upload area */
-  .upload-area {
-    border: 1px dashed var(--border);
-    border-radius: 4px;
-    padding: 14px;
-    text-align: center;
-    font-size: 10px;
-    color: var(--muted);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .upload-area:hover { border-color: var(--accent); color: var(--accent); }
-
-  input[type=file] { display: none; }
 </style>
 </head>
 <body>
+<div id="ui">МОНГОЛ НУТАГ <small>MONGOLIAN STEPPES · THREE.JS</small></div>
+<div id="hint">DRAG TO ROTATE · SCROLL TO ZOOM · RIGHT-DRAG TO PAN</div>
 
-<div class="topbar">
-  <div class="logo">Hero<span style="color:var(--accent2)">3D</span> Editor</div>
-  <div class="badge">THREE.JS</div>
-  <div class="topbar-info">
-    <div class="status-dot"></div>
-    <span>FBX Viewer + Hero Editor</span>
-  </div>
-</div>
+<script type="module">
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js';
 
-<div class="main">
-  <!-- CANVAS AREA -->
-  <div id="canvas-wrap">
-    <div class="grid-overlay" id="gridOverlay"></div>
-    <canvas id="c"></canvas>
+// ─── SCENE SETUP ──────────────────────────────────────────────
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+scene.fog = new THREE.FogExp2(0xc8d8e8, 0.018);
 
-    <div class="hero-overlay">
-      <div class="hero-title" id="heroTitle">Standing<br><span>Torch</span></div>
-      <div class="hero-sub" id="heroSub">3D Interactive Experience</div>
-    </div>
+const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.1, 500);
+camera.position.set(0, 28, 55);
+camera.lookAt(0, 0, 0);
 
-    <div class="info-bar">
-      <div class="info-item">X: <span id="camX">0</span></div>
-      <div class="info-item">Y: <span id="camY">0</span></div>
-      <div class="info-item">ZOOM: <span id="camZ">1.0</span></div>
-      <div class="info-item">FPS: <span id="fps">60</span></div>
-    </div>
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
 
-    <div id="loading">
-      <div class="loader-ring"></div>
-      <div class="loader-text">INITIALIZING THREE.JS...</div>
-    </div>
-  </div>
+// ─── LIGHTING ─────────────────────────────────────────────────
+const sun = new THREE.DirectionalLight(0xfff0cc, 2.2);
+sun.position.set(40, 60, 20);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 300;
+sun.shadow.camera.left = -80; sun.shadow.camera.right = 80;
+sun.shadow.camera.top = 80; sun.shadow.camera.bottom = -80;
+sun.shadow.bias = -0.0003;
+scene.add(sun);
 
-  <!-- CONTROL PANEL -->
-  <div class="panel">
+scene.add(new THREE.AmbientLight(0x9bb8d4, 0.6));
+const fillLight = new THREE.DirectionalLight(0xaad4f5, 0.4);
+fillLight.position.set(-30, 20, -10);
+scene.add(fillLight);
+const warmFill = new THREE.DirectionalLight(0xf5d0a0, 0.3);
+warmFill.position.set(10, 5, 40);
+scene.add(warmFill);
 
-    <!-- MODEL -->
-    <div class="panel-section">
-      <div class="panel-section-title">Model</div>
+// ─── ORBIT CONTROLS (manual) ──────────────────────────────────
+let isDragging = false, isRightDrag = false;
+let prevMouse = { x: 0, y: 0 };
+let theta = 0.2, phi = 0.38, radius = 65;
+let targetTheta = theta, targetPhi = phi, targetRadius = radius;
+let panX = 0, panZ = 0, targetPanX = 0, targetPanZ = 0;
 
-      <label class="upload-area" for="fbxUpload">
-        📁 FBX файл оруулах
-        <input type="file" id="fbxUpload" accept=".fbx">
-      </label>
-      <div class="hint" style="margin-top:8px">Таны Standing_Torch FBX ачааллагдсан байна</div>
-
-      <div class="ctrl-row" style="margin-top:12px">
-        <div class="ctrl-label">Scale</div>
-        <input type="range" id="scaleSlider" min="0.001" max="0.1" step="0.001" value="0.02">
-        <div class="ctrl-value" id="scaleVal">0.02</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Rot X</div>
-        <input type="range" id="rotX" min="-180" max="180" step="1" value="0">
-        <div class="ctrl-value" id="rotXVal">0°</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Rot Y</div>
-        <input type="range" id="rotY" min="-180" max="180" step="1" value="0">
-        <div class="ctrl-value" id="rotYVal">0°</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Rot Z</div>
-        <input type="range" id="rotZ" min="-180" max="180" step="1" value="0">
-        <div class="ctrl-value" id="rotZVal">0°</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Pos X</div>
-        <input type="range" id="posX" min="-500" max="500" step="1" value="0">
-        <div class="ctrl-value" id="posXVal">0</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Pos Y</div>
-        <input type="range" id="posY" min="-500" max="500" step="1" value="0">
-        <div class="ctrl-value" id="posYVal">0</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Auto Rotate</div>
-        <div class="btn-row" style="flex:1">
-          <button class="btn active" id="autoRotBtn" onclick="toggleAutoRot()">ON</button>
-        </div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Render Mode</div>
-      </div>
-      <div class="btn-row" style="margin-bottom:10px">
-        <button class="btn active" id="btnSolid" onclick="setRenderMode('solid')">SOLID</button>
-        <button class="btn" id="btnWire" onclick="setRenderMode('wire')">WIRE</button>
-        <button class="btn" id="btnFlat" onclick="setRenderMode('flat')">FLAT</button>
-      </div>
-
-      <div class="ctrl-row" id="solidColorRow">
-        <div class="ctrl-label">Mat Color</div>
-        <input type="color" id="solidColor" value="#b87333">
-        <div style="font-size:10px;color:var(--muted)">Override color</div>
-      </div>
-      <div class="ctrl-row" id="solidMetalRow">
-        <div class="ctrl-label">Metalness</div>
-        <input type="range" id="solidMetal" min="0" max="1" step="0.01" value="0.6">
-        <div class="ctrl-value" id="solidMetalVal">0.60</div>
-      </div>
-      <div class="ctrl-row" id="solidRoughRow">
-        <div class="ctrl-label">Roughness</div>
-        <input type="range" id="solidRough" min="0" max="1" step="0.01" value="0.4">
-        <div class="ctrl-value" id="solidRoughVal">0.40</div>
-      </div>
-      <div class="btn-row" style="margin-bottom:4px">
-        <button class="btn" onclick="resetMaterials()">ORIG MAT</button>
-      </div>
-    </div>
-
-    <!-- LIGHTING -->
-    <div class="panel-section">
-      <div class="panel-section-title">Lighting</div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Ambient</div>
-        <input type="range" id="ambLight" min="0" max="3" step="0.05" value="0.4">
-        <div class="ctrl-value" id="ambVal">0.4</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Dir Light</div>
-        <input type="range" id="dirLight" min="0" max="5" step="0.1" value="1.5">
-        <div class="ctrl-value" id="dirVal">1.5</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Torch Glow</div>
-        <input type="range" id="torchLight" min="0" max="5" step="0.1" value="2">
-        <div class="ctrl-value" id="torchVal">2.0</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Light Color</div>
-        <input type="color" id="lightColor" value="#ff8833">
-        <div style="font-size:10px;color:var(--muted)">Torch color</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Bg Fog</div>
-        <input type="range" id="fogDensity" min="0" max="0.01" step="0.0001" value="0.002">
-        <div class="ctrl-value" id="fogVal">0.002</div>
-      </div>
-    </div>
-
-    <!-- HERO TEXT -->
-    <div class="panel-section">
-      <div class="panel-section-title">Hero Text</div>
-
-      <div class="ctrl-label" style="margin-bottom:6px">Title</div>
-      <textarea class="hero-input" id="titleInput">Standing
-Torch</textarea>
-
-      <div class="ctrl-label" style="margin-top:10px;margin-bottom:6px">Subtitle</div>
-      <textarea class="hero-input" id="subInput" style="height:40px">3D Interactive Experience</textarea>
-
-      <div class="ctrl-row" style="margin-top:10px">
-        <div class="ctrl-label">Text Size</div>
-        <input type="range" id="textSize" min="24" max="120" step="2" value="60">
-        <div class="ctrl-value" id="textSizeVal">60px</div>
-      </div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">Accent</div>
-        <input type="color" id="accentColor" value="#ff6b35">
-      </div>
-
-      <div class="btn-row" style="margin-top:8px">
-        <button class="btn" id="gridBtn" onclick="toggleGrid()">GRID</button>
-        <button class="btn" onclick="resetAll()">RESET</button>
-      </div>
-    </div>
-
-    <!-- CAMERA -->
-    <div class="panel-section">
-      <div class="panel-section-title">Camera</div>
-
-      <div class="ctrl-row">
-        <div class="ctrl-label">FOV</div>
-        <input type="range" id="fovSlider" min="20" max="120" step="1" value="60">
-        <div class="ctrl-value" id="fovVal">60°</div>
-      </div>
-
-      <div class="btn-row">
-        <button class="btn" onclick="setView('front')">FRONT</button>
-        <button class="btn" onclick="setView('side')">SIDE</button>
-        <button class="btn" onclick="setView('top')">TOP</button>
-      </div>
-      <div class="hint" style="margin-top:10px">🖱 Drag: эргүүлэх<br>Scroll: zoom<br>Right-drag: шилжүүлэх</div>
-    </div>
-
-  </div>
-</div>
-
-<!-- THREE.JS + FBXLoader -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-// ─── We can't use FBXLoader from CDN easily without module system,
-//     so we'll load it via importmap shim approach or raw URL
-// Use a direct CDN that serves the FBXLoader as a script
-
-// Three.js r128 doesn't have FBXLoader on cdnjs; we'll load from unpkg
-const loaderScript = document.createElement('script');
-loaderScript.src = 'https://unpkg.com/three@0.128.0/examples/js/loaders/FBXLoader.js';
-document.head.appendChild(loaderScript);
-
-const inflateScript = document.createElement('script');
-inflateScript.src = 'https://unpkg.com/three@0.128.0/examples/js/libs/fflate.module.js';
-// Actually we need: zlib.min.js for FBXLoader binary
-const fflateScript = document.createElement('script');
-fflateScript.src = 'https://unpkg.com/fflate@0.7.4/umd/index.js';
-document.head.appendChild(fflateScript);
-
-const orbitScript = document.createElement('script');
-orbitScript.src = 'https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js';
-document.head.appendChild(orbitScript);
-
-loaderScript.onload = () => {
-  orbitScript.onload = () => {
-    init();
-  };
-  // If orbitscript already loaded
-  if (window.THREE && THREE.OrbitControls) init();
-};
-
-orbitScript.onload = () => {
-  if (window.THREE && THREE.FBXLoader) init();
-};
-
-// Fallback init after all scripts
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    if (!window.scene) init();
-  }, 2000);
+renderer.domElement.addEventListener('mousedown', e => {
+  isDragging = true; isRightDrag = e.button === 2;
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - prevMouse.x, dy = e.clientY - prevMouse.y;
+  if (isRightDrag) {
+    targetPanX -= dx * 0.05; targetPanZ -= dy * 0.05;
+  } else {
+    targetTheta -= dx * 0.005; targetPhi = Math.max(0.12, Math.min(1.2, targetPhi - dy * 0.005));
+  }
+  prevMouse = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('mouseup', () => isDragging = false);
+renderer.domElement.addEventListener('wheel', e => {
+  targetRadius = Math.max(15, Math.min(120, targetRadius + e.deltaY * 0.08));
+});
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
 });
 
-// ─────────────────────────────────────
-let scene, camera, renderer, controls, model;
-let ambientLight, dirLight, pointLight;
-let autoRot = true;
-let gridVisible = false;
-let lastTime = performance.now();
-let frameCount = 0;
+// ─── HELPERS ──────────────────────────────────────────────────
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b+1));
 
-function init() {
-  const canvas = document.getElementById('c');
-  const wrap = document.getElementById('canvas-wrap');
+function makeMat(color, rough=0.85, metal=0) {
+  return new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+}
 
-  // Scene
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0f);
-  scene.fog = new THREE.FogExp2(0x0a0a0f, 0.002);
+// ─── TERRAIN ──────────────────────────────────────────────────
+const terrainW = 160, terrainD = 130, segs = 180;
+const tGeo = new THREE.PlaneGeometry(terrainW, terrainD, segs, segs);
+tGeo.rotateX(-Math.PI/2);
+const pos = tGeo.attributes.position;
 
-  // Camera
-  camera = new THREE.PerspectiveCamera(60, wrap.clientWidth / wrap.clientHeight, 0.1, 10000);
-  camera.position.set(0, 200, 500);
+// Height function
+function terrainHeight(x, z) {
+  let h = 0;
+  h += Math.sin(x*0.05)*Math.cos(z*0.06)*3.5;
+  h += Math.sin(x*0.13)*Math.cos(z*0.11)*1.8;
+  h += Math.sin(x*0.3+1)*Math.cos(z*0.28+2)*0.8;
+  // Mountains in back
+  const mDist = Math.sqrt(Math.pow(x*0.7,2) + Math.pow(z+45,2));
+  h += Math.max(0, 18 - mDist*0.6);
+  // Right rocky hills
+  const rDist = Math.sqrt(Math.pow(x-55,2) + Math.pow(z+15,2));
+  h += Math.max(0, 12 - rDist*0.5);
+  // Gobi-like flat south
+  if (z > 30) h *= 0.3;
+  return h;
+}
 
-  // Renderer
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(wrap.clientWidth, wrap.clientHeight);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+for (let i = 0; i < pos.count; i++) {
+  const x = pos.getX(i), z = pos.getZ(i);
+  pos.setY(i, terrainHeight(x, z));
+}
+tGeo.computeVertexNormals();
 
-  // Controls
-  controls = new THREE.OrbitControls(camera, canvas);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.minDistance = 50;
-  controls.maxDistance = 3000;
+// Vertex colors by height
+const colors = new Float32Array(pos.count * 3);
+for (let i = 0; i < pos.count; i++) {
+  const h = pos.getY(i);
+  const x = pos.getX(i), z = pos.getZ(i);
+  let r, g, b;
+  // River area
+  const riverDist = Math.abs(x + 28) + Math.abs(z - z*0.1);
+  const nearRiver = (x > -42 && x < -18 && z > -55 && z < 30);
+  if (nearRiver && Math.abs(x+30 + Math.sin(z*0.12)*6) < 5) {
+    r=0.35; g=0.55; b=0.75; // water blue-green
+  } else if (h > 12) {
+    const t = Math.min((h-12)/8, 1);
+    r=0.72+t*0.2; g=0.68+t*0.2; b=0.60+t*0.2; // snow/rock
+  } else if (h > 6) {
+    r=0.65; g=0.58; b=0.42; // rocky
+  } else if (h > 1) {
+    r=0.72+rand(-0.05,0.05); g=0.68+rand(-0.05,0.05); b=0.38+rand(-0.04,0.04); // golden steppe
+  } else {
+    r=0.68; g=0.65; b=0.42; // dry flat
+  }
+  // Near trees — add green tint
+  colors[i*3]=r; colors[i*3+1]=g; colors[i*3+2]=b;
+}
+tGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  // Lights
-  ambientLight = new THREE.AmbientLight(0x334466, 0.4);
-  scene.add(ambientLight);
+const terrain = new THREE.Mesh(tGeo, new THREE.MeshStandardMaterial({
+  vertexColors: true, roughness: 0.92, metalness: 0
+}));
+terrain.receiveShadow = true;
+scene.add(terrain);
 
-  dirLight = new THREE.DirectionalLight(0xffeedd, 1.5);
-  dirLight.position.set(200, 400, 200);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
-  scene.add(dirLight);
+// ─── GET TERRAIN Y ────────────────────────────────────────────
+function getY(x, z) { return terrainHeight(x, z); }
 
-  pointLight = new THREE.PointLight(0xff8833, 2, 1000);
-  pointLight.position.set(0, 200, 0);
-  scene.add(pointLight);
+// ─── RIVER ────────────────────────────────────────────────────
+function makeRiver() {
+  const pts = [];
+  for (let i = 0; i <= 60; i++) {
+    const t = i/60;
+    const z = -55 + t*85;
+    const x = -30 + Math.sin(z*0.12)*8 + Math.sin(z*0.07+1)*4;
+    pts.push(new THREE.Vector3(x, getY(x,z)+0.15, z));
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  const rGeo = new THREE.TubeGeometry(curve, 100, 1.8, 10, false);
+  const rMat = new THREE.MeshStandardMaterial({
+    color: 0x4a8ab5, roughness: 0.1, metalness: 0.3,
+    transparent: true, opacity: 0.85
+  });
+  const river = new THREE.Mesh(rGeo, rMat);
+  river.receiveShadow = true;
+  scene.add(river);
 
-  // Ground
-  const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(2000, 2000),
-    new THREE.MeshStandardMaterial({ color: 0x0d0d14, roughness: 1 })
+  // Bridge
+  const bx = -30 + Math.sin(-5*0.12)*8;
+  const bz = -5;
+  const bGeo = new THREE.BoxGeometry(6, 0.4, 2.5);
+  const bridge = new THREE.Mesh(bGeo, makeMat(0x8b6914, 0.8));
+  bridge.position.set(bx, getY(bx,bz)+0.5, bz);
+  bridge.castShadow = true;
+  scene.add(bridge);
+}
+makeRiver();
+
+// ─── TREES ────────────────────────────────────────────────────
+function makeTree(x, z, scale=1) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  // Trunk
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12*scale, 0.18*scale, 1.2*scale, 6),
+    makeMat(0x5c3d1e, 0.95)
   );
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
+  trunk.position.y = 0.6*scale;
+  g.add(trunk);
+  // Foliage layers
+  const colors2 = [0x2d6a2d, 0x1e5c1e, 0x3a7a3a, 0x266426];
+  for (let i = 0; i < 3; i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry((1.1-i*0.25)*scale, (1.4-i*0.2)*scale, 7),
+      makeMat(colors2[i%colors2.length], 0.9)
+    );
+    cone.position.y = (1.2 + i*0.9)*scale;
+    cone.rotation.y = rand(0, Math.PI);
+    g.add(cone);
+  }
+  g.position.set(x, ty, z);
+  g.castShadow = true;
+  g.receiveShadow = true;
+  scene.add(g);
+}
 
-  // Load FBX
-  loadFBX('Standing Torch Light Torch.fbx');
+// Tree clusters along river
+const treeClusters = [
+  [-35,-40], [-28,-30], [-38,-20], [-25,-10], [-32,5], [-40,15],
+  [-20,-45], [-15,-35], [-22,-22], [-30,20], [-18,10],
+  [-42,-50], [-36,-8], [-26,25], [-20,30],
+  [5,-45],[8,-38],[12,-30],[6,-18],
+  [-5,-50],[-8,-42],[-3,-28],
+  [15,-40],[18,-30],[22,-22]
+];
+treeClusters.forEach(([x,z]) => {
+  const n = randInt(3,7);
+  for (let i=0;i<n;i++) makeTree(x+rand(-3,3), z+rand(-3,3), rand(0.6,1.1));
+});
 
-  // Resize
-  window.addEventListener('resize', () => {
-    camera.aspect = wrap.clientWidth / wrap.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+// ─── GER (Mongolian Yurt) ──────────────────────────────────────
+function makeGer(x, z, rotY=0, scale=1) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+
+  // Base platform (stone ring)
+  const baseMat = makeMat(0xa09070, 0.95);
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.5*scale, 2.6*scale, 0.25*scale, 20),
+    baseMat
+  );
+  base.position.y = 0.12;
+  g.add(base);
+
+  // Walls
+  const wallMat = new THREE.MeshStandardMaterial({
+    color: 0xf0e8d8, roughness: 0.7,
+    map: (() => {
+      const c = document.createElement('canvas'); c.width=128; c.height=64;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle='#f0e8d8';ctx.fillRect(0,0,128,64);
+      ctx.strokeStyle='#c8b898'; ctx.lineWidth=1;
+      for(let i=0;i<20;i++){ctx.beginPath();ctx.moveTo(i*7,0);ctx.lineTo(i*7,64);ctx.stroke();}
+      const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      t.repeat.set(4,1); return t;
+    })()
+  });
+  const wall = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.4*scale, 2.4*scale, 1.8*scale, 20, 1, true),
+    wallMat
+  );
+  wall.position.y = 0.9*scale + 0.25;
+  g.add(wall);
+
+  // Roof — orange/terracotta
+  const roofMat = makeMat(0xc8824a, 0.8);
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(2.5*scale, 1.3*scale, 20),
+    roofMat
+  );
+  roof.position.y = (1.8 + 0.65)*scale + 0.25;
+  g.add(roof);
+
+  // Roof ring
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.35*scale, 0.1*scale, 8, 20),
+    makeMat(0xe8a040, 0.5, 0.3)
+  );
+  ring.position.y = (1.8+1.3)*scale + 0.25;
+  ring.rotation.x = Math.PI/2;
+  g.add(ring);
+
+  // Door
+  const doorMat = makeMat(0x7a4a1a, 0.8);
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(0.7*scale, 1.4*scale, 0.08*scale),
+    doorMat
+  );
+  door.position.set(0, 0.7*scale + 0.25, 2.42*scale);
+  g.add(door);
+
+  // Door frame
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85*scale, 1.5*scale, 0.05*scale),
+    makeMat(0xe8a040, 0.7, 0.1)
+  );
+  frame.position.set(0, 0.75*scale + 0.25, 2.45*scale);
+  g.add(frame);
+
+  // Decorative felt patterns on wall
+  const patMat = makeMat(0xe05030, 0.8);
+  for(let i=0;i<3;i++){
+    const pat=new THREE.Mesh(
+      new THREE.BoxGeometry(0.5*scale,0.1*scale,0.05*scale),
+      patMat
+    );
+    const angle = (i/3)*Math.PI*2 + 1;
+    pat.position.set(Math.sin(angle)*2.42*scale, 1.5*scale+0.25, Math.cos(angle)*2.42*scale);
+    pat.rotation.y = -angle;
+    g.add(pat);
+  }
+
+  // Guy ropes
+  for(let i=0;i<6;i++){
+    const angle=i/6*Math.PI*2;
+    const rp=new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02,0.02,2.2,4),
+      makeMat(0xd4c090,0.9)
+    );
+    rp.position.set(Math.sin(angle)*1.8*scale, 1.8*scale+0.25, Math.cos(angle)*1.8*scale);
+    rp.rotation.z = Math.sin(angle)*0.5;
+    rp.rotation.x = -Math.cos(angle)*0.5;
+    g.add(rp);
+  }
+
+  g.position.set(x, ty, z);
+  g.rotation.y = rotY;
+  g.castShadow = true;
+  g.receiveShadow = true;
+  scene.add(g);
+  return g;
+}
+
+// ─── HORSE ────────────────────────────────────────────────────
+function makeHorse(x, z, rotY=0, color=0x6b3a1f) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  const mat = makeMat(color, 0.8);
+  const dkMat = makeMat(0x2a1508, 0.85);
+
+  // Body
+  const bodyBox = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.45,0.38), mat);
+  bodyBox.position.y = 0.85;
+  bodyBox.rotation.z = 0.05;
+  g.add(bodyBox);
+
+  // Neck
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,0.5,8), mat);
+  neck.position.set(0.38,1.1,0); neck.rotation.z=-0.5;
+  g.add(neck);
+
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.36,0.22,0.22), mat);
+  head.position.set(0.62,1.32,0);
+  g.add(head);
+  // Snout
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.2,0.16,0.18), mat);
+  snout.position.set(0.82,1.26,0);
+  g.add(snout);
+  // Eye
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03,6,6), makeMat(0x111111,0.3));
+  eye.position.set(0.73,1.35,0.1);
+  g.add(eye);
+
+  // Legs
+  const legPositions = [[0.28,0,-0.14],[0.28,0,0.14],[-0.28,0,-0.14],[-0.28,0,0.14]];
+  legPositions.forEach(([lx,ly,lz],i) => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.055,0.75,8), mat);
+    leg.position.set(lx, 0.42, lz);
+    const kick = (i===1)?0.15:0;
+    leg.rotation.x = kick;
+    g.add(leg);
+    // Hoof
+    const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.08,0.14), dkMat);
+    hoof.position.set(lx, 0.05+Math.sin(kick)*0.1, lz+Math.sin(kick)*0.2);
+    g.add(hoof);
   });
 
-  // Update camera info
-  controls.addEventListener('change', updateInfo);
+  // Tail
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.6,8), dkMat);
+  tail.position.set(-0.52,0.9,0); tail.rotation.z=1.3;
+  g.add(tail);
 
-  animate();
+  // Mane
+  const mane = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.25,0.18), dkMat);
+  mane.position.set(0.4,1.2,0); mane.rotation.z=-0.3;
+  g.add(mane);
+
+  g.position.set(x, ty, z);
+  g.rotation.y = rotY;
+  g.scale.setScalar(rand(0.85,1.1));
+  g.castShadow=true; g.receiveShadow=true;
+  scene.add(g);
+  return g;
 }
 
-function loadFBX(url) {
-  if (!THREE.FBXLoader) {
-    showError('FBXLoader дуусаагүй байна, дахин оролдоно уу');
-    return;
+// ─── RIDER ────────────────────────────────────────────────────
+function makeRider(x, z, rotY=0) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  const coat = makeMat([0x8b2020,0x1a4a8a,0x2a6a2a,0x6a4a1a][randInt(0,3)], 0.85);
+  const skin = makeMat(0xc8946a, 0.9);
+
+  // Torso
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.28,0.38,0.22), coat);
+  torso.position.y = 1.5;
+  g.add(torso);
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14,8,8), skin);
+  head.position.y = 1.84;
+  g.add(head);
+  // Hat
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.18,0.12,10), makeMat(0x2a2a2a,0.9));
+  hat.position.y = 1.96;
+  g.add(hat);
+  // Arms
+  [-0.2,0.2].forEach(side => {
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.3,6), coat);
+    arm.position.set(side*0.9, 1.54, 0.1); arm.rotation.z=side*0.8; arm.rotation.x=0.4;
+    g.add(arm);
+  });
+  // Legs
+  [-0.1,0.1].forEach(side => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.065,0.3,6), coat);
+    leg.position.set(side, 1.2, 0.1); leg.rotation.x=0.5;
+    g.add(leg);
+  });
+
+  g.position.set(x, ty, z);
+  g.rotation.y = rotY;
+  g.castShadow=true; g.receiveShadow=true;
+  scene.add(g);
+  return g;
+}
+
+// ─── CAMEL ────────────────────────────────────────────────────
+function makeCamel(x, z, rotY=0) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  const mat = makeMat(0xc8a060, 0.9);
+  const dkMat = makeMat(0x8a6030, 0.9);
+
+  // Body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.3,0.58,0.52), mat);
+  body.position.y = 1.1;
+  g.add(body);
+  // Humps (two-humped Bactrian!)
+  [-0.25,0.25].forEach(ox => {
+    const hump = new THREE.Mesh(new THREE.SphereGeometry(0.22,10,8), mat);
+    hump.position.set(ox,1.46,0); hump.scale.set(0.8,1,0.7);
+    g.add(hump);
+  });
+  // Neck
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.16,0.7,8), mat);
+  neck.position.set(0.65,1.4,0); neck.rotation.z=-0.4;
+  g.add(neck);
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.26,0.26), mat);
+  head.position.set(1.0,1.65,0);
+  g.add(head);
+  const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22,0.18,0.22), mat);
+  snout.position.set(1.23,1.58,0);
+  g.add(snout);
+  // Lips (darker)
+  const lip = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.06,0.22), dkMat);
+  lip.position.set(1.34,1.54,0);
+  g.add(lip);
+  // Eye
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.04,6,6), makeMat(0x111111,0.2));
+  eye.position.set(1.08,1.68,0.12);
+  g.add(eye);
+  // Legs (long!)
+  [[0.4,0,-0.2],[0.4,0,0.2],[-0.4,0,-0.2],[-0.4,0,0.2]].forEach(([lx,ly,lz]) => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.065,1.0,8), mat);
+    leg.position.set(lx,0.55,lz);
+    g.add(leg);
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.12,8,6), dkMat);
+    foot.position.set(lx,0.06,lz); foot.scale.set(1.2,0.5,1.4);
+    g.add(foot);
+  });
+  // Tail
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.04,0.4,6), dkMat);
+  tail.position.set(-0.72,1.1,0); tail.rotation.z=1.6;
+  g.add(tail);
+
+  g.position.set(x, ty, z);
+  g.rotation.y = rotY;
+  g.scale.setScalar(rand(0.85,1.05));
+  g.castShadow=true; g.receiveShadow=true;
+  scene.add(g);
+  return g;
+}
+
+// ─── EAGLE ────────────────────────────────────────────────────
+function makeEagle(x, y, z) {
+  const g = new THREE.Group();
+  const mat = makeMat(0x3a2010, 0.8);
+  const lightMat = makeMat(0xd4a060, 0.8);
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.3,8,8), mat);
+  body.scale.set(1.5,0.7,0.8);
+  g.add(body);
+  // Wings
+  [-1,1].forEach(side => {
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.05,1.4,0.45), mat);
+    wing.position.set(0,0,side*1.0); wing.rotation.x=side*0.15;
+    g.add(wing);
+    // Wing tip
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.04,0.5,0.25), mat);
+    tip.position.set(0,0,side*1.75); tip.rotation.x=side*0.3;
+    g.add(tip);
+  });
+  // Head
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8), lightMat);
+  head.position.set(0.42,0.1,0);
+  g.add(head);
+  // Beak
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.2,6), makeMat(0xf0c030,0.6));
+  beak.position.set(0.6,0.05,0); beak.rotation.z=-Math.PI/2;
+  g.add(beak);
+  // Tail
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.05,0.5,0.3), mat);
+  tail.position.set(-0.5,0,0); tail.rotation.z=0.3;
+  g.add(tail);
+
+  g.position.set(x,y,z);
+  g.rotation.y = rand(0,Math.PI*2);
+  scene.add(g);
+  return g;
+}
+
+// ─── ROCKS ────────────────────────────────────────────────────
+function makeRock(x, z, scale=1) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  const n = randInt(1,4);
+  for(let i=0;i<n;i++){
+    const geo = new THREE.DodecahedronGeometry(rand(0.3,0.8)*scale, 0);
+    const mesh = new THREE.Mesh(geo, makeMat(0x8a8078+randInt(-10,10)*256, 0.95));
+    mesh.position.set(rand(-0.4,0.4)*scale,rand(0.2,0.4)*scale,rand(-0.4,0.4)*scale);
+    mesh.rotation.set(rand(0,Math.PI),rand(0,Math.PI),rand(0,Math.PI));
+    mesh.castShadow=true; mesh.receiveShadow=true;
+    g.add(mesh);
   }
+  g.position.set(x,ty,z);
+  scene.add(g);
+}
 
-  const loader = new THREE.FBXLoader();
-  loader.load(
-    url,
-    (fbx) => {
-      model = fbx;
+// ─── STONE MONUMENT ───────────────────────────────────────────
+function makeOvoo(x, z) {
+  const g = new THREE.Group();
+  const ty = getY(x,z);
+  // Stone pile
+  for(let i=0;i<8;i++){
+    const r=new THREE.Mesh(
+      new THREE.DodecahedronGeometry(rand(0.3,0.7),0),
+      makeMat(0x908880,0.95)
+    );
+    r.position.set(rand(-0.5,0.5),rand(0,0.8),rand(-0.5,0.5));
+    r.rotation.set(rand(0,Math.PI),rand(0,Math.PI),rand(0,Math.PI));
+    r.castShadow=true;
+    g.add(r);
+  }
+  // Flag pole
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,3,8), makeMat(0x5c3d1e,0.9));
+  pole.position.y=2;
+  g.add(pole);
+  // Flags
+  [[0xc82020,0],[0x2020c8,0.4],[0xf0c020,0.8]].forEach(([col,oy],i)=>{
+    const flag=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.4), new THREE.MeshStandardMaterial({color:col,side:THREE.DoubleSide,roughness:0.9}));
+    flag.position.set(0.4,3.5-i*0.5,0);
+    flag.rotation.y=0.2;
+    g.add(flag);
+  });
+  g.position.set(x,ty,z);
+  scene.add(g);
+}
 
-      // Auto scale
-      const box = new THREE.Box3().setFromObject(fbx);
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 200 / maxDim;
-      fbx.scale.setScalar(scale);
+// ─── FENCE ────────────────────────────────────────────────────
+function makeFence(cx, cz, w, d, rotY=0) {
+  const g = new THREE.Group();
+  const mat = makeMat(0xa0824a, 0.95);
 
-      // Center
-      const center = box.getCenter(new THREE.Vector3());
-      fbx.position.sub(center.multiplyScalar(scale));
-      fbx.position.y = 0;
-
-      fbx.traverse(child => {
-        if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-
-      scene.add(fbx);
-      saveMaterials(fbx);
-      // Apply solid by default
-      setRenderMode('solid');
-
-      // Point light at top of torch
-      pointLight.position.set(fbx.position.x, size.y * scale * 0.9, fbx.position.z);
-
-      document.getElementById('loading').style.opacity = '0';
-      setTimeout(() => document.getElementById('loading').style.display = 'none', 600);
-
-      // Sync sliders
-      document.getElementById('scaleSlider').value = scale.toFixed(4);
-      document.getElementById('scaleVal').textContent = scale.toFixed(3);
-    },
-    (xhr) => {
-      const pct = (xhr.loaded / xhr.total * 100).toFixed(0);
-      document.querySelector('.loader-text').textContent = `LOADING ${pct}%`;
-    },
-    (err) => {
-      console.error(err);
-      showError('FBX ачаалахад алдаа гарлаа');
+  // Simple box fence outline
+  const fencePts = [[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2],[-w/2,-d/2]];
+  for(let s=0;s<4;s++){
+    const [ax,az]=fencePts[s], [bx,bz]=fencePts[s+1];
+    const len=Math.sqrt((bx-ax)**2+(bz-az)**2);
+    const mx=(ax+bx)/2, mz=(az+bz)/2;
+    const rail=new THREE.Mesh(new THREE.BoxGeometry(len,0.08,0.06),mat);
+    rail.position.set(mx,0.75,mz);
+    rail.rotation.y=Math.atan2(bx-ax,bz-az);
+    g.add(rail);
+    const rail2=new THREE.Mesh(new THREE.BoxGeometry(len,0.08,0.06),mat);
+    rail2.position.set(mx,0.45,mz);
+    rail2.rotation.y=Math.atan2(bx-ax,bz-az);
+    g.add(rail2);
+    // Posts
+    const n=Math.max(2,Math.floor(len/2.5));
+    for(let i=0;i<=n;i++){
+      const t=i/n;
+      const px=ax+(bx-ax)*t, pz=az+(bz-az)*t;
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,1.0,6),mat);
+      post.position.set(px,0.5,pz);
+      post.castShadow=true;
+      g.add(post);
     }
-  );
+  }
+  g.position.set(cx, getY(cx,cz), cz);
+  g.rotation.y=rotY;
+  scene.add(g);
 }
 
-function showError(msg) {
-  document.querySelector('.loader-ring').style.display = 'none';
-  document.querySelector('.loader-text').textContent = msg;
+// ─── PLACE EVERYTHING ─────────────────────────────────────────
+
+// Ger settlements (multiple clusters)
+const gerClusters = [
+  // Main central settlement
+  {gx:2, gz:-5, count:4, spread:8},
+  // Left river side
+  {gx:-15, gz:-15, count:5, spread:10},
+  {gx:-10, gz:5, count:3, spread:7},
+  // Right dry steppe
+  {gx:22, gz:-8, count:4, spread:9},
+  {gx:30, gz:5, count:3, spread:7},
+  {gx:18, gz:15, count:2, spread:6},
+  // Far clusters
+  {gx:-20, gz:20, count:3, spread:8},
+  {gx:5, gz:22, count:4, spread:9},
+  {gx:-5, gz:-30, count:2, spread:6},
+  {gx:15, gz:-25, count:3, spread:8},
+];
+
+gerClusters.forEach(({gx,gz,count,spread}) => {
+  for(let i=0;i<count;i++){
+    const x=gx+rand(-spread/2,spread/2);
+    const z=gz+rand(-spread/2,spread/2);
+    // Skip river
+    if(x > -42 && x < -18 && z > -55 && z < 30 && Math.abs(x+30+Math.sin(z*0.12)*6)<8) return;
+    makeGer(x, z, rand(0,Math.PI*2), rand(0.85,1.15));
+    // Fence around some gers
+    if(Math.random()>0.4) makeFence(x, z, rand(6,9), rand(5,7), rand(0,Math.PI*0.5));
+  }
+});
+
+// Special hilltop ger/temple
+makeGer(-5, -38, 0, 1.4);
+makeOvoo(-6, -36);
+
+// Horses with riders
+const horseData = [
+  {x:8,z:-2,rot:0.5}, {x:-5,z:8,rot:2}, {x:18,z:3,rot:1.2},
+  {x:-12,z:0,rot:3.5}, {x:5,z:15,rot:0.8}, {x:25,z:-5,rot:2.8},
+  {x:-20,z:10,rot:1.5}, {x:12,z:-18,rot:0.3}, {x:-8,z:-20,rot:2.2},
+  {x:30,z:15,rot:1.8}, {x:3,z:28,rot:3.1}, {x:-22,z:-5,rot:0.9},
+  {x:20,z:25,rot:2.5}, {x:-3,z:-12,rot:1.0}, {x:15,z:8,rot:3.7},
+];
+const horseColors = [0x6b3a1f, 0x3a2010, 0xc8a060, 0x8a6030, 0x1a1008, 0xd4b890];
+horseData.forEach(({x,z,rot}) => {
+  const col = horseColors[randInt(0,horseColors.length-1)];
+  makeHorse(x+rand(-2,2), z+rand(-2,2), rot+rand(-0.3,0.3), col);
+  if(Math.random()>0.35) makeRider(x+rand(-0.5,0.5), z+rand(-0.5,0.5)+rand(-1,1), rot);
+});
+
+// Camel herds (right/south side)
+const camelData = [
+  {x:28,z:8},{x:32,z:5},{x:30,z:12},{x:35,z:10},{x:33,z:-2},
+  {x:38,z:18},{x:25,z:20},{x:40,z:5},{x:36,z:15},{x:22,z:25},
+  {x:42,z:-8},{x:45,z:3},{x:38,z:-12},
+];
+camelData.forEach(({x,z}) => makeCamel(x+rand(-1.5,1.5),z+rand(-1.5,1.5),rand(0,Math.PI*2)));
+
+// Eagles
+makeEagle(-18, 22, -28);
+makeEagle(5, 18, -22);
+
+// Rocks scattered
+for(let i=0;i<40;i++){
+  const x=rand(-70,70), z=rand(-60,55);
+  if(Math.random()>0.5) makeRock(x,z,rand(0.5,1.8));
 }
 
-let frameT = 0;
-function animate() {
+// Extra ovoos
+makeOvoo(12,-10);
+makeOvoo(-25,18);
+
+// ─── MOUNTAINS (back) — extra geometry ────────────────────────
+function makeMountain(x, z, h, r) {
+  const geo = new THREE.ConeGeometry(r, h, randInt(5,8));
+  const mat = new THREE.MeshStandardMaterial({
+    color: h>14?0xe8eaf0:0x9a9080, roughness:0.95
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, getY(x,z)+h/2-2, z);
+  m.rotation.y = rand(0,Math.PI);
+  m.castShadow=true; m.receiveShadow=true;
+  scene.add(m);
+}
+// Add visible mountain peaks in back
+[[0,-52,22,14],[-15,-50,18,12],[15,-55,25,16],[-30,-48,16,11],[30,-50,20,13],[-8,-58,28,15],[8,-48,19,12]].forEach(([x,z,h,r])=>makeMountain(x,z,h,r));
+
+// Snow caps
+[[0,-52,22,2.2],[-15,-50,18,1.8],[15,-55,25,2.8],[-30,-48,16,1.6],[30,-50,20,2.2],[-8,-58,28,3.0],[8,-48,19,2.0]].forEach(([x,z,h,r])=>{
+  const snow=new THREE.Mesh(new THREE.ConeGeometry(r,h*0.35,8),makeMat(0xfafafa,0.7));
+  snow.position.set(x,getY(x,z)+h-h*0.18,z);
+  snow.rotation.y=rand(0,Math.PI);
+  scene.add(snow);
+});
+
+// ─── SKYBOX / CLOUDS ──────────────────────────────────────────
+function makeCloud(x,y,z,scale=1){
+  const g=new THREE.Group();
+  [[0,0,0,1.2],[0.8,0.3,0,0.9],[-0.7,0.2,0,0.85],[0.4,-0.2,0.5,0.75],[-0.3,-0.1,-0.5,0.7]].forEach(([cx,cy,cz,r])=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r*scale,8,6),new THREE.MeshStandardMaterial({color:0xf8f8ff,roughness:1,transparent:true,opacity:0.88}));
+    m.position.set(cx*scale,cy*scale,cz*scale);
+    g.add(m);
+  });
+  g.position.set(x,y,z);
+  scene.add(g);
+  return g;
+}
+const clouds=[];
+for(let i=0;i<12;i++) clouds.push(makeCloud(rand(-80,80),rand(30,50),rand(-60,40),rand(1.5,4)));
+
+// ─── ANIMATION ────────────────────────────────────────────────
+const clock = new THREE.Clock();
+let eagleRef = scene.children.filter(c=>c.children&&c.children.length>0).slice(-2); // crude
+
+function animate(){
   requestAnimationFrame(animate);
-  const now = performance.now();
-  const delta = (now - lastTime);
-  frameT += delta;
-  frameCount++;
-  lastTime = now;
+  const t = clock.getElapsedTime();
 
-  if (frameT > 500) {
-    document.getElementById('fps').textContent = Math.round(frameCount / (frameT / 1000));
-    frameT = 0; frameCount = 0;
-  }
+  // Smooth camera
+  theta += (targetTheta-theta)*0.06;
+  phi += (targetPhi-phi)*0.06;
+  radius += (targetRadius-radius)*0.06;
+  panX += (targetPanX-panX)*0.06;
+  panZ += (targetPanZ-panZ)*0.06;
 
-  controls.update();
+  camera.position.set(
+    Math.sin(theta)*Math.cos(phi)*radius + panX,
+    Math.sin(phi)*radius,
+    Math.cos(theta)*Math.cos(phi)*radius + panZ
+  );
+  camera.lookAt(panX, 0, panZ);
 
-  if (model && autoRot) {
-    model.rotation.y += 0.005;
-  }
+  // Clouds drift
+  clouds.forEach((c,i)=>{
+    c.position.x += 0.008*(i%2===0?1:-0.6);
+    if(c.position.x > 90) c.position.x=-90;
+    if(c.position.x < -90) c.position.x=90;
+  });
 
-  if (pointLight) {
-    pointLight.intensity = document.getElementById('torchLight').valueAsNumber + Math.sin(now * 0.01) * 0.15;
-  }
+  // Sun movement (subtle)
+  sun.position.x = 40*Math.cos(t*0.05);
+  sun.position.z = 20*Math.sin(t*0.05);
 
   renderer.render(scene, camera);
 }
-
-function updateInfo() {
-  if (!camera) return;
-  document.getElementById('camX').textContent = camera.position.x.toFixed(0);
-  document.getElementById('camY').textContent = camera.position.y.toFixed(0);
-  const dist = camera.position.length();
-  document.getElementById('camZ').textContent = (500 / dist).toFixed(2);
-}
-
-
-function bind(id, label, suffix, cb) {
-  const slider = document.getElementById(id);
-  const val = document.getElementById(label);
-  slider.addEventListener('input', () => {
-    val.textContent = parseFloat(slider.value).toFixed(slider.step.includes('.') ? 2 : 0) + (suffix || '');
-    cb(parseFloat(slider.value));
-  });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  bind('scaleSlider','scaleVal','', v => model && model.scale.setScalar(v));
-  bind('rotX','rotXVal','°', v => model && (model.rotation.x = v * Math.PI/180));
-  bind('rotY','rotYVal','°', v => model && (model.rotation.y = v * Math.PI/180));
-  bind('rotZ','rotZVal','°', v => model && (model.rotation.z = v * Math.PI/180));
-  bind('posX','posXVal','', v => model && (model.position.x = v));
-  bind('posY','posYVal','', v => model && (model.position.y = v));
-  bind('ambLight','ambVal','', v => ambientLight && (ambientLight.intensity = v));
-  bind('dirLight','dirVal','', v => dirLight && (dirLight.intensity = v));
-  bind('torchLight','torchVal','', v => pointLight && (pointLight.intensity = v));
-  bind('fogDensity','fogVal','', v => scene && scene.fog && (scene.fog.density = v));
-  bind('fovSlider','fovVal','°', v => { camera.fov = v; camera.updateProjectionMatrix(); });
-
-  bind('textSize','textSizeVal','px', v => {
-    document.getElementById('heroTitle').style.fontSize = v + 'px';
-  });
-
-  document.getElementById('lightColor').addEventListener('input', e => {
-    if (pointLight) pointLight.color.set(e.target.value);
-  });
-
-  document.getElementById('accentColor').addEventListener('input', e => {
-    document.documentElement.style.setProperty('--accent', e.target.value);
-    const spans = document.querySelectorAll('#heroTitle span');
-    spans.forEach(s => s.style.color = e.target.value);
-  });
-
-  document.getElementById('titleInput').addEventListener('input', e => {
-    const lines = e.target.value.split('\n');
-    document.getElementById('heroTitle').innerHTML = 
-      lines.map((l, i) => i === 1 ? `<span>${l}</span>` : l).join('<br>');
-  });
-
-  document.getElementById('subInput').addEventListener('input', e => {
-    document.getElementById('heroSub').textContent = e.target.value;
-  });
-
-  // Solid mat controls
-  document.getElementById('solidColor').addEventListener('input', refreshOverrideMat);
-  bind('solidMetal','solidMetalVal','', () => refreshOverrideMat());
-  bind('solidRough','solidRoughVal','', () => refreshOverrideMat());
-
-  document.getElementById('fbxUpload').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    if (model) { scene.remove(model); model = null; }
-    document.getElementById('loading').style.display = 'flex';
-    document.getElementById('loading').style.opacity = '1';
-    loadFBX(url);
-  });
-});
-
-function toggleAutoRot() {
-  autoRot = !autoRot;
-  const btn = document.getElementById('autoRotBtn');
-  btn.textContent = autoRot ? 'ON' : 'OFF';
-  btn.classList.toggle('active', autoRot);
-}
-
-let renderMode = 'solid';
-let originalMaterials = new Map();
-let overrideMat = null;
-
-function saveMaterials(fbx) {
-  fbx.traverse(c => {
-    if (c.isMesh) originalMaterials.set(c.uuid, c.material);
-  });
-}
-
-function getOverrideMat(wire, flat) {
-  const color = document.getElementById('solidColor').value;
-  const metal = parseFloat(document.getElementById('solidMetal').value);
-  const rough = parseFloat(document.getElementById('solidRough').value);
-  if (overrideMat) overrideMat.dispose();
-  overrideMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(color),
-    metalness: metal,
-    roughness: rough,
-    wireframe: wire,
-    flatShading: flat,
-  });
-  return overrideMat;
-}
-
-function setRenderMode(mode) {
-  renderMode = mode;
-  ['btnSolid','btnWire','btnFlat'].forEach(id => document.getElementById(id).classList.remove('active'));
-  document.getElementById(mode === 'solid' ? 'btnSolid' : mode === 'wire' ? 'btnWire' : 'btnFlat').classList.add('active');
-  if (!model) return;
-  const mat = getOverrideMat(mode === 'wire', mode === 'flat');
-  model.traverse(c => { if (c.isMesh) c.material = mat; });
-}
-
-function resetMaterials() {
-  if (!model) return;
-  renderMode = 'orig';
-  ['btnSolid','btnWire','btnFlat'].forEach(id => document.getElementById(id).classList.remove('active'));
-  model.traverse(c => {
-    if (c.isMesh && originalMaterials.has(c.uuid)) {
-      c.material = originalMaterials.get(c.uuid);
-    }
-  });
-}
-
-function refreshOverrideMat() {
-  if (renderMode === 'solid' || renderMode === 'wire' || renderMode === 'flat') {
-    setRenderMode(renderMode);
-  }
-}
-
-function toggleGrid() {
-  gridVisible = !gridVisible;
-  document.getElementById('gridOverlay').classList.toggle('show', gridVisible);
-  const btn = document.getElementById('gridBtn');
-  btn.classList.toggle('active', gridVisible);
-}
-
-function setView(v) {
-  if (!camera || !controls) return;
-  const d = 600;
-  if (v === 'front') camera.position.set(0, 150, d);
-  if (v === 'side') camera.position.set(d, 150, 0);
-  if (v === 'top') camera.position.set(0, d, 1);
-  controls.update();
-}
-
-function resetAll() {
-  if (model) {
-    model.rotation.set(0, 0, 0);
-    model.position.set(0, 0, 0);
-  }
-  ['rotX','rotY','rotZ','posX','posY'].forEach(id => {
-    document.getElementById(id).value = 0;
-  });
-  ['rotXVal','rotYVal','rotZVal'].forEach(id => document.getElementById(id).textContent = '0°');
-  ['posXVal','posYVal'].forEach(id => document.getElementById(id).textContent = '0');
-  setView('front');
-}
+animate();
 </script>
 </body>
 </html>

@@ -14,11 +14,10 @@ interface HeroChooseScreenProps {
   selectedId: HeroId;
   setSelectedId: (id: HeroId) => void;
   onPlay: () => void;
-  onGuest: () => void;
 }
 
 export function HeroChooseScreen({
-  t, lang, playerName, selectedId, setSelectedId, onPlay, onGuest,
+  t, lang, playerName, selectedId, setSelectedId, onPlay,
 }: HeroChooseScreenProps) {
   const selectedHero = HEROES.find((h) => h.id === selectedId)!;
 

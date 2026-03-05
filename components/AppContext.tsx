@@ -55,116 +55,214 @@ interface Translations {
 
 const mn: Translations = {
   nav: {
-    title: "МОНГОЛ УЛАМЖЛАЛТ ТОГЛООМ",
-    play: "ТОГЛОХ",
-    whatIs: "Юу вэ?",
-    howItWorks: "Хэрхэн ажилладаг",
-    games: "Тоглоомууд",
-    features: "Онцлогууд",
+    title: "МОНГОЛ УЛАМЖЛАЛТ ТОГЛООМУУД",
+    play: "ОДОО ТОГЛОХ",
+    whatIs: "Төслийн тухай",
+    howItWorks: "Хэрхэн ажиллах вэ",
+    games: "Тоглоомын сан",
+    features: "Давуу талууд",
   },
   hero: {
-    title1: "МОНГОЛ",
-    title2: "УЛАМЖЛАЛТ ТОГЛООМ",
-    subtitle: "Монгол орноор тоглоом тоглон аяллаар мэдрээрэй.",
-    cta: "Тоглох",
-    free: "Бета судлаачдад үнэгүй хандалт",
+    title1: "МОНГОЛЫН",
+    title2: "УЛАМЖЛАЛТ ТОГЛООМУУД",
+    subtitle:
+      "Монголын өв соёлыг 3D орчинд, интерактив аяллаар мэдрэх дижитал платформ.",
+    cta: "Тоглож эхлэх",
+    free: "Бүх тоглоомууд нь үндэсний өв соёлд суурилсан.",
   },
   whatIs: {
     items: [
-      { title: "Уламжлалт тоглоом тоглоорой", description: "Тал нутгийн зүрхнээс гарсан 3D физик дээр суурилсан сорилтуудыг эзэмшээрэй." },
-      { title: "Өртөөгөөр аялаарай", description: "Түүхэн өртөөний системийг дагаж уудам нутгаар аяллаарай." },
-      { title: "Соёлын шагнал олж ав", description: "Өвөрмөц дижитал олдворуудыг цуглуул, баатрын амжилтуудаа нээгээрэй." },
+      {
+        title: "Уламжлалт тоглоомуудыг орчин үеийн хэлбэрээр",
+        description:
+          "Тал нутагт оюун ухаан, ур чадварыг сорих 3D физикт суурилсан тоглоомууд.",
+      },
+      {
+        title: "Өртөөний аяллын систем",
+        description:
+          "Монголын түүхэн өртөөгөөр явч  монгол орноор виртуал аялал хийнэ.",
+      },
+      {
+        title: "Соёлын үнэт шагналууд",
+        description:
+          "Дижитал олдвор, амжилтын тэмдэг цуглуулж, өөрийн баатарлаг замналыг бүтээ.",
+      },
     ],
   },
   howItWorks: {
-    heading: "Хэрхэн ажилладаг",
+    heading: "Хэрхэн ажилладаг вэ ?",
     steps: [
-      { number: "1", title: "Баатраа сонгоорой", description: "Өөрийн архетип болон тусгай чадваруудаа сонгоорой." },
-      { number: "2", title: "Өртөөний газрыг аялаарай", description: "Интерактив 3D газрын зураг дээр өртөөнүүдийг судлаарай." },
-      { number: "3", title: "Тоглож цуглуул", description: "Мини тоглоомуудыг эзэмш, нэр хүндээ олж ав." },
+      {
+        number: "1",
+        title: "Баатраа сонго",
+        description:
+          "Өөрийн тоглох хэв маягт тохирсон хэв маяг болон тусгай чадварыг сонго.",
+      },
+      {
+        number: "2",
+        title: "Өртөөнүүдээр аял",
+        description:
+          "Интерактив 3D газрын зураг дээр түүхэн өртөөнүүдийг судалж нээ.",
+      },
+      {
+        number: "3",
+        title: "Тоглож, амжилт бүтээ",
+        description:
+          "Жижиг тоглоомуудыг амжилттай давж, оноо болон шагналуудаа цуглуул.",
+      },
     ],
   },
   games: {
-    heading: "Тоглоомууд",
+    heading: "Тоглоомын төрөлүүд",
     items: [
-      { name: "Шагайн тоглоом", desc: "Физик ба магадлалыг заадаг." },
-      { name: "Сурын харваа", desc: "Нарийвчлал, анхаарлыг эзэмшүүлдэг." },
-      { name: "Морин уралдаан", desc: "Тэвчээр, хурдыг сурна." },
-      { name: "Наадмын баяр", desc: "Хамтын нийгэмлэгийн сорилтууд." },
+      {
+        name: "Шагайн наадгай",
+        desc: "Физик, магадлал болон стратегийн сэтгэлгээг хөгжүүлнэ.",
+      },
+      {
+        name: "Сурын харваа",
+        desc: "Нарийвчлал, төвлөрөл, дотоод тэнцвэрийг сорих тоглоом.",
+      },
+      {
+        name: "Морин уралдаан",
+        desc: "Тэвчээр, хурд, шийдвэр гаргалтыг хослуулсан сорилт.",
+      },
+      {
+        name: "Наадмын их баяр",
+        desc: "Хамтын оролцоонд суурилсан нийгмийн сорилтууд.",
+      },
     ],
   },
   features: {
-    items: ["Монгол соёлыг сур", "Логик ба ур чадвараа хөгжүүл", "Уламжлалыг нээн илрүүл"],
+    items: [
+      "Монголын өв соёлыг танин мэдэх",
+      "Логик сэтгэлгээ ба ур чадвараа хөгжүүлэх",
+      "Уламжлалт мэдлэгийг орчин үеийн технологитой хослуулах",
+    ],
   },
   cta: {
-    heading1: "Монголын аялалаа",
-    heading2: "Өнөөдөр эхлүүлээрэй",
+    heading1: "Монголын өв соёлын",
+    heading2: "Аяллаа өнөөдөр эхлүүл",
     button: "Тоглож эхлэх",
-    note: "Бета судлаачдад үнэгүй хандалт",
+    note: "Бета хувилбарт үнэ төлбөргүй нэвтрэх боломжтой.",
   },
   footer: {
-    subtitle: "Монголын Өвийн Платформ",
-    links: ["Түүх", "Нууцлал", "Дэмжлэг"],
-    copy: "© 2024 MTGA Studios",
+    subtitle: "Монголын Өв Соёлын Дижитал Платформ",
+    links: ["Төслийн тухай", "Нууцлалын бодлого", "Тусламж"],
+    copy: "© 2026 MTGA Studios. Бүх эрх хуулиар хамгаалагдсан.",
   },
-  theme: { light: "Цагаан", dark: "Хар", system: "Систем", toggle: "Өнгөний сонголт" },
+  theme: {
+    light: "Цагаан",
+    dark: "Хар",
+    system: "Систем",
+    toggle: "Өнгөний горим",
+  },
 };
 
 const en: Translations = {
   nav: {
     title: "MONGOLIAN TRADITIONAL GAMES",
     play: "PLAY NOW",
-    whatIs: "What Is It?",
+    whatIs: "About",
     howItWorks: "How It Works",
-    games: "Games",
-    features: "Features",
+    games: "Game Library",
+    features: "Key Features",
   },
   hero: {
     title1: "MONGOLIAN",
     title2: "TRADITIONAL GAMES",
-    subtitle: "Embark on a 3D journey through Mongolia's heritage.",
-    cta: "Play",
-    free: "Free access for beta explorers",
+    subtitle:
+      "A digital platform that brings Mongolia’s cultural heritage to life through immersive 3D experiences.",
+    cta: "Start Playing",
+    free: "All games are inspired by authentic Mongolian heritage.",
   },
   whatIs: {
     items: [
-      { title: "Play Traditional Games", description: "Master 3D physics-based challenges from the heart of the steppe." },
-      { title: "Travel through Örtöö stations", description: "Navigate the historic relay system across vast landscapes." },
-      { title: "Earn cultural rewards & badges", description: "Collect unique digital artifacts and unlock hero achievements." },
+      {
+        title: "Traditional Games, Reimagined",
+        description:
+          "Experience physics-based 3D challenges inspired by the wisdom of the steppe.",
+      },
+      {
+        title: "Örtöö Travel System",
+        description:
+          "Journey across vast landscapes following Mongolia’s historic relay network.",
+      },
+      {
+        title: "Cultural Rewards & Achievements",
+        description:
+          "Collect digital artifacts and unlock achievements along your heroic path.",
+      },
     ],
   },
   howItWorks: {
     heading: "How It Works",
     steps: [
-      { number: "1", title: "Choose Hero", description: "Select your archetype and special abilities." },
-      { number: "2", title: "Travel Örtöö Map", description: "Explore relay stations on the interactive 3D map." },
-      { number: "3", title: "Play & Collect", description: "Master mini-games and earn your reputation." },
+      {
+        number: "1",
+        title: "Choose Your Hero",
+        description:
+          "Select an archetype and unique abilities that match your playstyle.",
+      },
+      {
+        number: "2",
+        title: "Explore the Örtöö Map",
+        description:
+          "Discover historic relay stations on an interactive 3D world map.",
+      },
+      {
+        number: "3",
+        title: "Play & Achieve",
+        description:
+          "Master mini-games, earn reputation, and unlock cultural rewards.",
+      },
     ],
   },
   games: {
-    heading: "Games",
+    heading: "Game Categories",
     items: [
-      { name: "Shagai Games", desc: "Teach physics & probability." },
-      { name: "Archery", desc: "Master precision and focus." },
-      { name: "Horse Racing", desc: "Learn endurance and speed." },
-      { name: "Festivals", desc: "Community challenges." },
+      {
+        name: "Shagai",
+        desc: "Develop physics intuition, probability, and strategic thinking.",
+      },
+      {
+        name: "Archery",
+        desc: "Refine precision, focus, and mental balance.",
+      },
+      {
+        name: "Horse Racing",
+        desc: "Test endurance, speed, and decision-making skills.",
+      },
+      {
+        name: "Naadam Festival",
+        desc: "Engage in community-based cultural challenges.",
+      },
     ],
   },
   features: {
-    items: ["Learn Mongolian culture", "Develop logic & skill", "Discover traditions"],
+    items: [
+      "Explore Mongolian cultural heritage",
+      "Enhance logic and practical skills",
+      "Blend tradition with modern technology",
+    ],
   },
   cta: {
-    heading1: "Start Your Mongolian",
-    heading2: "Adventure Today",
-    button: "Start Playing",
-    note: "Free access for beta explorers",
+    heading1: "Begin Your Journey",
+    heading2: "Into Mongolian Heritage Today",
+    button: "Start Your Adventure",
+    note: "Free access available during beta release.",
   },
   footer: {
-    subtitle: "Mongolian Heritage Platform",
-    links: ["History", "Privacy", "Support"],
-    copy: "© 2024 MTGA Studios",
+    subtitle: "Digital Platform for Mongolian Heritage",
+    links: ["About", "Privacy Policy", "Support"],
+    copy: "© 2026 MTGA Studios. All rights reserved.",
   },
-  theme: { light: "Light", dark: "Dark", system: "System", toggle: "Toggle theme" },
+  theme: {
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+    toggle: "Theme Mode",
+  },
 };
 
 const translations = { mn, en };

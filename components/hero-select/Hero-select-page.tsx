@@ -12,31 +12,7 @@ import { StarField } from "./StarField";
 import { HeroToast } from "./HeroToast";
 import { NameEntryScreen } from "./NameEntryScreen";
 import { HeroChooseScreen } from "./HeroChooseScreen";
-
-async function checkEmailExists(email: string): Promise<boolean> {
-  try {
-    const res = await fetch("/api/auth/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return !!data.exists;
-  } catch {
-    return false;
-  }
-}
-
-async function registerEmail(email: string, heroId: HeroId): Promise<void> {
-  try {
-    await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, heroId }),
-    });
-  } catch {}
-}
+import {getUserByEmail, registerEmail} from "@/lib/firebase-auth";
 
 export default function HeroSelectPage() {
   const router = useRouter();
@@ -61,13 +37,16 @@ export default function HeroSelectPage() {
     return () => { document.body.style.overflow = ""; };
   }, [heroSelectOpen]);
 
-  useEffect(() => {
-    const saved = loadPlayer();
-    if (!saved) {
-      setHeroSelectOpen(true);
-      setScreen("email");
-    }
-  }, []);
+  // useEffect(() => {
+  //   const saved = loadPlayer();
+  //   if (saved) {
+  //     setHeroSelectOpen(false);
+  //     router.push("/home");
+  //   } else {
+  //     setHeroSelectOpen(true);
+  //     setScreen("email");
+  //   }
+  // }, [router, setHeroSelectOpen]);
 
   useEffect(() => {
     if (!heroSelectOpen) return;
@@ -86,24 +65,28 @@ export default function HeroSelectPage() {
   const handleEnter = useCallback(async () => {
     const trimmed = email.trim();
     const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
-
     if (!valid) {
-      showToast(lang === "mn" ? "И-мэйл хаягаа зөв оруулна уу" : "Please enter a valid email");
+      showToast(
+        lang === "mn"
+          ? "И-мэйл хаягаа зөв оруулна уу"
+          : "Please enter a valid email"
+      );
       return;
     }
-
     setIsChecking(true);
-    const exists = await checkEmailExists(trimmed);
+    const user = await getUserByEmail(trimmed);
     setIsChecking(false);
-
-    if (exists) {
-      savePlayer({ name: trimmed, heroId: selectedId });
+    if (user) {
+      savePlayer({
+        name: trimmed,
+        heroId: user.profile.heroId,
+      });
       setHeroSelectOpen(false);
       router.push("/home");
-    } else {
-      setScreen("hero");
+      return;
     }
-  }, [email, lang, router, selectedId, setHeroSelectOpen]);
+    setScreen("hero");
+  }, [email, lang, router, setHeroSelectOpen]);
 
   const handlePlay = useCallback(async () => {
     if (!selectedHero.available) return;
@@ -112,13 +95,8 @@ export default function HeroSelectPage() {
     savePlayer({ name: email.trim(), heroId: selectedId });
 
     setHeroSelectOpen(false);
-    router.push("/");
+    router.push("/home");
   }, [email, selectedHero, selectedId, setHeroSelectOpen, router]);
-
-  const handleGuest = () => {
-    const name = lang === "mn" ? "Зочин" : "Guest";
-    showToast(t.toast(name, t.name[selectedId]));
-  };
 
   if (!mounted || !heroSelectOpen) return null;
 
@@ -190,7 +168,6 @@ export default function HeroSelectPage() {
               selectedId={selectedId}
               setSelectedId={setSelectedId}
               onPlay={handlePlay}
-              onGuest={handleGuest}
             />
           )}
         </div>

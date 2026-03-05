@@ -15,18 +15,8 @@ export default function HomePage() {
       <Hero />
       <WhatIsSection />
       <HowItWorks />
+      <Features />
       <GamesSection />
-      {/* <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="font-display text-4xl font-bold mb-12 text-center text-gradient-gold">
-            Interactive 3D Map
-          </h2>
-          <div className="h-[600px] rounded-3xl overflow-hidden glass">
-            <Map3D />
-          </div>
-        </div>
-      </section> */}
-      {/* <Features /> */}
       {/* <CTA /> */}
       <Footer />
     </main>

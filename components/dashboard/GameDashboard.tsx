@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DASH_STRINGS, type DashLang } from "./dashboard-strings";
 import { DashNav } from "./DashNav";
 import { LeftPanel } from "./LeftPanel";
 import { MapArea } from "./MapArea";
-import { RightPanel } from "./RightPanel";
-import { DashFooter } from "./DashFooter";
+import  UrtuuMap  from "./UrtuuMap";
+import { getUserByEmail } from "@/lib/firebase-auth";
+import { loadPlayer } from "@/components/hero-select/hero-data";
 
-const AVATAR = "https://lh3.googleusercontent.com/aida-public/AB6AXuBN1zFT6L8i3Yf5A5uZOyAfGIcwjio6h-in5xePSGBWb4Xa1CfRutgVZ8ZVt05B70PjdPypiONl2l30uDXl3dsmn4FpW91OhpkGzVBCgkoqFZlVqW75bS5uRK2LtrOfyLTXaZbnh6-YHRnWCKeaKGwxBk22tqMDr8mypGRkXQruWQwgyi-kPQK8fNmxje9v7TiosQVfs_tKVr_a7UHlAtAZTn5ijPm-ar9zpoCdZbaN0wBSu0_k_locWH4y2pDBi_R8Bx7Xe9-TfzgY";
+// const AVATAR = "https://lh3.googleusercontent.com/aida-public/...";
 
 interface GameDashboardProps {
   defaultLang?: DashLang;
@@ -17,21 +18,58 @@ interface GameDashboardProps {
 export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [lang, setLang] = useState<DashLang>(defaultLang);
   const [season, setSeason] = useState<"spring" | "summer" | "autumn" | "winter">("summer");
+  const [player, setPlayer] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const t = DASH_STRINGS[lang];
 
-  const player = {
-    name: lang === "mn" ? "Бату Хаан" : "Batu Khan",
-    title: lang === "mn" ? "Эзэнт Элч" : "Imperial Envoy",
-    level: 14,
-    kp: 42850,
-    tokens: { used: 18, max: 20 },
-    xp: 850,
-    xpMax: 1000,
-    accentColor: "#D4AF37",
-    currentStationId: "orkhon",
-    doneStationIds: ["kharakhorum"],
-  };
+  useEffect(() => {
+    async function load() {
+      const saved = loadPlayer();
+      if (!saved) {
+        setLoading(false);
+        return;
+      }
+      const data = await getUserByEmail(saved.name);
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+      setPlayer({
+        name: data.profile.heroName,
+        title: data.profile.heroTitle,
+        image: data.profile.heroImages,
+        level: data.profile.level,
+        kp: data.profile.kp,
+        tokens: { used: 0, max: 20 },
+        xp: data.progress.xp,
+        xpMax: data.progress.xpMax,
+        accentColor: data.profile.accentColor,
+        currentStationId: data.progress.currentStationId,
+        doneStationIds: data.progress.doneStationIds,
+      });
+
+      setLoading(false);
+    }
+
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!player) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        No player found
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -41,49 +79,36 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         setLang={setLang}
         playerName={player.name}
         playerTitle={player.title}
-        avatarUrl={AVATAR}
+        avatarUrl={player.image}
         level={player.level}
         kp={player.kp}
         tokens={player.tokens}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-
         <LeftPanel
           t={t}
           accentColor={player.accentColor}
           xp={player.xp}
           xpMax={player.xpMax}
-          avatarUrl={AVATAR}
+          avatarUrl={player.image}
           bonusMultiplier="x1.5"
-          bonusTitle={lang === "mn" ? "Талын Хурдан" : "Steppe Speedster"}
+          bonusTitle="Steppe Speedster"
           onJournal={() => console.log("Journal")}
           onBeginRelay={() => console.log("Begin relay")}
         />
 
         <MapArea
           t={t}
-          currentStationId={player.currentStationId}
-          doneStationIds={player.doneStationIds}
+          currentStationId={player?.currentStationId ?? ""}
+          doneStationIds={player?.doneStationIds ?? []}
         />
-
-        {/* <RightPanel
-          t={t}
-          stationsTotal={t.stations.length * 3}
-          stationsFound={t.stations.filter((s) => s.available).length}
-          activeSeason={season}
-          onSeasonChange={setSeason}
+        {/* <UrtuuMap
+          // t={t}
+          currentStationId={player?.currentStationId ?? ""}
+          doneStationIds={player?.doneStationIds ?? []}
         /> */}
       </div>
-
-      {/* <DashFooter
-        t={t}
-        avatarUrl={AVATAR}
-        bonusMultiplier="x1.5"
-        bonusTitle={lang === "mn" ? "Талын Хурдан" : "Steppe Speedster"}
-        onJournal={() => console.log("Journal")}
-        onBeginRelay={() => console.log("Begin relay")}
-      /> */}
     </div>
   );
 }

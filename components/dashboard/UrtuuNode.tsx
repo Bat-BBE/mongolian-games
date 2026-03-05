@@ -17,6 +17,7 @@ export interface UrtuuStation {
   /** already completed? */
   isDone?: boolean;
   icon?: string; // material icon name
+  distance?: string;
 }
 
 interface UrtuuNodeProps {
