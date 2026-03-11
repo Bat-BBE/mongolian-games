@@ -2,77 +2,175 @@
 
 import { useApp } from "./AppContext";
 
+/* Floating dust particle */
+function Particle({ style }: { style: React.CSSProperties }) {
+  return (
+    <div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        background: "var(--gold-bright)",
+        ...style,
+      }}
+    />
+  );
+}
+
+const PARTICLES = [
+  { width: 2,   height: 2,   left: "8%",  top: "22%", opacity: 0.18, animationDuration: "4.2s", animationDelay: "0s"   },
+  { width: 3,   height: 3,   left: "20%", top: "60%", opacity: 0.12, animationDuration: "5.5s", animationDelay: "0.6s" },
+  { width: 2,   height: 2,   left: "34%", top: "35%", opacity: 0.15, animationDuration: "3.8s", animationDelay: "1.1s" },
+  { width: 2,   height: 2,   left: "55%", top: "18%", opacity: 0.10, animationDuration: "6.0s", animationDelay: "0.4s" },
+  { width: 3,   height: 3,   left: "72%", top: "50%", opacity: 0.16, animationDuration: "4.8s", animationDelay: "1.8s" },
+  { width: 2,   height: 2,   left: "85%", top: "28%", opacity: 0.13, animationDuration: "5.1s", animationDelay: "0.9s" },
+  { width: 2,   height: 2,   left: "91%", top: "70%", opacity: 0.11, animationDuration: "4.5s", animationDelay: "2.2s" },
+  { width: 3,   height: 3,   left: "46%", top: "78%", opacity: 0.14, animationDuration: "5.8s", animationDelay: "1.4s" },
+];
+
 export default function Hero() {
   const { t, setHeroSelectOpen } = useApp();
 
   return (
-    <section className="h-screen relative flex items-center justify-center bg-cover bg-center hero-bg overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 1 }}>
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full animate-ping"
-            style={{
-              width: `${2 + (i % 3)}px`,
-              height: `${2 + (i % 3)}px`,
-              background: "var(--gold-main)",
-              left: `${10 + i * 12}%`,
-              top: `${20 + (i % 4) * 15}%`,
-              opacity: 0.15 + (i % 3) * 0.08,
-              animationDuration: `${3 + i * 0.7}s`,
-              animationDelay: `${i * 0.4}s`,
-            }}
-          />
-        ))}
-      </div>
+    <section
+      className="hero-section relative flex items-start justify-center overflow-hidden pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-10"
+      style={{ minHeight: "100svh" }}
+    >
+      {/* Parallax image layer */}
+      <div
+        className="parallax-inner absolute inset-[-4%]"
+        style={{
+          backgroundImage:
+            "url('https://libreshot.com/wp-content/uploads/2016/03/mongolian-shaman-place.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center center",
+        }}
+      />
 
-      <div className="text-center z-10 px-6 animate-fade-up">
+      {/* Dark overlay */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(8,6,3,0.30) 0%, rgba(8,6,3,0.60) 55%, rgba(5,4,2,1) 100%)",
+        }}
+      />
+
+      {/* Ambient radial glow — bottom center */}
+      <div
+        className="ambient-glow absolute bottom-0 left-1/2 -translate-x-1/2"
+        style={{
+          width: 700,
+          height: 350,
+          background:
+            "radial-gradient(ellipse, rgba(201,168,76,0.16) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Floating dust particles */}
+      {PARTICLES.map((p, i) => (
+        <Particle
+          key={i}
+          style={{
+            width: p.width,
+            height: p.height,
+            left: p.left,
+            top: p.top,
+            opacity: p.opacity,
+            animation: `float ${p.animationDuration} ease-in-out infinite`,
+            animationDelay: p.animationDelay,
+          }}
+        />
+      ))}
+
+      {/* ── Main content ── */}
+      <div className="relative z-10 text-center px-4 sm:px-6 flex flex-col items-center w-full">
+        {/* Eyebrow */}
         <p
-          className="font-heritage italic text-xs tracking-[0.45em] uppercase mb-6 opacity-70"
-          style={{ color: "var(--gold-light, #F1D592)" }}
+          className="font-heritage italic text-[0.48rem] sm:text-[0.62rem] tracking-[0.2em] sm:tracking-[0.4em] uppercase mb-4 mt-2 opacity-0 animate-fade-in delay-1 whitespace-nowrap"
+          style={{ color: "var(--gold-light, #EDD98A)" }}
         >
-          ⚔ Монгол Домог · Mongol Legend ⚔
+          ⚔&nbsp;&nbsp;Монгол Домог · Mongol Legend&nbsp;&nbsp;⚔
         </p>
 
-        <h1 className="font-display font-black text-white leading-none mb-6"
-          style={{ fontSize: "clamp(48px, 9vw, 90px)", textShadow: "0 0 60px rgba(200,168,75,0.35)" }}
+        {/* Main title */}
+        <h1
+          className="font-display font-black text-white leading-tight md:leading-[0.9] mb-4 opacity-0 animate-fade-up delay-2 max-w-3xl mx-auto"
+          style={{
+            fontSize: "clamp(38px, 8.5vw, 88px)",
+            textShadow: "0 0 80px rgba(180,148,55,0.28)",
+            letterSpacing: "-0.01em",
+          }}
         >
           {t.hero.title1}
-          <br />
-          <span className="text-gradient-gold">{t.hero.title2}</span>
+        </h1>
+        <h1
+          className="font-display font-black leading-tight md:leading-[0.9] mb-8 opacity-0 animate-fade-up delay-3 max-w-3xl mx-auto"
+          style={{
+            fontSize: "clamp(38px, 8.5vw, 88px)",
+            letterSpacing: "-0.01em",
+          }}
+        >
+          <span className="text-gold">{t.hero.title2}</span>
         </h1>
 
-        <div className="flex items-center justify-center gap-4 mb-6 opacity-40">
-          <div className="w-24 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold-main))" }} />
-          <span className="font-display text-sm" style={{ color: "var(--gold-main)" }}>◆</span>
-          <div className="w-24 h-px" style={{ background: "linear-gradient(90deg, var(--gold-main), transparent)" }} />
+        {/* Ornamental rule */}
+        <div className="flex items-center gap-5 mb-8 opacity-0 animate-fade-in delay-4">
+          <div
+            className="w-28 h-px"
+            style={{ background: "linear-gradient(90deg, transparent, var(--gold-bright))" }}
+          />
+          <span className="font-display text-sm" style={{ color: "var(--gold-bright)" }}>❖</span>
+          <div
+            className="w-28 h-px"
+            style={{ background: "linear-gradient(90deg, var(--gold-bright), transparent)" }}
+          />
         </div>
 
-        <p className="text-slate-300 max-w-lg mx-auto mb-10 font-heritage text-base leading-relaxed">
+        {/* Subtitle */}
+        <p
+          className="font-heritage text-slate-300/85 max-w-xl mx-auto mb-8 leading-relaxed text-base sm:text-lg opacity-0 animate-fade-up delay-4"
+        >
           {t.hero.subtitle}
         </p>
 
+        {/* CTA button */}
         <button
           onClick={() => setHeroSelectOpen(true)}
-          className="btn-gold font-display font-black uppercase tracking-[0.25em] px-14 py-5 rounded-full text-base relative overflow-hidden group"
+          className="btn-gold px-14 py-4 rounded-full text-sm opacity-0 animate-scale-in delay-5 relative overflow-hidden"
         >
           <span className="relative z-10 flex items-center gap-3">
-            <span>⚔</span>
+            <span className="text-base leading-none">⚔</span>
             <span>{t.hero.cta}</span>
-            <span>⚔</span>
+            <span className="text-base leading-none">⚔</span>
           </span>
         </button>
 
+        {/* Free note */}
         <p
-          className="mt-6 text-[10px] uppercase tracking-[0.4em] opacity-40 font-display"
-          style={{ color: "var(--gold-light, #F1D592)" }}
+          className="mt-5 font-display text-[0.6rem] uppercase tracking-[0.45em] opacity-30 opacity-0 animate-fade-in delay-7"
+          style={{ color: "var(--gold-pale, #F5EBCA)" }}
         >
           {t.hero.free}
         </p>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none"
-        style={{ background: "linear-gradient(to bottom, transparent, var(--bg-abyss, #050608))" }}
+      {/* Scroll cue */}
+      <div
+        className="hidden sm:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-35 animate-float pointer-events-none"
+      >
+        <div
+          className="w-px h-12"
+          style={{ background: "linear-gradient(180deg, transparent, var(--gold-bright))" }}
+        />
+        <div
+          className="w-1.5 h-1.5 rounded-full"
+          style={{ background: "var(--gold-bright)" }}
+        />
+      </div>
+
+      {/* Bottom fade-to-background */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none"
+        style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }}
       />
     </section>
   );

@@ -23,12 +23,15 @@ export function ModeToggle() {
           size="icon"
           className="border border-primary dark:border-primary"
         >
-          <Sun className="h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          <Sun className="h-[1.15rem] w-[1.15rem] text-[var(--gold-bright)] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+          <Moon className="absolute h-[1.15rem] w-[1.15rem] text-[oklch(0.86_0.02_250)] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
           <span className="sr-only">{t.theme.toggle}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        className="min-w-[9rem] border border-[color-mix(in_oklch,var(--primary)_30%,var(--border))] bg-[color-mix(in_oklch,var(--background)_96%,transparent)]/95 backdrop-blur-lg"
+      >
         <DropdownMenuItem onClick={() => setTheme("light")}>
           {t.theme.light}
         </DropdownMenuItem>

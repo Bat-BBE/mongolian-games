@@ -21,6 +21,8 @@ interface Translations {
     free: string;
   };
   whatIs: {
+    heading: string;
+    intro: string;
     items: { title: string; description: string }[];
   };
   howItWorks: {
@@ -55,107 +57,110 @@ interface Translations {
 
 const mn: Translations = {
   nav: {
-    title: "МОНГОЛ УЛАМЖЛАЛТ ТОГЛООМУУД",
+    title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМУУД",
     play: "ОДОО ТОГЛОХ",
-    whatIs: "Төслийн тухай",
-    howItWorks: "Хэрхэн ажиллах вэ",
-    games: "Тоглоомын сан",
-    features: "Давуу талууд",
+    whatIs: "Танилцуулга",
+    howItWorks: "Ажиллах заавар",
+    games: "Тоглоомууд",
+    features: "Онцлогууд",
   },
   hero: {
     title1: "МОНГОЛЫН",
     title2: "УЛАМЖЛАЛТ ТОГЛООМУУД",
     subtitle:
-      "Монголын өв соёлыг 3D орчинд, интерактив аяллаар мэдрэх дижитал платформ.",
-    cta: "Тоглож эхлэх",
-    free: "Бүх тоглоомууд нь үндэсний өв соёлд суурилсан.",
+      "Монголын уламжлалт тоглоом, зан үйл, домгийг 3D орчинд амилуулсан интерактив дижитал талбар.",
+    cta: "Тоглоомоо эхлүүлэх",
+    free: "Бүх тоглоом нь монголын жинхэнэ уламжлал, өв соёлоос сэдэвлэсэн.",
   },
   whatIs: {
+    heading: "ТӨСЛИЙН ТАНИЛЦУУЛГА",
+    intro:
+      "Монголын уламжлалт тоглоом, өв соёл, домгийг орчин үеийн тоглоомын хэлээр нэг дор багтаасан дижитал ертөнц.",
     items: [
       {
-        title: "Уламжлалт тоглоомуудыг орчин үеийн хэлбэрээр",
+        title: "Уламжлалт тоглоомуудыг орчин үеийн хэлээр",
         description:
-          "Тал нутагт оюун ухаан, ур чадварыг сорих 3D физикт суурилсан тоглоомууд.",
+          "Тал нутгийн ахуй, билэг ухааныг шингээсэн, физикийн хөдөлгөөн дээр суурилсан 3D тоглоомууд.",
       },
       {
-        title: "Өртөөний аяллын систем",
+        title: "Өртөө дамжин аялах систем",
         description:
-          "Монголын түүхэн өртөөгөөр явч  монгол орноор виртуал аялал хийнэ.",
+          "Монголын эртний өртөө, зам мөрийг даган Монгол орныг виртуал орчинд тойрон аялна.",
       },
       {
-        title: "Соёлын үнэт шагналууд",
+        title: "Соёлын онцгой шагналууд",
         description:
-          "Дижитал олдвор, амжилтын тэмдэг цуглуулж, өөрийн баатарлаг замналыг бүтээ.",
+          "Дижитал олдвор, медаль, тэмдэг цуглуулж, өөрийн баатарлаг замналыг бүтээ.",
       },
     ],
   },
   howItWorks: {
-    heading: "Хэрхэн ажилладаг вэ ?",
+  heading: "Тоглоом хэрхэн өрнөдөг вэ?",
     steps: [
       {
-        number: "1",
-        title: "Баатраа сонго",
+        number: "01",
+        title: "Өөрийн баатрыг сонго",
         description:
-          "Өөрийн тоглох хэв маягт тохирсон хэв маяг болон тусгай чадварыг сонго.",
+          "Тоглох хэв маягтаа тохирсон дүр, түүний зан чанар, тусгай чадваруудыг сонго.",
       },
       {
-        number: "2",
-        title: "Өртөөнүүдээр аял",
+        number: "02",
+        title: "Өртөөнүүдээр аялан нээгд",
         description:
-          "Интерактив 3D газрын зураг дээр түүхэн өртөөнүүдийг судалж нээ.",
+          "Интерактив 3D газрын зураг дээрх түүхэн өртөөнүүдийг судалж, нэг бүрчлэн нээгээрэй.",
       },
       {
-        number: "3",
-        title: "Тоглож, амжилт бүтээ",
+        number: "03",
+        title: "Тоглож, домог бүтээ",
         description:
-          "Жижиг тоглоомуудыг амжилттай давж, оноо болон шагналуудаа цуглуул.",
+          "Дэд тоглоомуудыг амжилттай давж, оноо, нэр хүнд, шагналаа цуглуул.",
       },
     ],
   },
   games: {
-    heading: "Тоглоомын төрөлүүд",
+    heading: "Тоглоомууд",
     items: [
       {
         name: "Шагайн наадгай",
-        desc: "Физик, магадлал болон стратегийн сэтгэлгээг хөгжүүлнэ.",
+        desc: "Физик хөдөлгөөн, магадлалын мэдрэмж, стратегийн сэтгэлгээг зэрэг хөгжүүлнэ.",
       },
       {
         name: "Сурын харваа",
-        desc: "Нарийвчлал, төвлөрөл, дотоод тэнцвэрийг сорих тоглоом.",
+        desc: "Нарийвчлал, төвлөрөл, дотоод тэнцвэрээ сорих харвааны сорилт.",
       },
       {
         name: "Морин уралдаан",
-        desc: "Тэвчээр, хурд, шийдвэр гаргалтыг хослуулсан сорилт.",
+        desc: "Тэвчээр, хурд, замын тактик, шийдвэр гаргалтыг хамтад нь шалгана.",
       },
       {
         name: "Наадмын их баяр",
-        desc: "Хамтын оролцоонд суурилсан нийгмийн сорилтууд.",
+        desc: "Наадмын уур амьсгалд хамтдаа оролцож, нийгмийн харилцаанд суурилсан сорилтуудыг давна.",
       },
     ],
   },
   features: {
     items: [
-      "Монголын өв соёлыг танин мэдэх",
-      "Логик сэтгэлгээ ба ур чадвараа хөгжүүлэх",
-      "Уламжлалт мэдлэгийг орчин үеийн технологитой хослуулах",
+      "Монголын уламжлал, домог, зан үйлийг тоглоомын хэлээр танин мэдэх",
+      "Логик сэтгэлгээ, анхаарал төвлөрөл, гар‑нүдний зохицол зэрэг ур чадвараа хөгжүүлэх",
+      "Уламжлалт мэдлэг, үлгэр домгийг орчин үеийн технологитой уялдуулан хадгалж, түгээх",
     ],
   },
   cta: {
-    heading1: "Монголын өв соёлын",
-    heading2: "Аяллаа өнөөдөр эхлүүл",
-    button: "Тоглож эхлэх",
-    note: "Бета хувилбарт үнэ төлбөргүй нэвтрэх боломжтой.",
+    heading1: "Монголын өв соёлын ертөнцөд",
+    heading2: "Өнөөдөр аяллаа эхлүүлээрэй",
+    button: "Аяллаа эхлүүлэх",
+    note: "Бета хувилбарын үеэр бүх тоглоомыг үнэ төлбөргүй турших боломжтой.",
   },
   footer: {
-    subtitle: "Монголын Өв Соёлын Дижитал Платформ",
-    links: ["Төслийн тухай", "Нууцлалын бодлого", "Тусламж"],
-    copy: "© 2026 MTGA Studios. Бүх эрх хуулиар хамгаалагдсан.",
+    subtitle: "Монголын өв соёлыг хадгалж, түгээх дижитал платформ",
+    links: ["Төслийн тухай", "Нууцлалын бодлого", "Тусламж, холбоо барих"],
+    copy: "© 2026 MTGA Studios. Зохиогчийн бүх эрх хуулиар хамгаалагдсан.",
   },
   theme: {
-    light: "Цагаан",
-    dark: "Хар",
-    system: "Систем",
-    toggle: "Өнгөний горим",
+    light: "Гэрэл",
+    dark: "Харанхуй",
+    system: "Системийн тохиргоо",
+    toggle: "Горим солих",
   },
 };
 
@@ -163,7 +168,7 @@ const en: Translations = {
   nav: {
     title: "MONGOLIAN TRADITIONAL GAMES",
     play: "PLAY NOW",
-    whatIs: "About",
+    whatIs: "Overview",
     howItWorks: "How It Works",
     games: "Game Library",
     features: "Key Features",
@@ -172,11 +177,14 @@ const en: Translations = {
     title1: "MONGOLIAN",
     title2: "TRADITIONAL GAMES",
     subtitle:
-      "A digital platform that brings Mongolia’s cultural heritage to life through immersive 3D experiences.",
+      "A digital platform that brings Mongolia's cultural heritage to life through immersive 3D experiences.",
     cta: "Start Playing",
     free: "All games are inspired by authentic Mongolian heritage.",
   },
   whatIs: {
+    heading: "PROJECT OVERVIEW",
+    intro:
+      "A living world of traditional Mongolian games and legends, blended into one immersive digital platform.",
     items: [
       {
         title: "Traditional Games, Reimagined",
@@ -186,7 +194,7 @@ const en: Translations = {
       {
         title: "Örtöö Travel System",
         description:
-          "Journey across vast landscapes following Mongolia’s historic relay network.",
+          "Journey across vast landscapes following Mongolia's historic relay network.",
       },
       {
         title: "Cultural Rewards & Achievements",
@@ -199,19 +207,19 @@ const en: Translations = {
     heading: "How It Works",
     steps: [
       {
-        number: "1",
+        number: "01",
         title: "Choose Your Hero",
         description:
           "Select an archetype and unique abilities that match your playstyle.",
       },
       {
-        number: "2",
+        number: "02",
         title: "Explore the Örtöö Map",
         description:
           "Discover historic relay stations on an interactive 3D world map.",
       },
       {
-        number: "3",
+        number: "03",
         title: "Play & Achieve",
         description:
           "Master mini-games, earn reputation, and unlock cultural rewards.",
@@ -288,7 +296,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [heroSelectOpen, setHeroSelectOpen] = useState(false);
 
   return (
-    <AppContext.Provider value={{ language, setLanguage, t: translations[language], heroSelectOpen, setHeroSelectOpen }}>
+    <AppContext.Provider
+      value={{
+        language,
+        setLanguage,
+        t: translations[language],
+        heroSelectOpen,
+        setHeroSelectOpen,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );
