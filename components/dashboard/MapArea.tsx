@@ -25,12 +25,13 @@ export function MapArea({ t, currentStationId, doneStationIds }: MapAreaProps) {
   );
   const stations: UrtuuStation[] = Object.entries(STATION_CONFIGS).map(([id, cfg]) => {
     const fromStrings = stationMap.get(id);
+    const firstGame = fromStrings?.games?.[0];
     return {
       id,
       name:      fromStrings?.name     ?? id,
-      gameName:  fromStrings?.gameName ?? "",
-      gameDesc:  fromStrings?.gameDesc ?? "",
-      reward:    fromStrings?.reward   ?? "",
+      gameName:  firstGame?.name ?? "",
+      gameDesc:  firstGame?.desc ?? "",
+      reward:    firstGame?.reward   ?? "",
       available: fromStrings?.available ?? false,
       pos:       { left: cfg.left, top: cfg.top },
       icon:      cfg.icon,

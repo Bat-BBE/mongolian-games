@@ -91,6 +91,7 @@ export function useThreeScene({
     builder.buildRocks();
     builder.buildGerCamps();
     builder.buildStationGers(stations);
+    builder.buildRoads(stations);
     builder.buildHorses();
     builder.buildCamels();
     builder.buildClouds();

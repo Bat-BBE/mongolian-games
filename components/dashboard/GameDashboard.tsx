@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useApp } from "../AppContext";
 import { DASH_STRINGS, type DashLang } from "./dashboard-strings";
 import { DashNav } from "./DashNav";
 import { LeftPanel } from "./LeftPanel";
@@ -14,7 +15,9 @@ interface GameDashboardProps {
 }
 
 export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
-  const [lang, setLang] = useState<DashLang>(defaultLang);
+  const { language, setLanguage } = useApp();
+  const lang = language as DashLang;
+  const setLang = setLanguage as (l: DashLang) => void;
   const [season, setSeason] = useState<"spring" | "summer" | "autumn" | "winter">("summer");
   const [player, setPlayer] = useState<any>(null);
   const [loading, setLoading] = useState(true);

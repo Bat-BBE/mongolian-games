@@ -145,26 +145,26 @@ const mn: Translations = {
         name: "Морин уралдаан",
         desc: "Монголын наадмын гол спортын нэг. Хурд, тэсвэр, замын мэдрэмж, шийдвэр гаргах чадварыг сорьдог.",
       },
-      // {
-      //   name: "Монгол шатар",
-      //   desc: "Стратеги, төлөвлөлт, логик сэтгэлгээг хөгжүүлдэг уламжлалт оюуны тоглоом.",
-      // },
+      {
+        name: "Монгол шатар",
+        desc: "Стратеги, төлөвлөлт, логик сэтгэлгээг хөгжүүлдэг уламжлалт оюуны тоглоом.",
+      },
       {
         name: "Дөрвөн бэрх",
         desc: "Шагай ашиглан тоглодог аз болон авхаалжийг хослуулсан уламжлалт наадгай.",
       },
-      // {
-      //   name: "Тэвэг өшиглөх",
-      //   desc: "Хүүхдүүдийн дунд түгээмэл тоглодог тоглоом бөгөөд гар-нүдний зохицол, хурд, анхаарал төвлөрлийг хөгжүүлдэг.",
-      // },
-      // {
-      //   name: "Алтан шагай",
-      //   desc: "Шагай ашиглан оноо цуглуулах сонирхолтой тоглоом. Аз болон ур чадвар хоёрыг зэрэг сорьдог.",
-      // },
-      // {
-      //   name: "Наадмын их баяр",
-      //   desc: "Монголын үндэсний баяр наадмын уур амьсгалд суурилсан олон төрлийн соёлын мини тоглоомууд.",
-      // },
+      {
+        name: "Тэвэг өшиглөх",
+        desc: "Хүүхдүүдийн дунд түгээмэл тоглодог тоглоом бөгөөд гар-нүдний зохицол, хурд, анхаарал төвлөрлийг хөгжүүлдэг.",
+      },
+      {
+        name: "Алтан шагай",
+        desc: "Шагай ашиглан оноо цуглуулах сонирхолтой тоглоом. Аз болон ур чадвар хоёрыг зэрэг сорьдог.",
+      },
+      {
+        name: "Наадмын их баяр",
+        desc: "Монголын үндэсний баяр наадмын уур амьсгалд суурилсан олон төрлийн соёлын мини тоглоомууд.",
+      },
     ],
   },
 
@@ -291,26 +291,26 @@ const en: Translations = {
         name: "Horse Racing",
         desc: "A symbolic sport of Mongolian culture. It tests endurance, speed, and decision-making skills.",
       },
-      // {
-      //   name: "Mongolian Chess",
-      //   desc: "A traditional strategy board game that develops logical thinking, planning, and tactical skills.",
-      // },
+      {
+        name: "Mongolian Chess",
+        desc: "A traditional strategy board game that develops logical thinking, planning, and tactical skills.",
+      },
       {
         name: "Four Bones Game",
         desc: "A traditional ankle bone game that combines both luck and skill, played widely in Mongolian culture.",
       },
-      // {
-      //   name: "Tevég (Kick Shuttle)",
-      //   desc: "A traditional game where players keep a small object in the air using their feet. It improves coordination, balance, and agility.",
-      // },
-      // {
-      //   name: "Golden Shagai",
-      //   desc: "A competitive ankle bone game where players collect points by accurately striking the target bones.",
-      // },
-      // {
-      //   name: "Naadam Festival Games",
-      //   desc: "Mini-games inspired by Mongolia's famous Naadam festival, celebrating traditional sports and cultural activities.",
-      // },
+      {
+        name: "Tevég (Kick Shuttle)",
+        desc: "A traditional game where players keep a small object in the air using their feet. It improves coordination, balance, and agility.",
+      },
+      {
+        name: "Golden Shagai",
+        desc: "A competitive ankle bone game where players collect points by accurately striking the target bones.",
+      },
+      {
+        name: "Naadam Festival Games",
+        desc: "Mini-games inspired by Mongolia's famous Naadam festival, celebrating traditional sports and cultural activities.",
+      },
     ],
   },
 

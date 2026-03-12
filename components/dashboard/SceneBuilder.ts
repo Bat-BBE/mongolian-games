@@ -427,20 +427,325 @@ export class SceneBuilder {
     });
   }
 
-  // Станцын гэрийн хороолол
+  // ── Landmark dispatcher ───────────────────────────────────
   buildStationGers(stations: UrtuuStation[]): void {
+    const MONASTERY_IDS = ["zuunmod","kharakhorum","erdenet","mandalgovi","sainshand"];
+    const MOUNTAIN_IDS  = ["uliastai","altai","ondorhaan","moron"];
+    const LAKE_IDS      = ["khatgal","ulaangom","bayankhongor"];
+    const SAND_IDS      = ["dalanzadgad"];
+    const PALACE_IDS    = ["ulaanbaatar"];
+    const ROCK_IDS      = ["nalaikh","zamiin_uud"];
+    const NATPARK_IDS   = ["darkhan","terelj"];
+
     stations.forEach(s => {
       const cfg = STATION_CONFIGS[s.id]; if (!cfg) return;
-      this.makeGer(cfg.wx, cfg.wz, rand(0, Math.PI*2), 1.6, true, s.id);
-      for (let i = 0; i < 3; i++) {
-        const ox = rand(-9, 9), oz = rand(-9, 9);
-        if (Math.abs(ox) < 4 && Math.abs(oz) < 4) continue;
-        this.makeGer(cfg.wx+ox, cfg.wz+oz, rand(0, Math.PI*2), rand(0.9,1.1));
+      const x = cfg.wx, z = cfg.wz;
+      const cur  = s.id === this.currentStationId;
+      const done = this.doneStationIds.includes(s.id);
+
+      if      (PALACE_IDS.includes(s.id))   this.makePalace(x, z, s.id, cur, done);
+      else if (MONASTERY_IDS.includes(s.id)) this.makeMonastery(x, z, s.id, cur, done);
+      else if (MOUNTAIN_IDS.includes(s.id))  this.makeMountainShrine(x, z, s.id, cur, done);
+      else if (LAKE_IDS.includes(s.id))      this.makeLakeStation(x, z, s.id, cur, done);
+      else if (SAND_IDS.includes(s.id))      this.makeSandDunes(x, z, s.id, cur, done);
+      else if (ROCK_IDS.includes(s.id))      this.makeRockSite(x, z, s.id, cur, done);
+      else if (NATPARK_IDS.includes(s.id))   this.makeNatPark(x, z, s.id, cur, done);
+      else {
+        this.makeGer(x, z, rand(0, Math.PI*2), 1.6, true, s.id);
+        for (let i = 0; i < 3; i++) {
+          const ox = rand(-9, 9), oz = rand(-9, 9);
+          if (Math.abs(ox) < 4 && Math.abs(oz) < 4) continue;
+          this.makeGer(x+ox, z+oz, rand(0, Math.PI*2), rand(0.9,1.1));
+        }
+        this.makeFence(x, z, 18, 15, rand(0, Math.PI*0.3));
+        this.makeOvoo(x+5, z+4);
       }
-      this.makeFence(cfg.wx, cfg.wz, 16, 14, rand(0, Math.PI*0.3));
-      this.makeOvoo(cfg.wx+4, cfg.wz+3.5);
     });
   }
+
+  // ── Ордон (Богд Хан Ордон) ───────────────────────────────
+  private makePalace(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const g = new THREE.Group();
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+    const sc = 1.4;
+    const wallMat = mkMat(0xc8a060, 0.85);
+    const roofMat = mkMat(0x8b2020, 0.75);
+
+    // 4 талын хэрэм
+    ([
+      [28*sc, 0.8*sc, 3.0*sc,  0,      -12*sc],
+      [28*sc, 0.8*sc, 3.0*sc,  0,      +12*sc],
+      [0.8*sc,24*sc,  3.0*sc, -14*sc,   0    ],
+      [0.8*sc,24*sc,  3.0*sc, +14*sc,   0    ],
+    ] as [number,number,number,number,number][]).forEach(([w,d,h,px,pz]) => {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      wall.position.set(px, h/2, pz); wall.castShadow = true; g.add(wall);
+      const wr = new THREE.Mesh(new THREE.BoxGeometry(w+0.4, 0.4, d+1.2), roofMat);
+      wr.position.set(px, h+0.2, pz); g.add(wr);
+    });
+
+    // 3 давхар гол барилга
+    ([
+      [5.2*sc, 2.5*sc, 4.8*sc],
+      [3.8*sc, 2.0*sc, 3.4*sc],
+      [2.6*sc, 1.5*sc, 2.2*sc],
+    ] as [number,number,number][]).forEach(([bw,bh,bd], i) => {
+      const base = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), mkMat(0xeee0c0, 0.7));
+      base.position.set(0, bh/2 + i*2.4*sc, 0); base.castShadow = true; g.add(base);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(bw*0.68*sc, bh*0.8*sc, 4), roofMat);
+      roof.position.set(0, bh + i*2.4*sc + bh*0.4*sc, 0); roof.rotation.y = Math.PI/4; roof.castShadow = true; g.add(roof);
+      const trim = new THREE.Mesh(new THREE.BoxGeometry(bw+0.3, 0.25, bd+0.3), mkMat(0xd4a020, 0.5, 0.3));
+      trim.position.set(0, bh + i*2.4*sc, 0); g.add(trim);
+    });
+
+    // Алтан орой
+    const spire = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.25, 4*sc, 6), mkMat(0xd4a020, 0.3, 0.6));
+    spire.position.set(0, 3*2.4*sc + 2*sc, 0); g.add(spire);
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.45*sc, 12, 10), mkMat(0xffd700, 0.2, 0.8));
+    ball.position.set(0, 3*2.4*sc + 6*sc, 0); g.add(ball);
+
+    // Хаалга
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(3.5*sc, 4.0*sc, 0.5*sc), mkMat(0x5a3010, 0.8));
+    gate.position.set(0, 2.0*sc, -12*sc-0.4); g.add(gate);
+    const gateTop = new THREE.Mesh(new THREE.ConeGeometry(2.2*sc, 1.8*sc, 4), roofMat);
+    gateTop.rotation.y = Math.PI/4; gateTop.position.set(0, 4.5*sc, -12*sc-0.4); g.add(gateTop);
+
+    this._stationMarker(g, id, 0, 3*2.4*sc + 9*sc, 0, sc, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x, hy + 3*2.4*sc + 13*sc, z));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Хийд (Monastery) ─────────────────────────────────────
+  private makeMonastery(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const g = new THREE.Group();
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+    const sc = 1.2;
+    const wallMat = mkMat(0xf5e8d0, 0.72);
+    const roofMat = mkMat(0xc8781a, 0.65);
+    const goldMat = mkMat(0xd4a020, 0.35, 0.5);
+
+    // Хэрэм
+    ([
+      [20*sc, 0.6, 2.5,  0,      -9*sc],
+      [20*sc, 0.6, 2.5,  0,      +9*sc],
+      [0.6, 18*sc,  2.5, -10*sc,  0   ],
+      [0.6, 18*sc,  2.5, +10*sc,  0   ],
+    ] as [number,number,number,number,number][]).forEach(([w,d,h,px,pz]) => {
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      wall.position.set(px, h/2, pz); wall.castShadow = true; g.add(wall);
+    });
+
+    // 3 давхар дуган
+    ([
+      [6*sc, 1.8*sc, 5*sc],
+      [4.5*sc, 1.6*sc, 3.8*sc],
+      [3.0*sc, 1.4*sc, 2.6*sc],
+    ] as [number,number,number][]).forEach(([w,h,d], i) => {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      body.position.set(0, h/2 + i*1.8*sc, 0); body.castShadow = true; g.add(body);
+      const rx = w+1.2, rz = d+1.2;
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(rx, 0.5, rz), roofMat);
+      roof.position.set(0, h + i*1.8*sc, 0); g.add(roof);
+      const rCone = new THREE.Mesh(new THREE.ConeGeometry(rx*0.62, h*1.1, 4), roofMat);
+      rCone.position.set(0, h*0.5 + i*1.8*sc + h*0.6, 0); rCone.rotation.y = Math.PI/4; g.add(rCone);
+    });
+
+    // Алтан сувд
+    const stupa = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.35, 2.5*sc, 8), goldMat);
+    stupa.position.set(0, 3*1.8*sc + 2.0*sc, 0); g.add(stupa);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.5*sc, 10, 8), goldMat);
+    orb.position.set(0, 3*1.8*sc + 3.8*sc, 0); g.add(orb);
+
+    // Хоёр туг
+    [-4*sc, 4*sc].forEach(px => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 7*sc, 6), mkMat(0x4a300c, 0.9));
+      pole.position.set(px, 3.5*sc, -9*sc+1); g.add(pole);
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.9),
+        new THREE.MeshStandardMaterial({color: px < 0 ? 0xcc2222 : 0x2222cc, side: THREE.DoubleSide, roughness: 0.9}));
+      flag.position.set(px+1.0, 6.6*sc, -9*sc+1); flag.rotation.y = 0.15; g.add(flag);
+    });
+
+    // Хоёр жижиг суварга
+    [-6*sc, 6*sc].forEach(ox => {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, 1.2, 12), wallMat);
+      base.position.set(ox, 0.6, 6*sc); g.add(base);
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(1.0, 12, 8, 0, Math.PI*2, 0, Math.PI*0.6), wallMat);
+      bell.position.set(ox, 1.8, 6*sc); g.add(bell);
+      const spi = new THREE.Mesh(new THREE.ConeGeometry(0.15, 1.8, 8), goldMat);
+      spi.position.set(ox, 3.2, 6*sc); g.add(spi);
+    });
+
+    this._stationMarker(g, id, 0, 3*1.8*sc + 6*sc, 0, sc, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x, hy + 3*1.8*sc + 9*sc, z));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Уулын ариун газар ────────────────────────────────────
+  private makeMountainShrine(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const g = new THREE.Group();
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+
+    ([
+      [8, 10, 7, 0x9a9080],
+      [6,  8, 5, 0xa8a090],
+      [4,  6, 4, 0xb8b0a0],
+      [2.5,5, 3, 0xccc8c0],
+      [1.5,4, 2, 0xddd8d0],
+    ] as [number,number,number,number][]).forEach(([r,h,,color], i) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, randInt(5,7)), mkMat(color, 0.95));
+      m.position.y = i * 4.0 + h/2; m.rotation.y = rand(0, Math.PI); m.castShadow = true; g.add(m);
+    });
+    const snow = new THREE.Mesh(new THREE.ConeGeometry(2.0, 3.5, 8), mkMat(0xeef4ff, 0.55));
+    snow.position.y = 4*4.0 + 4 + 3.5/2; g.add(snow);
+
+    // Жижиг сүм
+    const shrine = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.2, 2.0), mkMat(0xf0e4cc, 0.72));
+    shrine.position.set(5, 1.1, 3); g.add(shrine);
+    const sRoof = new THREE.Mesh(new THREE.ConeGeometry(1.8, 1.5, 4), mkMat(0x8b2020, 0.7));
+    sRoof.rotation.y = Math.PI/4; sRoof.position.set(5, 3.1, 3); g.add(sRoof);
+
+    this.makeOvoo(x+2, z+2);
+    this._stationMarker(g, id, 0, 4*4.0 + 12, 0, 1.2, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x, hy + 4*4.0 + 16, z));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Нуур ─────────────────────────────────────────────────
+  private makeLakeStation(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+    const g = new THREE.Group();
+
+    const lakeMat = new THREE.MeshStandardMaterial({
+      color: 0x1a5fa8, roughness: 0.03, metalness: 0.65, transparent: true, opacity: 0.88,
+    });
+    const lakeShape = new THREE.Shape();
+    lakeShape.ellipse(0, 0, 10, 6, 0, Math.PI*2, false, 0.3);
+    const lakeMesh = new THREE.Mesh(new THREE.ShapeGeometry(lakeShape, 24), lakeMat);
+    lakeMesh.rotation.x = -Math.PI/2; lakeMesh.position.y = 0.2; g.add(lakeMesh);
+
+    for (let i = 0; i < 18; i++) {
+      const ang = (i/18)*Math.PI*2;
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rand(0.3,0.9),0), mkMat(0x8a8878,0.95));
+      rock.position.set(9.5*Math.cos(ang)+rand(-1.5,1.5), rand(0,0.4), 5.8*Math.sin(ang)+rand(-1.5,1.5));
+      rock.rotation.set(rand(0,Math.PI),rand(0,Math.PI),rand(0,Math.PI)); g.add(rock);
+    }
+    for (let i = 0; i < 12; i++) {
+      const ang = (i/12)*Math.PI*2;
+      this.makeTree(x + 12*Math.cos(ang) + rand(-2,2), z + 7.5*Math.sin(ang) + rand(-2,2), rand(0.6,1.0));
+    }
+
+    this.makeGer(x+3, z+8, rand(0, Math.PI*2), 1.4, true, id);
+    this.makeFence(x+3, z+8, 12, 10, 0.2);
+    this._stationMarker(g, id, 3, 12, 8, 1.0, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x+3, hy+15, z+8));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Элсэн манхан ─────────────────────────────────────────
+  private makeSandDunes(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+    const g = new THREE.Group();
+    const sandMat = mkMat(0xd4b060, 0.96);
+
+    ([
+      [0,0,9,6,6],[-7,-2,7,5,4.5],[7,3,8,6,5],[-3,5,6,4,3.5],[4,-4,5,4,3]
+    ] as [number,number,number,number,number][]).forEach(([dx,dz,rx,rz,h]) => {
+      const sphere = new THREE.Mesh(new THREE.SphereGeometry(1,12,8), sandMat);
+      sphere.scale.set(rx, h*0.35, rz); sphere.position.set(dx, h*0.35, dz); sphere.castShadow=true; g.add(sphere);
+      const top = new THREE.Mesh(new THREE.ConeGeometry(rx*0.5, h*0.7, 10), sandMat);
+      top.position.set(dx, h*0.7, dz); top.rotation.y = rand(0,Math.PI); g.add(top);
+    });
+
+    // Динозаврын яс
+    const boneMat = mkMat(0xf0e0b8, 0.7);
+    ([[0,2,2.5],[1.5,2,1],[3,2,1.5]] as [number,number,number][]).forEach(([bx,by,bz]) => {
+      const bone = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.2,2.5,6), boneMat);
+      bone.position.set(bx,by,bz); bone.rotation.z = rand(0.3,0.8); g.add(bone);
+    });
+
+    this.makeCamel(x+4, z-3, rand(0, Math.PI*2));
+    this.makeGer(x-5, z+5, rand(0, Math.PI*2), 1.2, true, id);
+    this._stationMarker(g, id, -5, 12, 5, 1.0, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x-5, hy+14, z+5));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Хаданд чулуун газар ──────────────────────────────────
+  private makeRockSite(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+    const g = new THREE.Group();
+
+    ([[0,3.5],[3,2.5],[-2,3],[-3,2],[2,2.5],[0.5,1.8]] as [number,number][]).forEach(([rx,rs], i) => {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rs,0), mkMat(i%2===0?0x787060:0x8a8070, 0.95));
+      rock.position.set(rx, rs*0.4, i%2===0?0:2);
+      rock.rotation.set(rand(0,Math.PI),rand(0,Math.PI),rand(0,Math.PI)); rock.castShadow=true; g.add(rock);
+    });
+    for (let i = 0; i < 20; i++) {
+      const sm = new THREE.Mesh(new THREE.DodecahedronGeometry(rand(0.2,0.8),0), mkMat(0x908878,0.96));
+      sm.position.set(rand(-8,8), rand(0,0.3), rand(-8,8));
+      sm.rotation.set(rand(0,Math.PI),rand(0,Math.PI),rand(0,Math.PI)); g.add(sm);
+    }
+
+    this.makeGer(x+5, z-4, rand(0, Math.PI*2), 1.3, true, id);
+    this.makeFence(x+5, z-4, 12, 10, 0.1);
+    this.makeOvoo(x-5, z+3);
+    this._stationMarker(g, id, 5, 11, -4, 1.0, mc, cur);
+    this.labelAnchors.set(id, new THREE.Vector3(x+5, hy+14, z-4));
+    g.position.set(x, hy, z); this.scene.add(g);
+  }
+
+  // ── Байгалийн цогцолбор ──────────────────────────────────
+  private makeNatPark(x: number, z: number, id: string, cur: boolean, done: boolean): void {
+    const hy = terrainHeight(x, z);
+    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
+
+    for (let i = 0; i < 20; i++) {
+      this.makeTree(x + rand(-12,12), z + rand(-10,10), rand(0.7,1.2));
+    }
+
+    const springMat = new THREE.MeshStandardMaterial({color:0x4a9ad4,roughness:0.05,metalness:0.4,transparent:true,opacity:0.85});
+    const spring = new THREE.Mesh(new THREE.CircleGeometry(2.5,20), springMat);
+    spring.rotation.x = -Math.PI/2; spring.position.set(x-3, hy+0.2, z+2); this.scene.add(spring);
+
+    this.makeHorse(x+5, z+3, rand(0,Math.PI*2), 0xb8622a, false);
+
+    this.makeGer(x+2, z-6, rand(0, Math.PI*2), 1.4, true, id);
+    this.makeFence(x+2, z-6, 14, 12, 0.2);
+    this.makeOvoo(x+7, z-2);
+
+    const sg = new THREE.Group();
+    this._stationMarker(sg, id, 2, 11, -6, 1.0, mc, cur);
+    sg.position.set(x, hy, z); this.scene.add(sg);
+    this.labelAnchors.set(id, new THREE.Vector3(x+2, hy+14, z-6));
+  }
+
+  // ── Marker helper ─────────────────────────────────────────
+  private _stationMarker(
+    g: THREE.Group, id: string,
+    lx: number, ly: number, lz: number,
+    sc: number, mc: number, cur: boolean
+  ): void {
+    const mat = new THREE.MeshStandardMaterial({color:mc, emissive:mc, emissiveIntensity:0.7, roughness:0.25});
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6*sc, 0.14*sc, 10, 40), mat);
+    ring.position.set(lx, ly, lz); ring.rotation.x = Math.PI/2; g.add(ring);
+    this.markerMeshes.set(id, ring);
+    const glow = new THREE.Mesh(new THREE.SphereGeometry(0.55*sc,10,10),
+      new THREE.MeshBasicMaterial({color:mc, transparent:true, opacity:0.14}));
+    glow.position.set(lx, ly, lz); g.add(glow);
+    if (cur) {
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,10,10),
+        new THREE.MeshBasicMaterial({color:0x44ff88, transparent:true, opacity:0.28}));
+      beam.position.set(lx, ly+5, lz); g.add(beam);
+    }
+  }
+
+
 
   // ── Овоо ─────────────────────────────────────────────────
 
@@ -719,4 +1024,133 @@ export class SceneBuilder {
       rg.position.set(x,h,z); this.scene.add(rg);
     }
   }
+
+  // ── Өртөөний зам (Urtuu roads) ───────────────────────────
+  buildRoads(stations: UrtuuStation[]): void {
+    const pos = new Map<string, { wx: number; wz: number }>();
+    stations.forEach(s => {
+      const cfg = STATION_CONFIGS[s.id];
+      if (cfg) pos.set(s.id, { wx: cfg.wx, wz: cfg.wz });
+    });
+
+    const roadMat = new THREE.MeshStandardMaterial({
+      color: 0xb09870, roughness: 0.98, metalness: 0,
+      side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1,
+    });
+    const trackMat = new THREE.MeshStandardMaterial({
+      color: 0x8a7050, roughness: 0.99, metalness: 0,
+      side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2,
+    });
+
+    const ROUTES: string[][] = [
+      ["khovd","ulaangom","uliastai","altai","bayankhongor","orkhon_river","kharakhorum","arvaikheer","zuunmod","ulaanbaatar"],
+      ["ulaanbaatar","darkhan","erdenet","sukhbaatar","moron","khatgal"],
+      ["ulaanbaatar","nalaikh","terelj","ondorhaan","kherlenbayan","choibalsan","baruun_urt"],
+      ["ulaanbaatar","mandalgovi","dalanzadgad","sainshand","zamiin_uud"],
+    ];
+
+    // Helper: build flat ribbon mesh on terrain surface
+    const makeRibbon = (center: THREE.Vector3[], halfW: number, mat: THREE.Material): void => {
+      if (center.length < 2) return;
+
+      const positions: number[] = [];
+      const indices: number[] = [];
+      const uvs: number[] = [];
+
+      for (let i = 0; i < center.length; i++) {
+        // Tangent direction at this point
+        let tx: number, tz: number;
+        if (i === 0) {
+          tx = center[1].x - center[0].x;
+          tz = center[1].z - center[0].z;
+        } else if (i === center.length - 1) {
+          tx = center[i].x - center[i-1].x;
+          tz = center[i].z - center[i-1].z;
+        } else {
+          tx = center[i+1].x - center[i-1].x;
+          tz = center[i+1].z - center[i-1].z;
+        }
+        const tlen = Math.sqrt(tx*tx + tz*tz) || 1;
+        // Perp in XZ, rotated 90°
+        const px = -tz / tlen, pz = tx / tlen;
+
+        const lx = center[i].x + px * halfW;
+        const lz = center[i].z + pz * halfW;
+        const rx = center[i].x - px * halfW;
+        const rz = center[i].z - pz * halfW;
+
+        // Y from terrain for each edge vertex independently
+        const ly = terrainHeight(lx, lz) + 0.12;
+        const ry = terrainHeight(rx, rz) + 0.12;
+
+        positions.push(lx, ly, lz);   // left
+        positions.push(rx, ry, rz);   // right
+        const u = i / (center.length - 1);
+        uvs.push(0, u, 1, u);
+      }
+
+      for (let i = 0; i < center.length - 1; i++) {
+        const a = i*2, b = i*2+1, c = i*2+2, d = i*2+3;
+        indices.push(a, b, c, b, d, c);
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs, 2));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.receiveShadow = true;
+      this.scene.add(mesh);
+    };
+
+    ROUTES.forEach(route => {
+      for (let i = 0; i < route.length - 1; i++) {
+        const a = pos.get(route[i]);
+        const b = pos.get(route[i + 1]);
+        if (!a || !b) continue;
+
+        // Centerline points — 30 steps for smooth curve
+        const STEPS = 30;
+        const center: THREE.Vector3[] = [];
+        const dx = b.wx - a.wx, dz = b.wz - a.wz;
+        const perpLen = Math.sqrt(dx*dx + dz*dz) || 1;
+
+        for (let t = 0; t <= STEPS; t++) {
+          const f = t / STEPS;
+          const cx = a.wx + dx * f;
+          const cz = a.wz + dz * f;
+          // Gentle S-curve jitter perpendicular to road
+          const jitter = Math.sin(f * Math.PI * 2.5) * 5;
+          const jx = cx + (-dz / perpLen) * jitter;
+          const jz = cz + ( dx / perpLen) * jitter;
+          center.push(new THREE.Vector3(jx, 0, jz)); // Y set by makeRibbon
+        }
+
+        // Main road ribbon (width ~5 units total = ±2.5)
+        makeRibbon(center, 2.5, roadMat);
+
+        // Two tire track grooves (narrower, slightly offset color)
+        [-1.4, 1.4].forEach(off => {
+          const trackCenter = center.map(p => {
+            const cp = center[Math.min(center.indexOf(p)+1, center.length-1)];
+            const tdx = cp.x - p.x, tdz = cp.z - p.z;
+            const tlen = Math.sqrt(tdx*tdx + tdz*tdz) || 1;
+            return new THREE.Vector3(
+              p.x + (-tdz/tlen) * off, 0, p.z + (tdx/tlen) * off
+            );
+          });
+          makeRibbon(trackCenter, 0.45, trackMat);
+        });
+
+        // Occasional roadside ovoo
+        if (Math.random() > 0.6) {
+          const mid = center[Math.floor(STEPS / 2)];
+          this.makeOvoo(mid.x + rand(-6, 6), mid.z + rand(-6, 6));
+        }
+      }
+    });
+  }
 }
+

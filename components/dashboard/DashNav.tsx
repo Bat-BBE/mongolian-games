@@ -38,7 +38,7 @@ export function DashNav({
     active
       ? {
           background: "var(--grad-gold)",
-          color: "oklch(0.108 0.018 52)",
+          color: "oklch(0.12 0.018 55)", // Dark text for gold bg to ensure readability
           padding: "clamp(4px,0.5vw,6px) clamp(8px,1vw,12px)",
           fontSize: "clamp(10px,0.7vw,12px)",
           letterSpacing: "0.08em",
@@ -49,7 +49,7 @@ export function DashNav({
         }
       : {
           background: "transparent",
-          color: "color-mix(in oklch, var(--primary) 65%, transparent)",
+          color: "color-mix(in oklch, var(--foreground) 75%, transparent)",
           padding: "clamp(4px,0.5vw,6px) clamp(8px,1vw,12px)",
           fontSize: "clamp(10px,0.7vw,12px)",
           letterSpacing: "0.08em",
@@ -146,7 +146,7 @@ export function DashNav({
               style={{
                 fontSize: "clamp(8px,0.7vw,11px)",
                 letterSpacing: "0.08em",
-                color: "color-mix(in oklch,var(--primary)90%,transparent)",
+                color: "color-mix(in oklch,var(--foreground)60%,transparent)",
               }}
             >
               {playerTitle}
@@ -175,7 +175,7 @@ export function DashNav({
                 height: "clamp(14px,1.2vw,20px)",
                 fontSize: "clamp(7px,0.6vw,10px)",
                 background: "var(--primary)",
-                color: "black",
+                color: "var(--primary-foreground)",
                 border: "2px solid var(--background)",
               }}
             >
