@@ -79,8 +79,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         playerTitle={player.title}
         avatarUrl={player.image}
         level={player.level}
-        kp={player.kp}
-        tokens={player.tokens}
+        // kp={player.kp}
+        // tokens={player.tokens}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -92,8 +92,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           avatarUrl={player.image}
           bonusMultiplier="x1.5"
           bonusTitle="Steppe Speedster"
-          onJournal={() => console.log("Journal")}
-          onBeginRelay={() => console.log("Begin relay")}
+          // onJournal={() => console.log("Journal")}
+          // onBeginRelay={() => console.log("Begin relay")}
         />
 
         {/* <MapArea
