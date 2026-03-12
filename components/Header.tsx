@@ -286,7 +286,7 @@ export default function Header() {
               onClick={(e) => handleNavClick(e, link.href)}
               className="relative px-4 py-2 rounded-full font-display font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style={{
-                fontSize: "clamp(0.62rem, 0.9vw, 0.9rem)",
+                fontSize: "clamp(0.7rem, 1vw, 1rem)",
                 letterSpacing: "clamp(0.04em,0.15vw,0.06em)",
                 color:
                   activeLink === link.href
