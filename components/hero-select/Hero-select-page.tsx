@@ -155,8 +155,8 @@ export default function HeroSelectPage() {
               t={t}
               playerName={email}
               setPlayerName={setEmail}
-              email={email}
-              setEmail={setEmail}
+              // email={email}
+              // setEmail={setEmail}
               isChecking={isChecking}
               onEnter={handleEnter}
             />

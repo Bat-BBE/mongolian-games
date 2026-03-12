@@ -11,11 +11,9 @@ export function useHeroOrb(
   isLocked: boolean,
 ) {
   useEffect(() => {
-    // Get the container element
     const container = containerRef.current;
     if (!container) return;
 
-    // Create canvas element
     const canvas = document.createElement('canvas');
     canvas.width = 140;
     canvas.height = 140;

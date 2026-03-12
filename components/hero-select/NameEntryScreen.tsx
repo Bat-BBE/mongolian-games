@@ -6,20 +6,20 @@ interface NameEntryScreenProps {
   t: HeroStrings;
   playerName: string;
   setPlayerName: (v: string) => void;
-  email: string;
-  setEmail: (v: string) => void;
+  // email: string;
+  // setEmail: (v: string) => void;
   isChecking?: boolean;
   onEnter: () => void;
 }
 
 export function NameEntryScreen({
   t,
-  email,
-  setEmail,
+  playerName,
+  setPlayerName,
   isChecking = false,
   onEnter,
 }: NameEntryScreenProps) {
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(playerName.trim());
   const filled     = emailValid;
 
   return (
@@ -50,10 +50,10 @@ export function NameEntryScreen({
         <InputField
           type="email"
           placeholder={t.emailPlaceholder ?? "И-мэйл хаяг"}
-          value={email}
-          onChange={setEmail}
+          value={playerName}
+          onChange={setPlayerName}
           onEnter={() => filled && !isChecking && onEnter()}
-          isValid={email.trim().length === 0 ? undefined : emailValid}
+          isValid={playerName.trim().length === 0 ? undefined : emailValid}
           disabled={isChecking}
         />
 

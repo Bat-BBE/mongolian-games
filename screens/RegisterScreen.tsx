@@ -127,7 +127,6 @@ export default function HeroSelectPage() {
                 selectedId={selectedId}
                 setSelectedId={setSelectedId}
                 onPlay={handlePlay}
-                onGuest={handleGuest}
               />
             )}
           </div>
