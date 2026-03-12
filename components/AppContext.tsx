@@ -27,13 +27,17 @@ interface Translations {
   };
   howItWorks: {
     heading: string;
+    intro: string;
     steps: { number: string; title: string; description: string }[];
   };
   games: {
     heading: string;
+    intro: string;
     items: { name: string; desc: string }[];
   };
   features: {
+    heading: string;
+    intro: string;
     items: string[];
   };
   cta: {
@@ -57,110 +61,146 @@ interface Translations {
 
 const mn: Translations = {
   nav: {
-    title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМУУД",
+    title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМ",
     play: "ОДОО ТОГЛОХ",
     whatIs: "Танилцуулга",
-    howItWorks: "Ажиллах заавар",
-    games: "Тоглоомууд",
+    howItWorks: "Хэрхэн тоглох",
     features: "Онцлогууд",
+    games: "Тоглоомууд",
   },
+
   hero: {
     title1: "МОНГОЛЫН",
     title2: "УЛАМЖЛАЛТ ТОГЛООМУУД",
     subtitle:
-      "Монголын уламжлалт тоглоом, зан үйл, домгийг 3D орчинд амилуулсан интерактив дижитал талбар.",
-    cta: "Тоглоомоо эхлүүлэх",
-    free: "Бүх тоглоом нь монголын жинхэнэ уламжлал, өв соёлоос сэдэвлэсэн.",
+      "Монголын уламжлалт тоглоом, соёлын өв, нүүдэлчдийн ахуйг орчин үеийн 3D технологи ашиглан танилцуулах дижитал тоглоомын платформ.",
+    cta: "Тоглох",
+    free:
+      "Энэхүү платформ нь Монголын өв соёл, уламжлалт тоглоом наадгайг орчин үеийн технологитой хослуулан түгээн дэлгэрүүлэх зорилготой.",
   },
+
   whatIs: {
-    heading: "ТӨСЛИЙН ТАНИЛЦУУЛГА",
+    heading: "ТАНИЛЦУУЛГА",
     intro:
-      "Монголын уламжлалт тоглоом, өв соёл, домгийг орчин үеийн тоглоомын хэлээр нэг дор багтаасан дижитал ертөнц.",
+      "Монголын уламжлалт тоглоомууд нь нүүдэлчдийн амьдрал, ахуй соёл, ухаан сэтгэлгээг илэрхийлдэг өвөрмөц соёлын өв юм. Энэхүү төсөл нь тэдгээр тоглоомыг орчин үеийн дижитал хэлбэрт шилжүүлж, хүүхэд залуус болон олон улсын хэрэглэгчдэд сонирхолтой байдлаар хүргэх зорилготой.",
     items: [
       {
-        title: "Уламжлалт тоглоомуудыг орчин үеийн хэлээр",
+        title: "Уламжлалт тоглоомуудын дижитал хувилбар",
         description:
-          "Тал нутгийн ахуй, билэг ухааныг шингээсэн, физикийн хөдөлгөөн дээр суурилсан 3D тоглоомууд.",
+          "Монголын эртний наадгай, тоглоомуудыг орчин үеийн 3D технологи ашиглан дахин бүтээж, хэрэглэгчид интерактив байдлаар тоглох боломжийг олгоно.",
       },
       {
-        title: "Өртөө дамжин аялах систем",
+        title: "Монгол орноор виртуал аялал",
         description:
-          "Монголын эртний өртөө, зам мөрийг даган Монгол орныг виртуал орчинд тойрон аялна.",
+          "Тоглогчид Монголын түүхэн өртөөнүүд болон байгалийн үзэсгэлэнт газруудаар аялж, тухайн бүс нутагтай холбоотой тоглоомуудыг нээж тоглоно.",
       },
       {
-        title: "Соёлын онцгой шагналууд",
+        title: "Соёлын өвийг хадгалан түгээх",
         description:
-          "Дижитал олдвор, медаль, тэмдэг цуглуулж, өөрийн баатарлаг замналыг бүтээ.",
+          "Уламжлалт тоглоом, домог, зан заншлыг орчин үеийн залуу үед сонирхолтой байдлаар хүргэж, соёлын өвийг хадгалан хамгаалах зорилготой.",
       },
     ],
   },
+
   howItWorks: {
-  heading: "Тоглоом хэрхэн өрнөдөг вэ?",
+    heading: "ТОГЛООМ ХЭРХЭН ТОГЛОХ ВЭ?",
+    intro:
+      "Тоглогчид өөрийн баатрыг сонгож Монгол орны газрын зураг дээрх өртөөнүүдээр аялж, төрөл бүрийн уламжлалт тоглоомуудыг тоглон шинэ бүс нутгийг нээнэ.",
     steps: [
       {
         number: "01",
-        title: "Өөрийн баатрыг сонго",
+        title: "Баатраа сонго",
         description:
-          "Тоглох хэв маягтаа тохирсон дүр, түүний зан чанар, тусгай чадваруудыг сонго.",
+          "Тоглогч өөрийн хүссэн дүрийг сонгож тоглоомын аяллаа эхлүүлнэ. Дүр бүр өөрийн өвөрмөц хэв маягтай.",
       },
       {
         number: "02",
-        title: "Өртөөнүүдээр аялан нээгд",
+        title: "Өртөөнүүдийг судал",
         description:
-          "Интерактив 3D газрын зураг дээрх түүхэн өртөөнүүдийг судалж, нэг бүрчлэн нээгээрэй.",
+          "Монгол орны газрын зураг дээр байрлах түүхэн өртөөнүүдийг нээн судалж тухайн бүс нутгийн тоглоомуудыг тоглоно.",
       },
       {
         number: "03",
-        title: "Тоглож, домог бүтээ",
+        title: "Тоглож амжилт цуглуул",
         description:
-          "Дэд тоглоомуудыг амжилттай давж, оноо, нэр хүнд, шагналаа цуглуул.",
+          "Тоглоомуудыг амжилттай давж оноо, шагнал, дурсгалт олдвор цуглуулж шинэ боломжуудыг нээнэ.",
       },
     ],
   },
+
   games: {
-    heading: "Тоглоомууд",
+    heading: "УЛАМЖЛАЛТ ТОГЛООМУУД",
+    intro:
+      "Монголын ардын уламжлалт тоглоомууд нь нүүдэлчдийн амьдрал, ахуй соёл, оюун ухаан, авхаалж самбааг хөгжүүлэх зорилготой байжээ. Эдгээр тоглоомууд нь хүүхэд залуусын анхаарал төвлөрөл, логик сэтгэлгээ, гар-нүдний зохицлыг сайжруулдаг.",
     items: [
       {
         name: "Шагайн наадгай",
-        desc: "Физик хөдөлгөөн, магадлалын мэдрэмж, стратегийн сэтгэлгээг зэрэг хөгжүүлнэ.",
+        desc: "Монгол хүүхдүүдийн хамгийн өргөн тархсан тоглоом. Шагай харваж онох, цуглуулах зэрэг төрөлтэй бөгөөд нарийвчлал, стратеги, авхаалж самбааг хөгжүүлдэг.",
       },
       {
         name: "Сурын харваа",
-        desc: "Нарийвчлал, төвлөрөл, дотоод тэнцвэрээ сорих харвааны сорилт.",
+        desc: "Монголын үндэсний спортын нэг. Нум сум ашиглан бай онох бөгөөд төвлөрөл, нарийвчлал, дотоод тэнцвэрийг шаарддаг.",
       },
       {
         name: "Морин уралдаан",
-        desc: "Тэвчээр, хурд, замын тактик, шийдвэр гаргалтыг хамтад нь шалгана.",
+        desc: "Монголын наадмын гол спортын нэг. Хурд, тэсвэр, замын мэдрэмж, шийдвэр гаргах чадварыг сорьдог.",
+      },
+      {
+        name: "Монгол шатар",
+        desc: "Стратеги, төлөвлөлт, логик сэтгэлгээг хөгжүүлдэг уламжлалт оюуны тоглоом.",
+      },
+      {
+        name: "Дөрвөн бэрх",
+        desc: "Шагай ашиглан тоглодог аз болон авхаалжийг хослуулсан уламжлалт наадгай.",
+      },
+      {
+        name: "Тэвэг өшиглөх",
+        desc: "Хүүхдүүдийн дунд түгээмэл тоглодог тоглоом бөгөөд гар-нүдний зохицол, хурд, анхаарал төвлөрлийг хөгжүүлдэг.",
+      },
+      {
+        name: "Алтан шагай",
+        desc: "Шагай ашиглан оноо цуглуулах сонирхолтой тоглоом. Аз болон ур чадвар хоёрыг зэрэг сорьдог.",
       },
       {
         name: "Наадмын их баяр",
-        desc: "Наадмын уур амьсгалд хамтдаа оролцож, нийгмийн харилцаанд суурилсан сорилтуудыг давна.",
+        desc: "Монголын үндэсний баяр наадмын уур амьсгалд суурилсан олон төрлийн соёлын мини тоглоомууд.",
       },
     ],
   },
+
   features: {
+    heading: "ОНЦЛОГУУД",
+    intro:
+      "Энэхүү тоглоомын платформ нь Монголын уламжлалт соёл болон орчин үеийн технологийг хослуулсан онцлог шийдлүүдтэй.",
     items: [
-      "Монголын уламжлал, домог, зан үйлийг тоглоомын хэлээр танин мэдэх",
-      "Логик сэтгэлгээ, анхаарал төвлөрөл, гар‑нүдний зохицол зэрэг ур чадвараа хөгжүүлэх",
-      "Уламжлалт мэдлэг, үлгэр домгийг орчин үеийн технологитой уялдуулан хадгалж, түгээх",
+      "3D интерактив газрын зураг",
+      "Монголын уламжлалт тоглоомуудын дижитал хувилбар",
+      "Соёлын мэдээлэл болон түүхэн танин мэдэхүй",
+      "Амжилт, шагнал цуглуулах систем",
+      "Суралцах болон хөгжих боломж",
+      "Олон улсын хэрэглэгчдэд зориулсан англи хэлний дэмжлэг",
     ],
   },
+
   cta: {
     heading1: "Монголын өв соёлын ертөнцөд",
-    heading2: "Өнөөдөр аяллаа эхлүүлээрэй",
+    heading2: "Өөрийн аяллаа өнөөдөр эхлүүлээрэй",
     button: "Аяллаа эхлүүлэх",
-    note: "Бета хувилбарын үеэр бүх тоглоомыг үнэ төлбөргүй турших боломжтой.",
+    note:
+      "Энэхүү тоглоом нь боловсролын болон соёлын танин мэдэхүйн зорилготой.",
   },
+
   footer: {
-    subtitle: "Монголын өв соёлыг хадгалж, түгээх дижитал платформ",
-    links: ["Төслийн тухай", "Нууцлалын бодлого", "Тусламж, холбоо барих"],
-    copy: "© 2026 MTGA Studios. Зохиогчийн бүх эрх хуулиар хамгаалагдсан.",
+    subtitle: "Монголын уламжлалт тоглоомын платформ",
+    links: ["Төсөл", "Нууцлал", "Холбоо"],
+    copy: "© 2026 МУИС — дипломын ажил",
   },
+
   theme: {
-    light: "Гэрэл",
+    light: "Цайвар",
     dark: "Харанхуй",
-    system: "Системийн тохиргоо",
-    toggle: "Горим солих",
+    system: "Систем",
+    toggle: "Theme солих",
   },
 };
 
@@ -168,103 +208,140 @@ const en: Translations = {
   nav: {
     title: "MONGOLIAN TRADITIONAL GAMES",
     play: "PLAY NOW",
-    whatIs: "Overview",
+    whatIs: "About",
     howItWorks: "How It Works",
-    games: "Game Library",
-    features: "Key Features",
+    games: "Games",
+    features: "Features",
   },
+
   hero: {
     title1: "MONGOLIAN",
     title2: "TRADITIONAL GAMES",
     subtitle:
-      "A digital platform that brings Mongolia's cultural heritage to life through immersive 3D experiences.",
-    cta: "Start Playing",
-    free: "All games are inspired by authentic Mongolian heritage.",
+      "An interactive digital platform that introduces Mongolia's traditional games, culture, and nomadic heritage through immersive 3D experiences.",
+    cta: "Playing",
+    free:
+      "Inspired by authentic Mongolian traditions and cultural heritage.",
   },
+
   whatIs: {
-    heading: "PROJECT OVERVIEW",
+    heading: "OVERVIEW",
     intro:
-      "A living world of traditional Mongolian games and legends, blended into one immersive digital platform.",
+      "Traditional Mongolian games reflect the wisdom, lifestyle, and cultural values of nomadic civilization. This project aims to transform these traditional games into engaging digital experiences for modern audiences.",
     items: [
       {
-        title: "Traditional Games, Reimagined",
+        title: "Digital Versions of Traditional Games",
         description:
-          "Experience physics-based 3D challenges inspired by the wisdom of the steppe.",
+          "Classic Mongolian folk games recreated using modern 3D technologies for interactive gameplay.",
       },
       {
-        title: "Örtöö Travel System",
+        title: "Virtual Journey Across Mongolia",
         description:
-          "Journey across vast landscapes following Mongolia's historic relay network.",
+          "Players travel across Mongolia through historic relay stations while discovering cultural games along the way.",
       },
       {
-        title: "Cultural Rewards & Achievements",
+        title: "Preserving Cultural Heritage",
         description:
-          "Collect digital artifacts and unlock achievements along your heroic path.",
+          "The platform helps preserve and promote traditional Mongolian culture to younger generations and international audiences.",
       },
     ],
   },
+
   howItWorks: {
-    heading: "How It Works",
+    heading: "HOW TO PLAY",
+    intro:
+      "Choose your character, explore different regions of Mongolia, and unlock traditional games as you travel across the map.",
     steps: [
       {
         number: "01",
         title: "Choose Your Hero",
         description:
-          "Select an archetype and unique abilities that match your playstyle.",
+          "Select your character and begin your journey through the world of Mongolian traditional games.",
       },
       {
         number: "02",
-        title: "Explore the Örtöö Map",
+        title: "Explore the Map",
         description:
-          "Discover historic relay stations on an interactive 3D world map.",
+          "Travel through historical relay stations and discover unique cultural games in each region.",
       },
       {
         number: "03",
-        title: "Play & Achieve",
+        title: "Play and Achieve",
         description:
-          "Master mini-games, earn reputation, and unlock cultural rewards.",
+          "Complete challenges, collect achievements, and unlock new areas and rewards.",
       },
     ],
   },
+
   games: {
-    heading: "Game Categories",
+    heading: "TRADITIONAL GAMES",
+    intro:
+      "Traditional Mongolian games reflect the lifestyle, creativity, and wisdom of the nomadic culture. These games help develop concentration, strategic thinking, coordination, and patience.",
+
     items: [
       {
-        name: "Shagai",
-        desc: "Develop physics intuition, probability, and strategic thinking.",
+        name: "Shagai Game",
+        desc: "One of the most popular traditional Mongolian games played with sheep ankle bones. It develops precision, strategy, and quick reflexes.",
       },
       {
         name: "Archery",
-        desc: "Refine precision, focus, and mental balance.",
+        desc: "A traditional Mongolian sport where players use bows to hit targets. It requires high levels of focus, precision, and balance.",
       },
       {
         name: "Horse Racing",
-        desc: "Test endurance, speed, and decision-making skills.",
+        desc: "A symbolic sport of Mongolian culture. It tests endurance, speed, and decision-making skills.",
       },
       {
-        name: "Naadam Festival",
-        desc: "Engage in community-based cultural challenges.",
+        name: "Mongolian Chess",
+        desc: "A traditional strategy board game that develops logical thinking, planning, and tactical skills.",
+      },
+      {
+        name: "Four Bones Game",
+        desc: "A traditional ankle bone game that combines both luck and skill, played widely in Mongolian culture.",
+      },
+      {
+        name: "Tevég (Kick Shuttle)",
+        desc: "A traditional game where players keep a small object in the air using their feet. It improves coordination, balance, and agility.",
+      },
+      {
+        name: "Golden Shagai",
+        desc: "A competitive ankle bone game where players collect points by accurately striking the target bones.",
+      },
+      {
+        name: "Naadam Festival Games",
+        desc: "Mini-games inspired by Mongolia's famous Naadam festival, celebrating traditional sports and cultural activities.",
       },
     ],
   },
+
   features: {
+    heading: "FEATURES",
+    intro:
+      "The platform combines traditional culture with modern technology to create a unique gaming experience.",
     items: [
-      "Explore Mongolian cultural heritage",
-      "Enhance logic and practical skills",
-      "Blend tradition with modern technology",
+      "Interactive 3D world map",
+      "Digital versions of traditional Mongolian games",
+      "Cultural knowledge and storytelling",
+      "Achievement and reward system",
+      "Educational and entertaining gameplay",
+      "Bilingual support (Mongolian & English)",
     ],
   },
+
   cta: {
     heading1: "Begin Your Journey",
-    heading2: "Into Mongolian Heritage Today",
+    heading2: "Into Mongolian Culture Today",
     button: "Start Your Adventure",
-    note: "Free access available during beta release.",
+    note:
+      "This project is developed as an educational and cultural platform.",
   },
+
   footer: {
-    subtitle: "Digital Platform for Mongolian Heritage",
-    links: ["About", "Privacy Policy", "Support"],
-    copy: "© 2026 MTGA Studios. All rights reserved.",
+    subtitle: "Digital platform for traditional Mongolian games",
+    links: ["Project", "Privacy", "Contact"],
+    copy: "© 2026 NUM — student thesis project",
   },
+
   theme: {
     light: "Light",
     dark: "Dark",

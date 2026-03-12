@@ -6,11 +6,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ══════════════════════════════════════════════
-   GOOGLE FONTS — loaded via layout.tsx or _document.tsx
-   Add to <head>:
-   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Crimson+Pro:wght@300;400;600&display=swap" rel="stylesheet" />
-══════════════════════════════════════════════ */
 
 @theme inline {
   --color-background:           var(--background);
@@ -55,9 +50,6 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
-/* ══════════════════════════════════════════
-   LIGHT THEME
-══════════════════════════════════════════ */
 :root {
   --radius: 0.75rem;
 
@@ -95,7 +87,6 @@
   --sidebar-border:       oklch(0.83 0.032 78);
   --sidebar-ring:         oklch(0.70 0.145 75);
 
-  /* ── Brand palette ── */
   --gold:          #C9A84C;
   --gold-bright:   #D4AF37;
   --gold-light:    #EDD98A;
@@ -107,22 +98,17 @@
   --bg-abyss:      #050403;
   --steppe:        #2B3322;
 
-  /* ── Gradients ── */
   --grad-gold:     linear-gradient(135deg, #9A7420 0%, #EDD98A 40%, #D4AF37 65%, #9A7420 100%);
   --grad-gold-h:   linear-gradient(90deg,  #9A7420 0%, #EDD98A 50%, #9A7420 100%);
   --grad-crimson:  linear-gradient(135deg, #5a0000 0%, #8B0000 50%, #C9A84C 100%);
   --grad-hero:     linear-gradient(180deg, rgba(10,7,3,0.2) 0%, rgba(10,7,3,0.55) 55%, rgba(5,4,3,1) 100%);
   --grad-shimmer:  linear-gradient(105deg, transparent 30%, rgba(237,217,138,0.55) 50%, transparent 70%);
 
-  /* ── Glass ── */
   --glass-bg:     rgba(248, 242, 228, 0.68);
   --glass-border: rgba(201, 168, 76, 0.22);
   --glass-shadow: 0 8px 40px 0 rgba(0,0,0,0.10);
 }
 
-/* ══════════════════════════════════════════
-   DARK THEME
-══════════════════════════════════════════ */
 .dark {
   --background:         oklch(14% 0.014 48);
   --foreground:         oklch(0.93 0.018 78);
@@ -163,9 +149,6 @@
   --glass-shadow: 0 8px 40px 0 rgba(0,0,0,0.75);
 }
 
-/* ══════════════════════════════════════════
-   BASE LAYER
-══════════════════════════════════════════ */
 @layer base {
   * { @apply border-border outline-ring/50; }
 
@@ -175,12 +158,10 @@
     @apply bg-background text-foreground overflow-x-hidden;
     font-family: 'Crimson Pro', Georgia, serif;
     transition: background-color 0.4s ease, color 0.4s ease;
-    /* Subtle grain texture */
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar       { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
@@ -190,24 +171,17 @@
   }
   ::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
 
-  /* Selection */
   ::selection {
     background: color-mix(in oklch, var(--primary) 28%, transparent);
     color: var(--foreground);
   }
 
-  /* Font utilities */
   .font-display   { font-family: 'Cinzel', 'Playfair Display', Georgia, serif; }
   .font-heritage  { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; }
   .font-body      { font-family: 'Crimson Pro', Georgia, serif; }
 }
 
-/* ══════════════════════════════════════════
-   COMPONENT LAYER
-══════════════════════════════════════════ */
 @layer components {
-
-  /* ── Glass panels ── */
   .glass {
     background: var(--glass-bg);
     backdrop-filter: blur(18px) saturate(1.5);
@@ -242,7 +216,6 @@
     transform: translateY(-4px) scale(1.01);
   }
 
-  /* ── Text effects ── */
   .text-gold {
     background: var(--grad-gold);
     -webkit-background-clip: text;
@@ -261,7 +234,6 @@
     color: transparent;
   }
 
-  /* ── Buttons ── */
   .btn-gold {
     background: var(--grad-gold);
     background-size: 220% 220%;
@@ -314,7 +286,6 @@
     box-shadow: 0 0 20px color-mix(in oklch, var(--primary) 25%, transparent);
   }
 
-  /* ── Dividers ── */
   .divider-gold {
     height: 1px;
     background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 50%, transparent 100%);
@@ -326,7 +297,6 @@
     opacity: 0.55;
   }
 
-  /* ── Section decoration ── */
   .ornament::before,
   .ornament::after {
     content: '❖';
@@ -337,7 +307,6 @@
     margin: 0 0.8em;
   }
 
-  /* ── Icon containers ── */
   .icon-vessel {
     background: radial-gradient(ellipse at 28% 28%,
       color-mix(in oklch, var(--primary) 22%, transparent),
@@ -356,7 +325,6 @@
       inset 0 1px 0 color-mix(in oklch, #EDD98A 28%, transparent);
   }
 
-  /* ── Step number circle ── */
   .step-num {
     background: radial-gradient(ellipse at 30% 25%,
       color-mix(in oklch, var(--primary) 20%, var(--card)) 0%,
@@ -369,7 +337,6 @@
     font-family: 'Cinzel', serif;
   }
 
-  /* ── Hero section ── */
   .hero-section {
     background:
       var(--grad-hero),
@@ -379,7 +346,6 @@
     will-change: transform;
   }
 
-  /* ── Nav bar ── */
   .nav-bar {
     background: color-mix(in oklch, var(--background) 72%, transparent);
     backdrop-filter: blur(22px) saturate(1.6);
@@ -388,7 +354,6 @@
     box-shadow: 0 1px 0 color-mix(in oklch, var(--primary) 8%, transparent);
   }
 
-  /* ── Nav link ── */
   .nav-link {
     font-family: 'Cinzel', serif;
     font-size: 0.65rem;
@@ -411,7 +376,6 @@
   .nav-link:hover { color: var(--gold-bright); }
   .nav-link:hover::after { width: 100%; }
 
-  /* ── Glow ambient ── */
   .ambient-glow {
     position: absolute;
     border-radius: 50%;
@@ -420,7 +384,6 @@
     animation: ambient-pulse 6s ease-in-out infinite;
   }
 
-  /* ── Card top accent line ── */
   .card-top-line {
     position: absolute;
     top: 0;
@@ -430,7 +393,6 @@
     background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--primary) 45%, transparent), transparent);
   }
 
-  /* ── Footer ── */
   .footer-link {
     font-family: 'Cinzel', serif;
     font-size: 0.6rem;
@@ -453,16 +415,12 @@
   .footer-link:hover { color: var(--gold-bright); }
   .footer-link:hover::after { width: 100%; }
 
-  /* ── Parallax container ── */
   .parallax-inner {
     animation: heroZoom 28s ease-in-out infinite alternate;
     will-change: transform;
   }
 }
 
-/* ══════════════════════════════════════════
-   KEYFRAMES
-══════════════════════════════════════════ */
 @keyframes gold-shimmer {
   0%   { background-position: 0%   50%; }
   50%  { background-position: 100% 50%; }
@@ -519,7 +477,6 @@
   to   { transform: rotate(360deg); }
 }
 
-/* ── Utility animation classes ── */
 .animate-fade-up   { animation: fade-up   0.65s ease forwards; }
 .animate-fade-in   { animation: fade-in   0.5s  ease forwards; }
 .animate-scale-in  { animation: scale-in  0.55s ease forwards; }

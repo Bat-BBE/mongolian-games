@@ -10,7 +10,6 @@ export default function HowItWorks() {
       className="py-28 px-6 lg:px-10 bg-background relative overflow-hidden"
       id="how-it-works"
     >
-      {/* Faint ambient glow */}
       <div
         className="ambient-glow absolute bottom-0 right-0"
         style={{
@@ -22,8 +21,7 @@ export default function HowItWorks() {
       />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* Heading */}
-        <div className="text-center mb-20">
+        <div className="text-center mb-5">
           <p
             className="font-display text-[0.62rem] tracking-[0.45em] uppercase mb-5 opacity-55"
             style={{ color: "var(--gold-bright)" }}
@@ -32,16 +30,17 @@ export default function HowItWorks() {
           </p>
           <h2
             className="font-display font-bold text-gold uppercase tracking-widest"
-            style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.6rem)" }}
+            style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)" }}
           >
             {t.howItWorks.heading}
           </h2>
-          <div className="divider-gold w-48 mx-auto mt-6" />
+          <p className="font-body text-muted-foreground text-sm leading-relaxed">
+            {t.whatIs.intro}
+          </p>
+          <div className="divider-gold w-48 mx-auto mt-4" />
         </div>
 
-        {/* Steps */}
         <div className="relative grid md:grid-cols-3 gap-12 lg:gap-16">
-          {/* Connecting line (desktop) */}
           <div
             className="hidden md:block absolute top-[3.5rem] left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px"
             style={{
@@ -56,26 +55,22 @@ export default function HowItWorks() {
               className={`flex flex-col items-center text-center animate-fade-up delay-${i + 2}`}
               style={{ opacity: 0 }}
             >
-              {/* Step circle */}
               <div
-                className="step-num w-20 h-20 rounded-full flex items-center justify-center mb-8 text-2xl font-black relative z-10"
+                className="step-num w-18 h-18 rounded-full flex items-center justify-center mb-6 text-xl font-black relative z-10"
               >
                 {step.number}
               </div>
 
-              {/* Title */}
-              <h4 className="font-display font-semibold text-foreground text-lg mb-3 tracking-wide">
+              <h4 className="font-display font-semibold text-foreground text-lg mb-4 tracking-wide">
                 {step.title}
               </h4>
 
-              {/* Micro rule */}
               <div
-                className="w-8 h-px mb-4 opacity-45"
+                className="w-20 h-px mb-4 opacity-70"
                 style={{ background: "var(--gold-bright)" }}
               />
 
-              {/* Desc */}
-              <p className="font-body text-muted-foreground text-base leading-relaxed max-w-xs">
+              <p className="font-body text-muted-foreground text-sm leading-relaxed max-w-xs">
                 {step.description}
               </p>
             </div>

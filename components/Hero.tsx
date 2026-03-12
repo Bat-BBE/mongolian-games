@@ -1,8 +1,9 @@
 "use client";
 
 import { useApp } from "./AppContext";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 
-/* Floating dust particle */
 function Particle({ style }: { style: React.CSSProperties }) {
   return (
     <div
@@ -28,13 +29,26 @@ const PARTICLES = [
 
 export default function Hero() {
   const { t, setHeroSelectOpen } = useApp();
+  const { theme } = useTheme();
+  const [overlayColor, setOverlayColor] = useState("transparent");
+
+  useEffect(() => {
+    if (theme === "dark") {
+      setOverlayColor(
+        "linear-gradient(180deg, rgba(8,6,3,0.30) 0%, rgba(8,6,3,0.60) 55%, rgba(5,4,2,1) 100%)"
+      );
+    } else {
+      setOverlayColor(
+        "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0) 100%)"
+      );
+    }
+  }, [theme]);
 
   return (
     <section
       className="hero-section relative flex items-start justify-center overflow-hidden pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-10"
       style={{ minHeight: "100svh" }}
     >
-      {/* Parallax image layer */}
       <div
         className="parallax-inner absolute inset-[-4%]"
         style={{
@@ -44,17 +58,11 @@ export default function Hero() {
           backgroundPosition: "center center",
         }}
       />
-
-      {/* Dark overlay */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(8,6,3,0.30) 0%, rgba(8,6,3,0.60) 55%, rgba(5,4,2,1) 100%)",
-        }}
+        style={{ background: overlayColor }}
       />
 
-      {/* Ambient radial glow — bottom center */}
       <div
         className="ambient-glow absolute bottom-0 left-1/2 -translate-x-1/2"
         style={{
@@ -65,7 +73,6 @@ export default function Hero() {
         }}
       />
 
-      {/* Floating dust particles */}
       {PARTICLES.map((p, i) => (
         <Particle
           key={i}
@@ -81,9 +88,7 @@ export default function Hero() {
         />
       ))}
 
-      {/* ── Main content ── */}
       <div className="relative z-10 text-center px-4 sm:px-6 flex flex-col items-center w-full">
-        {/* Eyebrow */}
         <p
           className="font-heritage italic text-[0.48rem] sm:text-[0.62rem] tracking-[0.2em] sm:tracking-[0.4em] uppercase mb-4 mt-2 opacity-0 animate-fade-in delay-1 whitespace-nowrap"
           style={{ color: "var(--gold-light, #EDD98A)" }}
@@ -91,7 +96,6 @@ export default function Hero() {
           ⚔&nbsp;&nbsp;Монгол Домог · Mongol Legend&nbsp;&nbsp;⚔
         </p>
 
-        {/* Main title */}
         <h1
           className="font-display font-black text-white leading-tight md:leading-[0.9] mb-4 opacity-0 animate-fade-up delay-2 max-w-3xl mx-auto"
           style={{
@@ -112,7 +116,6 @@ export default function Hero() {
           <span className="text-gold">{t.hero.title2}</span>
         </h1>
 
-        {/* Ornamental rule */}
         <div className="flex items-center gap-5 mb-8 opacity-0 animate-fade-in delay-4">
           <div
             className="w-28 h-px"
@@ -125,14 +128,12 @@ export default function Hero() {
           />
         </div>
 
-        {/* Subtitle */}
         <p
-          className="font-heritage text-slate-300/85 max-w-xl mx-auto mb-8 leading-relaxed text-base sm:text-lg opacity-0 animate-fade-up delay-4"
+          className="font-heritage text-slate-300/85 max-w-xl mx-auto mb-8 leading-relaxed text-xs sm:text-sm opacity-0 animate-fade-up delay-4"
         >
           {t.hero.subtitle}
         </p>
 
-        {/* CTA button */}
         <button
           onClick={() => setHeroSelectOpen(true)}
           className="btn-gold px-14 py-4 rounded-full text-sm opacity-0 animate-scale-in delay-5 relative overflow-hidden"
@@ -144,16 +145,14 @@ export default function Hero() {
           </span>
         </button>
 
-        {/* Free note */}
         <p
-          className="mt-5 font-display text-[0.6rem] uppercase tracking-[0.45em] opacity-30 opacity-0 animate-fade-in delay-7"
-          style={{ color: "var(--gold-pale, #F5EBCA)" }}
+          className="mt-5 font-display text-[0.4rem] uppercase tracking-[0.45em] opacity-30 opacity-0 animate-fade-in delay-7"
+          style={{ color: "var(--gold-pale, #896900)" }}
         >
           {t.hero.free}
         </p>
       </div>
 
-      {/* Scroll cue */}
       <div
         className="hidden sm:flex absolute bottom-8 left-1/2 -translate-x-1/2 flex-col items-center gap-2 opacity-35 animate-float pointer-events-none"
       >
@@ -167,7 +166,6 @@ export default function Hero() {
         />
       </div>
 
-      {/* Bottom fade-to-background */}
       <div
         className="absolute bottom-0 left-0 right-0 h-48 pointer-events-none"
         style={{ background: "linear-gradient(to bottom, transparent, var(--background))" }}

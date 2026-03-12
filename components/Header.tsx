@@ -22,23 +22,20 @@ export default function Header() {
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // Navigation links
   const navLinks = [
     { name: language === "mn" ? "Нүүр" : "Home", href: "#", icon: "⌂" },
     { name: t.nav.whatIs, href: "#what-is", icon: "❖" },
-    { name: t.nav.games, href: "#games", icon: "⚔" },
     { name: t.nav.howItWorks, href: "#how-it-works", icon: "◎" },
     { name: t.nav.features, href: "#features", icon: "✦" },
+    { name: t.nav.games, href: "#games", icon: "⚔" },
   ];
 
-  // Scroll → header blur
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 28);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close drawer on desktop resize
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 1024) setIsMobileMenuOpen(false);
@@ -47,7 +44,6 @@ export default function Header() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Lock body scroll when drawer open
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
     return () => {
@@ -55,11 +51,9 @@ export default function Header() {
     };
   }, [isMobileMenuOpen]);
 
-  // Scroll-based active link
   const detectActive = useCallback(() => {
     const hrefs = ["#", "#what-is", "#games", "#how-it-works", "#features"];
     let current = "#";
-    
     for (const href of hrefs) {
       if (href === "#") {
         if (window.scrollY < 100) {
@@ -68,7 +62,6 @@ export default function Header() {
         }
         continue;
       }
-      
       const el = document.querySelector<HTMLElement>(href);
       if (el) {
         const rect = el.getBoundingClientRect();
@@ -87,7 +80,6 @@ export default function Header() {
     return () => window.removeEventListener("scroll", detectActive);
   }, [detectActive]);
 
-  // Sliding pill indicator
   const handleLinkHover = (i: number) => {
     const el = linkRefs.current[i];
     const nav = navRef.current;
@@ -97,7 +89,6 @@ export default function Header() {
     setIndicatorStyle({ left: er.left - nr.left, width: er.width });
   };
 
-  // Smooth scroll + active state
   const handleNavClick = (e: MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault();
     setActiveLink(href);
@@ -114,7 +105,6 @@ export default function Header() {
     }
   };
 
-  // Shared style objects
   const goldTextStyle: CSSProperties = {
     background: "var(--grad-gold)",
     WebkitBackgroundClip: "text",
@@ -131,10 +121,11 @@ export default function Header() {
           backgroundSize: "200% 200%",
           animation: "gold-shimmer 5s ease infinite",
           color: "oklch(0.108 0.018 52)",
-          boxShadow: "0 3px 12px color-mix(in oklch, var(--primary) 36%, transparent)",
-          padding: "5px 12px",
-          fontSize: "0.75rem",
-          letterSpacing: "0.1em",
+          boxShadow:
+            "0 3px 12px color-mix(in oklch, var(--primary) 36%, transparent)",
+          padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
+          fontSize: "clamp(0.6rem,0.8vw,0.7rem)",
+          letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
           borderRadius: "999px",
           fontWeight: 700,
           border: "none",
@@ -144,9 +135,9 @@ export default function Header() {
       : {
           background: "transparent",
           color: "color-mix(in oklch, var(--primary) 65%, transparent)",
-          padding: "5px 12px",
-          fontSize: "0.75rem",
-          letterSpacing: "0.1em",
+          padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
+          fontSize: "clamp(0.65rem,0.8vw,0.8rem)",
+          letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
           borderRadius: "999px",
           fontWeight: 700,
           border: "none",
@@ -184,8 +175,8 @@ export default function Header() {
       }`}
       style={{
         background: isScrolled
-          ? "background" // scroll үед бараан хатуу фон
-          : "background", // дээр үед арай ил тод
+          ? "background"
+          : "background",
         borderBottom: isScrolled
           ? "1px solid color-mix(in oklch, var(--primary) 18%, var(--border))"
           : "background",
@@ -194,7 +185,6 @@ export default function Header() {
           : "background",
       }}
     >
-      {/* Mongolian carpet stripe */}
       <div
         className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none"
         style={{
@@ -206,7 +196,6 @@ export default function Header() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
-        {/* ── LOGO ── */}
         <Link
           href="#"
           onClick={(e) => handleNavClick(e, "#")}
@@ -214,12 +203,10 @@ export default function Header() {
           aria-label="MTGA – нүүр хуудас"
         >
           <div className="relative flex-shrink-0">
-            {/* Hover glow */}
             <div
               className="absolute inset-0 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
               style={{ background: "color-mix(in oklch, var(--primary) 28%, transparent)" }}
             />
-            {/* Corner ornaments + text */}
             <div className="relative px-1.5 py-0.5">
               <span
                 className="absolute top-0 left-0 w-2.5 h-2.5 pointer-events-none"
@@ -239,12 +226,11 @@ export default function Header() {
               />
               <span
                 className="font-display font-black tracking-tighter select-none"
-                style={{ fontSize: "clamp(1.25rem, 3vw, 1.6rem)", ...goldTextStyle }}
+                style={{ fontSize: "clamp(1.3rem, 3vw, 1.5rem)", ...goldTextStyle }}
               >
                 MTGA
               </span>
             </div>
-            {/* Hover underline */}
             <div
               className="absolute -bottom-0.5 left-0 right-0 h-px origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 pointer-events-none"
               style={{
@@ -253,7 +239,6 @@ export default function Header() {
             />
           </div>
 
-          {/* Divider (md+) */}
           <div
             className="hidden md:block w-px h-7 flex-shrink-0"
             style={{
@@ -262,11 +247,10 @@ export default function Header() {
             }}
           />
 
-          {/* Subtitle (md+) */}
           <span
             className="hidden md:block font-heritage italic leading-tight"
             style={{
-              fontSize: "clamp(0.7rem, 1.2vw, 0.85rem)",
+              fontSize: "clamp(0.7rem, 1.2vw, 0.7rem)",
               color: "color-mix(in oklch, var(--foreground) 62%, transparent)",
               maxWidth: "260px",
             }}
@@ -275,13 +259,11 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* ── DESKTOP NAV ── */}
         <nav
           ref={navRef}
           className="hidden lg:flex items-center gap-1 relative"
           onMouseLeave={() => setIndicatorStyle({ left: 0, width: 0 })}
         >
-          {/* Sliding pill */}
           <div
             className="absolute top-0 bottom-0 rounded-full pointer-events-none transition-all duration-300 ease-out"
             style={{
@@ -304,8 +286,8 @@ export default function Header() {
               onClick={(e) => handleNavClick(e, link.href)}
               className="relative px-4 py-2 rounded-full font-display font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               style={{
-                fontSize: "0.86rem",
-                letterSpacing: "0.08em",
+                fontSize: "clamp(0.62rem, 0.9vw, 0.9rem)",
+                letterSpacing: "clamp(0.04em,0.15vw,0.06em)",
                 color:
                   activeLink === link.href
                     ? "var(--gold-bright)"
@@ -323,17 +305,15 @@ export default function Header() {
           ))}
         </nav>
 
-        {/* ── RIGHT CONTROLS ── */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           <LangToggle />
           <ModeToggle />
 
-          {/* Hamburger */}
           <button
             onClick={() => setIsMobileMenuOpen((v) => !v)}
             aria-label={isMobileMenuOpen ? "Цэс хаах" : "Цэс нээх"}
             aria-expanded={isMobileMenuOpen}
-            className="lg:hidden w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="lg:hidden w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{
               background: isMobileMenuOpen
                 ? "color-mix(in oklch, var(--primary) 18%, transparent)"
@@ -369,8 +349,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* ── MOBILE NAV OVERLAY & DRAWER ── */}
-      {/* Backdrop - мобайл цэсний арын дэвсгэр */}
       <div
         className={`fixed inset-0 z-40 transition-opacity duration-300 lg:hidden ${
           isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
@@ -381,8 +359,6 @@ export default function Header() {
         }}
         onClick={() => setIsMobileMenuOpen(false)}
       />
-
-      {/* Slide-in drawer - сайжруулсан дэвсгэр өнгөтэй */}
       <nav
         className={`fixed top-0 right-0 z-50 flex h-full w-[78vw] max-w-xs flex-col border-l transition-transform duration-300 lg:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
@@ -408,7 +384,7 @@ export default function Header() {
           <button
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Цэс хаах"
-            className="w-8 h-8 rounded-full flex items-center justify-center"
+            className="w-15 h-7 rounded-full flex items-center justify-center"
             style={{
               border: "1px solid color-mix(in oklch, var(--primary) 26%, var(--border))",
               background: "color-mix(in oklch, var(--primary) 8%, transparent)"
@@ -466,16 +442,6 @@ export default function Header() {
             </li>
           ))}
         </ul>
-
-        <div 
-          className="mt-auto px-6 pb-8 pt-4 border-t flex items-center justify-between gap-3"
-          style={{
-            borderColor: "color-mix(in oklch, var(--primary) 14%, var(--border))"
-          }}
-        >
-          <LangToggle />
-          <ModeToggle />
-        </div>
       </nav>
     </header>
   );
