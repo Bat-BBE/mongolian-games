@@ -23,11 +23,11 @@ export function NameEntryScreen({
   const filled     = emailValid;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-8 py-16 px-6 animate-fade-up">
+    <div className="flex flex-col items-center justify-center gap-8 py-16 px-6 animate-fade-up bg-background">
       <div className="text-center">
         <p
           className="font-heritage italic text-xs tracking-[0.4em] uppercase mb-3 opacity-70"
-          style={{ color: "var(--gold-main)" }}
+          style={{ color: "var(--gold)" }}
         >
           {t.gameTagline}
         </p>
@@ -35,7 +35,7 @@ export function NameEntryScreen({
           className="font-display font-black leading-tight"
           style={{
             fontSize: "clamp(28px,5vw,50px)",
-            color: "#fff",
+            color: "var(--gold-bright)",
             textShadow: "0 0 40px rgba(255, 240, 197, 0.5)",
           }}
         >
@@ -58,7 +58,7 @@ export function NameEntryScreen({
         />
 
         <p className="text-center text-[12px] tracking-wide transition-all duration-300"
-          style={{ color: "rgba(255, 255, 255, 0.51)" }}>
+          style={{ color: "var(--muted-foreground)" }}>
           {t.emailHint ?? "Бүртгэлтэй бол шууд тоглоомд орно"}
         </p>
       </div>
@@ -73,9 +73,9 @@ export function NameEntryScreen({
             : "opacity-30 cursor-not-allowed",
         )}
         style={{
-          background: "linear-gradient(135deg, rgba(200,168,75,0.15), rgba(200,168,75,0.05))",
+          background: "var(--gold)",
           border: "1px solid var(--gold-main)",
-          color: "var(--gold-light, #F1D592)",
+          color: "var(--foreground)",
           minWidth: "180px",
         }}
       >
@@ -85,7 +85,7 @@ export function NameEntryScreen({
               className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin inline-block"
               style={{ borderColor: "rgba(200,168,75,0.6)", borderTopColor: "transparent" }}
             />
-            <span className="opacity-60">
+            <span className="opacity-90">
               {t.checkingEmail ?? "Шалгаж байна..."}
             </span>
           </span>
@@ -120,19 +120,19 @@ function InputField({
 }) {
   const borderColor =
     isValid === true
-      ? "rgba(0, 255, 42, 0.5)"
+      ? "rgb(14, 206, 101)"
       : isValid === false
-      ? "rgba(220,80,80,0.5)"
-      : "rgba(200,168,75,0.18)";
+      ? "rgb(255, 0, 0)"
+      : "rgb(255, 191, 0)";
 
   const hairlineColor =
-    isValid === true ? "rgba(100,220,120,0.6)" : "var(--gold-main)";
+    isValid === true ? "rgba(100,220,120,0.6)" : "var(--gold-light)";
 
   return (
     <div className="relative w-full">
       <div
         className="absolute top-0 left-0 right-0 h-px transition-all duration-300"
-        style={{ background: `linear-gradient(90deg, transparent, ${hairlineColor}, transparent)` }}
+        style={{ background: `linear-gradient(80deg, transparent, ${hairlineColor}, transparent)` }}
       />
       <div
         className="absolute bottom-0 left-0 right-0 h-px transition-all duration-300"
@@ -149,9 +149,9 @@ function InputField({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onEnter()}
-        className="w-full text-center font-display text-base tracking-[0.15em] py-4 px-5 outline-none text-white placeholder:text-white/20 transition-all duration-300 disabled:opacity-40"
+        className="w-full text-center font-display text-base tracking-[0.15em] py-4 px-5 outline-none text-foreground placeholder:foreground/50 transition-all duration-300 disabled:opacity-40"
         style={{
-          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)",
+          background: "var(--muted)",
           border: "none",
           borderLeft: `1px solid ${borderColor}`,
           borderRight: `1px solid ${borderColor}`,
@@ -175,10 +175,10 @@ function InputField({
 
 function Ornament() {
   return (
-    <div className="flex items-center gap-4 w-64 opacity-40">
-      <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold-main))" }} />
-      <span className="font-display" style={{ color: "var(--gold-main)" }}>✦</span>
-      <div className="flex-1 h-px" style={{ background: "linear-gradient(90deg, var(--gold-main), transparent)" }} />
+    <div className="flex items-center gap-4 w-64 opacity-90">
+      <div className="flex-1 h-px" style={{ background: "var(--gold)" }} />
+      <span className="font-display" style={{ color: "var(--gold)" }}>✦</span>
+      <div className="flex-1 h-px" style={{ background: "var(--gold)" }} />
     </div>
   );
 }

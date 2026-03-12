@@ -9,8 +9,6 @@ import  UrtuuMap  from "./UrtuuMap";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer } from "@/components/hero-select/hero-data";
 
-// const AVATAR = "https://lh3.googleusercontent.com/aida-public/...";
-
 interface GameDashboardProps {
   defaultLang?: DashLang;
 }
@@ -98,13 +96,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           onBeginRelay={() => console.log("Begin relay")}
         />
 
-        <MapArea
+        {/* <MapArea
           t={t}
-          currentStationId={player?.currentStationId ?? ""}
-          doneStationIds={player?.doneStationIds ?? []}
-        />
-        {/* <UrtuuMap
-          // t={t}
           currentStationId={player?.currentStationId ?? ""}
           doneStationIds={player?.doneStationIds ?? []}
         /> */}

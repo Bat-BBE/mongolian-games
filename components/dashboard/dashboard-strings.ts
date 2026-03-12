@@ -6,6 +6,12 @@ export interface DashStrings {
   rank: string;
   rankTitle: string;
   title: string;
+  nav: {
+    dashboard: string;
+    map: string;
+    stations: string;
+    profile: string;
+  };
 
   currentExpedition: string;
   mainQuest: string;
@@ -48,15 +54,27 @@ export interface DashStrings {
   stageDesc: string;
   minigame: string;
   lore: string;
+  theme: {
+    light: string;
+    dark: string;
+    system: string;
+    toggle: string;
+  };
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
   mn: {
-    title: "МОНГОЛ УЛАМЖЛАЛТ ТОГЛООМ",
+    title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМ",
     knowledgePoints: "Мэдлэгийн Оноо",
     dailyTokens: "Өдрийн Токен",
     rank: "Зэрэг Дэвших",
     rankTitle: "Элч",
+    nav: {
+      dashboard: "Хяналтын самбар",
+      map: "Газрын зураг",
+      stations: "Уртнууд",
+      profile: "Профайл",
+    },
 
     currentExpedition: "Одоогийн Аялал",
     mainQuest: "Үндсэн Даалгавар",
@@ -251,6 +269,12 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     stageDesc: "Нүүдлийн соёлын өлгий нутаг. Эдгээр ариун газраар дамжин өнгөрөхийн тулд уламжлалт морин урлагаа мэргэшүүл.",
     minigame: "Мини-Тоглоом: Сур Харвах",
     lore: "Соёлын Түүх",
+    theme: {
+      light: "Цайвар",
+      dark: "Харанхуй",
+      system: "Систем",
+      toggle: "Theme солих",
+    },
   },
 
   en: {
@@ -259,6 +283,12 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     dailyTokens: "Daily Tokens",
     rank: "Rank Progression",
     rankTitle: "Messenger",
+    nav: {
+      dashboard: "Dashboard",
+      map: "Map",
+      stations: "Stations",
+      profile: "Profile",
+    },
 
     currentExpedition: "Current Expedition",
     mainQuest: "Main Quest",
@@ -454,5 +484,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     stageDesc: "The cradle of nomadic civilizations. Master the traditional equestrian arts to earn your passage.",
     minigame: "Mini-Game: Archery",
     lore: "Cultural Lore",
+    theme: {
+      light: "Light",
+      dark: "Dark",
+      system: "System",
+      toggle: "Theme Mode",
+    },
   },
 };

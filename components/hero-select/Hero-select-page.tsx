@@ -28,7 +28,7 @@ export default function HeroSelectPage() {
   const [toast, setToast]           = useState({ msg: "", visible: false });
 
   const selectedHero = HEROES.find((h) => h.id === selectedId)!;
-  const activeColor  = screen === "hero" ? selectedHero.color : "#C8A84B";
+  const activeColor  = screen === "hero" ? selectedHero.color : "#b38600";
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -104,7 +104,7 @@ export default function HeroSelectPage() {
     <>
       <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
         <div
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          className="absolute inset-0 backdrop-blur"
           onClick={() => setHeroSelectOpen(false)}
         />
 
@@ -121,7 +121,7 @@ export default function HeroSelectPage() {
           className="relative w-full max-w-3xl rounded-[2rem] overflow-hidden overflow-y-auto max-h-[100vh]"
           style={{
             zIndex: 10,
-            background: "color-mix(in oklch, var(--background) 10%, transparent)",
+            background: "var(--background)",
             backdropFilter: "blur(70px)",
             WebkitBackdropFilter: "blur(30px)",
             border: `1px solid ${activeColor}60`,
@@ -134,20 +134,19 @@ export default function HeroSelectPage() {
             onClick={() => setHeroSelectOpen(false)}
             className="absolute top-4 right-4 z-20 p-1.5 rounded-full transition-all duration-200"
             style={{
-              color: "rgba(255,255,255,0.35)",
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--glass-border",
+              border: "1px solid var(--popever)",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.9)";
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.12)";
+              // (e.currentTarget as HTMLElement).style.color = "var(--secondary)";
+              (e.currentTarget as HTMLElement).style.background = "var(--muted-foreground)";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+              // (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
+              (e.currentTarget as HTMLElement).style.background = "var(--primary)";
             }}
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-foreground" />
           </button>
 
           {screen === "email" ? (
