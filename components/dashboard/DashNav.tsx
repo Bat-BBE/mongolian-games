@@ -134,6 +134,7 @@ export function DashNav({
             <p
               className="font-bold"
               style={{
+                color: "var(--foreground)",
                 fontSize: "clamp(11px,0.9vw,14px)",
               }}
             >
@@ -145,7 +146,7 @@ export function DashNav({
               style={{
                 fontSize: "clamp(8px,0.7vw,11px)",
                 letterSpacing: "0.08em",
-                color: "color-mix(in oklch,var(--primary)60%,transparent)",
+                color: "color-mix(in oklch,var(--primary)90%,transparent)",
               }}
             >
               {playerTitle}

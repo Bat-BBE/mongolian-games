@@ -46,7 +46,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         currentStationId: data.progress.currentStationId,
         doneStationIds: data.progress.doneStationIds,
       });
-
       setLoading(false);
     }
 
@@ -96,11 +95,11 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           // onBeginRelay={() => console.log("Begin relay")}
         />
 
-        {/* <MapArea
+        <MapArea
           t={t}
           currentStationId={player?.currentStationId ?? ""}
           doneStationIds={player?.doneStationIds ?? []}
-        /> */}
+        />
       </div>
     </div>
   );

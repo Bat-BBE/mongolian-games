@@ -166,6 +166,6 @@ export const HORSE_COLORS = [
   0x8a6030, 0x1a1008, 0xd4b890, 0xa06040,
 ];
 
-export const TERRAIN_W   = 700;
+export const TERRAIN_W   = 900;
 export const TERRAIN_D   = 520; 
 export const TERRAIN_SEG = 280;

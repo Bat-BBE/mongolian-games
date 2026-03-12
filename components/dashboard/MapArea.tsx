@@ -1,13 +1,3 @@
-// ============================================================
-// MapArea.tsx
-// Үндсэн зохицуулагч компонент.
-//
-// Станц үүсгэх логик:
-//   1. STATION_CONFIGS-ийн БҮХ key-г суурь болгоно
-//   2. t.stations-аас нэр, тоглоом мэдээллийг нөхнө
-//   3. t.stations-д байхгүй станц ч гэсэн газрын зураг дээр харагдана
-// ============================================================
-
 "use client";
 
 import { useRef, useState } from "react";
@@ -30,13 +20,9 @@ export function MapArea({ t, currentStationId, doneStationIds }: MapAreaProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // t.stations-г id-р индекс болгоно — хурдан хайх
   const stationMap = new Map(
     (t?.stations ?? []).map(s => [s.id, s])
   );
-
-  // STATION_CONFIGS-ийн БҮГД id-г ашиглана
-  // t.stations-д байвал нэр/мэдээллийг авна, байхгүй бол fallback
   const stations: UrtuuStation[] = Object.entries(STATION_CONFIGS).map(([id, cfg]) => {
     const fromStrings = stationMap.get(id);
     return {
@@ -83,13 +69,13 @@ export function MapArea({ t, currentStationId, doneStationIds }: MapAreaProps) {
           station={selectedStation}
           onClose={() => setSelectedId(null)}
           onPlay={id => console.log("Play:", id)}
-          loreLabel={t.lore}
+          loreLabel={t.lore}      
           minigameLabel={t.minigame}
         />
       )}
 
-      <MapHUD t={t} currentStationId={currentStationId} />
-      <MapControls />
+      {/* <MapHUD t={t} currentStationId={currentStationId} />
+      <MapControls /> */}
     </main>
   );
 }
