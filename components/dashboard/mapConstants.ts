@@ -42,11 +42,55 @@ export const STATION_CONFIGS: Record<string, {
   zamiin_uud:   { left: "72%", top: "78%", icon: "🪨",  wx:  312,  wz:  388,  region: "Их Газрын Чулуу" },
 };
 
+// ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ ЯВАХ ДАРААЛАЛ ──────────
+// Нар мандах зүүн бүс → Төв → Баруун бүс → Нар жаргах
+// wx утгаар зүүнээс (өндөр wx) баруун тийш (бага wx) буурах дарааллаар
+export const JOURNEY_ORDER: string[] = [
+  // 🌅 НАР МАНДАХ ЗҮҮ Н — Хэрлэн голын бүс (wx ~538..362)
+  "choibalsan",    // wx: 538 — хамгийн зүүн
+  "kherlenbayan",  // wx: 362
+  "baruun_urt",    // wx: 388
+
+  // ⛅ ЗҮҮН-ТӨВИЙН БҮС — Хэнтийн нуруу (wx ~238..100)
+  "ondorhaan",     // wx: 238
+  "terelj",        // wx: 130
+  "nalaikh",       // wx: 100
+
+  // 🌞 ДУНДЫН ЦЭГ — Улаанбаатар (wx: 0)
+  "ulaanbaatar",   // wx:   0
+
+  // ☀️ ӨМНӨД ЧИГЛЭЛ — Говийн зам (wx ~20..312)
+  "zuunmod",       // wx:   0, wz:  80
+  "mandalgovi",    // wx:  20, wz: 230
+  "sainshand",     // wx: 238, wz: 263
+  "zamiin_uud",    // wx: 312, wz: 388
+
+  // 🌤 ХОЙД ЧИГЛЭЛ — Хангайн бүс (wx ~-45..-375)
+  "sukhbaatar",    // wx:  -45, wz: -250
+  "darkhan",       // wx:  -62, wz: -175
+  "erdenet",       // wx: -150, wz: -150
+  "kharakhorum",   // wx: -200, wz:   12
+  "orkhon_river",  // wx: -238, wz:  -90
+  "arvaikheer",    // wx: -188, wz:  130
+  "moron",         // wx: -350, wz: -238
+  "khatgal",       // wx: -375, wz: -325
+  "bayankhongor",  // wx: -350, wz:  138
+
+  // 🌇 БАРУУН БҮС — Алтайн нуруу (wx ~-525..-750)
+  "uliastai",      // wx: -525
+  "dalanzadgad",   // wx: -112, wz: 350 (говийн баруун)
+  "altai",         // wx: -600
+  "ulaangom",      // wx: -712, wz: -263
+
+  // 🌆 НАР ЖАРГАХ — Хамгийн баруун (wx: -750)
+  "khovd",         // wx: -750 — хамгийн барууsн
+];
+
 export const HORSE_COLORS = [
   0x6b3a1f, 0x3a2010, 0xc8a060,
   0x8a6030, 0x1a1008, 0xd4b890, 0xa06040,
 ];
 
-export const TERRAIN_W   = 1800;
+export const TERRAIN_W   = 3000;
 export const TERRAIN_D   = 1000;
 export const TERRAIN_SEG = 360;

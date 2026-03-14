@@ -80,14 +80,14 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       profile: "Профайл",
     },
 
-    currentExpedition: "Одоогийн Аялал",
+    currentExpedition: "Одоогийн Өртөө",
     mainQuest: "Үндсэн Даалгавар",
     questTitle: "Талын Элч",
     questDesc: "Орхоны хөндийг гатлан Их Хааны тамгыг хүргэх. Өөрчлөгдөх салхинаас болгоомжил.",
     continueJourney: "Аяллыг Үргэлжлүүлэх",
     treasury: "Эрдэнэс",
 
-    urtuuChain: "Уртуу Гинж",
+    urtuuChain: "Өртөө Гинж",
     discovered: "Нээгдсэн",
     masteries: "Ур Чадвар",
     seasonCycle: "Улирлын Эргэлт",
@@ -98,9 +98,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     locked: "Хаалттай",
 
     leaderboard: "Жагсаалт",
-    activeBonus: "Идэвхтэй Бонус",
+    activeBonus: "Идэвхтэй Оноо",
     journal: "Өдрийн Тэмдэглэл",
-    beginRelay: "Шинэ Уртуу Эхлүүлэх",
+    beginRelay: "Шинэ Өртөө эхлүүлэх Эхлүүлэх",
 
     stations: [
       {
@@ -344,7 +344,6 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     beginRelay: "Begin New Relay",
 
     stations: [
-      // ── CENTRAL ────────────────────────────────────────────
       {
         id: "ulaanbaatar", name: "Bogd Khan Palace",
         games: [

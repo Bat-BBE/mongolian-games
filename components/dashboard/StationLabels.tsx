@@ -24,20 +24,24 @@ export function StationLabels({
     <div className="absolute inset-0 z-10 pointer-events-none">
       {stations.map(station => {
         const lp = labelPositions[station.id];
-        if (!lp?.visible) return null;
+        // visible шалгахдаа z-clip-г бага зэрэг нэмж өгнө
+        if (!lp || !lp.visible) return null;
 
         const isCurrent  = station.id === currentStationId;
         const isDone     = doneStationIds.includes(station.id);
+        const isUpcoming = !isCurrent && !isDone;
         const isSelected = station.id === selectedId;
         const icon       = STATION_CONFIGS[station.id]?.icon ?? "📍";
 
-        // Visibility levels:
-        // - current  → fully visible (opacity 1), full name + ping dot
-        // - selected → fully visible (clicked by user), full name
-        // - done     → faint (opacity 0.45), icon + ✓ only
-        // - inactive → nearly invisible (opacity 0.18), tiny dim dot only
-        const showLabel = isCurrent || isSelected || isDone;
-        const opacity   = isCurrent ? 1 : isSelected ? 0.95 : isDone ? 0.45 : 0.18;
+        // Opacity: current=1, done=0.85, upcoming=0.38
+        // Selected бол үргэлж тод
+        const opacity = isSelected
+          ? 1
+          : isCurrent
+          ? 1
+          : isDone
+          ? 0.82
+          : 0.35;
 
         return (
           <div
@@ -48,63 +52,65 @@ export function StationLabels({
               top: lp.y,
               transform: "translate(-50%, -100%)",
               opacity,
-              transition: "opacity 0.25s ease",
+              transition: "opacity 0.3s ease",
             }}
             onClick={() => onSelect(station.id)}
           >
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center gap-0">
+
+              {/* ── Label badge ──────────────────────────────── */}
               <div
                 className={cn(
-                  "relative rounded-full border shadow-lg backdrop-blur-sm transition-all duration-200",
-                  showLabel ? "px-3 py-1.5 text-xs font-bold tracking-wide" : "w-2 h-2 p-0",
+                  "relative flex items-center gap-1 rounded-full border shadow-lg backdrop-blur-sm transition-all duration-200 px-2.5 py-1 text-xs font-semibold whitespace-nowrap",
                   isCurrent
-                    ? "bg-emerald-900/90 border-emerald-400 text-emerald-200 shadow-emerald-500/50 shadow-xl scale-110"
+                    ? "bg-emerald-900/90 border-emerald-400 text-emerald-100 shadow-emerald-500/40 shadow-xl scale-110"
                     : isSelected
-                    ? "bg-primary/80 border-primary text-primary-foreground"
+                    ? "bg-primary/85 border-primary text-primary-foreground scale-105"
                     : isDone
-                    ? "bg-amber-900/70 border-amber-500/60 text-amber-300"
-                    : "bg-gray-900/60 border-gray-600/40 text-gray-400",
+                    ? "bg-amber-900/75 border-amber-500/70 text-amber-200"
+                    : "bg-gray-900/65 border-gray-500/40 text-gray-300",
                 )}
-                style={{ whiteSpace: "nowrap" }}
               >
-                {/* Animated pulsing dot for current station */}
+                {/* Pulsing dot — current станц */}
                 {isCurrent && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full">
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5">
                     <span className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-75" />
+                    <span className="absolute inset-0 bg-emerald-400 rounded-full" />
                   </span>
                 )}
 
-                {showLabel && (
-                  <>
-                    <span className="mr-1">{icon}</span>
-                    {/* Full name only for current or selected */}
-                    {(isCurrent || isSelected) && station.name}
-                    {/* Done stations: icon + ✓ only (no name unless selected) */}
-                    {isDone && !isCurrent && !isSelected && (
-                      <span className="text-amber-400">✓</span>
-                    )}
-                    {isDone && (isCurrent || isSelected) && (
-                      <span className="ml-1 text-amber-400">✓</span>
-                    )}
-                  </>
+                {/* Icon */}
+                <span className="text-xs leading-none">{icon}</span>
+
+                {/* Нэр — бүх төлөвт харуулна */}
+                <span>{station.name}</span>
+
+                {/* Done тэмдэг */}
+                {isDone && !isCurrent && (
+                  <span className="text-amber-400 text-xs leading-none">✓</span>
+                )}
+
+                {/* Upcoming тэмдэг */}
+                {isUpcoming && !isSelected && (
+                  <span className="text-gray-500 text-xs leading-none">·</span>
                 )}
               </div>
 
-              {/* Pointer triangle — only when label is showing */}
-              {showLabel && (
-                <div
-                  className={cn(
-                    "w-0 h-0",
-                    "border-l-[5px] border-r-[5px] border-t-[7px]",
-                    "border-l-transparent border-r-transparent",
-                    isCurrent
-                      ? "border-t-emerald-400"
-                      : isSelected
-                      ? "border-t-primary"
-                      : "border-t-amber-500",
-                  )}
-                />
-              )}
+              {/* ── Pointer triangle ─────────────────────────── */}
+              <div
+                className={cn(
+                  "w-0 h-0",
+                  "border-l-[4px] border-r-[4px] border-t-[6px]",
+                  "border-l-transparent border-r-transparent",
+                  isCurrent
+                    ? "border-t-emerald-400"
+                    : isSelected
+                    ? "border-t-primary"
+                    : isDone
+                    ? "border-t-amber-500/70"
+                    : "border-t-gray-500/50",
+                )}
+              />
             </div>
           </div>
         );

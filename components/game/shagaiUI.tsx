@@ -1,0 +1,233 @@
+"use client";
+
+import { ShagaiResult, SHAgAI_SIDES, ShagaiSide } from "./shagai";
+import { useState, useEffect } from "react";
+
+interface ShagaiUIProps {
+  result: ShagaiResult | null;
+  isRolling: boolean;
+  throwCount: number;
+  score: Record<ShagaiSide, number>;
+  onThrow: () => void;
+  onReset: () => void;
+}
+
+const SIDE_ORDER: ShagaiSide[] = ["horse", "sheep", "goat", "camel"];
+
+function GoldDivider() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "10px 0" }}>
+      <div style={{ flex: 1, height: 1, background: "linear-gradient(to right, transparent, #c8a030)" }} />
+      <span style={{ color: "#c8a030", fontSize: 10 }}>❖</span>
+      <div style={{ flex: 1, height: 1, background: "linear-gradient(to left, transparent, #c8a030)" }} />
+    </div>
+  );
+}
+
+function ScoreRow({ side, count, total, isActive }: { side: ShagaiSide; count: number; total: number; isActive: boolean }) {
+  const info = SHAgAI_SIDES[side];
+  const pct  = total > 0 ? (count / total) * 100 : 0;
+  const sideColor = side === "horse" ? "#f0c040" : side === "sheep" ? "#90d890" : side === "goat" ? "#c8956a" : "#e0a050";
+
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3, alignItems: "center" }}>
+        <span style={{ fontSize: 13, color: isActive ? sideColor : "#bbb", transition: "color .3s", display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ fontSize: 16 }}>{info.symbol}</span>
+          <span style={{ fontFamily: "'Noto Serif', Georgia, serif", letterSpacing: 1 }}>{info.name}</span>
+        </span>
+        <span style={{ color: sideColor, fontWeight: "bold", fontSize: 15, minWidth: 22, textAlign: "right" }}>{count}</span>
+      </div>
+      <div style={{ height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{
+          height: "100%",
+          width: `${pct}%`,
+          background: sideColor,
+          borderRadius: 3,
+          transition: "width .6s ease",
+          boxShadow: isActive ? `0 0 8px ${sideColor}88` : "none",
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function ResultDisplay({ result, isRolling }: { result: ShagaiResult | null; isRolling: boolean }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (result && !isRolling) {
+      setVisible(false);
+      const t = setTimeout(() => setVisible(true), 50);
+      return () => clearTimeout(t);
+    } else {
+      setVisible(false);
+    }
+  }, [result, isRolling]);
+
+  if (isRolling) {
+    return (
+      <div style={{ textAlign: "center", padding: "20px 0" }}>
+        <div style={{ fontSize: 42, lineHeight: 1, marginBottom: 8, animation: "bounce 0.4s infinite alternate" }}>🎲</div>
+        <div style={{ color: "#aaa", fontSize: 14, letterSpacing: 3 }}>Нисэж байна...</div>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return (
+      <div style={{ textAlign: "center", padding: "20px 0", opacity: 0.5 }}>
+        <div style={{ fontSize: 36, marginBottom: 6 }}>🦴</div>
+        <div style={{ color: "#888", fontSize: 13, letterSpacing: 2 }}>Шагай шидэж эхлэ</div>
+      </div>
+    );
+  }
+
+  const sideColor = result.side === "horse" ? "#f0c040" : result.side === "sheep" ? "#90d890" : result.side === "goat" ? "#c8956a" : "#e0a050";
+
+  return (
+    <div style={{
+      textAlign: "center",
+      padding: "16px 0",
+      opacity: visible ? 1 : 0,
+      transform: visible ? "scale(1)" : "scale(0.8)",
+      transition: "all 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+    }}>
+      <div style={{ fontSize: 56, lineHeight: 1, marginBottom: 6, filter: `drop-shadow(0 0 18px ${sideColor}88)` }}>
+        {result.symbol}
+      </div>
+      <div style={{ color: sideColor, fontSize: 26, fontWeight: "bold", fontFamily: "'Noto Serif', Georgia, serif", letterSpacing: 4, textShadow: `0 0 20px ${sideColor}88`, marginBottom: 8 }}>
+        {result.name}
+      </div>
+      <GoldDivider />
+      <div style={{ color: "#c8a030", fontSize: 12, fontStyle: "italic", lineHeight: 1.6, padding: "0 8px" }}>
+        ✨ {result.luck}
+      </div>
+      <div style={{ color: "#555", fontSize: 11, marginTop: 8, lineHeight: 1.5, padding: "0 4px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 8 }}>
+        "{result.description}"
+      </div>
+    </div>
+  );
+}
+
+export default function ShagaiUI({ result, isRolling, throwCount, score, onThrow, onReset }: ShagaiUIProps) {
+  const total = Object.values(score).reduce((a, b) => a + b, 0);
+
+  return (
+    <>
+      {/* Зүүн самбар */}
+      <div style={{
+        position: "absolute", top: 20, left: 20,
+        width: 270,
+        background: "rgba(8,6,3,0.88)",
+        border: "1px solid rgba(200,160,48,0.35)",
+        borderRadius: 16,
+        padding: "18px 18px 14px",
+        backdropFilter: "blur(14px)",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+        fontFamily: "'Noto Serif', Georgia, serif",
+        color: "white",
+        zIndex: 10,
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <div style={{ color: "#c8a030", fontSize: 19, fontWeight: "bold", letterSpacing: 2 }}>ᠱᠠᠭᠠᠢ</div>
+          <div style={{ color: "#888", fontSize: 10, letterSpacing: 4 }}>ШАГАЙ НААДАМ</div>
+        </div>
+
+        <GoldDivider />
+        <ResultDisplay result={result} isRolling={isRolling} />
+        <GoldDivider />
+
+        <button
+          onClick={onThrow}
+          disabled={isRolling}
+          style={{
+            width: "100%",
+            padding: "13px 0",
+            fontSize: 15,
+            fontWeight: "bold",
+            fontFamily: "'Noto Serif', Georgia, serif",
+            letterSpacing: 2,
+            background: isRolling ? "rgba(80,70,40,0.5)" : "linear-gradient(135deg, #c8a030, #f0c040 50%, #c8a030)",
+            color: isRolling ? "#666" : "#1a0e00",
+            border: "none",
+            borderRadius: 10,
+            cursor: isRolling ? "not-allowed" : "pointer",
+            transition: "all 0.2s",
+            boxShadow: isRolling ? "none" : "0 4px 20px rgba(200,160,48,0.35)",
+          }}
+        >
+          {isRolling ? "🎲 Нисэж байна..." : "🦴 Шагай шидэх"}
+        </button>
+
+        <div style={{ color: "#555", fontSize: 11, textAlign: "center", marginTop: 8 }}>
+          Шагай дээр дарж ч шидэж болно
+        </div>
+      </div>
+
+      {/* Баруун самбар */}
+      <div style={{
+        position: "absolute", top: 20, right: 20,
+        width: 220,
+        background: "rgba(8,6,3,0.88)",
+        border: "1px solid rgba(200,160,48,0.25)",
+        borderRadius: 16,
+        padding: "16px 16px 12px",
+        backdropFilter: "blur(14px)",
+        boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+        fontFamily: "'Noto Serif', Georgia, serif",
+        color: "white",
+        zIndex: 10,
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <div style={{ color: "#c8a030", fontSize: 12, letterSpacing: 3 }}>СТАТИСТИК</div>
+          <div style={{ color: "#c8a030", fontSize: 12, background: "rgba(200,160,48,0.1)", borderRadius: 10, padding: "2px 10px" }}>{total} удаа</div>
+        </div>
+
+        <GoldDivider />
+
+        {SIDE_ORDER.map((side) => (
+          <ScoreRow key={side} side={side} count={score[side]} total={total} isActive={result?.side === side} />
+        ))}
+
+        {total > 0 && (
+          <>
+            <GoldDivider />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <span style={{ color: "#888" }}>Морийн хувь</span>
+              <span style={{ color: "#f0c040", fontWeight: "bold" }}>{total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%</span>
+            </div>
+          </>
+        )}
+
+        {total > 0 && (
+          <button
+            onClick={onReset}
+            style={{
+              width: "100%",
+              marginTop: 12,
+              padding: "8px 0",
+              fontSize: 12,
+              letterSpacing: 1,
+              background: "rgba(255,255,255,0.05)",
+              color: "#888",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontFamily: "'Noto Serif', Georgia, serif",
+            }}
+          >
+            Шинээр эхлэх
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes bounce {
+          from { transform: translateY(0); }
+          to { transform: translateY(-8px); }
+        }
+      `}</style>
+    </>
+  );
+}

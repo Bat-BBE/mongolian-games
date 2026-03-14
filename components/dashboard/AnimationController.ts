@@ -1,8 +1,5 @@
 // ============================================================
 // AnimationController.ts
-// Three.js animate loop — морь, шувуу, үүл, label проекц,
-// нарны нум, камерын хяналт.
-// 480×280 terrain + 25 станц хувилбар.
 // ============================================================
 
 import * as THREE from "three";
@@ -24,6 +21,9 @@ interface AnimationControllerOptions {
   labelAnchors: Map<string, THREE.Vector3>;
   currentStationId: string;
   onLabelUpdate: (positions: Record<string, LabelPos>) => void;
+  // ── useThreeScene-с камер + нарны логик inject хийхэд ────
+  // Render хийхийн өмнө дуудагдана. dt = clock.getElapsedTime()
+  onBeforeRender?: (dt: number) => void;
 }
 
 export class AnimationController {
@@ -32,7 +32,7 @@ export class AnimationController {
   private clock = new THREE.Clock();
   private _tmp = new THREE.Vector3();
 
-  // Камерын төлөв
+  // Камерын төлөв — onBeforeRender байхгүй үед л ажиллана (fallback)
   private theta  = 0.18;  private tTheta  = 0.18;
   private phi    = 0.32;  private tPhi    = 0.32;
   private radius = 220;   private tRadius = 220;
@@ -46,10 +46,13 @@ export class AnimationController {
 
   constructor(opts: AnimationControllerOptions) {
     this.opts = opts;
-    this.registerEvents();
+    // onBeforeRender байхгүй үед л өөрийн drag/zoom event-уудыг бүртгэнэ
+    if (!opts.onBeforeRender) {
+      this.registerEvents();
+    }
   }
 
-  // ── Эвент бүртгэл ────────────────────────────────────────
+  // ── Fallback камерын эвентүүд (onBeforeRender байхгүй үед) ─
 
   private registerEvents(): void {
     const { renderer } = this.opts;
@@ -126,6 +129,11 @@ export class AnimationController {
     }
   };
 
+  /** Станц солигдоход гаднаас дуудна — marker pulse шинэчлэгдэнэ */
+  updateCurrentStation(id: string): void {
+    this.opts.currentStationId = id;
+  }
+
   // ── Animate loop ──────────────────────────────────────────
 
   start(): void {
@@ -134,28 +142,41 @@ export class AnimationController {
       horses, clouds, birds,
       markerMeshes, labelAnchors,
       currentStationId, onLabelUpdate,
+      onBeforeRender,
     } = this.opts;
 
     const loop = (): void => {
       this.animId = requestAnimationFrame(loop);
       const t = this.clock.getElapsedTime();
-      const L = 0.05; // lerp хурд
+      const L = 0.05;
 
-      // Камер шилжих
-      this.theta  += (this.tTheta  - this.theta)  * L;
-      this.phi    += (this.tPhi    - this.phi)     * L;
-      this.radius += (this.tRadius - this.radius)  * L;
-      this.panX   += (this.tPanX   - this.panX)    * L;
-      this.panZ   += (this.tPanZ   - this.panZ)    * L;
+      // ── Камер шилжих ─────────────────────────────────────
+      if (onBeforeRender) {
+        // useThreeScene-с камер + нар бүрэн удирдагдана
+        onBeforeRender(t);
+      } else {
+        // Fallback: AnimationController-ийн өөрийн камер
+        this.theta  += (this.tTheta  - this.theta)  * L;
+        this.phi    += (this.tPhi    - this.phi)     * L;
+        this.radius += (this.tRadius - this.radius)  * L;
+        this.panX   += (this.tPanX   - this.panX)    * L;
+        this.panZ   += (this.tPanZ   - this.panZ)    * L;
 
-      camera.position.set(
-        Math.sin(this.theta) * Math.cos(this.phi) * this.radius + this.panX,
-        Math.sin(this.phi) * this.radius,
-        Math.cos(this.theta) * Math.cos(this.phi) * this.radius + this.panZ
-      );
-      camera.lookAt(this.panX, 2, this.panZ);
+        camera.position.set(
+          Math.sin(this.theta) * Math.cos(this.phi) * this.radius + this.panX,
+          Math.sin(this.phi) * this.radius,
+          Math.cos(this.theta) * Math.cos(this.phi) * this.radius + this.panZ
+        );
+        camera.lookAt(this.panX, 2, this.panZ);
 
-      // Marker pulse — одоогийн станц
+        // Fallback нарны нум (onBeforeRender байхгүй үед л)
+        sun.position.x = 80 * Math.cos(t * 0.022);
+        sun.position.z = 40 * Math.sin(t * 0.022);
+        const sunAngle = (Math.sin(t * 0.022) + 1) * 0.5;
+        sun.color.setHSL(0.09 - sunAngle * 0.04, 0.95, 0.85 - sunAngle * 0.08);
+      }
+
+      // ── Marker pulse — одоогийн станц ────────────────────
       markerMeshes.forEach((marker, id) => {
         if (id === currentStationId) {
           marker.scale.setScalar(1 + Math.sin(t * 3.2) * 0.15);
@@ -164,7 +185,7 @@ export class AnimationController {
         }
       });
 
-      // Морины хөдөлгөөн
+      // ── Морины хөдөлгөөн ─────────────────────────────────
       horses.forEach(h => {
         const angle = h.phase + t * h.speed;
         const nx = h.orbitCx + Math.cos(angle) * h.orbitR;
@@ -182,7 +203,7 @@ export class AnimationController {
         }
       });
 
-      // Шувуу
+      // ── Шувуу ─────────────────────────────────────────────
       birds.forEach((bird, i) => {
         const angle = t * bird.speed + (i / birds.length) * Math.PI * 2;
         bird.arm.position.x = bird.radius;
@@ -191,7 +212,7 @@ export class AnimationController {
         bird.wingMesh.rotation.z = Math.sin(t * 5.5 + bird.phase) * 0.58;
       });
 
-      // Үүл дорно зүгт хөдөлнө
+      // ── Үүл дорно зүгт хөдөлнө ───────────────────────────
       clouds.forEach(cloud => {
         cloud.g.position.x += cloud.speed;
         cloud.g.position.y = cloud.alt + Math.sin(t * 0.13 + cloud.g.position.x * 0.018) * 1.5;
@@ -199,13 +220,7 @@ export class AnimationController {
         if (cloud.g.position.x < -220) cloud.g.position.x = 220;
       });
 
-      // Нарны нум
-      sun.position.x = 80 * Math.cos(t * 0.022);
-      sun.position.z = 40 * Math.sin(t * 0.022);
-      const sunAngle = (Math.sin(t * 0.022) + 1) * 0.5;
-      sun.color.setHSL(0.09 - sunAngle * 0.04, 0.95, 0.85 - sunAngle * 0.08);
-
-      // Label 2D проекц шинэчлэл
+      // ── Label 2D проекц шинэчлэл ─────────────────────────
       const cw = container.clientWidth, ch = container.clientHeight;
       const np: Record<string, LabelPos> = {};
       labelAnchors.forEach((wp, id) => {
@@ -221,10 +236,12 @@ export class AnimationController {
 
   stop(): void {
     cancelAnimationFrame(this.animId);
-    const { renderer } = this.opts;
-    renderer.domElement.removeEventListener("mousedown",   this.onDown);
-    window.removeEventListener("mousemove", this.onMove);
-    window.removeEventListener("mouseup",   this.onUp);
-    window.removeEventListener("resize",    this.onResize);
+    if (!this.opts.onBeforeRender) {
+      const { renderer } = this.opts;
+      renderer.domElement.removeEventListener("mousedown",   this.onDown);
+      window.removeEventListener("mousemove", this.onMove);
+      window.removeEventListener("mouseup",   this.onUp);
+      window.removeEventListener("resize",    this.onResize);
+    }
   }
 }
