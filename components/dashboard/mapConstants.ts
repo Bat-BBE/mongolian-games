@@ -94,3 +94,22 @@ export const HORSE_COLORS = [
 export const TERRAIN_W   = 3000;
 export const TERRAIN_D   = 1000;
 export const TERRAIN_SEG = 360;
+
+/** Аяллын дараалал дахь индекс (байхгүй бол -1) */
+export function getStationJourneyIndex(stationId: string): number {
+  return JOURNEY_ORDER.indexOf(stationId);
+}
+
+/**
+ * Тоглогч зөвхөн одоогийн болон өмнөх өртөөнүүдэд очих боломжтой (дараагийг алгасахгүй).
+ */
+export function isStationUnlockedInJourney(
+  stationId: string,
+  currentStationId: string,
+): boolean {
+  const idx = JOURNEY_ORDER.indexOf(stationId);
+  if (idx < 0) return false;
+  const curIdx = JOURNEY_ORDER.indexOf(currentStationId);
+  if (curIdx < 0) return idx === 0;
+  return idx <= curIdx;
+}

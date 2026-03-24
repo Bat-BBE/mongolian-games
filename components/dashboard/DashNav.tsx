@@ -23,7 +23,6 @@ export function DashNav({
   avatarUrl,
   level,
 }: DashNavProps) {
-
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
@@ -38,7 +37,7 @@ export function DashNav({
     active
       ? {
           background: "var(--grad-gold)",
-          color: "oklch(0.12 0.018 55)", // Dark text for gold bg to ensure readability
+          color: "oklch(0.12 0.018 55)",
           padding: "clamp(4px,0.5vw,6px) clamp(8px,1vw,12px)",
           fontSize: "clamp(10px,0.7vw,12px)",
           letterSpacing: "0.08em",
@@ -64,7 +63,8 @@ export function DashNav({
       className="flex items-center gap-[2px] rounded-full p-[2px]"
       style={{
         background: "color-mix(in oklch, var(--background) 35%, transparent)",
-        border: "1px solid color-mix(in oklch, var(--primary) 20%, var(--border))",
+        border:
+          "1px solid color-mix(in oklch, var(--primary) 20%, var(--border))",
         backdropFilter: "blur(8px)",
       }}
     >
@@ -92,9 +92,7 @@ export function DashNav({
       }}
     >
       <div className="flex items-center gap-[clamp(10px,2vw,24px)]">
-
         <div className="flex items-center gap-[clamp(8px,1vw,14px)] select-none">
-
           <span
             className="font-display font-black tracking-tight"
             style={{
@@ -123,13 +121,11 @@ export function DashNav({
           >
             {t.title}
           </span>
-
         </div>
       </div>
 
       <div className="flex items-center gap-[clamp(8px,1.2vw,16px)]">
         <div className="flex items-center gap-[clamp(6px,1vw,12px)]">
-
           <div className="text-right hidden sm:block">
             <p
               className="font-bold"

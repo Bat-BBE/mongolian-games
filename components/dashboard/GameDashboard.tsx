@@ -9,6 +9,7 @@ import { MapArea } from "./MapArea";
 import  UrtuuMap  from "./UrtuuMap";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer } from "@/components/hero-select/hero-data";
+import { JOURNEY_ORDER } from "./mapConstants";
 
 interface GameDashboardProps {
   defaultLang?: DashLang;
@@ -100,7 +101,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
 
         <MapArea
           t={t}
-          currentStationId={player?.currentStationId ?? ""}
+          currentStationId={
+            player?.currentStationId?.trim() || JOURNEY_ORDER[0]
+          }
           doneStationIds={player?.doneStationIds ?? []}
         />
       </div>

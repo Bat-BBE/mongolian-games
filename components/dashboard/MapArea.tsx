@@ -8,7 +8,8 @@ import { useThreeScene } from "./useThreeScene";
 import { StationLabels } from "./StationLabels";
 import { MapHUD } from "./MapHUD";
 import { MapControls } from "./MapControls";
-import { STATION_CONFIGS } from "./mapConstants";
+import { STATION_CONFIGS, isStationUnlockedInJourney } from "./mapConstants";
+import { MapPinned } from "lucide-react";
 
 interface MapAreaProps {
   t: DashStrings;
@@ -41,16 +42,24 @@ export function MapArea({ t, currentStationId, doneStationIds }: MapAreaProps) {
   });
 
   const selectedStation = stations.find(s => s.id === selectedId) ?? null;
+  const isViewingLockedStation =
+    selectedId != null &&
+    !isStationUnlockedInJourney(selectedId, currentStationId);
 
-  const { labelPositions } = useThreeScene({
+  const { labelPositions, flyToStation } = useThreeScene({
     containerRef: canvasRef,
     stations,
     currentStationId,
     doneStationIds,
   });
 
-  const handleSelect = (id: string) =>
-    setSelectedId(prev => (prev === id ? null : id));
+  const handleSelect = (id: string) => {
+    setSelectedId((prev) => {
+      if (prev === id) return null;
+      flyToStation(id, true);
+      return id;
+    });
+  };
 
   return (
     <main className="flex-1 relative overflow-hidden bg-background">
@@ -65,13 +74,30 @@ export function MapArea({ t, currentStationId, doneStationIds }: MapAreaProps) {
         onSelect={handleSelect}
       />
 
+      {isViewingLockedStation && (
+        <div className="absolute top-4 left-1/2 z-[45] -translate-x-1/2 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => {
+              flyToStation(currentStationId, true);
+              setSelectedId(currentStationId);
+            }}
+            className="flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-950/90 px-4 py-2 text-sm font-semibold text-emerald-100 shadow-lg shadow-emerald-900/40 backdrop-blur-sm transition-all hover:scale-[1.02] hover:border-emerald-400 hover:bg-emerald-900/95"
+          >
+            <MapPinned className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            Одоогийн өртөө рүү очих
+          </button>
+        </div>
+      )}
+
       {selectedStation && (
         <StationPopup
           station={selectedStation}
           onClose={() => setSelectedId(null)}
           onPlay={id => console.log("Play:", id)}
-          loreLabel={t.lore}      
+          loreLabel={t.lore}
           minigameLabel={t.minigame}
+          canPlay={selectedStation.id === currentStationId}
         />
       )}
 
