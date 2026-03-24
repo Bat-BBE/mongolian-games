@@ -17,7 +17,6 @@ import {
 } from "./mapConstants";
 import type { UrtuuStation } from "./UrtuuNode";
 
-/** Станц тус бүрийн орчны нэмэлт дүрслэл (мод, гэр, амьтан г.м.) */
 type StationPeripheryPreset = {
   trees?: number;
   treeRadius?: number;
