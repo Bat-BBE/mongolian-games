@@ -9,8 +9,7 @@ export function Providers({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Хэрэглэгч сонгосон theme хадгалах
+  
   useEffect(() => {
     const savedTheme = localStorage.getItem("mtga-theme");
     if (savedTheme) {

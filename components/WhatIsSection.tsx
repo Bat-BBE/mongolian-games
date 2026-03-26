@@ -1,10 +1,26 @@
 "use client";
 
-import { GamepadIcon, MapIcon, AwardIcon } from "lucide-react";
+import {
+  GamepadIcon,
+  MapIcon,
+  AwardIcon,
+  BrainIcon,
+  GlobeIcon,
+  BookOpenIcon,
+} from "lucide-react";
+
 import { useApp } from "./AppContext";
 
-const ICONS = [GamepadIcon, MapIcon, AwardIcon];
-const NUMS = ["I", "II", "III"];
+const ICONS = [
+  GamepadIcon,
+  MapIcon,
+  AwardIcon,
+  BrainIcon,
+  GlobeIcon,
+  BookOpenIcon,
+];
+
+const NUMS = ["I", "II", "III", "IV", "V", "VI"];
 
 export default function WhatIsSection() {
   const { t } = useApp();
@@ -26,37 +42,41 @@ export default function WhatIsSection() {
       />
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <div className="text-center mb-5">
+        <div className="text-center mb-10">
           <p
             className="font-display text-[0.62rem] tracking-[0.45em] uppercase mb-3 opacity-55"
             style={{ color: "var(--gold-bright)" }}
           >
             ❖ &nbsp; About &nbsp; ❖
           </p>
+
           <h2
             className="font-display font-bold text-gold uppercase tracking-widest"
             style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)" }}
           >
             {t.whatIs.heading}
           </h2>
-          <p className="font-body text-muted-foreground text-sm leading-relaxed">
+
+          <p className="font-body text-muted-foreground text-sm leading-relaxed max-w-6xl mx-auto">
             {t.whatIs.intro}
           </p>
 
           <div className="divider-gold w-48 mx-auto mt-4" />
         </div>
 
-        <div className="grid md:grid-cols-3 gap-3 lg:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {t.whatIs.items.map((item, i) => {
             const Icon = ICONS[i];
+
             return (
               <article
                 key={i}
-                className={`glass-card rounded-[2rem] p-3 lg:p-4 text-center group relative overflow-hidden
-                  animate-fade-up delay-${i + 2}`}
+                className={`glass-card rounded-[2rem] px-1 py-3 text-center group relative overflow-hidden
+                animate-fade-up delay-${i + 2}`}
                 style={{ opacity: 0 }}
               >
                 <div className="card-top-line" />
+
                 <span
                   className="font-display font-bold text-xs tracking-[0.4em] uppercase mb-6 block"
                   style={{ color: "var(--gold-bright)" }}
@@ -64,8 +84,8 @@ export default function WhatIsSection() {
                   {NUMS[i]}
                 </span>
 
-                <div className="icon-vessel w-18 h-18 rounded-2xl flex items-center justify-center mx-auto mb-8">
-                  <Icon className="text-primary w-8 h-8" strokeWidth={1.5} />
+                <div className="icon-vessel w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  {Icon && <Icon className="text-primary w-8 h-8" strokeWidth={1.5} />}
                 </div>
 
                 <h3 className="font-display font-bold text-foreground text-lg mb-4 leading-snug">

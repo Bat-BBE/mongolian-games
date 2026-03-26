@@ -9,3 +9,14 @@ export default function Page() {
     </Suspense>
   );
 }
+// "use client";
+
+// import GameScene from "@/components/game/gamescene";
+
+// export default function Page() {
+//   return (
+//     <main style={{ width: "100vw", height: "100vh" }}>
+//       <GameScene />
+//     </main>
+//   );
+// }

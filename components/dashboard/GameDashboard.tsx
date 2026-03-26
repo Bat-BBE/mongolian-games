@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useApp } from "../AppContext";
 import { DASH_STRINGS, type DashLang } from "./dashboard-strings";
 import { DashNav } from "./DashNav";
 import { LeftPanel } from "./LeftPanel";
@@ -8,13 +9,16 @@ import { MapArea } from "./MapArea";
 import  UrtuuMap  from "./UrtuuMap";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer } from "@/components/hero-select/hero-data";
+import { JOURNEY_ORDER } from "./mapConstants";
 
 interface GameDashboardProps {
   defaultLang?: DashLang;
 }
 
 export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
-  const [lang, setLang] = useState<DashLang>(defaultLang);
+  const { language, setLanguage } = useApp();
+  const lang = language as DashLang;
+  const setLang = setLanguage as (l: DashLang) => void;
   const [season, setSeason] = useState<"spring" | "summer" | "autumn" | "winter">("summer");
   const [player, setPlayer] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -46,7 +50,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         currentStationId: data.progress.currentStationId,
         doneStationIds: data.progress.doneStationIds,
       });
-
       setLoading(false);
     }
 
@@ -79,8 +82,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         playerTitle={player.title}
         avatarUrl={player.image}
         level={player.level}
-        kp={player.kp}
-        tokens={player.tokens}
+        // kp={player.kp}
+        // tokens={player.tokens}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -92,15 +95,17 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           avatarUrl={player.image}
           bonusMultiplier="x1.5"
           bonusTitle="Steppe Speedster"
-          onJournal={() => console.log("Journal")}
-          onBeginRelay={() => console.log("Begin relay")}
+          // onJournal={() => console.log("Journal")}
+          // onBeginRelay={() => console.log("Begin relay")}
         />
 
-        {/* <MapArea
+        <MapArea
           t={t}
-          currentStationId={player?.currentStationId ?? ""}
+          currentStationId={
+            player?.currentStationId?.trim() || JOURNEY_ORDER[0]
+          }
           doneStationIds={player?.doneStationIds ?? []}
-        /> */}
+        />
       </div>
     </div>
   );

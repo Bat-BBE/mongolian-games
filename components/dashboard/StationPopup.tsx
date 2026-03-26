@@ -10,9 +10,18 @@ interface StationPopupProps {
   onPlay: (id: string) => void;
   loreLabel: string;
   minigameLabel: string;
+  /** Зөвхөн одоогийн өртөө дээр тоглоом эхлүүлэх */
+  canPlay?: boolean;
 }
 
-export function StationPopup({ station, onClose, onPlay, loreLabel, minigameLabel }: StationPopupProps) {
+export function StationPopup({
+  station,
+  onClose,
+  onPlay,
+  loreLabel,
+  minigameLabel,
+  canPlay = true,
+}: StationPopupProps) {
   if (!station) return null;
 
   return (
@@ -71,11 +80,24 @@ export function StationPopup({ station, onClose, onPlay, loreLabel, minigameLabe
                 {station.reward}
               </div>
               <button
-                onClick={() => onPlay(station.id)}
-                className="px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-black transition-all hover:scale-105"
-                style={{ background: "var(--gold-gradient)" }}
+                type="button"
+                disabled={!canPlay}
+                onClick={() => canPlay && onPlay(station.id)}
+                className={cn(
+                  "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                  canPlay
+                    ? "text-black hover:scale-105"
+                    : "text-muted-foreground cursor-not-allowed opacity-60",
+                )}
+                style={
+                  canPlay ? { background: "var(--gold-gradient)" } : undefined
+                }
               >
-                {station.gameName} →
+                {canPlay
+                  ? `${station.gameName} →`
+                  : station.isDone
+                    ? "Дууссан"
+                    : "Хүлээгдэж буй"}
               </button>
             </div>
           </div>

@@ -54,7 +54,7 @@ export default function Features() {
 
               <div>
                 <p
-                  className="font-display font-semibold text-foreground text-sm lg:text-base group-hover:text-gold transition-all duration-300 leading-snug"
+                  className="font-display text-foreground text-sm lg:text-base group-hover:text-gold transition-all duration-300 leading-snug"
                 >
                   {feature}
                 </p>
