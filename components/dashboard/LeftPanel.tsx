@@ -1,17 +1,27 @@
 "use client";
 
 import { Sword, BookOpen, Shield, Wrench, ChevronLeft, ChevronRight, Map, Gem, TrendingUp, Trophy } from "lucide-react";
-import type { DashStrings } from "./dashboard-strings";
+import type { DashStrings, DashLang } from "./dashboard-strings";
+import type { StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 interface LeftPanelProps {
   t: DashStrings;
+  lang: DashLang;
   accentColor: string;
   xp: number;
   xpMax: number;
   avatarUrl: string;
   bonusMultiplier: string;
   bonusTitle: string;
+  /** Аяллын өдөр, одоогийн уртуу — backend `dashboard-bundle`-аас */
+  journeyDay?: number;
+  stationIndex?: number;
+  totalStations?: number;
+  currentStationLabel?: string;
+  heroTier?: string;
+  stationGames?: StationGameBundleRow[];
+  onOpenLeaderboard?: () => void;
 }
 
 const TREASURY_ICONS = [
@@ -29,6 +39,14 @@ export function LeftPanel({
   avatarUrl,
   bonusMultiplier,
   bonusTitle,
+  journeyDay,
+  stationIndex,
+  totalStations,
+  currentStationLabel,
+  heroTier,
+  stationGames = [],
+  onOpenLeaderboard,
+  lang,
 }: LeftPanelProps) {
   const xpPct = Math.round((xp / xpMax) * 100);
   const [isMobile, setIsMobile] = useState(false);
@@ -56,6 +74,10 @@ export function LeftPanel({
           {NAV_ITEMS.map(({ id, Icon, label }) => (
             <button
               key={id}
+              type="button"
+              onClick={() => {
+                if (id === "leaderboard") onOpenLeaderboard?.();
+              }}
               className="flex flex-col items-center justify-center text-primary/70 hover:text-primary transition-all group"
               title={label}
             >
@@ -86,7 +108,48 @@ export function LeftPanel({
                 </span>
               </div>
               <h4 className="font-display text-base text-foreground mb-1.5 font-semibold">{t.questTitle}</h4>
-              <p className="text-xs text-foreground/70 mb-3 leading-relaxed line-clamp-2">{t.questDesc}</p>
+              <p className="text-xs text-foreground/70 mb-2 leading-relaxed line-clamp-2">{t.questDesc}</p>
+              {journeyDay != null &&
+                currentStationLabel &&
+                stationIndex != null &&
+                totalStations != null &&
+                totalStations > 0 && (
+                  <p className="text-[10px] text-foreground/65 mb-3 leading-snug">
+                    <span className="text-primary/90 font-semibold">
+                      {t.journeyDayLabel} {journeyDay}
+                    </span>
+                    <span className="text-foreground/50"> · </span>
+                    <span>
+                      {t.urtuuCounter} {stationIndex}/{totalStations}
+                    </span>
+                    <span className="text-foreground/50"> — </span>
+                    <span>{currentStationLabel}</span>
+                  </p>
+                )}
+              {stationGames.length > 0 && (
+                <div className="mb-3 rounded-lg border border-primary/15 bg-background/40 px-2.5 py-2">
+                  <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1.5">
+                    {lang === "mn" ? "Энэ өртөөний тоглоомууд" : "Games at this station"}
+                  </p>
+                  <ul className="space-y-1">
+                    {stationGames.map((g) => (
+                      <li
+                        key={g.id}
+                        className="text-[11px] text-foreground/80 leading-snug flex justify-between gap-2"
+                      >
+                        <span className="truncate">
+                          {lang === "mn" ? g.name_mn : g.name_en}
+                        </span>
+                        {(lang === "mn" ? g.reward_hint_mn : g.reward_hint_en)?.trim() ? (
+                          <span className="shrink-0 text-primary/80 text-[10px]">
+                            {lang === "mn" ? g.reward_hint_mn : g.reward_hint_en}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <button
                 className="w-full py-2.5 text-white font-bold text-xs rounded-lg hover:scale-[1.02] transition-all uppercase tracking-widest shadow-lg"
                 style={{
@@ -120,7 +183,12 @@ export function LeftPanel({
           <SectionTitle>{t.rank}</SectionTitle>
           <div className="glass bg-background/90 p-3 rounded-lg border border-primary/20 mt-1.5">
             <div className="flex justify-between text-[11px] text-foreground mb-1.5">
-              <span className="font-bold uppercase tracking-wider text-primary">{t.rankTitle}</span>
+              <span className="font-bold uppercase tracking-wider text-primary">
+                {t.rankTitle}
+                {heroTier ? (
+                  <span className="ml-1.5 text-[9px] opacity-80 font-mono">· {heroTier}</span>
+                ) : null}
+              </span>
               <span className="text-foreground font-medium">{xp.toLocaleString()} / {xpMax.toLocaleString()}</span>
             </div>
             <div className="h-1.5 w-full bg-background/50 border border-primary/20 rounded-full overflow-hidden">
@@ -135,10 +203,14 @@ export function LeftPanel({
         {/* Leaderboard Section */}
         <div className="w-full">
           <SectionTitle>{t.leaderboard}</SectionTitle>
-          <div className="flex items-center justify-between gap-3 mt-1.5">
+          <button
+            type="button"
+            onClick={() => onOpenLeaderboard?.()}
+            className="w-full text-left flex items-center justify-between gap-3 mt-1.5 rounded-xl border border-transparent hover:border-primary/25 hover:bg-primary/5 transition-colors p-1 -m-1"
+          >
             <div className="flex flex-col">
               <span className="text-[8px] text-primary uppercase tracking-[0.2em] font-bold mb-1.5">
-                Top Players
+                {t.topPlayersLabel}
               </span>
               <div className="flex items-center -space-x-2">
                 {[0, 1, 2].map((i) => (
@@ -170,7 +242,7 @@ export function LeftPanel({
                 <span className="text-[10px] text-primary/70 uppercase tracking-widest">{bonusTitle}</span>
               </div>
             </div>
-          </div>
+          </button>
         </div>
       </div>
     );
@@ -182,6 +254,10 @@ export function LeftPanel({
         {NAV_ITEMS.map(({ id, Icon, label }) => (
           <button
             key={id}
+            type="button"
+            onClick={() => {
+              if (id === "leaderboard") onOpenLeaderboard?.();
+            }}
             className="flex flex-col items-center justify-center text-primary/70 hover:text-primary transition-all px-1.5"
           >
             <Icon className="w-5 h-5 mb-0.5" />

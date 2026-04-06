@@ -2,6 +2,14 @@
 export type HeroId = "shikhikhutag" | "tatatunga" | "subutai" | "rashid";
 export type Lang = "mn" | "en";
 
+/** DB / JSON-аас ирсэн утгыг HeroId болгоно. */
+export function parseHeroId(raw: unknown): HeroId {
+  if (raw === "shikhikhutag" || raw === "tatatunga" || raw === "subutai" || raw === "rashid") {
+    return raw;
+  }
+  return "shikhikhutag";
+}
+
 export const HERO_STRINGS = {
   mn: {
     gameTagline: "⚔ Монгол Домог ⚔",

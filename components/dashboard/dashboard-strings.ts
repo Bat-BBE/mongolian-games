@@ -32,6 +32,12 @@ export interface DashStrings {
 
   leaderboard: string;
   activeBonus: string;
+  /** Sidebar: аяллын өдөр / Journey day */
+  journeyDayLabel: string;
+  /** Leaderboard avatar row heading */
+  topPlayersLabel: string;
+  /** "Өртөө" / Station — уртуу дугаарын угтвар */
+  urtuuCounter: string;
   journal: string;
   beginRelay: string;
 
@@ -105,6 +111,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
 
     leaderboard: "Жагсаалт",
     activeBonus: "Идэвхтэй Оноо",
+    journeyDayLabel: "Аяллын өдөр",
+    topPlayersLabel: "Топ тоглогчид",
+    urtuuCounter: "Өртөө",
     journal: "Өдрийн Тэмдэглэл",
     beginRelay: "Шинэ Өртөө эхлүүлэх Эхлүүлэх",
 
@@ -537,6 +546,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
 
     leaderboard: "Leaderboard",
     activeBonus: "Active Relay Bonus",
+    journeyDayLabel: "Journey day",
+    topPlayersLabel: "Top Players",
+    urtuuCounter: "Station",
     journal: "Journal",
     beginRelay: "Begin New Relay",
 
@@ -931,3 +943,38 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     },
   },
 };
+
+/** API `ui_strings.key` → DashStrings field (left sidebar + rank labels). */
+const SIDEBAR_STRING_KEYS: Record<string, keyof DashStrings> = {
+  "sidebar.currentExpedition": "currentExpedition",
+  "sidebar.mainQuest": "mainQuest",
+  "sidebar.questTitle": "questTitle",
+  "sidebar.questDesc": "questDesc",
+  "sidebar.continueJourney": "continueJourney",
+  "sidebar.treasury": "treasury",
+  "sidebar.rank": "rank",
+  "sidebar.rankTitle": "rankTitle",
+  "sidebar.leaderboard": "leaderboard",
+  "sidebar.activeBonus": "activeBonus",
+  "sidebar.journeyDayLabel": "journeyDayLabel",
+  "sidebar.topPlayersLabel": "topPlayersLabel",
+  "sidebar.urtuuCounter": "urtuuCounter",
+};
+
+export function mergeDashboardSidebar(
+  base: DashStrings,
+  apiStrings: Record<string, string>,
+  computed?: Partial<Pick<DashStrings, "questTitle" | "questDesc">>
+): DashStrings {
+  const next: DashStrings = { ...base };
+  const mut = next as unknown as Record<string, string>;
+  for (const [apiKey, field] of Object.entries(SIDEBAR_STRING_KEYS)) {
+    const v = apiStrings[apiKey];
+    if (typeof v === "string" && v.length > 0) {
+      mut[field] = v;
+    }
+  }
+  if (computed?.questTitle) next.questTitle = computed.questTitle;
+  if (computed?.questDesc) next.questDesc = computed.questDesc;
+  return next;
+}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Cinzel, Marcellus } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/components/AuthContext";
 import { AppProvider } from "@/components/AppContext";
 import HeroSelectPage from "@/components/hero-select/Hero-select-page";
 
@@ -35,10 +36,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppProvider>
-            {children}
-            <HeroSelectPage />
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              {children}
+              <HeroSelectPage />
+            </AppProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

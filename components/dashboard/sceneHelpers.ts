@@ -98,7 +98,11 @@ export function terrainHeight(x: number, z: number): number {
   return h;
 }
 
-export function terrainBiome(x: number, z: number, h = terrainHeight(x, z)): TerrainBiome {
+export function terrainBiome(
+  x: number,
+  z: number,
+  h = terrainHeight(x, z),
+): TerrainBiome {
   const gobiFactor = smoothstep(20, 34, z);
   const orkhonX = -32 + Math.sin(z * 0.08) * 6;
   const tuulX = 2 + Math.sin(z * 0.1) * 4;
@@ -109,7 +113,7 @@ export function terrainBiome(x: number, z: number, h = terrainHeight(x, z)): Ter
   const forestBand =
     ((x > -74 && x < -18 && z > -34 && z < -4) ||
       (x > 12 && x < 54 && z > -30 && z < -4) ||
-      ((x + 63) ** 2 / 450 + (z + 44) ** 2 / 850 < 1.0)) &&
+      (x + 63) ** 2 / 450 + (z + 44) ** 2 / 850 < 1.0) &&
     h > 0.5 &&
     h < 15;
 

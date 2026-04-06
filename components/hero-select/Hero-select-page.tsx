@@ -6,13 +6,12 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppContext";
 import { HEROES, loadPlayer, savePlayer } from "./hero-data";
-import { HERO_STRINGS } from "./hero-strings";
-import type { HeroId, Lang } from "./hero-strings";
+import { HERO_STRINGS, parseHeroId, type HeroId, type Lang } from "./hero-strings";
 import { StarField } from "./StarField";
 import { HeroToast } from "./HeroToast";
 import { NameEntryScreen } from "./NameEntryScreen";
 import { HeroChooseScreen } from "./HeroChooseScreen";
-import {getUserByEmail, registerEmail} from "@/lib/firebase-auth";
+import { getUserByEmail, registerEmail } from "@/lib/firebase-auth";
 
 export default function HeroSelectPage() {
   const router = useRouter();
@@ -79,7 +78,7 @@ export default function HeroSelectPage() {
     if (user) {
       savePlayer({
         name: trimmed,
-        heroId: user.profile.heroId,
+        heroId: parseHeroId(user.profile.heroId),
       });
       setHeroSelectOpen(false);
       router.push("/home");

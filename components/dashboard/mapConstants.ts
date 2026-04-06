@@ -95,6 +95,13 @@ export const TERRAIN_W   = 3000;
 export const TERRAIN_D   = 1000;
 export const TERRAIN_SEG = 360;
 
+/** Firebase/хуучин өгөгдөлд `orkhon` гэж ирвэл зураг дээрх slug руу. */
+export function normalizeStationId(raw: string | undefined): string {
+  let s = raw?.trim() || "ulaanbaatar";
+  if (s === "orkhon") s = "orkhon_river";
+  return s;
+}
+
 /** Аяллын дараалал дахь индекс (байхгүй бол -1) */
 export function getStationJourneyIndex(stationId: string): number {
   return JOURNEY_ORDER.indexOf(stationId);

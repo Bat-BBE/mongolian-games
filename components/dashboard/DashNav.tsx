@@ -3,6 +3,7 @@
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import { useRef, useState, CSSProperties } from "react";
+import { Trophy } from "lucide-react";
 
 interface DashNavProps {
   t: DashStrings;
@@ -12,6 +13,7 @@ interface DashNavProps {
   playerTitle: string;
   avatarUrl: string;
   level: number;
+  onOpenLeaderboard?: () => void;
 }
 
 export function DashNav({
@@ -22,6 +24,7 @@ export function DashNav({
   playerTitle,
   avatarUrl,
   level,
+  onOpenLeaderboard,
 }: DashNavProps) {
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -125,6 +128,20 @@ export function DashNav({
       </div>
 
       <div className="flex items-center gap-[clamp(8px,1.2vw,16px)]">
+        {onOpenLeaderboard ? (
+          <button
+            type="button"
+            onClick={onOpenLeaderboard}
+            className="p-2 rounded-full border border-primary/25 bg-background/50 hover:bg-primary/15 hover:border-primary/45 transition-colors shrink-0"
+            style={{
+              color: "color-mix(in oklch, var(--primary) 85%, transparent)",
+            }}
+            title={t.leaderboard}
+            aria-label={t.leaderboard}
+          >
+            <Trophy className="size-[clamp(18px,1.5vw,22px)]" strokeWidth={1.75} />
+          </button>
+        ) : null}
         <div className="flex items-center gap-[clamp(6px,1vw,12px)]">
           <div className="text-right hidden sm:block">
             <p

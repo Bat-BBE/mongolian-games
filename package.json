@@ -2,8 +2,13 @@
   "name": "mongolian-games",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "server"
+  ],
   "scripts": {
     "dev": "next dev",
+    "dev:server": "npm run dev --workspace mongolian-games-server",
+    "dev:all": "concurrently -n web,api -c cyan,magenta \"npm run dev\" \"npm run dev:server\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -46,6 +51,7 @@
     "@types/three": "^0.183.1",
     "autoprefixer": "^10.4.24",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.1.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "postcss": "^8.5.6",
