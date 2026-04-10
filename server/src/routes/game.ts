@@ -12,6 +12,16 @@ const completeBody = z.object({
   progressPct: z.number().min(0).max(100).optional(),
 });
 
+const homeUpgradeBody = z.object({
+  email: z.string().min(3),
+});
+
+const homeBuyBody = z.object({
+  email: z.string().min(3),
+  kind: z.enum(["sheep", "horse", "camel"]),
+  qty: z.number().int().min(1).max(10),
+});
+
 function emailUid(email: string): string {
   return `local:${email.trim().toLowerCase()}`;
 }
@@ -80,6 +90,17 @@ function computeWealthScore(profile: Record<string, unknown>): number {
     gerLevel * 500;
 
   return Math.max(0, Math.floor(base));
+}
+
+function upgradeCost(gerLevel: number): { coins: number; kp: number } {
+  const lvl = Math.max(1, Math.floor(gerLevel));
+  return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
+}
+
+function livestockCost(kind: "sheep" | "horse" | "camel", qty: number): { coins: number } {
+  const q = Math.max(1, Math.floor(qty));
+  const unit = kind === "sheep" ? 120 : kind === "horse" ? 650 : 820;
+  return { coins: unit * q };
 }
 
 function rewardFor(gameSlug: string): {
@@ -244,6 +265,114 @@ gameRouter.post("/complete", async (req, res) => {
     res.json({ user: upd.rows[0] });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Complete failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+gameRouter.post("/home/upgrade", async (req, res) => {
+  const parsed = homeUpgradeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  const uid = emailUid(email);
+
+  try {
+    const userRes = await pool.query(
+      `SELECT profile, progress FROM app_users WHERE firebase_uid = $1`,
+      [uid],
+    );
+    if (userRes.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const row = userRes.rows[0] as { profile: unknown; progress: unknown };
+    const profile = isPlainRecord(row.profile) ? { ...(row.profile as Record<string, unknown>) } : {};
+    const progress = isPlainRecord(row.progress) ? { ...(row.progress as Record<string, unknown>) } : {};
+
+    const inv = isPlainRecord(profile.inventory) ? { ...(profile.inventory as Record<string, unknown>) } : {};
+    const ger = isPlainRecord(profile.ger) ? { ...(profile.ger as Record<string, unknown>) } : {};
+    const curLevel = Math.max(1, Math.floor(num(ger.level, 1)));
+    const cost = upgradeCost(curLevel);
+
+    const coins = num(inv.coins, 0);
+    const kp = num(profile.kp, 0);
+    if (coins < cost.coins || kp < cost.kp) {
+      res.status(409).json({ error: "Not enough resources" });
+      return;
+    }
+
+    inv.coins = coins - cost.coins;
+    profile.inventory = inv;
+    profile.kp = kp - cost.kp;
+    ger.level = curLevel + 1;
+    profile.ger = ger;
+    profile.wealthScore = computeWealthScore(profile);
+
+    const upd = await pool.query(
+      `UPDATE app_users
+       SET profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE firebase_uid = $1
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [uid, JSON.stringify(profile), JSON.stringify(progress)],
+    );
+    res.json({ user: upd.rows[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upgrade failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+gameRouter.post("/home/buy", async (req, res) => {
+  const parsed = homeBuyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  const uid = emailUid(email);
+  const kind = parsed.data.kind;
+  const qty = parsed.data.qty;
+
+  try {
+    const userRes = await pool.query(
+      `SELECT profile, progress FROM app_users WHERE firebase_uid = $1`,
+      [uid],
+    );
+    if (userRes.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const row = userRes.rows[0] as { profile: unknown; progress: unknown };
+    const profile = isPlainRecord(row.profile) ? { ...(row.profile as Record<string, unknown>) } : {};
+    const progress = isPlainRecord(row.progress) ? { ...(row.progress as Record<string, unknown>) } : {};
+
+    const inv = isPlainRecord(profile.inventory) ? { ...(profile.inventory as Record<string, unknown>) } : {};
+    const coins = num(inv.coins, 0);
+    const cost = livestockCost(kind, qty);
+    if (coins < cost.coins) {
+      res.status(409).json({ error: "Not enough coins" });
+      return;
+    }
+    inv.coins = coins - cost.coins;
+    profile.inventory = inv;
+
+    const ls = isPlainRecord(profile.livestock) ? { ...(profile.livestock as Record<string, unknown>) } : {};
+    ls[kind] = Math.max(0, Math.floor(num(ls[kind], 0) + qty));
+    profile.livestock = ls;
+    profile.wealthScore = computeWealthScore(profile);
+
+    const upd = await pool.query(
+      `UPDATE app_users
+       SET profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE firebase_uid = $1
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [uid, JSON.stringify(profile), JSON.stringify(progress)],
+    );
+    res.json({ user: upd.rows[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Buy failed";
     res.status(500).json({ error: msg });
   }
 });

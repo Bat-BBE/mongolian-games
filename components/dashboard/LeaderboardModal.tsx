@@ -20,6 +20,32 @@ type LeaderboardModalProps = {
   lang: DashLang;
 };
 
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function breakdownFrom(entry: LeaderboardEntry): {
+  kp: number | null;
+  gerLevel: number | null;
+  sheep: number | null;
+  horse: number | null;
+  camel: number | null;
+} {
+  const kp = typeof entry.meta?.kp === "number" ? entry.meta.kp : null;
+  const gerLevel =
+    isPlainRecord(entry.meta?.ger) && typeof entry.meta?.ger?.level === "number"
+      ? (entry.meta.ger.level as number)
+      : null;
+  const ls = entry.meta?.livestock;
+  const sheep =
+    isPlainRecord(ls) && typeof ls.sheep === "number" ? (ls.sheep as number) : null;
+  const horse =
+    isPlainRecord(ls) && typeof ls.horse === "number" ? (ls.horse as number) : null;
+  const camel =
+    isPlainRecord(ls) && typeof ls.camel === "number" ? (ls.camel as number) : null;
+  return { kp, gerLevel, sheep, horse, camel };
+}
+
 function heroDisplayName(heroId: string | null): string {
   if (!heroId) return "—";
   try {
@@ -67,6 +93,8 @@ function PodiumCard({
     );
   }
 
+  const b = breakdownFrom(entry);
+
   return (
     <div
       className={cn(
@@ -82,10 +110,32 @@ function PodiumCard({
       <p className="text-[10px] text-muted-foreground truncate w-full">
         {heroDisplayName(entry.hero_id)}
       </p>
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
+        {b.gerLevel != null ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+            {lang === "mn" ? `Гэр Lv ${b.gerLevel}` : `Ger Lv ${b.gerLevel}`}
+          </span>
+        ) : null}
+        {b.sheep != null ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+            🐑 {b.sheep}
+          </span>
+        ) : null}
+        {b.horse != null ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+            🐎 {b.horse}
+          </span>
+        ) : null}
+        {b.camel != null ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+            🐫 {b.camel}
+          </span>
+        ) : null}
+      </div>
       <p className="text-lg font-bold tabular-nums text-primary mt-auto">
         {entry.xp.toLocaleString()}
         <span className="text-[10px] font-normal text-muted-foreground ml-1">
-          XP
+          {lang === "mn" ? "үнэлгээ" : "score"}
         </span>
       </p>
     </div>
@@ -188,23 +238,52 @@ export function LeaderboardModal({
                   </p>
                   <ul className="space-y-1.5 pr-1">
                     {rest.map((e) => (
-                      <li
-                        key={`${e.rank}-${e.name}`}
-                        className="flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] px-3 py-2.5 text-sm hover:bg-primary/[0.08] transition-colors"
-                      >
-                        <span className="tabular-nums font-mono text-xs text-muted-foreground w-7 shrink-0">
-                          {e.rank}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{e.name}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {heroDisplayName(e.hero_id)}
-                          </p>
-                        </div>
-                        <span className="tabular-nums font-semibold text-primary shrink-0 text-sm">
-                          {e.xp.toLocaleString()}
-                        </span>
-                      </li>
+                      (() => {
+                        const b = breakdownFrom(e);
+                        return (
+                          <li
+                            key={`${e.rank}-${e.name}`}
+                            className="flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] px-3 py-2.5 text-sm hover:bg-primary/[0.08] transition-colors"
+                          >
+                            <span className="tabular-nums font-mono text-xs text-muted-foreground w-7 shrink-0">
+                              {e.rank}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate">{e.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {heroDisplayName(e.hero_id)}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {b.gerLevel != null ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+                                    {lang === "mn"
+                                      ? `Гэр Lv ${b.gerLevel}`
+                                      : `Ger Lv ${b.gerLevel}`}
+                                  </span>
+                                ) : null}
+                                {b.sheep != null ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+                                    🐑 {b.sheep}
+                                  </span>
+                                ) : null}
+                                {b.horse != null ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+                                    🐎 {b.horse}
+                                  </span>
+                                ) : null}
+                                {b.camel != null ? (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
+                                    🐫 {b.camel}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <span className="tabular-nums font-semibold text-primary shrink-0 text-sm">
+                              {e.xp.toLocaleString()}
+                            </span>
+                          </li>
+                        );
+                      })()
                     ))}
                   </ul>
                 </div>

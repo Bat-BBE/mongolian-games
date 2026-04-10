@@ -848,11 +848,13 @@ export class SceneBuilder {
 
     if (isStation) {
       const mc =
-        stationId === this.currentStationId
-          ? 0x44ff88
-          : this.doneStationIds.includes(stationId)
-            ? 0xffcc00
-            : 0xff6644;
+        stationId === "home"
+          ? 0x6dd6ff
+          : stationId === this.currentStationId
+            ? 0x44ff88
+            : this.doneStationIds.includes(stationId)
+              ? 0xffcc00
+              : 0xff6644;
       const markerMat = new THREE.MeshStandardMaterial({
         color: mc,
         emissive: mc,
@@ -965,6 +967,71 @@ export class SceneBuilder {
     g.position.set(cx, terrainHeight(cx, cz), cz);
     g.rotation.y = rotY;
     this.scene.add(g);
+  }
+
+  /** Player home base — single ger near the center (visual only). */
+  buildPlayerHomeGer(gerLevel = 1): void {
+    const s = 1 + Math.max(0, Math.min(gerLevel - 1, 20)) * 0.08;
+    // Player home base — away from major stations.
+    const x = 90;
+    const z = 10;
+    // Use station-style marker so it can be clicked (special-cased as "home").
+    this.makeGer(x, z, 0, s, true, "home");
+    // Small fence to hint “home yard”.
+    this.makeFence(x + 1.2, z + 1.0, 9, 7, Math.PI * 0.2);
+  }
+
+  /** Spawn player's livestock near the home ger (visual only). */
+  buildPlayerLivestockNearHome(
+    livestock?: { sheep: number; horse: number; camel: number },
+  ): void {
+    if (!livestock) return;
+    const x = 90;
+    const z = 10;
+    const sheepN = Math.max(0, Math.min(12, Math.floor(livestock.sheep)));
+    const horseN = Math.max(0, Math.min(4, Math.floor(livestock.horse)));
+    const camelN = Math.max(0, Math.min(3, Math.floor(livestock.camel)));
+
+    // Simple sheep blobs.
+    const sheepMat = mkMat(0xf1e7d5, 0.92);
+    const hoofMat = mkMat(0x2a1508, 0.9);
+    for (let i = 0; i < sheepN; i++) {
+      const ox = rand(-5.2, 5.2);
+      const oz = rand(3.2, 9.2);
+      const y = terrainHeight(x + ox, z + oz);
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 10), sheepMat);
+      body.scale.set(1.25, 1.0, 1.0);
+      body.position.y = 0.45;
+      g.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), mkMat(0x6a3a10, 0.9));
+      head.position.set(0.35, 0.55, 0);
+      g.add(head);
+      [-0.22, 0.22].forEach((lx) => {
+        [-0.16, 0.16].forEach((lz) => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.28, 6), hoofMat);
+          leg.position.set(lx, 0.16, lz);
+          g.add(leg);
+        });
+      });
+      g.position.set(x + ox, y, z + oz);
+      g.rotation.y = rand(0, Math.PI * 2);
+      this.scene.add(g);
+    }
+
+    for (let i = 0; i < horseN; i++) {
+      this.makeHorse(
+        x + rand(-7, 7),
+        z + rand(-6, 6),
+        rand(0, Math.PI * 2),
+        [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
+        false,
+      );
+    }
+
+    for (let i = 0; i < camelN; i++) {
+      this.makeCamel(x + rand(-8, 8), z + rand(-8, 8), rand(0, Math.PI * 2));
+    }
   }
 
   buildGerCamps(): void {

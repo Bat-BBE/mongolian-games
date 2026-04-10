@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  LuSword as Sword,
-  LuBookOpen as BookOpen,
-  LuShield as Shield,
-  LuWrench as Wrench,
   LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
   LuMap as Map,
@@ -32,15 +28,44 @@ interface LeftPanelProps {
   currentStationLabel?: string;
   heroTier?: string;
   stationGames?: StationGameBundleRow[];
+  currentStationId?: string;
+  stationSteps?: Record<string, { completedGameSlugs: string[] }>;
+  stationVisits?: Record<string, number[]>;
+  treasury?: {
+    kp: number;
+    coins: number;
+    gems: number;
+    gerLevel: number;
+    livestock: { sheep: number; horse: number; camel: number };
+  };
   onOpenLeaderboard?: () => void;
 }
 
-const TREASURY_ICONS = [
-  { Icon: Shield, label: "shield" },
-  { Icon: Sword, label: "swords" },
-  { Icon: BookOpen, label: "auto_stories" },
-  { Icon: Wrench, label: "hardware" },
-];
+function TreasuryRow({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
+      <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-sm font-semibold tabular-nums text-foreground">
+        {value}
+        {hint ? (
+          <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+            {hint}
+          </span>
+        ) : null}
+      </span>
+    </div>
+  );
+}
 
 export function LeftPanel({
   t,
@@ -56,6 +81,10 @@ export function LeftPanel({
   currentStationLabel,
   heroTier,
   stationGames = [],
+  currentStationId,
+  stationSteps,
+  stationVisits,
+  treasury,
   onOpenLeaderboard,
   lang,
 }: LeftPanelProps) {
@@ -149,27 +178,58 @@ export function LeftPanel({
                       ? "Энэ өртөөний тоглоомууд"
                       : "Games at this station"}
                   </p>
+                  {currentStationId ? (
+                    <p className="text-[10px] text-foreground/60 mb-1.5">
+                      {(() => {
+                        const now = Date.now();
+                        const windowMs = 7 * 24 * 60 * 60 * 1000;
+                        const visits = (stationVisits?.[currentStationId] ?? [])
+                          .map((x) => Number(x))
+                          .filter((n) => Number.isFinite(n) && n >= now - windowMs);
+                        const rem = Math.max(0, 2 - visits.length);
+                        return lang === "mn"
+                          ? `7 хоногт үлдсэн боломж: ${rem}/2`
+                          : `Weekly plays remaining: ${rem}/2`;
+                      })()}
+                    </p>
+                  ) : null}
                   <ul className="space-y-1">
-                    {stationGames.map((g) => (
-                      <li
-                        key={g.id}
-                        className="text-[11px] text-foreground/80 leading-snug flex justify-between gap-2"
-                      >
-                        <span className="truncate">
-                          {lang === "mn" ? g.name_mn : g.name_en}
-                        </span>
-                        {(lang === "mn"
-                          ? g.reward_hint_mn
-                          : g.reward_hint_en
-                        )?.trim() ? (
-                          <span className="shrink-0 text-primary/80 text-[10px]">
-                            {lang === "mn"
-                              ? g.reward_hint_mn
-                              : g.reward_hint_en}
+                    {stationGames.map((g) => {
+                      const completed = new Set(
+                        (currentStationId
+                          ? stationSteps?.[currentStationId]?.completedGameSlugs
+                          : []) ?? [],
+                      );
+                      const nextRequired =
+                        stationGames.find((x) => !completed.has(x.slug))?.slug ?? null;
+                      const status =
+                        completed.has(g.slug)
+                          ? (lang === "mn" ? "Дууссан" : "Done")
+                          : g.slug === nextRequired
+                            ? (lang === "mn" ? "Дараагийн" : "Next")
+                            : (lang === "mn" ? "Түгжээтэй" : "Locked");
+
+                      return (
+                        <li
+                          key={g.id}
+                          className="text-[11px] text-foreground/80 leading-snug flex justify-between gap-2"
+                        >
+                          <span className="truncate">
+                            {lang === "mn" ? g.name_mn : g.name_en}
                           </span>
-                        ) : null}
-                      </li>
-                    ))}
+                          <span className="shrink-0 flex items-center gap-2">
+                            <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                              {status}
+                            </span>
+                            {(lang === "mn" ? g.reward_hint_mn : g.reward_hint_en)?.trim() ? (
+                              <span className="text-primary/80 text-[10px]">
+                                {lang === "mn" ? g.reward_hint_mn : g.reward_hint_en}
+                              </span>
+                            ) : null}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -189,15 +249,40 @@ export function LeftPanel({
         {/* Treasury Section */}
         <div className="w-full">
           <SectionTitle>{t.treasury}</SectionTitle>
-          <div className="grid grid-cols-4 gap-2 mt-1.5">
-            {TREASURY_ICONS.map(({ Icon, label }) => (
-              <button
-                key={label}
-                className="aspect-square glass rounded-lg flex items-center justify-center hover:border-primary/60 transition-all group bg-background/80 w-full p-3"
-              >
-                <Icon className="w-5 h-5 text-primary/60 group-hover:text-primary transition-colors" />
-              </button>
-            ))}
+          <div className="space-y-2 mt-1.5">
+            <TreasuryRow
+              label={lang === "mn" ? "Гэр" : "Ger"}
+              value={`Lv ${treasury?.gerLevel ?? 1}`}
+            />
+            <TreasuryRow
+              label={lang === "mn" ? "Эрдэнэс (МО)" : "KP"}
+              value={(treasury?.kp ?? 0).toLocaleString()}
+            />
+            <TreasuryRow
+              label={lang === "mn" ? "Зоос" : "Coins"}
+              value={(treasury?.coins ?? 0).toLocaleString()}
+              hint={lang === "mn" ? "₮" : "$"}
+            />
+            <TreasuryRow
+              label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
+              value={(treasury?.gems ?? 0).toLocaleString()}
+            />
+            <div className="rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                {lang === "mn" ? "Мал сүрэг" : "Livestock"}
+              </p>
+              <div className="flex flex-wrap gap-2 text-xs text-foreground/85 tabular-nums">
+                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
+                  🐑 {(treasury?.livestock.sheep ?? 0).toLocaleString()}
+                </span>
+                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
+                  🐎 {(treasury?.livestock.horse ?? 0).toLocaleString()}
+                </span>
+                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
+                  🐫 {(treasury?.livestock.camel ?? 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -15,6 +15,7 @@ import {
   LuExternalLink as ExternalLink,
   LuX as X,
   LuLogOut as LogOut,
+  LuGem as Gem,
 } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -44,6 +45,12 @@ const nav = [
     href: "/admin/stations",
     label: "Өртөөнүүд",
     icon: StationsIcon,
+    match: "prefix" as const,
+  },
+  {
+    href: "/admin/treasury",
+    label: "Эрдэнэс",
+    icon: Gem,
     match: "prefix" as const,
   },
 ];
@@ -105,7 +112,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2 group min-w-0"
               onClick={() => setMobileOpen(false)}
             >
-              <span className="admin-logo font-display font-bold text-lg tracking-tight shrink-0">
+              <span className="admin-logo font-display font-bold text-xl tracking-tight shrink-0">
                 MTGA
               </span>
               {!sidebarCollapsed && (
@@ -123,11 +130,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <ModeToggle />
               <Button
                 type="button"
-                variant="ghost"
                 size="icon"
-                className="hidden lg:flex h-9 w-9 text-[var(--admin-muted)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
+                variant="outline"
+                className="hidden lg:flex h-8 w-8 text-[var(--admin-muted)] border-[var(--primary)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
                 onClick={() => setSidebarCollapsed((c) => !c)}
-                title={sidebarCollapsed ? "Сайдбар өргөтгөх" : "Хумих"}
+                title={sidebarCollapsed ? "Нээх" : "Хаах"}
               >
                 {sidebarCollapsed ? (
                   <PanelLeft className="size-4 stroke-[1.5]" />

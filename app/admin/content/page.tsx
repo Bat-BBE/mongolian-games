@@ -28,7 +28,7 @@ export default function AdminContentIndexPage() {
         />
         <Card
           title="Өртөөнүүд"
-          desc="Quest hint/title + quest description (dynamic sidebar)."
+          desc="Quest гарчиг + quest тайлбар (sidebar дээр динамик гарна)."
           href="/admin/stations"
         />
       </div>

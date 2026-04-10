@@ -19,8 +19,13 @@ import GameModal from "@/components/game/gameModal";
 
 interface MapAreaProps {
   t: DashStrings;
+  userEmail: string;
+  homeGerLevel?: number;
+  homeLivestock?: { sheep: number; horse: number; camel: number };
   currentStationId: string;
   doneStationIds: string[];
+  stationSteps?: Record<string, { completedGameSlugs: string[] }>;
+  stationVisits?: Record<string, number[]>;
   stations: {
     id: string;
     name: string;
@@ -32,14 +37,23 @@ interface MapAreaProps {
     game?: { slug?: string; name: string; desc: string; reward: string };
   }[];
   heroModelPath?: string | null;
+  onGameCompleted?: () => void;
+  onOpenHome?: () => void;
 }
 
 export function MapArea({
   t,
+  userEmail,
+  homeGerLevel = 1,
+  homeLivestock,
   currentStationId,
   doneStationIds,
+  stationSteps,
+  stationVisits,
   stations: apiStations,
   heroModelPath,
+  onGameCompleted,
+  onOpenHome,
 }: MapAreaProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -47,6 +61,8 @@ export function MapArea({
   const [selectedGame, setSelectedGame] = useState<{
     type: string;
     name: string;
+    stationSlug: string;
+    gameSlug: string;
   } | null>(null);
 
   const stationMap = new Map(apiStations.map((s) => [s.id, s]));
@@ -94,12 +110,16 @@ export function MapArea({
     !isStationUnlockedInJourney(selectedId, currentStationId);
 
   function handleSelect(id: string) {
+    if (id === "home") {
+      flyToStation("home", true);
+      onOpenHome?.();
+      return;
+    }
     setSelectedId((prev) => {
       if (prev === id) return null;
       flyToStation(id, true);
       return id;
     });
-    // If user clicked label/door, also set hero target so hero can walk there.
     setHeroTargetId(id);
   }
 
@@ -110,15 +130,15 @@ export function MapArea({
     doneStationIds,
     onSelectStation: handleSelect,
     onHeroArriveStation: (id) => {
-      // Arrived at a station door → open its dialog automatically.
       setSelectedId(id);
       flyToStation(id, true);
     },
     heroModelPath,
     heroTargetStationId: heroTargetId,
+    homeGerLevel,
+    homeLivestock,
   });
 
-  // Keyboard control: move hero along journey with arrows / A-D.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (
@@ -128,7 +148,6 @@ export function MapArea({
         e.key !== "d"
       )
         return;
-      // Don't steal keys if a modal is open.
       if (selectedGame) return;
       const dir = e.key === "ArrowLeft" || e.key === "a" ? -1 : 1;
       const base = heroTargetId ?? selectedId ?? currentStationId;
@@ -152,7 +171,6 @@ export function MapArea({
     <main className="flex-1 relative overflow-hidden bg-background">
       <div ref={canvasRef} className="absolute inset-0" />
 
-      {/* Route hint (current -> hero target) */}
       {heroTargetId &&
         heroTargetId !== currentStationId &&
         labelPositions[currentStationId]?.visible &&
@@ -221,7 +239,12 @@ export function MapArea({
           onClose={() => setSelectedId(null)}
           onPlay={(slug, name) => {
             if (!slug) return;
-            setSelectedGame({ type: slug, name: name || selectedStation.gameName });
+            setSelectedGame({
+              type: slug,
+              name: name || selectedStation.gameName,
+              stationSlug: selectedStation.id,
+              gameSlug: slug,
+            });
           }}
           loreLabel={t.lore}
           minigameLabel={t.minigame}
@@ -230,6 +253,8 @@ export function MapArea({
           lockedHint={t.gameStatusLocked}
           doneHint={t.gameStatusDone}
           canPlay={selectedStation.id === currentStationId}
+          stationSteps={stationSteps}
+          stationVisits={stationVisits}
         />
       )}
 
@@ -239,6 +264,12 @@ export function MapArea({
           onClose={() => setSelectedGame(null)}
           gameType={selectedGame.type}
           gameName={selectedGame.name}
+          stationSlug={selectedGame.stationSlug}
+          gameSlug={selectedGame.gameSlug}
+          onCompleted={(r) => {
+            if (r === "win") onGameCompleted?.();
+            setSelectedGame(null);
+          }}
         />
       )}
     </main>

@@ -12,6 +12,10 @@ import {
   computerPickStones, buildMessage, WIN_SCORE,
 } from "./stoneType"
 
+export type StoneGameProps = {
+  onComplete?: (result: "win" | "lose") => void;
+};
+
 function GameTable() {
   return (
     <>
@@ -141,9 +145,10 @@ function GameScene({
 }
 
 // ── Үндсэн тоглоомын компонент ────────────────
-export default function StoneGame() {
+export default function StoneGame({ onComplete }: StoneGameProps) {
   const [state,       setState]       = useState<GameState>(INITIAL_STATE)
   const [burstActive, setBurstActive] = useState(false)
+  const sentRef = useRef(false)
 
   // ── Тоглогч чулуу сонгоно ──
   const handlePick = useCallback((n: number) => {
@@ -214,7 +219,17 @@ export default function StoneGame() {
   // ── Дахин эхлэх ──
   const handleRestart = useCallback(() => {
     setState(INITIAL_STATE)
+    sentRef.current = false
   }, [])
+
+  useEffect(() => {
+    if (sentRef.current) return
+    const playerWins = state.score.player >= WIN_SCORE
+    const computerWins = state.score.computer >= WIN_SCORE
+    if (!playerWins && !computerWins) return
+    sentRef.current = true
+    onComplete?.(playerWins ? "win" : "lose")
+  }, [onComplete, state.score.computer, state.score.player])
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative", background: "#080604", overflow: "hidden" }}>

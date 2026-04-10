@@ -215,6 +215,12 @@ export type LeaderboardEntry = {
   name: string;
   xp: number;
   hero_id: string | null;
+  meta?: {
+    rawXp?: number;
+    kp?: number;
+    livestock?: unknown;
+    ger?: unknown;
+  };
 };
 
 export async function getLeaderboard(): Promise<{ entries: LeaderboardEntry[] }> {
@@ -250,6 +256,42 @@ export async function completeGame(body: {
     throw new Error(data.error ?? `game complete failed (${res.status})`);
   }
   if (!data.user) throw new Error("game complete: missing user");
+  return { user: data.user };
+}
+
+export async function homeUpgradeGer(body: {
+  email: string;
+}): Promise<{ user: AppUserRow }> {
+  const res = await apiFetch("/api/game/home/upgrade", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (!res.ok) throw new Error(data.error ?? `home upgrade failed (${res.status})`);
+  if (!data.user) throw new Error("home upgrade: missing user");
+  return { user: data.user };
+}
+
+export async function homeBuyLivestock(body: {
+  email: string;
+  kind: "sheep" | "horse" | "camel";
+  qty: number;
+}): Promise<{ user: AppUserRow }> {
+  const res = await apiFetch("/api/game/home/buy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (!res.ok) throw new Error(data.error ?? `home buy failed (${res.status})`);
+  if (!data.user) throw new Error("home buy: missing user");
   return { user: data.user };
 }
 
@@ -299,6 +341,9 @@ export async function getContentHeroes(): Promise<{ heroes: HeroRow[] }> {
   if (!data.heroes) throw new Error("content heroes: missing list");
   return { heroes: data.heroes };
 }
+
+// Backward compat for accidental misspelling in older code.
+export const getContentHer24oes = getContentHeroes;
 
 export type ContentStationListRow = {
   slug: string;
@@ -423,6 +468,66 @@ export async function adminListUsersV2(
   }
   if (!data.users) throw new Error("missing users");
   return { users: data.users };
+}
+
+export async function adminGetTreasury(
+  token: string,
+): Promise<{
+  summary: {
+    users: number;
+    kp_total: number;
+    coins_total: number;
+    gems_total: number;
+    sheep_total: number;
+    horse_total: number;
+    camel_total: number;
+    ger_level_avg: number;
+  };
+  top: Array<{
+    id: string;
+    display_name: string | null;
+    email: string;
+    hero_id: string | null;
+    score: number;
+    ger_level: number;
+    kp: number;
+    coins: number;
+    gems: number;
+    sheep: number;
+    horse: number;
+    camel: number;
+    visited_stations: number;
+  }>;
+  users: Array<{
+    id: string;
+    display_name: string | null;
+    email: string;
+    hero_id: string | null;
+    score: number;
+    ger_level: number;
+    kp: number;
+    coins: number;
+    gems: number;
+    sheep: number;
+    horse: number;
+    camel: number;
+    visited_stations: number;
+  }>;
+}> {
+  const res = await apiFetch("/api/admin/treasury", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    summary?: unknown;
+    top?: unknown;
+    users?: unknown;
+  };
+  if (!res.ok) throw new Error(data.error ?? `admin treasury failed (${res.status})`);
+  if (!data.summary || !data.top || !data.users) {
+    throw new Error("admin treasury: incomplete response");
+  }
+  return data as any;
 }
 
 export async function adminCreateGame(

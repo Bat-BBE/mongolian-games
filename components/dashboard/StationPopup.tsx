@@ -16,6 +16,8 @@ interface StationPopupProps {
   doneHint: string;
   /** Одоогийн өртөө эсэх — энд л тоглоом эхлүүлэх */
   canPlay?: boolean;
+  stationSteps?: Record<string, { completedGameSlugs: string[] }>;
+  stationVisits?: Record<string, number[]>;
 }
 
 export function StationPopup({
@@ -29,6 +31,8 @@ export function StationPopup({
   lockedHint,
   doneHint,
   canPlay = true,
+  stationSteps,
+  stationVisits,
 }: StationPopupProps) {
   if (!station) return null;
 
@@ -44,9 +48,24 @@ export function StationPopup({
           },
         ];
 
+  const completed = new Set(
+    stationSteps?.[station.id]?.completedGameSlugs?.map(String) ?? [],
+  );
+  const nextRequired = list.find((g) => g.slug && !completed.has(g.slug))?.slug ?? null;
+
+  const windowMs = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const visits = (stationVisits?.[station.id] ?? [])
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && n >= now - windowMs);
+  const weeklyRemaining = Math.max(0, 2 - visits.length);
+
   return (
     <>
-      <div className="absolute inset-0 z-40" onClick={onClose} />
+      <div
+        className="absolute inset-0 z-40 bg-black/25 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div
         className={cn(
           "absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(520px,calc(100vw-1.5rem))] max-h-[min(70vh,560px)] overflow-y-auto",
@@ -101,8 +120,27 @@ export function StationPopup({
               {gamesSectionLabel} ({list.length})
             </p>
 
+            <p className="text-[10px] text-muted-foreground mb-3">
+              {weeklyRemaining > 0
+                ? `7 хоногт үлдсэн боломж: ${weeklyRemaining}/2`
+                : "Энэ өртөөнд 7 хоногийн лимит дууссан"}
+            </p>
+
             <ul className="space-y-3">
               {list.map((g) => (
+                (() => {
+                  const isDone = g.slug ? completed.has(g.slug) : false;
+                  const isNext = g.slug ? g.slug === nextRequired : false;
+                  const canStart =
+                    canPlay && Boolean(g.slug) && weeklyRemaining > 0 && isNext;
+
+                  const statusText = isDone
+                    ? doneHint
+                    : isNext
+                      ? "Дараагийн алхам"
+                      : lockedHint;
+
+                  return (
                 <li
                   key={`${station.id}-${g.slug || g.name}`}
                   className="rounded-2xl border border-white/10 bg-black/20 p-3"
@@ -121,27 +159,25 @@ export function StationPopup({
                   </p>
                   <button
                     type="button"
-                    disabled={!canPlay || !g.slug}
-                    onClick={() => canPlay && g.slug && onPlay(g.slug, g.name)}
+                    disabled={!canStart}
+                    onClick={() => canStart && g.slug && onPlay(g.slug, g.name)}
                     className={cn(
                       "w-full px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                      canPlay && g.slug
+                      canStart
                         ? "text-black hover:scale-[1.01]"
                         : "text-muted-foreground cursor-not-allowed opacity-60",
                     )}
                     style={
-                      canPlay && g.slug
+                      canStart
                         ? { background: "var(--gold-gradient)" }
                         : undefined
                     }
                   >
-                    {canPlay && g.slug
-                      ? `${g.name} →`
-                      : station.isDone
-                        ? doneHint
-                        : lockedHint}
+                    {canStart ? `${g.name} →` : statusText}
                   </button>
                 </li>
+                  );
+                })()
               ))}
             </ul>
           </div>

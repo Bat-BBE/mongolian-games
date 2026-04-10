@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LuBookMarked as BookMarked, LuRefreshCw as RefreshCw, LuSave as Save } from "react-icons/lu";
+import {
+  LuBookMarked as BookMarked,
+  LuRefreshCw as RefreshCw,
+  LuSave as Save,
+} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
@@ -17,12 +21,10 @@ import {
 export default function AdminStationsPage() {
   const { token } = useAdminAuth();
   const [stations, setStations] = useState<MapStationRow[]>([]);
-  const [locale, setLocale] = useState<"mn" | "en">("mn");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [selectedSlug, setSelectedSlug] = useState<string>("");
   const [catalog, setCatalog] = useState<GameRow[]>([]);
-  /** Эрэмбэ: эхний индекс = label/popup-д эхэнд харагдана. */
   const [orderedGameIds, setOrderedGameIds] = useState<string[]>([]);
   const [gamesBusy, setGamesBusy] = useState(false);
   const [stationBusy, setStationBusy] = useState(false);
@@ -33,7 +35,10 @@ export default function AdminStationsPage() {
     setLoading(true);
     setMsg(null);
     try {
-      const [st, cat] = await Promise.all([adminListStations(t), adminListGames(t)]);
+      const [st, cat] = await Promise.all([
+        adminListStations(t),
+        adminListGames(t),
+      ]);
       const s = st.stations;
       setStations(s);
       setCatalog(cat.games);
@@ -67,7 +72,7 @@ export default function AdminStationsPage() {
 
   const selectedStation = useMemo(
     () => stations.find((s) => s.slug === selectedSlug) ?? null,
-    [stations, selectedSlug]
+    [stations, selectedSlug],
   );
 
   useEffect(() => {
@@ -132,46 +137,30 @@ export default function AdminStationsPage() {
 
   return (
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8 pb-24 text-[var(--admin-text,#fafafa)]">
-      <header className="space-y-2">
-        <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
-          PostgreSQL
-        </p>
-        <h1 className="font-display text-2xl md:text-3xl tracking-wide flex items-center gap-2 text-[var(--admin-text)]">
-          <BookMarked className="size-7 text-[var(--admin-muted)] stroke-[1.5]" />
-          Өртөөнүүд
-        </h1>
-        <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
-          Тоглоомын дарааллыг доорх жагсаалаар тохируулна — эхнийх нь газрын зурагны шошго, popup-д эхэлж гарна. Quest нь sidebar текст.
-        </p>
-        <div className="flex flex-wrap gap-2 items-center pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="gap-2 border-[var(--admin-border)] text-[var(--admin-muted)]"
-            disabled={loading}
-            onClick={() => void load()}
-          >
-            <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            Сэргээх
-          </Button>
-          <div className="flex rounded-lg border border-[var(--admin-border)] overflow-hidden text-xs">
-            <button
-              type="button"
-              className={`px-3 py-1.5 ${locale === "mn" ? "bg-white/10 text-white" : "text-[var(--admin-muted)]"}`}
-              onClick={() => setLocale("mn")}
-            >
-              MN
-            </button>
-            <button
-              type="button"
-              className={`px-3 py-1.5 ${locale === "en" ? "bg-white/10 text-white" : "text-[var(--admin-muted)]"}`}
-              onClick={() => setLocale("en")}
-            >
-              EN
-            </button>
-          </div>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          {/* <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
+            Өртөө
+          </p> */}
+          <h1 className="font-display text-2xl md:text-3xl tracking-wide flex items-center gap-2 text-[var(--admin-text)]">
+            Өртөөнүүд
+          </h1>
+          {/* <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
+            Тоглоомын дарааллыг доорх жагсаалаар тохируулна — эхнийх нь газрын
+            зурагны шошго, popup-д эхэлж гарна. Quest нь sidebar текст.
+          </p> */}
         </div>
+        <Button
+          type="button"
+          variant="default"
+          size="sm"
+          className="gap-2 border-[var(--admin-border)] text-white hover:border-[var(--admin-text)]"
+          disabled={loading}
+          onClick={() => void load()}
+        >
+          <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
+          Шинэчлэх
+        </Button>
       </header>
 
       {msg && (
@@ -186,7 +175,7 @@ export default function AdminStationsPage() {
             <thead>
               <tr className="border-b border-[var(--admin-border)] text-[10px] uppercase tracking-wider text-[var(--admin-subtle,#737373)]">
                 <th className="p-3">#</th>
-                <th className="p-3">Slug</th>
+                <th className="p-3">Түлхүүр</th>
                 <th className="p-3">Нэр</th>
                 <th className="p-3">Бүс</th>
                 <th className="p-3">Quest</th>
@@ -195,9 +184,9 @@ export default function AdminStationsPage() {
             <tbody>
               {stations.map((s) => {
                 const active = s.slug === selectedSlug;
-                const name = locale === "mn" ? s.name_mn : s.name_en;
-                const region = locale === "mn" ? s.region_mn : s.region_en;
-                const questTitle = locale === "mn" ? s.quest_hint_mn : s.quest_hint_en;
+                const name = s.name_mn;
+                const region = s.region_mn;
+                const questTitle = s.quest_hint_mn;
                 return (
                   <tr
                     key={s.slug}
@@ -207,10 +196,25 @@ export default function AdminStationsPage() {
                     <td className="p-3 text-xs text-[var(--admin-subtle)] tabular-nums">
                       {(s.journey_index ?? 0) + 1}
                     </td>
-                    <td className="p-3 font-mono text-xs text-[var(--admin-muted)]">{s.slug}</td>
-                    <td className="p-3 text-[var(--admin-text)] whitespace-nowrap">{name}</td>
-                    <td className="p-3 text-[var(--admin-muted)] whitespace-nowrap">{region}</td>
-                    <td className="p-3 text-[var(--admin-muted)] text-xs max-w-[360px] truncate" title={questTitle ?? ""}>
+                    <td className="p-3 font-mono text-xs text-[var(--admin-muted)]">
+                      {s.slug}
+                    </td>
+                    <td className="p-3 whitespace-nowrap">
+                      <div className="text-[var(--admin-text)]">{name}</div>
+                      <div className="text-[var(--admin-muted)] text-xs">
+                        {s.name_en}
+                      </div>
+                    </td>
+                    <td className="p-3 text-[var(--admin-muted)] whitespace-nowrap">
+                      <div className="text-[var(--admin-text)]">{region}</div>
+                      <div className="text-[var(--admin-muted)] text-xs">
+                        {s.region_en}
+                      </div>
+                    </td>
+                    <td
+                      className="p-3 text-[var(--admin-muted)] text-xs max-w-[360px] truncate"
+                      title={questTitle ?? ""}
+                    >
                       {questTitle?.trim() ? questTitle : "—"}
                     </td>
                   </tr>
@@ -218,14 +222,20 @@ export default function AdminStationsPage() {
               })}
               {stations.length === 0 && !loading && (
                 <tr>
-                  <td className="p-8 text-center text-[var(--admin-muted)] text-sm" colSpan={5}>
+                  <td
+                    className="p-8 text-center text-[var(--admin-muted)] text-sm"
+                    colSpan={5}
+                  >
                     Өртөө олдсонгүй.
                   </td>
                 </tr>
               )}
               {loading && stations.length === 0 && (
                 <tr>
-                  <td className="p-8 text-center text-[var(--admin-muted)] text-sm" colSpan={5}>
+                  <td
+                    className="p-8 text-center text-[var(--admin-muted)] text-sm"
+                    colSpan={5}
+                  >
                     Ачаалж байна…
                   </td>
                 </tr>
@@ -236,50 +246,46 @@ export default function AdminStationsPage() {
 
         <div className="lg:col-span-2 admin-panel p-4 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle,#737373)]">Сонгосон өртөө</p>
-              <p className="font-display text-lg text-[var(--admin-text,#fafafa)]">
-                {selectedStation ? (locale === "mn" ? selectedStation.name_mn : selectedStation.name_en) : "—"}
+            <div className="flex gap-1 items-start flex-col">
+              <p className="text-[9px] uppercase tracking-[0.28em] text-[var(--admin-subtle,#737373)]">
+                Өртөөний дэлгэрэнгүй
               </p>
-              <p className="text-xs text-[var(--admin-muted)] font-mono">{selectedStation?.slug ?? ""}</p>
+              <p className="font-display text-lg text-[var(--admin-text,#fafafa)]">
+                {selectedStation ? selectedStation.name_mn : "—"}
+              </p>
+              {/* <p className="text-xs text-[var(--admin-muted)] font-mono">
+                {selectedStation?.slug ?? ""}
+              </p> */}
             </div>
           </div>
 
           {!selectedStation ? (
-            <p className="text-sm text-[var(--admin-muted)]">Засах өртөөг хүснэгтээс сонгоно уу.</p>
+            <p className="text-sm text-[var(--admin-muted)]">
+              Засах өртөөг хүснэгтээс сонгоно уу.
+            </p>
           ) : (
             <StationDetailEditor
               station={selectedStation}
-              locale={locale}
               saving={stationBusy}
               onSave={(patch) => void saveStation(selectedStation.slug, patch)}
             />
           )}
 
           {selectedStation ? (
-            <div className="pt-2 border-t border-[var(--admin-border)] space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle,#737373)]">Тоглоомууд — эрэмбэ</p>
-                  <p className="text-xs text-[var(--admin-muted)]">
-                    Дараалал: 1 = эхний шошго/тоглоом. Дээш/доош дарж солино.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="gap-1.5 shrink-0 border-[var(--admin-border)] bg-[var(--admin-elevated)]"
-                  disabled={gamesBusy || !selectedSlug}
-                  onClick={() => void saveStationGames()}
-                >
-                  <Save className="size-3.5 stroke-[1.5]" />
-                  Хадгалах
-                </Button>
+            <div className="pt-2 border-t border-[var(--admin-border)] space-y-3 mt-4 flex flex-col">
+              <div className="flex flex-col items-start gap-1">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle,#737373)]">
+                  Тоглоом тохируулах
+                </p>
+                <p className="text-[10px] text-[var(--admin-muted)]">
+                  Дараалал: 1 = эхний шошго/тоглоом. Дээш/доош дарж солино.
+                </p>
               </div>
 
               {gamesBusy ? (
-                <p className="text-xs text-[var(--admin-muted)]">Ачаалж байна…</p>
+                <p className="text-xs text-[var(--admin-muted)]">
+                  Ачаалж байна…
+                </p>
               ) : (
                 <div className="space-y-3">
                   <ol className="space-y-1.5 max-h-[280px] overflow-y-auto pr-1">
@@ -298,9 +304,7 @@ export default function AdminStationsPage() {
                             <span className="font-mono text-[10px] text-[var(--admin-subtle)] block truncate">
                               {g.slug}
                             </span>
-                            <span className="leading-snug">
-                              {locale === "mn" ? g.name_mn : g.name_en}
-                            </span>
+                            <span className="leading-snug">{g.name_mn}</span>
                           </div>
                           <div className="flex items-center gap-0.5 shrink-0">
                             <button
@@ -351,13 +355,22 @@ export default function AdminStationsPage() {
                         .filter((g) => !orderedGameIds.includes(g.id))
                         .map((g) => (
                           <option key={g.id} value={g.id}>
-                            {g.slug} · {locale === "mn" ? g.name_mn : g.name_en}
+                            {g.slug} · {g.name_mn}
                           </option>
                         ))}
                     </select>
                   </div>
                 </div>
               )}
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                disabled={gamesBusy || !selectedSlug}
+                onClick={() => void saveStationGames()}
+              >
+                Хадгалах
+              </Button>
             </div>
           ) : null}
         </div>
@@ -368,12 +381,10 @@ export default function AdminStationsPage() {
 
 function StationDetailEditor({
   station,
-  locale,
   saving,
   onSave,
 }: {
   station: MapStationRow;
-  locale: "mn" | "en";
   saving: boolean;
   onSave: (patch: Partial<MapStationRow>) => void;
 }) {
@@ -382,14 +393,14 @@ function StationDetailEditor({
   const [regionMn, setRegionMn] = useState(station.region_mn);
   const [regionEn, setRegionEn] = useState(station.region_en);
   const [icon, setIcon] = useState(station.icon ?? "📍");
-  const [journeyIndex, setJourneyIndex] = useState<number>(station.journey_index ?? 0);
+  const [journeyIndex, setJourneyIndex] = useState<number>(
+    station.journey_index ?? 0,
+  );
 
-  const [questTitle, setQuestTitle] = useState(
-    locale === "mn" ? station.quest_hint_mn ?? "" : station.quest_hint_en ?? ""
-  );
-  const [questDesc, setQuestDesc] = useState(
-    locale === "mn" ? station.quest_desc_mn ?? "" : station.quest_desc_en ?? ""
-  );
+  const [questTitleMn, setQuestTitleMn] = useState(station.quest_hint_mn ?? "");
+  const [questTitleEn, setQuestTitleEn] = useState(station.quest_hint_en ?? "");
+  const [questDescMn, setQuestDescMn] = useState(station.quest_desc_mn ?? "");
+  const [questDescEn, setQuestDescEn] = useState(station.quest_desc_en ?? "");
 
   useEffect(() => {
     setNameMn(station.name_mn);
@@ -401,9 +412,11 @@ function StationDetailEditor({
   }, [station]);
 
   useEffect(() => {
-    setQuestTitle(locale === "mn" ? station.quest_hint_mn ?? "" : station.quest_hint_en ?? "");
-    setQuestDesc(locale === "mn" ? station.quest_desc_mn ?? "" : station.quest_desc_en ?? "");
-  }, [station, locale]);
+    setQuestTitleMn(station.quest_hint_mn ?? "");
+    setQuestTitleEn(station.quest_hint_en ?? "");
+    setQuestDescMn(station.quest_desc_mn ?? "");
+    setQuestDescEn(station.quest_desc_en ?? "");
+  }, [station]);
 
   const saveAll = () => {
     const basePatch: Partial<MapStationRow> = {
@@ -412,20 +425,26 @@ function StationDetailEditor({
       region_mn: regionMn,
       region_en: regionEn,
       icon,
-      journey_index: Number.isFinite(journeyIndex) ? journeyIndex : station.journey_index,
+      journey_index: Number.isFinite(journeyIndex)
+        ? journeyIndex
+        : station.journey_index,
     };
-    const questPatch: Partial<MapStationRow> =
-      locale === "mn"
-        ? { quest_hint_mn: questTitle, quest_desc_mn: questDesc }
-        : { quest_hint_en: questTitle, quest_desc_en: questDesc };
-    onSave({ ...basePatch, ...questPatch });
+    onSave({
+      ...basePatch,
+      quest_hint_mn: questTitleMn,
+      quest_hint_en: questTitleEn,
+      quest_desc_mn: questDescMn,
+      quest_desc_en: questDescEn,
+    });
   };
 
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Нэр (MN)</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Нэр
+          </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
             value={nameMn}
@@ -433,7 +452,9 @@ function StationDetailEditor({
           />
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Нэр (EN)</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Нэр (EN)
+          </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
             value={nameEn}
@@ -441,7 +462,9 @@ function StationDetailEditor({
           />
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Бүс (MN)</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Бүс
+          </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
             value={regionMn}
@@ -449,7 +472,9 @@ function StationDetailEditor({
           />
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Бүс (EN)</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Бүс (EN)
+          </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
             value={regionEn}
@@ -457,7 +482,9 @@ function StationDetailEditor({
           />
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Icon</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Икон
+          </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
             value={icon}
@@ -466,7 +493,9 @@ function StationDetailEditor({
           />
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">Journey index</p>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Эрэмбэ
+          </p>
           <input
             type="number"
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs font-mono text-[var(--admin-text)]"
@@ -478,23 +507,45 @@ function StationDetailEditor({
 
       <div>
         <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
-          Quest title ({locale.toUpperCase()})
+          Quest гарчиг (MN)
         </p>
         <textarea
           className="w-full min-h-[56px] rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
-          value={questTitle}
-          onChange={(e) => setQuestTitle(e.target.value)}
+          value={questTitleMn}
+          onChange={(e) => setQuestTitleMn(e.target.value)}
         />
       </div>
 
       <div>
         <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
-          Quest description ({locale.toUpperCase()})
+          Quest гарчиг (EN)
+        </p>
+        <textarea
+          className="w-full min-h-[56px] rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
+          value={questTitleEn}
+          onChange={(e) => setQuestTitleEn(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+          Quest тайлбар (MN)
         </p>
         <textarea
           className="w-full min-h-[88px] rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
-          value={questDesc}
-          onChange={(e) => setQuestDesc(e.target.value)}
+          value={questDescMn}
+          onChange={(e) => setQuestDescMn(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+          Quest тайлбар (EN)
+        </p>
+        <textarea
+          className="w-full min-h-[88px] rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"
+          value={questDescEn}
+          onChange={(e) => setQuestDescEn(e.target.value)}
         />
       </div>
 
@@ -502,16 +553,13 @@ function StationDetailEditor({
         <Button
           type="button"
           size="sm"
-          variant="secondary"
-          className="gap-1.5 border-[var(--admin-border)] bg-[var(--admin-elevated)]"
+          variant="default"
           disabled={saving}
           onClick={() => saveAll()}
         >
-          <Save className="size-3.5" />
           Хадгалах
         </Button>
       </div>
     </div>
   );
 }
-

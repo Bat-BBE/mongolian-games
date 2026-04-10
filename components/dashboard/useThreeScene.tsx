@@ -15,6 +15,8 @@ interface UseThreeSceneOptions {
   stations: UrtuuStation[];
   currentStationId: string;
   doneStationIds: string[];
+  homeGerLevel?: number;
+  homeLivestock?: { sheep: number; horse: number; camel: number };
   onSelectStation?: (stationId: string) => void;
   onHeroArriveStation?: (stationId: string) => void;
   heroModelPath?: string | null;
@@ -88,6 +90,20 @@ function buildCameraTarget(stationId: string): CameraTarget {
   };
 }
 
+// Player home base — place away from major stations (more “empty steppe”).
+const HOME_POS = { x: 90, z: 10 };
+function buildHomeCameraTarget(): CameraTarget {
+  const lx = HOME_POS.x;
+  const lz = HOME_POS.z;
+  const ly = terrainHeight(lx, lz) + 2.4;
+  return {
+    lookAt: new THREE.Vector3(lx, ly, lz),
+    distance: 40,
+    phi: 0.44,
+    theta: 0.15,
+  };
+}
+
 function getSunPositionForStation(stationId: string): { angle: number } {
   const id = resolveStationId(stationId);
   const idx = JOURNEY_ORDER.indexOf(id);
@@ -102,6 +118,8 @@ export function useThreeScene({
   stations,
   currentStationId,
   doneStationIds,
+  homeGerLevel = 1,
+  homeLivestock,
   onSelectStation,
   onHeroArriveStation,
   heroModelPath,
@@ -153,7 +171,7 @@ export function useThreeScene({
     const camera = new THREE.PerspectiveCamera(50, W / H, 0.5, 800);
 
     const firstStation = resolveStationId(currentStationId);
-    const initTarget = buildCameraTarget(firstStation);
+    const initTarget = buildHomeCameraTarget();
     camera.position.set(
       initTarget.lookAt.x +
         Math.sin(initTarget.theta) *
@@ -221,6 +239,8 @@ export function useThreeScene({
     builder.buildMountains();
     builder.buildGrassTufts();
     builder.buildRocks();
+    builder.buildPlayerHomeGer(homeGerLevel);
+    builder.buildPlayerLivestockNearHome(homeLivestock);
     builder.buildGerCamps();
     builder.buildStationGers(stations);
     builder.buildRoads(stations);
@@ -417,7 +437,7 @@ export function useThreeScene({
     };
 
     function flyToStation(id: string, snap = false) {
-      const t = buildCameraTarget(id);
+      const t = id === "home" ? buildHomeCameraTarget() : buildCameraTarget(id);
       cameraState.targetLook.copy(t.lookAt);
       cameraState.targetDist = t.distance;
       cameraState.targetPhi = t.phi;

@@ -289,7 +289,11 @@ function GameScene({
   );
 }
 
-export default function FourBonesGame() {
+export default function FourBonesGame({
+  onComplete,
+}: {
+  onComplete?: (result: "win" | "lose") => void;
+}) {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -308,6 +312,13 @@ export default function FourBonesGame() {
     state.phase === "result" &&
     state.history.length > 0 &&
     state.history[state.history.length - 1].isDorvenBerkh;
+
+  useEffect(() => {
+    if (!isWin) return;
+    if (resultSentRef.current) return;
+    resultSentRef.current = true;
+    onComplete?.("win");
+  }, [isWin, onComplete]);
 
   const handleThrow = useCallback(() => {
     if (state.phase === "throwing" || state.phase === "settling") return;
@@ -368,6 +379,7 @@ export default function FourBonesGame() {
     setSettledSides([null, null, null, null]);
     settledCount.current = 0;
     setIsThrown(false);
+    resultSentRef.current = false;
   }, []);
 
   return (

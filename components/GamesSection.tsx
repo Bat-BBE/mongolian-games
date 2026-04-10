@@ -184,6 +184,8 @@ export default function GamesSection() {
           onClose={() => setSelectedGame(null)}
           gameType={selectedGame.type}
           gameName={selectedGame.name}
+          stationSlug="freeplay"
+          gameSlug={selectedGame.type}
         />
       )}
     </>

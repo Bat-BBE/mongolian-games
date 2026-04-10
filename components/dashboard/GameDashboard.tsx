@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { ProfileModal } from "./ProfileModal";
+import { HomeModal } from "./HomeModal";
 import { clearPlayer } from "@/components/hero-select/hero-data";
 
 interface GameDashboardProps {
@@ -30,6 +31,33 @@ interface GameDashboardProps {
 function num(v: unknown, fallback: number): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function isPlainRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function readStationSteps(progress: Record<string, unknown>): Record<string, { completedGameSlugs: string[] }> {
+  const raw = progress.stationSteps;
+  if (!isPlainRecord(raw)) return {};
+  const out: Record<string, { completedGameSlugs: string[] }> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (!isPlainRecord(v)) continue;
+    const arr = (v as Record<string, unknown>).completedGameSlugs;
+    out[k] = { completedGameSlugs: Array.isArray(arr) ? arr.map((x) => String(x)) : [] };
+  }
+  return out;
+}
+
+function readStationVisits(progress: Record<string, unknown>): Record<string, number[]> {
+  const raw = progress.stationVisits;
+  if (!isPlainRecord(raw)) return {};
+  const out: Record<string, number[]> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (!Array.isArray(v)) continue;
+    out[k] = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+  }
+  return out;
 }
 
 export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
@@ -58,11 +86,24 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     currentStationLabel?: string;
     heroTier?: string;
     heroModelPath?: string | null;
+    stationSteps?: Record<string, { completedGameSlugs: string[] }>;
+    stationVisits?: Record<string, number[]>;
+    homeGerLevel?: number;
+    homeLivestock?: { sheep: number; horse: number; camel: number };
+    treasury?: {
+      kp: number;
+      coins: number;
+      gems: number;
+      gerLevel: number;
+      livestock: { sheep: number; horse: number; camel: number };
+    };
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileReloadTick, setProfileReloadTick] = useState(0);
+  const [gameReloadTick, setGameReloadTick] = useState(0);
+  const [homeOpen, setHomeOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
@@ -106,6 +147,14 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
 
       const prof = data.profile as Record<string, unknown>;
       const prog = data.progress as Record<string, unknown>;
+      const inv =
+        isPlainRecord(prof.inventory) ? (prof.inventory as Record<string, unknown>) : {};
+      const gerRec =
+        isPlainRecord(prof.ger) ? (prof.ger as Record<string, unknown>) : {};
+      const lsRec =
+        isPlainRecord(prof.livestock)
+          ? (prof.livestock as Record<string, unknown>)
+          : {};
       const hero = bundle?.hero;
       const bundleStation =
         typeof bundle?.computed?.currentStationSlug === "string"
@@ -155,6 +204,25 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
             : typeof prof.heroModelPath === "string"
               ? String(prof.heroModelPath)
               : null,
+        stationSteps: readStationSteps(prog),
+        stationVisits: readStationVisits(prog),
+        homeGerLevel: num(gerRec.level, 1),
+        homeLivestock: {
+          sheep: num(lsRec.sheep, 0),
+          horse: num(lsRec.horse, 0),
+          camel: num(lsRec.camel, 0),
+        },
+        treasury: {
+          kp: num(prof.kp, 0),
+          coins: num(inv.coins, 0),
+          gems: num(inv.gems, 0),
+          gerLevel: num(gerRec.level, 1),
+          livestock: {
+            sheep: num(lsRec.sheep, 0),
+            horse: num(lsRec.horse, 0),
+            camel: num(lsRec.camel, 0),
+          },
+        },
       });
       setLoading(false);
     }
@@ -162,7 +230,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     return () => {
       cancelled = true;
     };
-  }, [lang, profileReloadTick]);
+  }, [lang, profileReloadTick, gameReloadTick]);
 
   if (loading) {
     return (
@@ -215,6 +283,14 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         onHeroSaved={() => setProfileReloadTick((n) => n + 1)}
       />
 
+      <HomeModal
+        open={homeOpen}
+        onOpenChange={setHomeOpen}
+        t={t}
+        lang={lang}
+        onChanged={() => setGameReloadTick((n) => n + 1)}
+      />
+
       <div className="flex flex-1 overflow-hidden relative">
         <LeftPanel
           t={t}
@@ -231,17 +307,28 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           currentStationLabel={player.currentStationLabel}
           heroTier={player.heroTier}
           stationGames={stationGames}
+          currentStationId={player.currentStationId}
+          stationSteps={player.stationSteps}
+          stationVisits={player.stationVisits}
+          treasury={player.treasury}
           onOpenLeaderboard={openLb}
         />
 
         <MapArea
           t={t}
+          userEmail={userEmail}
+          homeGerLevel={player.homeGerLevel ?? 1}
+          homeLivestock={player.homeLivestock}
           currentStationId={
             player.currentStationId?.trim() || JOURNEY_ORDER[0]
           }
           doneStationIds={Array.isArray(player.doneStationIds) ? player.doneStationIds : []}
           stations={mapStations}
           heroModelPath={player.heroModelPath ?? null}
+          stationSteps={player.stationSteps}
+          stationVisits={player.stationVisits}
+          onGameCompleted={() => setGameReloadTick((n) => n + 1)}
+          onOpenHome={() => setHomeOpen(true)}
         />
       </div>
     </div>

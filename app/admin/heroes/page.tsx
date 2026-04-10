@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LuBookMarked as BookMarked, LuRefreshCw as RefreshCw, LuPencil as Pencil } from "react-icons/lu";
+import {
+  LuBookMarked as BookMarked,
+  LuRefreshCw as RefreshCw,
+  LuPencil as Pencil,
+} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,27 +78,27 @@ export default function AdminHeroesPage() {
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8 pb-24 text-[var(--admin-text,#fafafa)]">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
-            PostgreSQL
-          </p>
+          {/* <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
+            Баатар
+          </p> */}
           <h1 className="font-display text-2xl md:text-3xl tracking-wide flex items-center gap-2">
-            <BookMarked className="size-7 text-[var(--admin-muted)] stroke-[1.5]" />
+            {/* <BookMarked className="size-7 text-[var(--admin-muted)] stroke-[1.5]" /> */}
             Баатрууд
           </h1>
-          <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
-            Баатарын нэр, цол, товч танилцуулгыг (bio) эндээс засна.
-          </p>
+          {/* <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
+            Баатарын тухай дэлгэрэнгүй мэдээллийг эндээс засна.
+          </p> */}
         </div>
         <Button
           type="button"
-          variant="outline"
+          variant="default"
           size="sm"
-          className="gap-2 shrink-0 border-[var(--admin-border)] text-[var(--admin-muted)]"
+          className="gap-2 shrink-0 border-[var(--admin-border)] text-white hover:border-[var(--admin-text)]"
           disabled={loading}
           onClick={() => void load()}
         >
           <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
-          Сэргээх
+          Шинэчлэх
         </Button>
       </header>
 
@@ -105,28 +109,43 @@ export default function AdminHeroesPage() {
       )}
 
       <div className="admin-panel overflow-x-auto">
-        <table className="w-full text-sm text-left min-w-[940px]">
+        <table className="w-full text-sm text-left min-w-auto">
           <thead>
             <tr className="border-b border-[var(--admin-border)] text-[10px] uppercase tracking-wider text-[var(--admin-subtle)]">
-              <th className="p-3">Slug</th>
-              <th className="p-3">Нэр (MN)</th>
-              <th className="p-3">Нэр (EN)</th>
-              <th className="p-3">Цол (MN)</th>
-              <th className="p-3">Цол (EN)</th>
-              <th className="p-3 w-24">Эрэмбэ</th>
+              <th className="p-3 w-auto">Түлхүүр</th>
+              <th className="p-3 w-auto">Нэр (MN/EN)</th>
+              <th className="p-3 w-auto">Цол (MN/EN)</th>
+              {/* <th className="p-3 w-24">Эрэмбэ</th> */}
               <th className="p-3 w-28">Төлөв</th>
-              <th className="p-3 w-28 text-right" />
+              <th className="p-3 font-medium w-10 text-right">Засах</th>
             </tr>
           </thead>
           <tbody>
             {heroes.map((h) => (
-              <tr key={h.id} className="border-b border-[var(--admin-border)] hover:bg-white/[0.04]">
-                <td className="p-3 font-mono text-xs text-[var(--admin-muted)]">{h.slug}</td>
-                <td className="p-3 text-[var(--admin-text)]">{h.name_mn}</td>
-                <td className="p-3 text-[var(--admin-text)]">{h.name_en}</td>
-                <td className="p-3 text-[var(--admin-muted)]">{h.title_mn}</td>
-                <td className="p-3 text-[var(--admin-muted)]">{h.title_en}</td>
-                <td className="p-3 tabular-nums text-[var(--admin-muted)]">{h.sort_order}</td>
+              <tr
+                key={h.id}
+                className="border-b border-[var(--admin-border)] hover:bg-white/[0.04]"
+              >
+                <td className="p-3 font-mono text-xs text-[var(--admin-muted)]">
+                  {h.slug}
+                </td>
+                <td className="p-3">
+                  <div className="font-medium text-[var(--admin-text)]">
+                    {h.name_mn}
+                  </div>
+                  <div className="text-[var(--admin-muted)] text-xs">
+                    {h.name_en}
+                  </div>
+                </td>
+                <td className="p-3">
+                  <div className="text-[var(--admin-text)]">{h.title_mn}</div>
+                  <div className="text-[var(--admin-muted)] text-xs">
+                    {h.title_en}
+                  </div>
+                </td>
+                {/* <td className="p-3 tabular-nums text-[var(--admin-muted)]">
+                  {h.sort_order}
+                </td> */}
                 <td className="p-3">
                   <span
                     className={
@@ -155,10 +174,14 @@ export default function AdminHeroesPage() {
           </tbody>
         </table>
         {heroes.length === 0 && !loading && (
-          <p className="p-8 text-center text-[var(--admin-muted)] text-sm">Баатар олдсонгүй.</p>
+          <p className="p-8 text-center text-[var(--admin-muted)] text-sm">
+            Баатар олдсонгүй.
+          </p>
         )}
         {loading && heroes.length === 0 && (
-          <p className="p-8 text-center text-[var(--admin-muted)] text-sm">Ачаалж байна…</p>
+          <p className="p-8 text-center text-[var(--admin-muted)] text-sm">
+            Ачаалж байна…
+          </p>
         )}
       </div>
 
@@ -174,7 +197,11 @@ export default function AdminHeroesPage() {
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>slug</Label>
-                  <Input value={editing.slug} disabled className="border-[var(--admin-border)] bg-[var(--admin-elevated)] opacity-80" />
+                  <Input
+                    value={editing.slug}
+                    disabled
+                    className="border-[var(--admin-border)] bg-[var(--admin-elevated)] opacity-80"
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label>sort_order</Label>
@@ -183,7 +210,9 @@ export default function AdminHeroesPage() {
                     value={editing.sort_order}
                     onChange={(e) =>
                       setEditing((p) =>
-                        p ? { ...p, sort_order: Number(e.target.value) || 0 } : p
+                        p
+                          ? { ...p, sort_order: Number(e.target.value) || 0 }
+                          : p,
                       )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
@@ -193,21 +222,25 @@ export default function AdminHeroesPage() {
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Нэр (MN)</Label>
+                  <Label>Нэр</Label>
                   <Input
                     value={editing.name_mn}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, name_mn: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, name_mn: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Name (EN)</Label>
+                  <Label>Нэр (EN)</Label>
                   <Input
                     value={editing.name_en}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, name_en: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, name_en: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
@@ -216,21 +249,25 @@ export default function AdminHeroesPage() {
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Цол (MN)</Label>
+                  <Label>Цол</Label>
                   <Input
                     value={editing.title_mn}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, title_mn: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, title_mn: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Title (EN)</Label>
+                  <Label>Цол (EN)</Label>
                   <Input
                     value={editing.title_en}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, title_en: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, title_en: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
@@ -239,21 +276,25 @@ export default function AdminHeroesPage() {
 
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Bio (MN)</Label>
+                  <Label>Түүх</Label>
                   <Textarea
                     value={editing.bio_mn ?? ""}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, bio_mn: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, bio_mn: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[96px]"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Bio (EN)</Label>
+                  <Label>Түүх (EN)</Label>
                   <Textarea
                     value={editing.bio_en ?? ""}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, bio_en: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, bio_en: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[96px]"
                   />
@@ -261,64 +302,78 @@ export default function AdminHeroesPage() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
+                {/* <div className="space-y-1.5">
                   <Label>image_url</Label>
                   <Input
                     value={editing.image_url}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, image_url: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, image_url: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
-                </div>
-                <div className="space-y-1.5">
+                </div> */}
+                {/* <div className="space-y-1.5">
                   <Label>model_path</Label>
                   <Input
                     value={editing.model_path ?? ""}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, model_path: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, model_path: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
-                </div>
-                <div className="space-y-1.5">
+                </div> */}
+                {/* <div className="space-y-1.5">
                   <Label>color</Label>
                   <Input
                     value={editing.color}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, color: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, color: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                     placeholder="#ffd559"
                   />
-                </div>
-                <div className="space-y-1.5">
+                </div> */}
+                {/* <div className="space-y-1.5">
                   <Label>emissive</Label>
                   <Input
                     value={editing.emissive ?? ""}
                     onChange={(e) =>
-                      setEditing((p) => (p ? { ...p, emissive: e.target.value } : p))
+                      setEditing((p) =>
+                        p ? { ...p, emissive: e.target.value } : p,
+                      )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                     placeholder="#D4AF37"
                   />
-                </div>
+                </div> */}
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <Checkbox
                   id="e_avail"
                   checked={editing.is_available}
                   onCheckedChange={(v) =>
-                    setEditing((p) => (p ? { ...p, is_available: v === true } : p))
+                    setEditing((p) =>
+                      p ? { ...p, is_available: v === true } : p,
+                    )
                   }
                 />
                 <Label htmlFor="e_avail">Нээлттэй (is_available)</Label>
-              </div>
+              </div> */}
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setEditing(null)}
+            >
               Болих
             </Button>
             <Button type="button" onClick={() => void handleUpdate()}>

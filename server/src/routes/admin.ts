@@ -96,6 +96,70 @@ adminRouter.post("/login", (req, res) => {
 
 adminRouter.use(requireAdminJwt);
 
+adminRouter.get("/treasury", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         count(*)::int AS users,
+         COALESCE(sum((profile->>'kp')::int), 0)::int AS kp_total,
+         COALESCE(sum((profile->'inventory'->>'coins')::int), 0)::int AS coins_total,
+         COALESCE(sum((profile->'inventory'->>'gems')::int), 0)::int AS gems_total,
+         COALESCE(sum((profile->'livestock'->>'sheep')::int), 0)::int AS sheep_total,
+         COALESCE(sum((profile->'livestock'->>'horse')::int), 0)::int AS horse_total,
+         COALESCE(sum((profile->'livestock'->>'camel')::int), 0)::int AS camel_total,
+         COALESCE(avg((profile->'ger'->>'level')::int), 1)::float AS ger_level_avg
+       FROM app_users`,
+    );
+
+    const top = await pool.query(
+      `SELECT id, display_name, email, hero_id,
+              COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
+              COALESCE((profile->'ger'->>'level')::int, 1) AS ger_level,
+              COALESCE((profile->>'kp')::int, 0) AS kp,
+              COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
+              COALESCE((profile->'inventory'->>'gems')::int, 0) AS gems,
+              COALESCE((profile->'livestock'->>'sheep')::int, 0) AS sheep,
+              COALESCE((profile->'livestock'->>'horse')::int, 0) AS horse,
+              COALESCE((profile->'livestock'->>'camel')::int, 0) AS camel,
+              COALESCE(
+                jsonb_array_length(COALESCE(progress->'doneStationIds', '[]'::jsonb)),
+                0
+              )::int AS visited_stations
+       FROM app_users
+       ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
+       LIMIT 10`,
+    );
+
+    const users = await pool.query(
+      `SELECT id, display_name, email, hero_id,
+              COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
+              COALESCE((profile->'ger'->>'level')::int, 1) AS ger_level,
+              COALESCE((profile->>'kp')::int, 0) AS kp,
+              COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
+              COALESCE((profile->'inventory'->>'gems')::int, 0) AS gems,
+              COALESCE((profile->'livestock'->>'sheep')::int, 0) AS sheep,
+              COALESCE((profile->'livestock'->>'horse')::int, 0) AS horse,
+              COALESCE((profile->'livestock'->>'camel')::int, 0) AS camel,
+              COALESCE(
+                jsonb_array_length(COALESCE(progress->'doneStationIds', '[]'::jsonb)),
+                0
+              )::int AS visited_stations
+       FROM app_users
+       ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
+       LIMIT 250`,
+    );
+
+    res.json({
+      summary: result.rows[0],
+      top: top.rows,
+      users: users.rows,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Query failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
 adminRouter.get("/users", async (_req, res) => {
   try {
     const includeLocal = z
