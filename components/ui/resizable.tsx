@@ -1,6 +1,6 @@
 "use client"
 
-import { GripVerticalIcon } from "lucide-react"
+import { LuGripVertical as GripVerticalIcon } from "react-icons/lu"
 import * as ResizablePrimitive from "react-resizable-panels"
 
 import { cn } from "@/lib/utils"

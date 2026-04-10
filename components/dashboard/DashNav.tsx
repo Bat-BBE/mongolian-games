@@ -1,9 +1,21 @@
 "use client";
 
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { DashStrings, DashLang } from "./dashboard-strings";
-import { useRef, useState, CSSProperties } from "react";
-import { Trophy } from "lucide-react";
+import { useRef, CSSProperties } from "react";
+import {
+  LuTrophy as Trophy,
+  LuChevronDown as ChevronDown,
+  LuUser as User,
+  LuLogOut as LogOut,
+} from "react-icons/lu";
 
 interface DashNavProps {
   t: DashStrings;
@@ -13,6 +25,10 @@ interface DashNavProps {
   playerTitle: string;
   avatarUrl: string;
   level: number;
+  /** Нэвтрэлтийн и-мэйл (профайл хэсэгт). */
+  userEmail: string;
+  onOpenProfile: () => void;
+  onLogout: () => void;
   onOpenLeaderboard?: () => void;
 }
 
@@ -24,11 +40,12 @@ export function DashNav({
   playerTitle,
   avatarUrl,
   level,
+  userEmail,
+  onOpenProfile,
+  onLogout,
   onOpenLeaderboard,
 }: DashNavProps) {
   const navRef = useRef<HTMLElement>(null);
-  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   const goldText = {
     background: "var(--grad-gold)",
@@ -74,6 +91,7 @@ export function DashNav({
       {(["mn", "en"] as const).map((lng) => (
         <button
           key={lng}
+          type="button"
           onClick={() => setLang(lng)}
           aria-pressed={lang === lng}
           style={langBtnStyle(lang === lng)}
@@ -139,63 +157,96 @@ export function DashNav({
             title={t.leaderboard}
             aria-label={t.leaderboard}
           >
-            <Trophy className="size-[clamp(18px,1.5vw,22px)]" strokeWidth={1.75} />
+            <Trophy className="size-[clamp(18px,1.5vw,22px)]" />
           </button>
         ) : null}
-        <div className="flex items-center gap-[clamp(6px,1vw,12px)]">
-          <div className="text-right hidden sm:block">
-            <p
-              className="font-bold"
-              style={{
-                color: "var(--foreground)",
-                fontSize: "clamp(11px,0.9vw,14px)",
-              }}
-            >
-              {playerName}
-            </p>
 
-            <p
-              className="uppercase"
-              style={{
-                fontSize: "clamp(8px,0.7vw,11px)",
-                letterSpacing: "0.08em",
-                color: "color-mix(in oklch,var(--foreground)60%,transparent)",
-              }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-[clamp(6px,1vw,12px)] rounded-2xl pl-1 pr-2 py-1 border border-white/10 bg-background/40 hover:bg-primary/10 hover:border-primary/30 transition-colors text-left max-w-[min(280px,50vw)]"
             >
-              {playerTitle}
-            </p>
-          </div>
+              <div className="text-right hidden sm:block min-w-0 flex-1">
+                <p
+                  className="font-bold truncate"
+                  style={{
+                    color: "var(--foreground)",
+                    fontSize: "clamp(11px,0.9vw,14px)",
+                  }}
+                >
+                  {playerName}
+                </p>
 
-          <div
-            className="relative"
-            style={{
-              width: "clamp(34px,3vw,46px)",
-              height: "clamp(34px,3vw,46px)",
-            }}
+                <p
+                  className="uppercase truncate"
+                  style={{
+                    fontSize: "clamp(8px,0.7vw,11px)",
+                    letterSpacing: "0.08em",
+                    color: "color-mix(in oklch,var(--foreground)60%,transparent)",
+                  }}
+                >
+                  {playerTitle}
+                </p>
+              </div>
+
+              <div
+                className="relative shrink-0"
+                style={{
+                  width: "clamp(34px,3vw,46px)",
+                  height: "clamp(34px,3vw,46px)",
+                }}
+              >
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="w-full h-full rounded-full object-cover border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
+                />
+
+                <div
+                  className="absolute flex items-center justify-center rounded-full font-black"
+                  style={{
+                    bottom: "-3px",
+                    right: "-3px",
+                    width: "clamp(14px,1.2vw,20px)",
+                    height: "clamp(14px,1.2vw,20px)",
+                    fontSize: "clamp(7px,0.6vw,10px)",
+                    background: "var(--primary)",
+                    color: "var(--primary-foreground)",
+                    border: "2px solid var(--background)",
+                  }}
+                >
+                  {level}
+                </div>
+              </div>
+              <ChevronDown className="size-4 text-muted-foreground shrink-0 hidden sm:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[220px] border-primary/20 bg-zinc-950/95 backdrop-blur-md"
           >
-            <img
-              src={avatarUrl}
-              alt={playerName}
-              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
-            />
-
-            <div
-              className="absolute flex items-center justify-center rounded-full font-black"
-              style={{
-                bottom: "-3px",
-                right: "-3px",
-                width: "clamp(14px,1.2vw,20px)",
-                height: "clamp(14px,1.2vw,20px)",
-                fontSize: "clamp(7px,0.6vw,10px)",
-                background: "var(--primary)",
-                color: "var(--primary-foreground)",
-                border: "2px solid var(--background)",
-              }}
-            >
-              {level}
+            <div className="px-2 py-1.5 text-[10px] text-muted-foreground truncate border-b border-white/5 mb-1">
+              {userEmail}
             </div>
-          </div>
-        </div>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={onOpenProfile}
+            >
+              <User className="size-4" />
+              {t.accountMenuProfile}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer text-red-300 focus:text-red-100 focus:bg-red-950/50"
+              onClick={onLogout}
+            >
+              <LogOut className="size-4" />
+              {t.accountMenuLogout}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <LangToggle />
         <ModeToggle />
       </div>

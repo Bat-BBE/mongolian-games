@@ -1,5 +1,7 @@
+"use client"
+
 import * as React from "react"
-import { ChevronDownIcon } from "lucide-react"
+import { LuChevronDown as ChevronDownIcon } from "react-icons/lu"
 
 import { cn } from "@/lib/utils"
 

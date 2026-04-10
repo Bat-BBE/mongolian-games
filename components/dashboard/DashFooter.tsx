@@ -1,6 +1,5 @@
 "use client";
 
-import { BookOpen, Play } from "lucide-react";
 import type { DashStrings } from "./dashboard-strings";
 
 interface DashFooterProps {

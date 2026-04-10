@@ -13,7 +13,8 @@ function defaultProgress(): Record<string, unknown> {
   return {
     xp: 0,
     xpMax: 100,
-    currentStationId: "ulaanbaatar",
+    // Journey should start from the leftmost station for everyone.
+    currentStationId: "choibalsan",
     journeyDay: 1,
     doneStationIds: [],
   };
@@ -105,7 +106,7 @@ export async function registerEmail(email: string, heroId: HeroId) {
   const progress = {
     xp: 0,
     xpMax: 100,
-    currentStationId: "ulaanbaatar",
+    currentStationId: "choibalsan",
     journeyDay: 1,
     doneStationIds: [] as string[],
   };
@@ -128,4 +129,87 @@ export async function registerEmail(email: string, heroId: HeroId) {
   } catch {
     /* PG optional */
   }
+}
+
+/**
+ * Баатар солих — түвшин / аялал / эрдэнэсийн оноог хадгална.
+ */
+export async function updateHeroForEmail(email: string, heroId: HeroId) {
+  const trimmed = email.trim();
+  const hero = HEROES.find((h) => h.id === heroId);
+  if (!hero) throw new Error("Hero not found");
+
+  const key = emailToKey(trimmed);
+  const snapshot = await get(ref(db, `users/${key}`));
+
+  let profile: Record<string, unknown>;
+  let progress: Record<string, unknown>;
+  let meta: { createdAt?: number };
+
+  if (snapshot.exists()) {
+    const data = snapshot.val() as {
+      profile?: unknown;
+      progress?: unknown;
+      meta?: unknown;
+    };
+    profile = { ...(isPlainRecord(data.profile) ? data.profile : {}) };
+    progress = mergeProgress(data.progress);
+    meta = isPlainRecord(data.meta) ? (data.meta as { createdAt?: number }) : { createdAt: Date.now() };
+  } else {
+    try {
+      const gp = await getGameProfileByEmail(trimmed);
+      if (gp?.user) {
+        profile = isPlainRecord(gp.user.profile) ? { ...gp.user.profile } : {};
+        progress = mergeProgress(gp.user.progress);
+        meta = { createdAt: new Date(gp.user.created_at).getTime() };
+      } else {
+        throw new Error("User not found");
+      }
+    } catch {
+      throw new Error("User not found");
+    }
+  }
+
+  const levelRaw = profile.level;
+  const kpRaw = profile.kp;
+  const level =
+    typeof levelRaw === "number"
+      ? levelRaw
+      : Number.isFinite(Number(levelRaw))
+        ? Number(levelRaw)
+        : 1;
+  const kp =
+    typeof kpRaw === "number"
+      ? kpRaw
+      : Number.isFinite(Number(kpRaw))
+        ? Number(kpRaw)
+        : 0;
+
+  const nextProfile: Record<string, unknown> = {
+    ...profile,
+    name: typeof profile.name === "string" ? profile.name : trimmed,
+    heroId: hero.id,
+    heroName: hero.name,
+    heroTitle: hero.title,
+    heroImages: hero.imageUrl,
+    heroModelPath: hero.modelPath,
+    accentColor: hero.color,
+    stats: hero.stats,
+    level,
+    kp,
+  };
+
+  await set(ref(db, `users/${key}`), {
+    profile: nextProfile,
+    progress,
+    meta,
+  });
+
+  await syncAppUserSimple({
+    email: trimmed,
+    displayName: typeof nextProfile.name === "string" ? String(nextProfile.name) : trimmed,
+    heroId: hero.id,
+    profile: nextProfile,
+    progress,
+  });
 }

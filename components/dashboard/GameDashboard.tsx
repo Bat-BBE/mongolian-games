@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useApp } from "../AppContext";
 import {
   DASH_STRINGS,
-  mergeDashboardSidebar,
   type DashLang,
   type DashStrings,
 } from "./dashboard-strings";
@@ -14,8 +14,14 @@ import { MapArea } from "./MapArea";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer } from "@/components/hero-select/hero-data";
 import { JOURNEY_ORDER, normalizeStationId } from "./mapConstants";
-import { getDashboardBundle, type StationGameBundleRow } from "@/lib/api";
+import {
+  getDashboardBundle,
+  type MapStationApiRow,
+  type StationGameBundleRow,
+} from "@/lib/api";
 import { LeaderboardModal } from "./LeaderboardModal";
+import { ProfileModal } from "./ProfileModal";
+import { clearPlayer } from "@/components/hero-select/hero-data";
 
 interface GameDashboardProps {
   defaultLang?: DashLang;
@@ -27,6 +33,7 @@ function num(v: unknown, fallback: number): number {
 }
 
 export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
+  const router = useRouter();
   const { language, setLanguage } = useApp();
   const lang = language as DashLang;
   const setLang = setLanguage as (l: DashLang) => void;
@@ -50,10 +57,15 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     totalStations?: number;
     currentStationLabel?: string;
     heroTier?: string;
+    heroModelPath?: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileReloadTick, setProfileReloadTick] = useState(0);
+  const [userEmail, setUserEmail] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
+  const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,20 +76,26 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         return;
       }
 
+      setUserEmail(saved.name);
+
       let merged = DASH_STRINGS[lang];
       let bundle: Awaited<ReturnType<typeof getDashboardBundle>> | null = null;
       try {
         bundle = await getDashboardBundle(saved.name, lang);
-        merged = mergeDashboardSidebar(DASH_STRINGS[lang], bundle.strings, {
+        // Labels stay static (frontend). Only the quest content comes from the player's current station.
+        merged = {
+          ...DASH_STRINGS[lang],
           questTitle: bundle.computed.questTitle,
           questDesc: bundle.computed.questDesc,
-        });
+        };
+        setUserEmail(String(bundle.user.email ?? saved.name));
       } catch {
         /* Хэрэглэгч зөвхөн Firebase эсвэл API уншихгүй */
       }
       if (cancelled) return;
       setT(merged);
       setStationGames(bundle?.stationGames ?? []);
+      setMapStations(bundle?.mapStations ?? []);
 
       const data = await getUserByEmail(saved.name);
       if (cancelled) return;
@@ -89,6 +107,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
       const prof = data.profile as Record<string, unknown>;
       const prog = data.progress as Record<string, unknown>;
       const hero = bundle?.hero;
+      const bundleStation =
+        typeof bundle?.computed?.currentStationSlug === "string"
+          ? String(bundle.computed.currentStationSlug)
+          : typeof bundle?.currentStation?.slug === "string"
+            ? String(bundle.currentStation.slug)
+            : null;
 
       const name =
         bundle?.computed.displayHeroName &&
@@ -113,8 +137,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         xpMax: num(prog.xpMax, 100),
         accentColor:
           typeof hero?.color === "string" ? hero.color : String(prof.accentColor ?? "#ffd559"),
+        // Single source-of-truth: PostgreSQL dashboard-bundle
         currentStationId: normalizeStationId(
-          typeof prog.currentStationId === "string" ? prog.currentStationId : undefined
+          bundleStation ?? (typeof prog.currentStationId === "string" ? prog.currentStationId : undefined)
         ),
         doneStationIds: prog.doneStationIds,
         bonusMultiplier: bundle?.computed.bonusMultiplier ?? "x1.5",
@@ -124,6 +149,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         totalStations: bundle?.computed.totalStations,
         currentStationLabel: bundle?.computed.currentStationLabel,
         heroTier: bundle?.computed.tier,
+        heroModelPath:
+          typeof hero?.model_path === "string"
+            ? hero.model_path
+            : typeof prof.heroModelPath === "string"
+              ? String(prof.heroModelPath)
+              : null,
       });
       setLoading(false);
     }
@@ -131,7 +162,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, profileReloadTick]);
 
   if (loading) {
     return (
@@ -161,6 +192,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         playerTitle={player.title}
         avatarUrl={player.image}
         level={player.level}
+        userEmail={userEmail}
+        onOpenProfile={() => setProfileOpen(true)}
+        onLogout={() => {
+          clearPlayer();
+          router.push("/");
+        }}
         onOpenLeaderboard={openLb}
       />
 
@@ -168,6 +205,14 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         open={leaderboardOpen}
         onOpenChange={setLeaderboardOpen}
         lang={lang}
+      />
+
+      <ProfileModal
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        t={t}
+        lang={lang}
+        onHeroSaved={() => setProfileReloadTick((n) => n + 1)}
       />
 
       <div className="flex flex-1 overflow-hidden relative">
@@ -195,6 +240,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
             player.currentStationId?.trim() || JOURNEY_ORDER[0]
           }
           doneStationIds={Array.isArray(player.doneStationIds) ? player.doneStationIds : []}
+          stations={mapStations}
+          heroModelPath={player.heroModelPath ?? null}
         />
       </div>
     </div>

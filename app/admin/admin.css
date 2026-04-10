@@ -1,0 +1,110 @@
+.admin-root {
+  --admin-bg: var(--background);
+  --admin-surface: var(--card);
+  --admin-elevated: var(--muted);
+
+  --admin-border: var(--border);
+  --admin-border-strong: color-mix(
+    in oklch,
+    var(--border) 72%,
+    var(--foreground) 28%
+  );
+
+  --admin-text: var(--foreground);
+  --admin-muted: var(--muted-foreground);
+  --admin-subtle: color-mix(
+    in oklch,
+    var(--muted-foreground) 82%,
+    var(--foreground)
+  );
+
+  --admin-nav-hover-bg: var(--accent);
+  --admin-nav-hover-fg: var(--accent-foreground);
+  --admin-nav-hover: var(--admin-nav-hover-bg);
+  --admin-nav-active-bg: color-mix(in oklch, var(--primary) 28%, var(--muted));
+
+  --admin-login-inset: color-mix(in oklch, var(--foreground) 5%, transparent);
+}
+
+.dark .admin-root {
+  --admin-muted: color-mix(
+    in oklch,
+    var(--muted-foreground) 42%,
+    var(--foreground) 58%
+  );
+  --admin-subtle: color-mix(
+    in oklch,
+    var(--muted-foreground) 55%,
+    var(--foreground) 45%
+  );
+  --admin-border-strong: color-mix(
+    in oklch,
+    var(--border) 58%,
+    var(--foreground) 42%
+  );
+  --admin-login-inset: transparent;
+}
+
+.admin-root,
+.admin-root aside,
+.admin-root > main,
+.admin-panel,
+.admin-panel-elevated {
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.15s ease;
+}
+
+.admin-root > main {
+  background: var(--admin-bg);
+}
+
+.admin-root aside {
+  background: var(--sidebar);
+  border-color: var(--sidebar-border) !important;
+}
+
+.admin-nav-link {
+  color: var(--admin-muted);
+  border-color: transparent;
+}
+
+.admin-nav-link:hover {
+  color: var(--admin-nav-hover-fg);
+  background: var(--admin-nav-hover-bg);
+}
+
+.admin-nav-link[data-active="true"] {
+  color: var(--admin-text);
+  background: var(--admin-nav-active-bg);
+  border-color: var(--admin-border);
+  font-weight: 600;
+}
+
+.admin-logo {
+  color: var(--primary);
+  letter-spacing: -0.02em;
+}
+
+.admin-badge {
+  color: var(--admin-subtle);
+}
+
+.admin-login-screen {
+  background: var(--admin-bg);
+}
+
+.admin-login-brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.75rem;
+  height: 3.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--admin-border-strong);
+  background: var(--admin-elevated);
+  color: var(--admin-text);
+  box-shadow: inset 0 1px 0 var(--admin-login-inset);
+}

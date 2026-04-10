@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { LuStar as Star } from "react-icons/lu";
 import type { DashStrings } from "./dashboard-strings";
 
 export function ChallengeCard({ t }: { t: DashStrings }) {

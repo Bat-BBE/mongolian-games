@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X } from "lucide-react";
+import { LuX as X } from "react-icons/lu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "@/components/AppContext";
 import { HEROES, loadPlayer, savePlayer } from "@/components/hero-select/hero-data";

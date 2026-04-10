@@ -18,15 +18,22 @@ function displayNameOrMasked(
 }
 
 /**
- * XP-ээр эрэмбэлсэн жагсаалт (progress.xp).
+ * Wealth score-оор эрэмбэлсэн жагсаалт.
+ * - profile.wealthScore (шинэ)
+ * - fallback: profile.kp
+ * - fallback: progress.xp
  */
 leaderboardRouter.get("/", async (_req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, display_name, email, hero_id,
-              COALESCE((progress->>'xp')::int, 0) AS xp
+              COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
+              COALESCE((progress->>'xp')::int, 0) AS xp,
+              COALESCE((profile->>'kp')::int, 0) AS kp,
+              profile->'livestock' AS livestock,
+              profile->'ger' AS ger
        FROM app_users
-       ORDER BY COALESCE((progress->>'xp')::int, 0) DESC NULLS LAST
+       ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
        LIMIT 50`
     );
     const entries = result.rows.map((r, i) => ({
@@ -35,8 +42,14 @@ leaderboardRouter.get("/", async (_req, res) => {
         r.display_name as string | null,
         String(r.email ?? "")
       ),
-      xp: Number(r.xp) || 0,
+      xp: Number(r.score) || 0,
       hero_id: r.hero_id as string | null,
+      meta: {
+        rawXp: Number(r.xp) || 0,
+        kp: Number(r.kp) || 0,
+        livestock: r.livestock ?? null,
+        ger: r.ger ?? null,
+      },
     }));
     res.json({ entries });
   } catch (e) {

@@ -90,17 +90,17 @@ export default function Hero() {
 
       <div className="relative z-10 text-center px-4 sm:px-6 flex flex-col items-center w-full">
         <p
-          className="font-heritage italic text-[0.48rem] sm:text-[0.62rem] tracking-[0.2em] sm:tracking-[0.4em] uppercase mb-4 mt-2 opacity-0 animate-fade-in delay-1 whitespace-nowrap"
-          style={{ color: "var(--gold-light, #EDD98A)" }}
+          className="font-body italic text-[0.48rem] sm:text-[0.62rem] tracking-[0.2em] sm:tracking-[0.4em] uppercase mb-4 mt-2 opacity-0 animate-fade-in delay-1 whitespace-nowrap"
+          style={{ color: "color-mix(in oklch, var(--gold-light, #EDD98A) 88%, white)" }}
         >
           ⚔&nbsp;&nbsp;Монгол Домог · Mongol Legend&nbsp;&nbsp;⚔
         </p>
 
         <h1
-          className="font-display font-black text-white leading-tight md:leading-[0.9] mb-4 opacity-0 animate-fade-up delay-2 max-w-3xl mx-auto"
+          className="font-display font-black leading-tight md:leading-[0.9] mb-4 opacity-0 animate-fade-up delay-2 max-w-3xl mx-auto text-[oklch(0.97_0.012_78)] dark:text-[oklch(0.96_0.02_82)]"
           style={{
             fontSize: "clamp(38px, 8.5vw, 88px)",
-            textShadow: "0 0 80px rgba(180,148,55,0.28)",
+            textShadow: "0 0 80px rgba(180,148,55,0.22)",
             letterSpacing: "-0.01em",
           }}
         >
@@ -129,7 +129,7 @@ export default function Hero() {
         </div>
 
         <p
-          className="font-heritage text-slate-300/85 max-w-xl mx-auto mb-8 leading-relaxed text-xs sm:text-sm opacity-0 animate-fade-up delay-4"
+          className="font-body text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed text-xs sm:text-sm opacity-0 animate-fade-up delay-4"
         >
           {t.hero.subtitle}
         </p>

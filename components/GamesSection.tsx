@@ -1,6 +1,6 @@
 "use client";
 
-import { Dices, Target, Zap, Trophy, Swords, Gamepad2, Play, Lock } from "lucide-react";
+import { LuDices as Dices, LuTarget as Target, LuZap as Zap, LuTrophy as Trophy, LuSwords as Swords, LuGamepad2 as Gamepad2, LuPlay as Play, LuLock as Lock } from "react-icons/lu";
 import { useApp } from "./AppContext";
 import { useEffect, useState } from "react";
 import GameModal from "@/components/game/gameModal";
@@ -9,9 +9,9 @@ import { getGames, type GameRow } from "@/lib/api";
 const ICONS = [Dices, Target, Zap, Trophy, Swords, Gamepad2];
 
 const btnActive =
-  "w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-amber-600 text-black font-medium text-sm hover:scale-105 active:scale-95 transition-transform";
+  "w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 bg-gradient-to-r from-gold to-amber-600 text-[oklch(0.14_0.03_55)] font-medium text-sm hover:scale-105 active:scale-95 transition-transform";
 const btnLocked =
-  "w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white/30 text-sm select-none";
+  "w-full py-2 px-4 rounded-lg flex items-center justify-center gap-2 bg-black/15 dark:bg-white/5 border border-white/12 text-muted-foreground text-sm select-none";
 
 export default function GamesSection() {
   const { t, language } = useApp();
@@ -49,6 +49,7 @@ export default function GamesSection() {
   };
 
   const list = games ?? [];
+  const visible = list.filter((g) => g.show_on_home !== false);
 
   return (
     <>
@@ -97,7 +98,7 @@ export default function GamesSection() {
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-            {list.map((game, i) => {
+            {visible.map((game, i) => {
               const Icon = ICONS[i % ICONS.length];
               const title = language === "mn" ? game.name_mn : game.name_en;
               const desc = language === "mn" ? game.description_mn : game.description_en;

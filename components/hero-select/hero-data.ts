@@ -71,3 +71,9 @@ export function savePlayer(data: SavedPlayer) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {}
 }
+
+export function clearPlayer() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}

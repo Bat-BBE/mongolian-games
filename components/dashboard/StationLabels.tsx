@@ -36,6 +36,11 @@ export function StationLabels({
         const isUpcoming = !isCurrent && !isDone && !isLocked;
         const isSelected = station.id === selectedId;
         const icon = STATION_CONFIGS[station.id]?.icon ?? "📍";
+        const firstGameName =
+          station.games?.[0]?.name?.trim() ||
+          station.gameName?.trim() ||
+          "";
+        const gameCount = station.games?.length ?? (firstGameName ? 1 : 0);
 
         const opacity = isLocked
           ? 0.48
@@ -93,7 +98,18 @@ export function StationLabels({
 
                 <span className="text-xs leading-none">{icon}</span>
 
-                <span>{station.name}</span>
+                <span className="flex flex-col items-start gap-0 leading-tight">
+                  <span>{station.name}</span>
+                  {firstGameName ? (
+                    <span
+                      className="text-[9px] font-normal opacity-80 max-w-[200px] truncate"
+                      title={firstGameName}
+                    >
+                      {gameCount > 1 ? `1/${gameCount} · ` : ""}
+                      {firstGameName}
+                    </span>
+                  ) : null}
+                </span>
 
                 {isDone && !isCurrent && (
                   <span className="text-amber-400 text-xs leading-none">✓</span>

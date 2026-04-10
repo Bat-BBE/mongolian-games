@@ -98,6 +98,7 @@ export type GameRow = {
   description_mn: string;
   description_en: string;
   is_available: boolean;
+  show_on_home: boolean;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -119,7 +120,27 @@ export async function getGames(): Promise<{ games: GameRow[] }> {
   return { games: data.games };
 }
 
-/** Өртөөнд холбогдсон тоглоом (dashboard / public). */
+/** Өртөө бүр дээрх тоглоомын товч мэдээлэл (газрын зураг / popup). */
+export type MapStationGamePreview = {
+  slug: string;
+  name: string;
+  desc: string;
+  reward: string;
+};
+
+export type MapStationApiRow = {
+  id: string;
+  name: string;
+  region?: string;
+  icon?: string;
+  pos?: { left?: string; top?: string };
+  available?: boolean;
+  /** Бүх холбогдсон тоглоом (admin-аас). */
+  games?: MapStationGamePreview[];
+  /** Эхний тоглоом (хуучин клиентийн нийцлийн тулд). */
+  game?: { slug?: string; name: string; desc: string; reward: string };
+};
+
 export type StationGameBundleRow = {
   id: string;
   slug: string;
@@ -147,7 +168,9 @@ export type DashboardBundle = {
   currentStation: Record<string, unknown> | null;
   stationGames: StationGameBundleRow[];
   strings: Record<string, string>;
+  mapStations?: MapStationApiRow[];
   computed: {
+    currentStationSlug?: string;
     journeyDay: number;
     questTitle: string;
     questDesc: string;
@@ -207,6 +230,29 @@ export async function getLeaderboard(): Promise<{ entries: LeaderboardEntry[] }>
   return { entries: data.entries };
 }
 
+export async function completeGame(body: {
+  email: string;
+  stationSlug: string;
+  gameSlug: string;
+  result: "win" | "lose";
+  progressPct?: number;
+}): Promise<{ user: AppUserRow }> {
+  const res = await apiFetch("/api/game/complete", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `game complete failed (${res.status})`);
+  }
+  if (!data.user) throw new Error("game complete: missing user");
+  return { user: data.user };
+}
+
 export type LinkedStationGameRow = {
   id: string;
   slug: string;
@@ -227,20 +273,54 @@ export type HeroRow = {
   name_en: string;
   title_mn: string;
   title_en: string;
-  tier: string;
   stats: Record<string, unknown>;
   color: string;
   emissive: string | null;
   image_url: string;
   model_path: string | null;
-  bonus_multiplier: string;
-  bonus_title_mn: string | null;
-  bonus_title_en: string | null;
+  bio_mn?: string | null;
+  bio_en?: string | null;
   sort_order: number;
   is_available: boolean;
   created_at: string;
   updated_at: string;
 };
+
+/** Public — админ самбарын тоо хэмжээнд. */
+export async function getContentHeroes(): Promise<{ heroes: HeroRow[] }> {
+  const res = await apiFetch("/api/content/heroes");
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    heroes?: HeroRow[];
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `content heroes failed (${res.status})`);
+  }
+  if (!data.heroes) throw new Error("content heroes: missing list");
+  return { heroes: data.heroes };
+}
+
+export type ContentStationListRow = {
+  slug: string;
+  name_mn: string;
+  name_en: string;
+  journey_index: number;
+};
+
+export async function getContentStations(): Promise<{
+  stations: ContentStationListRow[];
+}> {
+  const res = await apiFetch("/api/content/stations");
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    stations?: ContentStationListRow[];
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `content stations failed (${res.status})`);
+  }
+  if (!data.stations) throw new Error("content stations: missing list");
+  return { stations: data.stations };
+}
 
 export type MapStationRow = {
   slug: string;
@@ -253,6 +333,8 @@ export type MapStationRow = {
   journey_index: number;
   quest_hint_mn: string | null;
   quest_hint_en: string | null;
+  quest_desc_mn?: string | null;
+  quest_desc_en?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -324,6 +406,25 @@ export async function adminListUsers(token: string): Promise<{ users: AppUserRow
   return { users: data.users };
 }
 
+export async function adminListUsersV2(
+  token: string,
+  opts?: { includeLocal?: boolean }
+): Promise<{ users: AppUserRow[] }> {
+  const q = opts?.includeLocal ? "?includeLocal=true" : "";
+  const res = await apiFetch(`/api/admin/users${q}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    users?: AppUserRow[];
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `admin users failed (${res.status})`);
+  }
+  if (!data.users) throw new Error("missing users");
+  return { users: data.users };
+}
+
 export async function adminCreateGame(
   token: string,
   body: Omit<GameRow, "id" | "created_at" | "updated_at">
@@ -354,6 +455,7 @@ export async function adminUpdateGame(
       | "description_mn"
       | "description_en"
       | "is_available"
+      | "show_on_home"
       | "sort_order"
     >
   >
@@ -406,15 +508,13 @@ export async function adminUpdateHero(
       | "name_en"
       | "title_mn"
       | "title_en"
-      | "tier"
       | "stats"
       | "color"
       | "emissive"
       | "image_url"
       | "model_path"
-      | "bonus_multiplier"
-      | "bonus_title_mn"
-      | "bonus_title_en"
+      | "bio_mn"
+      | "bio_en"
       | "sort_order"
       | "is_available"
     >
@@ -464,6 +564,8 @@ export async function adminUpdateStation(
       | "journey_index"
       | "quest_hint_mn"
       | "quest_hint_en"
+      | "quest_desc_mn"
+      | "quest_desc_en"
     >
   >
 ): Promise<{ station: MapStationRow }> {
@@ -479,6 +581,16 @@ export async function adminUpdateStation(
   if (!res.ok) throw new Error(data.error ?? `station update failed (${res.status})`);
   if (!data.station) throw new Error("missing station");
   return { station: data.station };
+}
+
+export async function adminDeleteUser(token: string, userId: string): Promise<void> {
+  const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 204) return;
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new Error(data.error ?? `user delete failed (${res.status})`);
 }
 
 export async function adminGetStationGames(

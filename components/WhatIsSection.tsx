@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  GamepadIcon,
-  MapIcon,
-  AwardIcon,
-  BrainIcon,
-  GlobeIcon,
-  BookOpenIcon,
-} from "lucide-react";
+  LuGamepad2 as GamepadIcon,
+  LuMap as MapIcon,
+  LuAward as AwardIcon,
+  LuBrain as BrainIcon,
+  LuGlobe as GlobeIcon,
+  LuBookOpen as BookOpenIcon,
+} from "react-icons/lu";
 
 import { useApp } from "./AppContext";
 

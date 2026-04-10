@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { LuX as X } from "react-icons/lu";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppContext";
 import { HEROES, loadPlayer, savePlayer } from "./hero-data";

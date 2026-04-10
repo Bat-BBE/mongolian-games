@@ -14,6 +14,7 @@ import {
   TERRAIN_W,
   TERRAIN_D,
   TERRAIN_SEG,
+  WORLD_SCALE,
 } from "./mapConstants";
 import type { UrtuuStation } from "./UrtuuNode";
 
@@ -318,6 +319,9 @@ export class SceneBuilder {
   public birds: BirdEntry[] = [];
   public markerMeshes = new Map<string, THREE.Mesh>();
   public labelAnchors = new Map<string, THREE.Vector3>();
+  public doorAnchors = new Map<string, THREE.Vector3>();
+  /** Centerline points for station-to-station roads (world x/z, y=0). */
+  public roadPaths = new Map<string, THREE.Vector3[]>();
 
   constructor(
     scene: THREE.Scene,
@@ -859,6 +863,7 @@ export class SceneBuilder {
         new THREE.TorusGeometry(1.5 * s, 0.13 * s, 10, 40),
         markerMat,
       );
+      marker.userData.stationId = stationId;
       marker.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
       marker.rotation.x = Math.PI / 2;
       g.add(marker);
@@ -899,9 +904,20 @@ export class SceneBuilder {
     }
 
     g.position.set(x, terrainHeight(x, z), z);
-    g.rotation.y = rotY;
+    // Station gers: keep door consistently facing "forward" (+Z)
+    // so doors/labels/picking feel predictable.
+    g.rotation.y = isStation ? 0 : rotY;
     g.castShadow = true;
     g.receiveShadow = true;
+    if (isStation && stationId) {
+      door.userData.stationId = stationId;
+      g.updateMatrixWorld(true);
+      const wp = new THREE.Vector3();
+      door.getWorldPosition(wp);
+      // Slightly lift so label doesn't intersect the door mesh.
+      wp.y += 0.25 * s;
+      this.doorAnchors.set(stationId, wp);
+    }
     this.scene.add(g);
   }
 
@@ -1337,8 +1353,8 @@ export class SceneBuilder {
     stations.forEach((s) => {
       const cfg = STATION_CONFIGS[s.id];
       if (!cfg) return;
-      const x = cfg.wx,
-        z = cfg.wz;
+      const x = cfg.wx * WORLD_SCALE,
+        z = cfg.wz * WORLD_SCALE;
       const cur = s.id === this.currentStationId;
       const done = this.doneStationIds.includes(s.id);
 
@@ -1356,7 +1372,8 @@ export class SceneBuilder {
       else if (NATPARK_IDS.includes(s.id))
         this.makeNatPark(x, z, s.id, cur, done);
       else {
-        this.makeGer(x, z, rand(0, Math.PI * 2), 1.6, true, s.id);
+        // Slightly smaller stations so gers don't visually "stick together".
+        this.makeGer(x, z, rand(0, Math.PI * 2), 1.25, true, s.id);
         for (let i = 0; i < 3; i++) {
           const ox = rand(-9, 9),
             oz = rand(-9, 9);
@@ -2449,7 +2466,7 @@ export class SceneBuilder {
     const pos = new Map<string, { wx: number; wz: number }>();
     stations.forEach((s) => {
       const cfg = STATION_CONFIGS[s.id];
-      if (cfg) pos.set(s.id, { wx: cfg.wx, wz: cfg.wz });
+      if (cfg) pos.set(s.id, { wx: cfg.wx * WORLD_SCALE, wz: cfg.wz * WORLD_SCALE });
     });
 
     const roadMat = new THREE.MeshStandardMaterial({
@@ -2563,6 +2580,8 @@ export class SceneBuilder {
         const a = pos.get(route[i]);
         const b = pos.get(route[i + 1]);
         if (!a || !b) continue;
+        const fromId = route[i];
+        const toId = route[i + 1];
 
         const STEPS = 30;
         const center: THREE.Vector3[] = [];
@@ -2579,6 +2598,9 @@ export class SceneBuilder {
           const jz = cz + (dx / perpLen) * jitter;
           center.push(new THREE.Vector3(jx, 0, jz));
         }
+
+        this.roadPaths.set(`${fromId}->${toId}`, center);
+        this.roadPaths.set(`${toId}->${fromId}`, [...center].reverse());
 
         makeRibbon(center, 2.5, roadMat);
 

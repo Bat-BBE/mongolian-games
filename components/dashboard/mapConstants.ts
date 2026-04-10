@@ -42,6 +42,9 @@ export const STATION_CONFIGS: Record<string, {
   zamiin_uud:   { left: "72%", top: "78%", icon: "🪨",  wx:  312,  wz:  388,  region: "Их Газрын Чулуу" },
 };
 
+// Increase world spacing between stations/roads without changing 2D % positions.
+export const WORLD_SCALE = 1.35;
+
 // ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ ЯВАХ ДАРААЛАЛ ──────────
 // Нар мандах зүүн бүс → Төв → Баруун бүс → Нар жаргах
 // wx утгаар зүүнээс (өндөр wx) баруун тийш (бага wx) буурах дарааллаар

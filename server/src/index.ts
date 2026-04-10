@@ -7,6 +7,7 @@ import { gamesPublicRouter } from "./routes/games.js";
 import { adminRouter } from "./routes/admin.js";
 import { contentRouter } from "./routes/content.js";
 import { leaderboardRouter } from "./routes/leaderboard.js";
+import { gameRouter } from "./routes/game.js";
 
 const app = express();
 app.use(
@@ -21,6 +22,7 @@ app.use(healthRouter);
 app.use("/api", gamesPublicRouter);
 app.use("/api/content", contentRouter);
 app.use("/api/leaderboard", leaderboardRouter);
+app.use("/api/game", gameRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/users", usersRouter);
 

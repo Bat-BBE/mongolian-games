@@ -17,6 +17,7 @@ const gameBody = z.object({
   description_mn: z.string().max(10000).optional().default(""),
   description_en: z.string().max(10000).optional().default(""),
   is_available: z.boolean(),
+  show_on_home: z.boolean().optional().default(true),
   sort_order: z.number().int(),
 });
 
@@ -27,15 +28,13 @@ const heroAdminPatch = z.object({
   name_en: z.string().min(1).optional(),
   title_mn: z.string().min(1).optional(),
   title_en: z.string().min(1).optional(),
-  tier: z.string().max(8).optional(),
+  bio_mn: z.string().optional(),
+  bio_en: z.string().optional(),
   stats: z.record(z.string(), z.unknown()).optional(),
   color: z.string().optional(),
   emissive: z.string().optional(),
   image_url: z.string().optional(),
   model_path: z.string().optional(),
-  bonus_multiplier: z.string().optional(),
-  bonus_title_mn: z.string().optional(),
-  bonus_title_en: z.string().optional(),
   sort_order: z.number().int().optional(),
   is_available: z.boolean().optional(),
 });
@@ -50,6 +49,8 @@ const stationAdminPatch = z.object({
   journey_index: z.number().int().optional(),
   quest_hint_mn: z.string().optional(),
   quest_hint_en: z.string().optional(),
+  quest_desc_mn: z.string().optional(),
+  quest_desc_en: z.string().optional(),
 });
 
 const uiStringPut = z.object({
@@ -97,10 +98,17 @@ adminRouter.use(requireAdminJwt);
 
 adminRouter.get("/users", async (_req, res) => {
   try {
+    const includeLocal = z
+      .enum(["1", "true", "yes"])
+      .optional()
+      .safeParse(_req.query.includeLocal);
     const result = await pool.query(
       `SELECT id, firebase_uid, email, display_name, hero_id, created_at, updated_at
        FROM app_users
+       WHERE ($1::boolean = true) OR (firebase_uid NOT LIKE 'local:%')
        ORDER BY created_at DESC`
+      ,
+      [includeLocal.success && !!includeLocal.data]
     );
     res.json({ users: result.rows });
   } catch (e) {
@@ -111,7 +119,7 @@ adminRouter.get("/users", async (_req, res) => {
 
 adminRouter.get("/games", async (_req, res) => {
   const result = await pool.query(
-    `SELECT id, slug, name_mn, name_en, description_mn, description_en, is_available, sort_order,
+    `SELECT id, slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order,
             created_at, updated_at
      FROM games
      ORDER BY sort_order ASC, name_en ASC`
@@ -128,8 +136,8 @@ adminRouter.post("/games", async (req, res) => {
   const b = parsed.data;
   try {
     const result = await pool.query(
-      `INSERT INTO games (slug, name_mn, name_en, description_mn, description_en, is_available, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)
+      `INSERT INTO games (slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
        RETURNING id, slug, name_mn, name_en, description_mn, description_en, is_available, sort_order, created_at, updated_at`,
       [
         b.slug,
@@ -138,6 +146,7 @@ adminRouter.post("/games", async (req, res) => {
         b.description_mn,
         b.description_en,
         b.is_available,
+        b.show_on_home ?? true,
         b.sort_order,
       ]
     );
@@ -191,6 +200,10 @@ adminRouter.put("/games/:id", async (req, res) => {
     fields.push(`is_available = $${n++}`);
     values.push(p.is_available);
   }
+  if ((p as { show_on_home?: boolean }).show_on_home !== undefined) {
+    fields.push(`show_on_home = $${n++}`);
+    values.push((p as { show_on_home: boolean }).show_on_home);
+  }
   if (p.sort_order !== undefined) {
     fields.push(`sort_order = $${n++}`);
     values.push(p.sort_order);
@@ -204,7 +217,7 @@ adminRouter.put("/games/:id", async (req, res) => {
 
   const result = await pool.query(
     `UPDATE games SET ${fields.join(", ")} WHERE id = $${n}
-     RETURNING id, slug, name_mn, name_en, description_mn, description_en, is_available, sort_order, created_at, updated_at`,
+     RETURNING id, slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order, created_at, updated_at`,
     values
   );
   if (result.rowCount === 0) {
@@ -231,8 +244,8 @@ adminRouter.delete("/games/:id", async (req, res) => {
 adminRouter.get("/heroes", async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, slug, name_mn, name_en, title_mn, title_en, tier, stats, color, emissive, image_url, model_path,
-              bonus_multiplier, bonus_title_mn, bonus_title_en, sort_order, is_available, created_at, updated_at
+      `SELECT id, slug, name_mn, name_en, title_mn, title_en, bio_mn, bio_en, stats, color, emissive, image_url, model_path,
+              sort_order, is_available, created_at, updated_at
        FROM heroes
        ORDER BY sort_order ASC, name_en ASC`
     );
@@ -266,7 +279,8 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
   if (p.name_en !== undefined) push("name_en", p.name_en);
   if (p.title_mn !== undefined) push("title_mn", p.title_mn);
   if (p.title_en !== undefined) push("title_en", p.title_en);
-  if (p.tier !== undefined) push("tier", p.tier);
+  if (p.bio_mn !== undefined) push("bio_mn", p.bio_mn);
+  if (p.bio_en !== undefined) push("bio_en", p.bio_en);
   if (p.stats !== undefined) {
     fields.push(`stats = $${n++}::jsonb`);
     values.push(JSON.stringify(p.stats));
@@ -275,9 +289,6 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
   if (p.emissive !== undefined) push("emissive", p.emissive);
   if (p.image_url !== undefined) push("image_url", p.image_url);
   if (p.model_path !== undefined) push("model_path", p.model_path);
-  if (p.bonus_multiplier !== undefined) push("bonus_multiplier", p.bonus_multiplier);
-  if (p.bonus_title_mn !== undefined) push("bonus_title_mn", p.bonus_title_mn);
-  if (p.bonus_title_en !== undefined) push("bonus_title_en", p.bonus_title_en);
   if (p.sort_order !== undefined) push("sort_order", p.sort_order);
   if (p.is_available !== undefined) push("is_available", p.is_available);
   if (fields.length === 0) {
@@ -289,8 +300,8 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE heroes SET ${fields.join(", ")} WHERE slug = $${n}
-       RETURNING id, slug, name_mn, name_en, title_mn, title_en, tier, stats, color, emissive, image_url, model_path,
-                 bonus_multiplier, bonus_title_mn, bonus_title_en, sort_order, is_available, created_at, updated_at`,
+       RETURNING id, slug, name_mn, name_en, title_mn, title_en, bio_mn, bio_en, stats, color, emissive, image_url, model_path,
+                 sort_order, is_available, created_at, updated_at`,
       values
     );
     if (result.rowCount === 0) {
@@ -308,7 +319,7 @@ adminRouter.get("/stations", async (_req, res) => {
   try {
     const result = await pool.query(
       `SELECT slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
-              quest_hint_mn, quest_hint_en, created_at, updated_at
+              quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at
        FROM map_stations
        ORDER BY journey_index ASC`
     );
@@ -370,6 +381,14 @@ adminRouter.put("/stations/:slug", async (req, res) => {
     fields.push(`quest_hint_en = $${n++}`);
     values.push(p.quest_hint_en);
   }
+  if (p.quest_desc_mn !== undefined) {
+    fields.push(`quest_desc_mn = $${n++}`);
+    values.push(p.quest_desc_mn);
+  }
+  if (p.quest_desc_en !== undefined) {
+    fields.push(`quest_desc_en = $${n++}`);
+    values.push(p.quest_desc_en);
+  }
   if (fields.length === 0) {
     res.status(400).json({ error: "No fields to update" });
     return;
@@ -379,7 +398,8 @@ adminRouter.put("/stations/:slug", async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE map_stations SET ${fields.join(", ")} WHERE slug = $${n}
-       RETURNING slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index, quest_hint_mn, quest_hint_en, created_at, updated_at`,
+       RETURNING slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
+                 quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at`,
       values
     );
     if (result.rowCount === 0) {
@@ -389,6 +409,25 @@ adminRouter.put("/stations/:slug", async (req, res) => {
     res.json({ station: result.rows[0] });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+adminRouter.delete("/users/:id", async (req, res) => {
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  try {
+    const result = await pool.query(`DELETE FROM app_users WHERE id = $1 RETURNING id`, [id.data]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    res.status(204).send();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Delete failed";
     res.status(500).json({ error: msg });
   }
 });

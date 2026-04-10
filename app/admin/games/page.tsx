@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RefreshCw, Plus, Pencil, Trash2 } from "lucide-react";
+import { LuRefreshCw as RefreshCw, LuPlus as Plus, LuPencil as Pencil, LuTrash2 as Trash2 } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +61,7 @@ export default function AdminGamesPage() {
       description_mn: "",
       description_en: "",
       is_available: false,
+      show_on_home: true,
       sort_order: 0,
     })
   );
@@ -82,6 +83,7 @@ export default function AdminGamesPage() {
         description_mn: "",
         description_en: "",
         is_available: false,
+        show_on_home: true,
         sort_order: 0,
       });
       await load();
@@ -104,6 +106,7 @@ export default function AdminGamesPage() {
         description_mn: editing.description_mn,
         description_en: editing.description_en,
         is_available: editing.is_available,
+        show_on_home: editing.show_on_home,
         sort_order: editing.sort_order,
       });
       setEditing(null);
@@ -129,17 +132,17 @@ export default function AdminGamesPage() {
   };
 
   return (
-    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-10 pb-24">
+    <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-10 pb-24 text-[var(--admin-text)]">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--gold-bright)] opacity-80 mb-1">
+          <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)] mb-1">
             Каталог
           </p>
-          <h1 className="font-display text-2xl md:text-3xl text-slate-100 tracking-wide">
+          <h1 className="font-display text-2xl md:text-3xl tracking-wide">
             Тоглоомууд
           </h1>
-          <p className="text-sm text-slate-500 mt-2 max-w-xl leading-relaxed">
-            Мэдээлэл нь PostgreSQL <code className="text-xs text-slate-400">games</code> хүснэгтэд
+          <p className="text-sm text-[var(--admin-muted)] mt-2 max-w-xl leading-relaxed">
+            Мэдээлэл нь PostgreSQL <code className="text-xs text-[var(--admin-subtle)]">games</code> хүснэгтэд
             хадгалагдана. Нүүр хуудсын «Тоглоомууд» хэсэг API-аас ижил өгөгдлийг уншина.
           </p>
         </div>
@@ -147,7 +150,7 @@ export default function AdminGamesPage() {
           type="button"
           variant="outline"
           size="sm"
-          className="gap-2 border-white/15 shrink-0"
+          className="gap-2 shrink-0 border-[var(--admin-border)] text-[var(--admin-muted)]"
           disabled={loading}
           onClick={() => void load()}
         >
@@ -157,20 +160,20 @@ export default function AdminGamesPage() {
       </header>
 
       {msg && (
-        <div className="rounded-xl border border-amber-800/40 bg-amber-950/25 px-4 py-3 text-sm text-amber-100/95">
+        <div className="admin-panel-elevated px-4 py-3 text-sm text-[var(--admin-text)]">
           {msg}
         </div>
       )}
 
       <section className="space-y-3">
-        <h2 className="font-display text-xs tracking-[0.2em] text-slate-500 uppercase">Бүртгэл</h2>
+        <h2 className="font-display text-xs tracking-[0.2em] text-[var(--admin-subtle)] uppercase">Бүртгэл</h2>
         {loading && games.length === 0 ? (
-          <p className="text-sm text-slate-500">Ачаалж байна…</p>
+          <p className="text-sm text-[var(--admin-muted)]">Ачаалж байна…</p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-zinc-950/40">
+          <div className="admin-panel overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-[var(--admin-border)] text-[10px] uppercase tracking-wider text-[var(--admin-subtle)]">
                   <th className="p-3 font-medium">Slug</th>
                   <th className="p-3 font-medium">Нэр (МН / EN)</th>
                   <th className="p-3 font-medium w-24">Эрэмбэ</th>
@@ -180,19 +183,19 @@ export default function AdminGamesPage() {
               </thead>
               <tbody>
                 {games.map((g) => (
-                  <tr key={g.id} className="border-b border-white/5 hover:bg-white/[0.03]">
-                    <td className="p-3 font-mono text-xs text-[var(--gold-bright)]">{g.slug}</td>
+                  <tr key={g.id} className="border-b border-[var(--admin-border)] hover:bg-white/[0.04]">
+                    <td className="p-3 font-mono text-xs text-[var(--admin-muted)]">{g.slug}</td>
                     <td className="p-3">
-                      <div className="font-medium text-slate-200">{g.name_mn}</div>
-                      <div className="text-slate-500 text-xs">{g.name_en}</div>
+                      <div className="font-medium text-[var(--admin-text)]">{g.name_mn}</div>
+                      <div className="text-[var(--admin-muted)] text-xs">{g.name_en}</div>
                     </td>
-                    <td className="p-3 tabular-nums text-slate-400">{g.sort_order}</td>
+                    <td className="p-3 tabular-nums text-[var(--admin-muted)]">{g.sort_order}</td>
                     <td className="p-3">
                       <span
                         className={
                           g.is_available
-                            ? "text-emerald-400/90 text-xs"
-                            : "text-slate-500 text-xs"
+                            ? "text-[var(--admin-text)] text-xs"
+                            : "text-[var(--admin-subtle)] text-xs"
                         }
                       >
                         {g.is_available ? "Нээлттэй" : "Түгжээтэй"}
@@ -223,20 +226,15 @@ export default function AdminGamesPage() {
               </tbody>
             </table>
             {games.length === 0 && !loading && (
-              <p className="p-8 text-center text-slate-500 text-sm">Мэдээлэл байхгүй. Доорх хэсгээс нэмнэ үү.</p>
+              <p className="p-8 text-center text-[var(--admin-muted)] text-sm">Мэдээлэл байхгүй. Доорх хэсгээс нэмнэ үү.</p>
             )}
           </div>
         )}
       </section>
 
-      <section
-        className="rounded-2xl border border-white/10 p-6 space-y-5"
-        style={{
-          background: "linear-gradient(145deg, rgba(20,16,4,0.35) 0%, rgba(6,4,1,0.5) 100%)",
-        }}
-      >
-        <div className="flex items-center gap-2 text-[var(--gold-bright)]">
-          <Plus className="size-5" strokeWidth={1.5} />
+      <section className="admin-panel p-6 space-y-5">
+        <div className="flex items-center gap-2 text-[var(--admin-muted)]">
+          <Plus className="size-5 stroke-[1.5]" />
           <h2 className="font-display text-sm tracking-[0.15em] uppercase">Шинэ тоглоом</h2>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
@@ -246,7 +244,7 @@ export default function AdminGamesPage() {
               value={createForm.slug}
               onChange={(e) => setCreateForm((p) => ({ ...p, slug: e.target.value }))}
               placeholder="жишээ: shagai"
-              className="bg-black/30 border-white/15"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
             />
           </div>
           <div className="space-y-1.5">
@@ -257,7 +255,7 @@ export default function AdminGamesPage() {
               onChange={(e) =>
                 setCreateForm((p) => ({ ...p, sort_order: Number(e.target.value) || 0 }))
               }
-              className="bg-black/30 border-white/15"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
             />
           </div>
           <div className="space-y-1.5">
@@ -265,7 +263,7 @@ export default function AdminGamesPage() {
             <Input
               value={createForm.name_mn}
               onChange={(e) => setCreateForm((p) => ({ ...p, name_mn: e.target.value }))}
-              className="bg-black/30 border-white/15"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
             />
           </div>
           <div className="space-y-1.5">
@@ -273,7 +271,7 @@ export default function AdminGamesPage() {
             <Input
               value={createForm.name_en}
               onChange={(e) => setCreateForm((p) => ({ ...p, name_en: e.target.value }))}
-              className="bg-black/30 border-white/15"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
             />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
@@ -281,7 +279,7 @@ export default function AdminGamesPage() {
             <Textarea
               value={createForm.description_mn}
               onChange={(e) => setCreateForm((p) => ({ ...p, description_mn: e.target.value }))}
-              className="bg-black/30 border-white/15 min-h-[80px]"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[80px]"
             />
           </div>
           <div className="sm:col-span-2 space-y-1.5">
@@ -289,7 +287,7 @@ export default function AdminGamesPage() {
             <Textarea
               value={createForm.description_en}
               onChange={(e) => setCreateForm((p) => ({ ...p, description_en: e.target.value }))}
-              className="bg-black/30 border-white/15 min-h-[80px]"
+              className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[80px]"
             />
           </div>
           <div className="flex items-center gap-2 sm:col-span-2">
@@ -300,6 +298,14 @@ export default function AdminGamesPage() {
             />
             <Label htmlFor="c_avail">Тоглож болно (is_available)</Label>
           </div>
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Checkbox
+              id="c_home"
+              checked={createForm.show_on_home}
+              onCheckedChange={(v) => setCreateForm((p) => ({ ...p, show_on_home: v === true }))}
+            />
+            <Label htmlFor="c_home">Нүүр хуудсанд харагдана (show_on_home)</Label>
+          </div>
         </div>
         <Button type="button" onClick={() => void handleCreate()} className="gap-2">
           <Plus className="size-4" />
@@ -308,9 +314,9 @@ export default function AdminGamesPage() {
       </section>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-white/15 bg-zinc-950 text-slate-200">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto border-[var(--admin-border)] bg-[var(--admin-surface)] text-[var(--admin-text)]">
           <DialogHeader>
-            <DialogTitle className="font-display text-[var(--gold-bright)] tracking-wide">
+            <DialogTitle className="font-display tracking-wide text-[var(--admin-text)]">
               Тоглоом засах
             </DialogTitle>
           </DialogHeader>
@@ -321,7 +327,7 @@ export default function AdminGamesPage() {
                 <Input
                   value={editing.slug}
                   onChange={(e) => setEditing((p) => (p ? { ...p, slug: e.target.value } : p))}
-                  className="bg-black/40 border-white/15"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
               <div className="space-y-1.5">
@@ -334,7 +340,7 @@ export default function AdminGamesPage() {
                       p ? { ...p, sort_order: Number(e.target.value) || 0 } : p
                     )
                   }
-                  className="bg-black/40 border-white/15"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
               <div className="space-y-1.5">
@@ -342,7 +348,7 @@ export default function AdminGamesPage() {
                 <Input
                   value={editing.name_mn}
                   onChange={(e) => setEditing((p) => (p ? { ...p, name_mn: e.target.value } : p))}
-                  className="bg-black/40 border-white/15"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
               <div className="space-y-1.5">
@@ -350,7 +356,7 @@ export default function AdminGamesPage() {
                 <Input
                   value={editing.name_en}
                   onChange={(e) => setEditing((p) => (p ? { ...p, name_en: e.target.value } : p))}
-                  className="bg-black/40 border-white/15"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
               <div className="space-y-1.5">
@@ -360,7 +366,7 @@ export default function AdminGamesPage() {
                   onChange={(e) =>
                     setEditing((p) => (p ? { ...p, description_mn: e.target.value } : p))
                   }
-                  className="bg-black/40 border-white/15 min-h-[72px]"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[72px]"
                 />
               </div>
               <div className="space-y-1.5">
@@ -370,7 +376,7 @@ export default function AdminGamesPage() {
                   onChange={(e) =>
                     setEditing((p) => (p ? { ...p, description_en: e.target.value } : p))
                   }
-                  className="bg-black/40 border-white/15 min-h-[72px]"
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[72px]"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -382,6 +388,16 @@ export default function AdminGamesPage() {
                   }
                 />
                 <Label htmlFor="e_avail">Тоглож болно</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="e_home"
+                  checked={editing.show_on_home}
+                  onCheckedChange={(v) =>
+                    setEditing((p) => (p ? { ...p, show_on_home: v === true } : p))
+                  }
+                />
+                <Label htmlFor="e_home">Нүүр хуудсанд харагдана</Label>
               </div>
             </div>
           )}

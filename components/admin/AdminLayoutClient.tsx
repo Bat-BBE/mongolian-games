@@ -1,5 +1,6 @@
 "use client";
 
+import "@/app/admin/admin.css";
 import { usePathname } from "next/navigation";
 import { AdminAuthProvider } from "./AdminAuthContext";
 import { AdminAuthGuard } from "./AdminAuthGuard";

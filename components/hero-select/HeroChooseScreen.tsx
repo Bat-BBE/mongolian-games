@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Sword } from "lucide-react";
+import { LuChevronLeft as ChevronLeft, LuChevronRight as ChevronRight, LuSword as Sword } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 import { HEROES } from "./hero-data";
 import type { HeroId, Lang, HeroStrings } from "./hero-strings";

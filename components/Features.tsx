@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { LuCircleCheckBig as CheckCircle2 } from "react-icons/lu";
 import { useApp } from "./AppContext";
 
 export default function Features() {

@@ -4,27 +4,48 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  BookMarked,
-  Gamepad2,
-  Home,
-  LayoutDashboard,
-  Menu,
-  PanelLeftClose,
-  PanelLeft,
-  ExternalLink,
-  X,
-  Users,
-  LogOut,
-} from "lucide-react";
+  LuBookMarked as BookMarkedIcon,
+  LuMapPinned as StationsIcon,
+  LuGamepad2 as Gamepad2,
+  LuHouse as Home,
+  LuLayoutDashboard as LayoutDashboard,
+  LuMenu as Menu,
+  LuPanelLeftClose as PanelLeftClose,
+  LuPanelLeft as PanelLeft,
+  LuExternalLink as ExternalLink,
+  LuX as X,
+  LuLogOut as LogOut,
+} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 import { cn } from "@/lib/utils";
 import { useAdminAuth } from "./AdminAuthContext";
 
 const nav = [
-  { href: "/admin", label: "Самбар", icon: LayoutDashboard, match: "exact" as const },
-  { href: "/admin/games", label: "Тоглоомууд", icon: Gamepad2, match: "prefix" as const },
-  { href: "/admin/content", label: "Контент", icon: BookMarked, match: "prefix" as const },
-  { href: "/admin/users", label: "Хэрэглэгчид", icon: Users, match: "prefix" as const },
+  {
+    href: "/admin",
+    label: "Самбар",
+    icon: LayoutDashboard,
+    match: "exact" as const,
+  },
+  {
+    href: "/admin/games",
+    label: "Тоглоомууд",
+    icon: Gamepad2,
+    match: "prefix" as const,
+  },
+  {
+    href: "/admin/heroes",
+    label: "Баатрууд",
+    icon: BookMarkedIcon,
+    match: "prefix" as const,
+  },
+  {
+    href: "/admin/stations",
+    label: "Өртөөнүүд",
+    icon: StationsIcon,
+    match: "prefix" as const,
+  },
 ];
 
 function isActive(pathname: string, href: string, match: "exact" | "prefix") {
@@ -45,11 +66,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#050608] text-slate-200">
+    <div className="admin-root min-h-screen flex bg-[var(--admin-bg)] text-[var(--admin-text)]">
       <button
         type="button"
         aria-label={mobileOpen ? "Цэс хаах" : "Цэс нээх"}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2.5 rounded-xl border border-white/10 bg-zinc-900/90 text-slate-200 shadow-lg"
+        className="fixed top-4 left-4 z-50 lg:hidden p-2.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
         onClick={() => setMobileOpen((v) => !v)}
       >
         {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
@@ -57,48 +78,82 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <aside
         className={cn(
-          "fixed lg:sticky top-0 z-40 h-screen flex flex-col border-r border-white/10",
-          "bg-gradient-to-b from-zinc-950 to-[#050608] shadow-xl transition-[transform,width] duration-200 ease-out",
+          "fixed lg:sticky top-0 z-40 h-screen flex flex-col border-r border-[var(--admin-border)]",
+          "shadow-none transition-[transform,width] duration-200 ease-out",
           "w-[min(280px,88vw)]",
-          sidebarCollapsed ? "lg:w-[76px]" : "lg:w-[260px]",
+          sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[248px]",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
-          "lg:translate-x-0"
+          "lg:translate-x-0",
         )}
       >
-        <div className={cn("p-4 border-b border-white/10", sidebarCollapsed && "px-2")}>
-          <Link
-            href="/admin"
-            className="flex items-center gap-2 group"
-            onClick={() => setMobileOpen(false)}
-          >
-            <span className="font-display font-black tracking-tighter text-[var(--gold-bright)] text-lg shrink-0">
-              MTGA
-            </span>
-            {!sidebarCollapsed && (
-              <span className="text-[10px] uppercase tracking-[0.28em] text-slate-500 group-hover:text-slate-400 transition-colors">
-                Админ
-              </span>
+        <div
+          className={cn(
+            "p-3 sm:p-4 border-b border-[var(--admin-border)]",
+            sidebarCollapsed && "px-2",
+          )}
+        >
+          <div
+            className={cn(
+              "flex min-w-0 gap-2",
+              sidebarCollapsed
+                ? "flex-col items-center gap-3"
+                : "items-center justify-between",
             )}
-          </Link>
+          >
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 group min-w-0"
+              onClick={() => setMobileOpen(false)}
+            >
+              <span className="admin-logo font-display font-bold text-lg tracking-tight shrink-0">
+                MTGA
+              </span>
+              {!sidebarCollapsed && (
+                <span className="admin-badge text-[10px] uppercase tracking-[0.2em]">
+                  Админ
+                </span>
+              )}
+            </Link>
+            <div
+              className={cn(
+                "flex items-center gap-1 shrink-0",
+                sidebarCollapsed && "justify-center",
+              )}
+            >
+              <ModeToggle />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="hidden lg:flex h-9 w-9 text-[var(--admin-muted)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
+                onClick={() => setSidebarCollapsed((c) => !c)}
+                title={sidebarCollapsed ? "Сайдбар өргөтгөх" : "Хумих"}
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeft className="size-4 stroke-[1.5]" />
+                ) : (
+                  <PanelLeftClose className="size-4 stroke-[1.5]" />
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
           {nav.map(({ href, label, icon: Icon, match }) => {
             const active = isActive(pathname, href, match);
             return (
               <Link
                 key={href}
                 href={href}
+                data-active={active}
                 onClick={() => setMobileOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors border",
-                  active
-                    ? "bg-amber-950/35 text-[var(--gold-bright)] border-amber-800/35"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border-transparent"
+                  "admin-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors border",
                 )}
                 title={sidebarCollapsed ? label : undefined}
               >
-                <Icon className="size-[18px] shrink-0 opacity-90" strokeWidth={1.75} />
+                <Icon className="size-[17px] shrink-0 opacity-90 stroke-[1.5]" />
                 {!sidebarCollapsed && <span>{label}</span>}
               </Link>
             );
@@ -107,56 +162,47 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         <div
           className={cn(
-            "p-3 border-t border-white/10 space-y-2 mt-auto",
-            sidebarCollapsed && "px-2"
+            "p-3 border-t border-[var(--admin-border)] space-y-2 mt-auto",
+            sidebarCollapsed && "px-2",
           )}
         >
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="w-full justify-center gap-2 h-9 text-xs border-white/15 text-slate-300"
+            className="w-full justify-center gap-2 h-9 text-xs border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
             onClick={() => onLogout()}
           >
-            <LogOut className="size-3.5" />
+            <LogOut className="size-3.5 stroke-[1.5]" />
             {!sidebarCollapsed && "Гарах"}
           </Button>
-          <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="hidden lg:flex shrink-0 h-9 w-9 text-slate-400"
-              onClick={() => setSidebarCollapsed((c) => !c)}
-              title={sidebarCollapsed ? "Сайдбар өргөтгөх" : "Хумих"}
-            >
-              {sidebarCollapsed ? (
-                <PanelLeft className="size-4" />
-              ) : (
-                <PanelLeftClose className="size-4" />
-              )}
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1 text-xs gap-1.5 h-9 border-white/15" asChild>
-              <Link href="/" onClick={() => setMobileOpen(false)}>
-                <Home className="size-3.5" />
-                {!sidebarCollapsed && <span>Сайт</span>}
-                <ExternalLink className="size-3 opacity-60" />
-              </Link>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs gap-1.5 h-9 border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-[var(--admin-nav-hover)] hover:text-[var(--accent-foreground)]"
+            asChild
+          >
+            <Link href="/" onClick={() => setMobileOpen(false)}>
+              <Home className="size-3.5 stroke-[1.5]" />
+              {!sidebarCollapsed && <span>Сайт</span>}
+              <ExternalLink className="size-3 opacity-50 stroke-[1.5]" />
+            </Link>
+          </Button>
         </div>
       </aside>
 
       {mobileOpen && (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-black/75 lg:hidden backdrop-blur-[2px]"
+          className="fixed inset-0 z-30 bg-black/70 lg:hidden"
           aria-label="Хаах"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      <main className="flex-1 min-w-0 pt-16 lg:pt-0 min-h-screen">{children}</main>
+      <main className="flex-1 min-w-0 pt-16 lg:pt-0 min-h-screen bg-[var(--admin-bg)]">
+        {children}
+      </main>
     </div>
   );
 }

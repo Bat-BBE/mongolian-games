@@ -21,7 +21,6 @@ async function main() {
     for (const f of files) {
       const sql = readFileSync(join(sqlDir, f), "utf8");
       await client.query(sql);
-      // eslint-disable-next-line no-console
       console.log(`Applied ${f}`);
     }
   } finally {

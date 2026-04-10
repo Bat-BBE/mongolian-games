@@ -70,6 +70,27 @@ export interface DashStrings {
     system: string;
     toggle: string;
   };
+
+  accountMenuProfile: string;
+  accountMenuLogout: string;
+  profileEmailLabel: string;
+  profileLevelLabel: string;
+  profileXpLabel: string;
+  profileKpLabel: string;
+  profileStationLabel: string;
+  profileTierLabel: string;
+  profilePageTitle: string;
+  profileVisitedStationsTitle: string;
+  profileChangeHeroTitle: string;
+  profileHeroCooldownLabel: string;
+  profileHeroOnCooldown: string;
+  profileHeroConfirm: string;
+  profileNoSession: string;
+  dialogClose: string;
+  mapRegionLabel: string;
+  gamesAtStation: string;
+  gameStatusLocked: string;
+  gameStatusDone: string;
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
@@ -506,6 +527,29 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       system: "Систем",
       toggle: "Theme солих",
     },
+
+    accountMenuProfile: "Профайл",
+    accountMenuLogout: "Гарах",
+    profileEmailLabel: "И-мэйл",
+    profileLevelLabel: "Түвшин",
+    profileXpLabel: "Туршлага (XP)",
+    profileKpLabel: "Мэдлэгийн оноо",
+    profileStationLabel: "Одоогийн өртөө",
+    profileTierLabel: "Зэрэглэл",
+    profilePageTitle: "Тоглогчийн профайл",
+    profileVisitedStationsTitle: "Очсон өртөөнүүд",
+    profileChangeHeroTitle: "Баатар солих",
+    profileHeroCooldownLabel: "Дараагийн солилт хүртэл",
+    profileHeroOnCooldown:
+      "24 цаг тутамд нэг удаа баатраа солино. Дуусах хүртэл түр хүлээнэ үү.",
+    profileHeroConfirm: "Энэ баатрыг сонгох",
+    profileNoSession:
+      "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товчоор нэвтэрнэ үү.",
+    dialogClose: "Хаах",
+    mapRegionLabel: "Бүс нутаг",
+    gamesAtStation: "Тоглоомууд",
+    gameStatusLocked: "Хүлээгдэж буй",
+    gameStatusDone: "Дууссан",
   },
 
   en: {
@@ -941,6 +985,29 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       system: "System",
       toggle: "Theme Mode",
     },
+
+    accountMenuProfile: "Profile",
+    accountMenuLogout: "Sign out",
+    profileEmailLabel: "Email",
+    profileLevelLabel: "Level",
+    profileXpLabel: "Experience (XP)",
+    profileKpLabel: "Knowledge points",
+    profileStationLabel: "Current station",
+    profileTierLabel: "Tier",
+    profilePageTitle: "Player profile",
+    profileVisitedStationsTitle: "Stations visited",
+    profileChangeHeroTitle: "Change hero",
+    profileHeroCooldownLabel: "Next change in",
+    profileHeroOnCooldown:
+      "You can change your hero once every 24 hours. Please wait until the timer ends.",
+    profileHeroConfirm: "Save this hero",
+    profileNoSession:
+      "No player session found. Use Play on the home page to sign in.",
+    dialogClose: "Close",
+    mapRegionLabel: "Region",
+    gamesAtStation: "Games",
+    gameStatusLocked: "Locked",
+    gameStatusDone: "Completed",
   },
 };
 

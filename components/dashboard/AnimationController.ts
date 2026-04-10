@@ -15,6 +15,8 @@ interface AnimationControllerOptions {
   birds: BirdEntry[];
   markerMeshes: Map<string, THREE.Mesh>;
   labelAnchors: Map<string, THREE.Vector3>;
+  doorAnchors?: Map<string, THREE.Vector3>;
+  heroMixerRef?: { current: THREE.AnimationMixer | null };
   currentStationId: string;
   onLabelUpdate: (positions: Record<string, LabelPos>) => void;
   onBeforeRender?: (elapsed: number, delta: number) => void;
@@ -158,6 +160,8 @@ export class AnimationController {
       birds,
       markerMeshes,
       labelAnchors,
+      doorAnchors,
+      heroMixerRef,
       currentStationId,
       onLabelUpdate,
       onBeforeRender,
@@ -233,17 +237,19 @@ export class AnimationController {
         if (cloud.g.position.x < -220) cloud.g.position.x = 220;
       });
 
+      heroMixerRef?.current?.update(delta);
+
       const cw = container.clientWidth,
         ch = container.clientHeight;
       const np: Record<string, LabelPos> = {};
       labelAnchors.forEach((wp, id) => {
-        np[id] = projectToScreen(wp, camera, cw, ch, this._tmp);
+        const p = doorAnchors?.get(id) ?? wp;
+        np[id] = projectToScreen(p, camera, cw, ch, this._tmp);
       });
       onLabelUpdate(np);
 
       renderer.render(scene, camera);
     };
-
     loop();
   }
 

@@ -3,11 +3,15 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import { Physics, usePlane } from "@react-three/cannon";
-import { Suspense, useState, useCallback } from "react";
+import { Suspense, useState, useCallback, useEffect, useRef } from "react";
 import ShagaiModel from "./shagaiModel";
 import ShagaiUI from "./shagaiUI";
 import GameHistory, { ThrowRecord } from "./gameHistory";
 import { ShagaiSide, SHAgAI_SIDES } from "./shagai";
+
+export type ShagaiGameProps = {
+  onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+};
 
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
@@ -77,7 +81,8 @@ function GameTable() {
   );
 }
 
-export default function ShagaiGame() {
+export default function ShagaiGame(props: ShagaiGameProps) {
+  const sentRef = useRef(false);
   const [result, setResult] = useState<ShagaiSide | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [throwCount, setThrowCount] = useState(0);
@@ -115,7 +120,18 @@ export default function ShagaiGame() {
     setHistory([]);
     setScore({ horse: 0, sheep: 0, goat: 0, camel: 0 });
     setThrowCount(0);
+    sentRef.current = false;
   }, []);
+
+  // MVP: after 5 completed throws, treat as a win.
+  useEffect(() => {
+    if (sentRef.current) return;
+    const pct = Math.min(100, Math.round((history.length / 5) * 100));
+    if (history.length >= 5) {
+      sentRef.current = true;
+      props.onComplete?.("win", pct);
+    }
+  }, [history.length, props]);
 
   return (
     <div

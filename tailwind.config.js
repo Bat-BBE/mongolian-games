@@ -17,8 +17,8 @@ module.exports = {
         "bg-card": "rgba(15, 18, 25, 0.7)",
       },
       fontFamily: {
-        display: ["var(--font-cinzel)", "serif"],
-        heritage: ["var(--font-marcellus)", "serif"],
+        display: ["var(--font-playfair)", "Georgia", "serif"],
+        heritage: ["var(--font-playfair)", "Georgia", "serif"],
       },
       backgroundImage: {
         "gold-gradient": "linear-gradient(135deg, #D4AF37 0%, #F1D592 50%, #D4AF37 100%)",

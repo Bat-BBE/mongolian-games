@@ -1,6 +1,17 @@
 "use client";
 
-import { Sword, BookOpen, Shield, Wrench, ChevronLeft, ChevronRight, Map, Gem, TrendingUp, Trophy } from "lucide-react";
+import {
+  LuSword as Sword,
+  LuBookOpen as BookOpen,
+  LuShield as Shield,
+  LuWrench as Wrench,
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+  LuMap as Map,
+  LuGem as Gem,
+  LuTrendingUp as TrendingUp,
+  LuTrophy as Trophy,
+} from "react-icons/lu";
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect } from "react";
@@ -66,7 +77,6 @@ export function LeftPanel({
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Дунд зэргийн томруулсан контент
   const renderContent = () => {
     if (collapsed) {
       return (
@@ -84,7 +94,9 @@ export function LeftPanel({
               <div className="p-3 rounded-xl glass bg-background/60 group-hover:bg-primary/20 border border-primary/20 group-hover:border-primary/50 transition-all mb-1">
                 <Icon className="w-6 h-6 text-foreground/80 group-hover:text-primary transition-colors" />
               </div>
-              <span className="text-[9px] uppercase mt-1 font-medium">{label}</span>
+              <span className="text-[9px] uppercase mt-1 font-medium">
+                {label}
+              </span>
             </button>
           ))}
         </div>
@@ -107,8 +119,12 @@ export function LeftPanel({
                   {t.mainQuest}
                 </span>
               </div>
-              <h4 className="font-display text-base text-foreground mb-1.5 font-semibold">{t.questTitle}</h4>
-              <p className="text-xs text-foreground/70 mb-2 leading-relaxed line-clamp-2">{t.questDesc}</p>
+              <h4 className="font-display text-base text-foreground mb-1.5 font-semibold">
+                {t.questTitle}
+              </h4>
+              <p className="text-xs text-foreground/70 mb-2 leading-relaxed line-clamp-2">
+                {t.questDesc}
+              </p>
               {journeyDay != null &&
                 currentStationLabel &&
                 stationIndex != null &&
@@ -129,7 +145,9 @@ export function LeftPanel({
               {stationGames.length > 0 && (
                 <div className="mb-3 rounded-lg border border-primary/15 bg-background/40 px-2.5 py-2">
                   <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1.5">
-                    {lang === "mn" ? "Энэ өртөөний тоглоомууд" : "Games at this station"}
+                    {lang === "mn"
+                      ? "Энэ өртөөний тоглоомууд"
+                      : "Games at this station"}
                   </p>
                   <ul className="space-y-1">
                     {stationGames.map((g) => (
@@ -140,9 +158,14 @@ export function LeftPanel({
                         <span className="truncate">
                           {lang === "mn" ? g.name_mn : g.name_en}
                         </span>
-                        {(lang === "mn" ? g.reward_hint_mn : g.reward_hint_en)?.trim() ? (
+                        {(lang === "mn"
+                          ? g.reward_hint_mn
+                          : g.reward_hint_en
+                        )?.trim() ? (
                           <span className="shrink-0 text-primary/80 text-[10px]">
-                            {lang === "mn" ? g.reward_hint_mn : g.reward_hint_en}
+                            {lang === "mn"
+                              ? g.reward_hint_mn
+                              : g.reward_hint_en}
                           </span>
                         ) : null}
                       </li>
@@ -186,15 +209,22 @@ export function LeftPanel({
               <span className="font-bold uppercase tracking-wider text-primary">
                 {t.rankTitle}
                 {heroTier ? (
-                  <span className="ml-1.5 text-[9px] opacity-80 font-mono">· {heroTier}</span>
+                  <span className="ml-1.5 text-[9px] opacity-80 font-mono">
+                    · {heroTier}
+                  </span>
                 ) : null}
               </span>
-              <span className="text-foreground font-medium">{xp.toLocaleString()} / {xpMax.toLocaleString()}</span>
+              <span className="text-foreground font-medium">
+                {xp.toLocaleString()} / {xpMax.toLocaleString()}
+              </span>
             </div>
             <div className="h-1.5 w-full bg-background/50 border border-primary/20 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${xpPct}%`, background: "var(--gold-gradient, var(--grad-gold))" }}
+                style={{
+                  width: `${xpPct}%`,
+                  background: "var(--gold-gradient, var(--grad-gold))",
+                }}
               />
             </div>
           </div>
@@ -219,10 +249,19 @@ export function LeftPanel({
                     className="w-7 h-7 rounded-full border-2 overflow-hidden bg-background/80"
                     style={{
                       zIndex: 30 - i * 10,
-                      borderColor: i === 0 ? "var(--gold-main, var(--gold-bright))" : "color-mix(in oklch, var(--primary) 30%, var(--border))",
+                      borderColor:
+                        i === 0
+                          ? "var(--gold-main, var(--gold-bright))"
+                          : "color-mix(in oklch, var(--primary) 30%, var(--border))",
                     }}
                   >
-                    {i === 0 && <img src={avatarUrl} alt="top player" className="w-full h-full object-cover" />}
+                    {i === 0 && (
+                      <img
+                        src={avatarUrl}
+                        alt="top player"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
                 ))}
                 <div className="w-7 h-7 rounded-full bg-background/90 border border-primary/30 flex items-center justify-center font-bold text-primary text-[10px]">
@@ -238,8 +277,12 @@ export function LeftPanel({
                 {t.activeBonus}
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="text-primary font-bold text-base font-display">{bonusMultiplier}</span>
-                <span className="text-[10px] text-primary/70 uppercase tracking-widest">{bonusTitle}</span>
+                <span className="text-primary font-bold text-base font-display">
+                  {bonusMultiplier}
+                </span>
+                <span className="text-[10px] text-primary/70 uppercase tracking-widest">
+                  {bonusTitle}
+                </span>
               </div>
             </div>
           </button>
@@ -277,7 +320,9 @@ export function LeftPanel({
       }`}
       style={{ height: "calc(100vh - 2rem)", maxHeight: "850px" }}
     >
-      <div className={`flex w-full ${collapsed ? "justify-center" : "justify-end"} shrink-0 mb-3`}>
+      <div
+        className={`flex w-full ${collapsed ? "justify-center" : "justify-end"} shrink-0 mb-3`}
+      >
         <button
           className="p-1.5 bg-background/80 border border-primary/30 rounded-md shadow-md hover:bg-primary/20 hover:text-primary transition-all"
           onClick={() => setCollapsed(!collapsed)}

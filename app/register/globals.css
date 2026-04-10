@@ -11,22 +11,29 @@
   --color-bg-card: rgba(15, 18, 25, 0.7);
   
   --gradient-gold: linear-gradient(135deg, #D4AF37 0%, #F1D592 50%, #D4AF37 100%);
-  
-  --font-display: 'Cinzel', serif;
-  --font-heritage: 'Marcellus', serif;
 }
 
 @layer base {
   body {
     @apply bg-[#07090C] text-slate-200 font-sans overflow-hidden;
+    font-family: var(--font-inter);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair);
   }
   
   .font-display {
-    font-family: var(--font-display);
+    font-family: var(--font-playfair);
   }
   
   .font-heritage {
-    font-family: var(--font-heritage);
+    font-family: var(--font-playfair);
+    font-style: italic;
+  }
+
+  .font-body {
+    font-family: var(--font-inter);
   }
 }
 

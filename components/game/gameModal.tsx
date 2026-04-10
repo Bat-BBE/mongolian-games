@@ -1,19 +1,32 @@
 "use client";
 
-import { X } from "lucide-react";
+import { LuX as X } from "react-icons/lu";
 import { useEffect } from "react";
 import ShagaiGame from "./shagaiGame";
 import StoneGame  from "./stoneGame";
 import FourBonesGame from "./fourBonusGame";
+import { loadPlayer } from "@/components/hero-select/hero-data";
+import { completeGame } from "@/lib/api";
 
 interface GameModalProps {
   isOpen:   boolean;
   onClose:  () => void;
   gameType: string;
   gameName: string;
+  stationSlug: string;
+  gameSlug: string;
+  onCompleted?: (result: "win" | "lose") => void;
 }
 
-export default function GameModal({ isOpen, onClose, gameType, gameName }: GameModalProps) {
+export default function GameModal({
+  isOpen,
+  onClose,
+  gameType,
+  gameName,
+  stationSlug,
+  gameSlug,
+  onCompleted,
+}: GameModalProps) {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     if (isOpen) {
@@ -27,6 +40,19 @@ export default function GameModal({ isOpen, onClose, gameType, gameName }: GameM
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  async function submit(result: "win" | "lose", progressPct?: number) {
+    const saved = loadPlayer();
+    if (!saved?.name) return;
+    await completeGame({
+      email: saved.name,
+      stationSlug,
+      gameSlug,
+      result,
+      progressPct,
+    });
+    onCompleted?.(result);
+  }
 
   return (
     <div
@@ -77,10 +103,18 @@ export default function GameModal({ isOpen, onClose, gameType, gameName }: GameM
         </div>
 
         <div className="w-full h-full">
-          {gameType === "shagai"       && <ShagaiGame />}
-          {gameType === "stone-guess"  && <StoneGame />}
+          {gameType === "shagai" && (
+            <ShagaiGame
+              onComplete={(r, pct) => void submit(r, pct)}
+            />
+          )}
+          {gameType === "stone-guess" && (
+            <StoneGame onComplete={(r) => void submit(r)} />
+          )}
           {gameType === "alag-melkhii" && <ComingSoon name="Алаг мэлхий өрөх" />}
-          {gameType === "four-bones"   && <FourBonesGame/>}
+          {gameType === "four-bones" && (
+            <FourBonesGame onComplete={(r) => void submit(r)} />
+          )}
           {gameType === "uichuur"      && <ComingSoon name="Үйчүүр" />}
           {gameType === "khorol"       && <ComingSoon name="Хорол" />}
           {gameType === "puzzle"       && <ComingSoon name="Оньсон тоглоом" />}

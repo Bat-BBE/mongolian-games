@@ -6,14 +6,19 @@ import { SceneBuilder } from "./SceneBuilder";
 import { AnimationController } from "./AnimationController";
 import type { LabelPos } from "./AnimationController";
 import type { UrtuuStation } from "./UrtuuNode";
-import { STATION_CONFIGS, JOURNEY_ORDER } from "./mapConstants";
+import { STATION_CONFIGS, JOURNEY_ORDER, WORLD_SCALE } from "./mapConstants";
 import { terrainBiome, terrainHeight } from "./sceneHelpers";
+import { createHeroAnimator, loadFbxModel, loadHeroClips } from "../map3d/heroFbx";
 
 interface UseThreeSceneOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
   stations: UrtuuStation[];
   currentStationId: string;
   doneStationIds: string[];
+  onSelectStation?: (stationId: string) => void;
+  onHeroArriveStation?: (stationId: string) => void;
+  heroModelPath?: string | null;
+  heroTargetStationId?: string | null;
 }
 
 interface CameraTarget {
@@ -26,8 +31,8 @@ interface CameraTarget {
 const CAMERA_LIMITS = {
   minPhi: 0.16,
   maxPhi: 1.2,
-  minDist: 26,
-  maxDist: 420,
+  minDist: 22,
+  maxDist: 320,
 };
 
 const clamp = (v: number, min: number, max: number): number =>
@@ -50,31 +55,31 @@ function resolveStationId(stationId: string): string {
 function buildCameraTarget(stationId: string): CameraTarget {
   const id = resolveStationId(stationId);
   const cfg = STATION_CONFIGS[id];
-  const lx = cfg.wx,
-    lz = cfg.wz;
-  const ly = terrainHeight(lx, lz) + 4;
-  const biome = terrainBiome(lx, lz, ly - 4);
+  const lx = cfg.wx * WORLD_SCALE,
+    lz = cfg.wz * WORLD_SCALE;
+  const ly = terrainHeight(lx, lz) + 2.6;
+  const biome = terrainBiome(lx, lz, ly - 2.6);
   const slopeSample =
     Math.abs(terrainHeight(lx + 3, lz) - terrainHeight(lx - 3, lz)) +
     Math.abs(terrainHeight(lx, lz + 3) - terrainHeight(lx, lz - 3));
   const terrainSteep = Math.min(slopeSample / 8, 1);
   const baseDistance =
     biome === "high_alpine" || biome === "mountain"
-      ? 102
+      ? 66
       : biome === "gobi"
-        ? 96
+        ? 62
         : biome === "forest"
-          ? 88
-          : 85;
+          ? 58
+          : 56;
   const distance = baseDistance + terrainSteep * 12;
   const phi =
     biome === "high_alpine"
-      ? 0.56
+      ? 0.48
       : biome === "gobi"
-        ? 0.46
+        ? 0.38
         : biome === "forest"
-          ? 0.53
-          : 0.5;
+          ? 0.44
+          : 0.42;
   return {
     lookAt: new THREE.Vector3(lx, ly, lz),
     distance,
@@ -97,10 +102,29 @@ export function useThreeScene({
   stations,
   currentStationId,
   doneStationIds,
+  onSelectStation,
+  onHeroArriveStation,
+  heroModelPath,
+  heroTargetStationId,
 }: UseThreeSceneOptions) {
   const [labelPositions, setLabelPositions] = useState<
     Record<string, LabelPos>
   >({});
+
+  const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
+  useEffect(() => {
+    onSelectRef.current = onSelectStation ?? null;
+  }, [onSelectStation]);
+
+  const onArriveRef = useRef<UseThreeSceneOptions["onHeroArriveStation"]>(null);
+  useEffect(() => {
+    onArriveRef.current = onHeroArriveStation ?? null;
+  }, [onHeroArriveStation]);
+
+  const heroTargetRef = useRef<string | null>(null);
+  useEffect(() => {
+    heroTargetRef.current = heroTargetStationId ?? null;
+  }, [heroTargetStationId]);
 
   const flyToStationRef = useRef<((id: string, snap?: boolean) => void) | null>(
     null,
@@ -206,6 +230,160 @@ export function useThreeScene({
     builder.buildClouds();
     builder.buildBirds();
 
+    const heroMixerRef = { current: null as THREE.AnimationMixer | null };
+    const heroRootRef = { current: null as THREE.Object3D | null };
+    const heroPlayRef = { current: null as ((name: string, fadeSec?: number) => void) | null };
+    const heroMoveRef = {
+      current: {
+        lastTarget: null as string | null,
+        lastArrived: null as string | null,
+        pathPts: null as THREE.Vector3[] | null,
+        pathLens: [] as number[],
+        totalLen: 0,
+        distAlong: 0,
+        speed: 18,
+      },
+    };
+    /** Гар удирдлага: хурд тэгшлэгдэнэ (гэнэтийн шилжилт багасна). */
+    const heroManualVelRef = { current: new THREE.Vector3(0, 0, 0) };
+    const manualKeysRef = {
+      current: {
+        up: false,
+        down: false,
+        left: false,
+        right: false,
+        run: false,
+      },
+    };
+    let disposed = false;
+
+    const stationWorldPos = (stationId: string): THREE.Vector3 => {
+      const id = resolveStationId(stationId);
+      const cfg = STATION_CONFIGS[id];
+      const x = cfg.wx * WORLD_SCALE;
+      const z = cfg.wz * WORLD_SCALE;
+      const y = terrainHeight(x, z);
+      return new THREE.Vector3(x, y, z);
+    };
+
+    const stationArrivalPos = (stationId: string): THREE.Vector3 => {
+      const id = resolveStationId(stationId);
+      const door = builder.doorAnchors.get(id);
+      if (door) {
+        // Station gers are oriented so the door faces +Z.
+        // Stand slightly in front of the door to avoid intersecting the ger mesh.
+        const pos = new THREE.Vector3(door.x, door.y, door.z + 2.2);
+        pos.y = terrainHeight(pos.x, pos.z);
+        return pos;
+      }
+      return stationWorldPos(id);
+    };
+
+    if (heroModelPath && heroModelPath.trim()) {
+      void (async () => {
+        try {
+          const rawPath = heroModelPath.trim();
+          const safePath = rawPath.endsWith(".fbx.fbx")
+            ? rawPath.slice(0, -4)
+            : rawPath;
+          const root = await loadFbxModel(safePath);
+          if (disposed) return;
+          // Map scale: manual control feels better when smaller.
+          root.scale.setScalar(0.02);
+          root.traverse((c) => {
+            if (c instanceof THREE.Mesh) {
+              c.castShadow = true;
+              c.receiveShadow = true;
+            }
+          });
+          const clips = await loadHeroClips({
+            idle: "/models/standing idle 01.fbx",
+            walk: "/models/standing walk forward.fbx",
+            run: "/models/standing run forward.fbx",
+          });
+          if (disposed) return;
+          const { mixer, play } = createHeroAnimator(root, clips);
+          heroMixerRef.current = mixer;
+          heroRootRef.current = root;
+          heroPlayRef.current = play;
+          const p = stationArrivalPos(firstStation);
+          root.position.set(p.x, p.y, p.z);
+          play("idle", 0);
+          scene.add(root);
+        } catch {
+          // If hero fails to load, map still works.
+          // eslint-disable-next-line no-console
+          console.warn("Hero model failed to load for map:", heroModelPath);
+        }
+      })();
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let downX = 0;
+    let downY = 0;
+    let downAt = 0;
+
+    const getStationId = (obj: THREE.Object3D | null): string | null => {
+      let cur: THREE.Object3D | null = obj;
+      while (cur) {
+        const sid = (cur.userData as { stationId?: unknown } | undefined)?.stationId;
+        if (typeof sid === "string" && sid.trim()) return sid;
+        cur = cur.parent;
+      }
+      return null;
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      downX = e.clientX;
+      downY = e.clientY;
+      downAt = performance.now();
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      const cb = onSelectRef.current;
+      if (!cb) return;
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      const dist = Math.hypot(dx, dy);
+      const dt = performance.now() - downAt;
+      // Don't treat drags as clicks.
+      if (dist > 6 || dt > 900) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+      raycaster.setFromCamera(mouse, camera);
+      const targets = Array.from(builder.markerMeshes.values());
+      const hits = raycaster.intersectObjects(targets, true);
+      if (!hits.length) return;
+      const sid = getStationId(hits[0].object);
+      if (sid) cb(sid);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const st = manualKeysRef.current;
+      if (e.key === "Shift") st.run = true;
+      if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") st.up = true;
+      if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") st.down = true;
+      if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") st.left = true;
+      if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") st.right = true;
+      // Cancel station autopilot quickly.
+      if (e.key === "Escape" || e.key === " ") {
+        heroTargetRef.current = null;
+        heroMoveRef.current.lastTarget = null;
+        heroMoveRef.current.pathPts = null;
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const st = manualKeysRef.current;
+      if (e.key === "Shift") st.run = false;
+      if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") st.up = false;
+      if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") st.down = false;
+      if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") st.left = false;
+      if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") st.right = false;
+    };
+
     const cameraState = {
       currentLook: initTarget.lookAt.clone(),
       currentDist: initTarget.distance,
@@ -220,12 +398,15 @@ export function useThreeScene({
       distVel: 0,
       isDragging: false,
       userInteracted: false,
-      introActive: true,
+      introActive: false,
       introT: 0,
-      introDur: 3.6,
+      introDur: 0,
       lastX: 0,
       lastY: 0,
     };
+
+    // When the player manually drives the hero, keep camera centered on hero for a bit.
+    const followHeroUntilRef = { current: 0 };
 
     const cancelIntro = () => {
       cameraState.userInteracted = true;
@@ -360,6 +541,10 @@ export function useThreeScene({
     });
     renderer.domElement.addEventListener("touchend", onTouchEnd);
     renderer.domElement.addEventListener("dblclick", onDoubleClick);
+    renderer.domElement.addEventListener("pointerdown", onPointerDown);
+    renderer.domElement.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
 
     const anim = new AnimationController({
       renderer,
@@ -372,6 +557,8 @@ export function useThreeScene({
       birds: builder.birds,
       markerMeshes: builder.markerMeshes,
       labelAnchors: builder.labelAnchors,
+      doorAnchors: builder.doorAnchors,
+      heroMixerRef,
       currentStationId: firstStation,
       onLabelUpdate: setLabelPositions,
       onBeforeRender: (elapsed: number, delta: number) => {
@@ -448,6 +635,9 @@ export function useThreeScene({
               Math.cos(cameraState.currentPhi) *
               cameraState.currentDist,
         );
+        // Keep camera above terrain to avoid "digging" into the ground.
+        const floorY = terrainHeight(finalCamPos.x, finalCamPos.z) + 2.2;
+        if (finalCamPos.y < floorY) finalCamPos.y = floorY;
         if (cameraState.introActive) {
           const t = Math.min(1, cameraState.introT / cameraState.introDur);
           const e = 1 - Math.pow(1 - t, 3);
@@ -473,6 +663,189 @@ export function useThreeScene({
           camera.lookAt(cameraState.currentLook);
         }
         camera.updateMatrixWorld();
+
+        // --- Hero movement (manual first, then station autopilot) ---
+        const root = heroRootRef.current;
+        const play = heroPlayRef.current;
+        if (!root || !play) return;
+        const ms = heroMoveRef.current;
+
+        // Manual: WASD/Arrows (Shift = run). Movement is camera-relative.
+        const st = manualKeysRef.current;
+        const mvx = (st.right ? 1 : 0) - (st.left ? 1 : 0);
+        // W = forward, S = backward
+        const mvz = (st.up ? 1 : 0) - (st.down ? 1 : 0);
+        const len = Math.sqrt(mvx * mvx + mvz * mvz);
+        const hv = heroManualVelRef.current;
+        if (len <= 0.01) {
+          hv.lerp(new THREE.Vector3(0, 0, 0), 1 - Math.exp(-14 * delta));
+        }
+        if (len > 0.01) {
+          followHeroUntilRef.current = performance.now() + 1400;
+          const baseSpeed = st.run ? 22 : 12;
+          const localDir = new THREE.Vector3(mvx / len, 0, mvz / len);
+          const camForward = new THREE.Vector3();
+          camera.getWorldDirection(camForward);
+          camForward.y = 0;
+          camForward.normalize();
+          const camRight = new THREE.Vector3()
+            .crossVectors(camForward, new THREE.Vector3(0, 1, 0))
+            .normalize();
+          const worldDir = new THREE.Vector3()
+            .addScaledVector(camRight, localDir.x)
+            .addScaledVector(camForward, localDir.z)
+            .normalize();
+
+          const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
+          hv.lerp(desiredVel, 1 - Math.exp(-16 * delta));
+          root.position.addScaledVector(hv, delta);
+          root.position.x = clamp(root.position.x, -820, 650);
+          root.position.z = clamp(root.position.z, -520, 520);
+          root.position.y = terrainHeight(root.position.x, root.position.z) + 0.02;
+
+          const targetYaw = Math.atan2(worldDir.x, worldDir.z);
+          let dy = targetYaw - root.rotation.y;
+          while (dy > Math.PI) dy -= Math.PI * 2;
+          while (dy < -Math.PI) dy += Math.PI * 2;
+          root.rotation.y += dy * (1 - Math.exp(-14 * delta));
+
+          play(st.run ? "run" : "walk", 0.12);
+
+          // Manual input cancels any in-progress autopilot path.
+          heroTargetRef.current = null;
+          ms.pathPts = null;
+          ms.lastTarget = null;
+          return;
+        }
+
+        // Camera follow when manually moving (or shortly after).
+        if (followHeroUntilRef.current > performance.now()) {
+          cameraState.targetLook.set(root.position.x, root.position.y + 2.2, root.position.z);
+        }
+
+        // Autopilot: set by clicking labels/doors in the UI.
+        const tgtRaw = heroTargetRef.current;
+        if (!tgtRaw) {
+          play("idle", 0.18);
+          return;
+        }
+        const tgt = resolveStationId(tgtRaw);
+
+        const buildAdj = () => {
+          const adj = new Map<string, Set<string>>();
+          for (const key of builder.roadPaths.keys()) {
+            const [a, b] = key.split("->");
+            if (!a || !b) continue;
+            if (!adj.has(a)) adj.set(a, new Set());
+            adj.get(a)!.add(b);
+          }
+          return adj;
+        };
+
+        const findRoute = (from: string, to: string): string[] | null => {
+          if (from === to) return [from];
+          const adj = buildAdj();
+          const q: string[] = [from];
+          const prev = new Map<string, string | null>();
+          prev.set(from, null);
+          while (q.length) {
+            const cur = q.shift()!;
+            const ns = adj.get(cur);
+            if (!ns) continue;
+            for (const n of ns) {
+              if (prev.has(n)) continue;
+              prev.set(n, cur);
+              if (n === to) {
+                const out: string[] = [];
+                let x: string | null = to;
+                while (x) {
+                  out.push(x);
+                  x = prev.get(x) ?? null;
+                }
+                out.reverse();
+                return out;
+              }
+              q.push(n);
+            }
+          }
+          return null;
+        };
+
+        const setPath = (fromId: string, toId: string) => {
+          const route = findRoute(fromId, toId);
+          if (!route || route.length < 2) {
+            ms.pathPts = null;
+            ms.totalLen = 0;
+            ms.pathLens = [];
+            ms.distAlong = 0;
+            return;
+          }
+          const pts: THREE.Vector3[] = [];
+          for (let i = 0; i < route.length - 1; i++) {
+            const seg = builder.roadPaths.get(`${route[i]}->${route[i + 1]}`);
+            if (!seg) continue;
+            for (let j = 0; j < seg.length; j++) {
+              if (i > 0 && j === 0) continue;
+              pts.push(seg[j].clone());
+            }
+          }
+          for (const p of pts) p.y = terrainHeight(p.x, p.z);
+          ms.pathPts = pts;
+          ms.pathLens = [0];
+          ms.totalLen = 0;
+          for (let i = 1; i < pts.length; i++) {
+            ms.totalLen += pts[i].distanceTo(pts[i - 1]);
+            ms.pathLens.push(ms.totalLen);
+          }
+          ms.distAlong = 0;
+          play("walk", 0.2);
+        };
+
+        const sampleAt = (d: number): { pos: THREE.Vector3; dir: THREE.Vector3 } => {
+          const pts = ms.pathPts;
+          if (!pts || pts.length < 2 || ms.totalLen <= 0) {
+            return { pos: root.position.clone(), dir: new THREE.Vector3(0, 0, 1) };
+          }
+          const clamped = Math.max(0, Math.min(ms.totalLen, d));
+          let i = 1;
+          while (i < ms.pathLens.length && ms.pathLens[i] < clamped) i++;
+          const i0 = Math.max(1, i);
+          const prevLen = ms.pathLens[i0 - 1];
+          const segLen = ms.pathLens[i0] - prevLen || 1;
+          const t = (clamped - prevLen) / segLen;
+          const a = pts[i0 - 1];
+          const b = pts[i0];
+          const pos = new THREE.Vector3().lerpVectors(a, b, t);
+          const dir = new THREE.Vector3().subVectors(b, a);
+          dir.y = 0;
+          dir.normalize();
+          return { pos, dir };
+        };
+
+        if (tgt !== ms.lastTarget) {
+          setPath(resolveStationId(currentIdRef.current), tgt);
+          ms.lastTarget = tgt;
+        }
+
+        if (!ms.pathPts || ms.totalLen <= 0) return;
+
+        // Autopilot speed tuned for the larger world scale.
+        ms.distAlong += (ms.speed * 0.75) * delta;
+        const { pos, dir } = sampleAt(ms.distAlong);
+        root.position.copy(pos);
+        root.position.y += 0.02;
+        if (dir.lengthSq() > 0) root.rotation.y = Math.atan2(dir.x, dir.z);
+
+        if (ms.distAlong >= ms.totalLen - 0.01) {
+          ms.pathPts = null;
+          play("idle", 0.25);
+          const sp = stationArrivalPos(tgt);
+          root.position.set(sp.x, sp.y, sp.z);
+          if (ms.lastArrived !== tgt) {
+            ms.lastArrived = tgt;
+            onArriveRef.current?.(tgt);
+          }
+        }
       },
     });
 
@@ -480,6 +853,11 @@ export function useThreeScene({
     animRef.current = anim;
 
     return () => {
+      disposed = true;
+      if (heroRootRef.current) {
+        scene.remove(heroRootRef.current);
+        heroRootRef.current = null;
+      }
       flyToStationRef.current = null;
       animRef.current = null;
       anim.stop();
@@ -491,6 +869,10 @@ export function useThreeScene({
       renderer.domElement.removeEventListener("touchmove", onTouchMove);
       renderer.domElement.removeEventListener("touchend", onTouchEnd);
       renderer.domElement.removeEventListener("dblclick", onDoubleClick);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
       renderer.dispose();
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);

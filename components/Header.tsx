@@ -248,7 +248,7 @@ export default function Header() {
           />
 
           <span
-            className="hidden md:block font-heritage italic leading-tight"
+            className="hidden md:block font-body italic leading-tight"
             style={{
               fontSize: "clamp(0.7rem, 1.2vw, 0.7rem)",
               color: "color-mix(in oklch, var(--foreground) 62%, transparent)",
