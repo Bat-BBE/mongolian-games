@@ -97,8 +97,7 @@ export function MapArea({
           top: fromApi?.pos?.top ?? cfg.top,
         },
         icon: fromApi?.icon ?? cfg.icon,
-        isCurrent:
-          currentStationId !== "home" && id === currentStationId,
+        isCurrent: currentStationId !== "home" && id === currentStationId,
         isDone: doneStationIds?.includes(id) ?? false,
       };
     },
@@ -113,7 +112,7 @@ export function MapArea({
       reward: "",
       available: true,
       pos: { left: "0%", top: "0%" },
-      icon: "🏠",
+      icon: "🛖",
       isCurrent: currentStationId === "home",
       isDone: false,
     }),
@@ -125,10 +124,8 @@ export function MapArea({
     [homeStationForLabel, stations],
   );
 
-  const selectedStation =
-    stations.find((s) => s.id === selectedId) ?? null;
+  const selectedStation = stations.find((s) => s.id === selectedId) ?? null;
 
-  /** Шошго нь зөвхөн `visibleStationId`-д харагддаг тул энд нэмэлт шалгалт хэрэггүй. */
   function handleStationFocus(id: string) {
     if (id === "home") {
       onOpenHome?.();
@@ -145,16 +142,16 @@ export function MapArea({
     showAllMapLabels,
     goToHomeGer,
   } = useThreeScene({
-      containerRef: canvasRef,
-      stations,
-      currentStationId,
-      doneStationIds,
-      onSelectStation: handleStationFocus,
-      heroModelPath,
-      homeGerLevel,
-      homeLivestock,
-      onHeroAtStationChange,
-    });
+    containerRef: canvasRef,
+    stations,
+    currentStationId,
+    doneStationIds,
+    onSelectStation: handleStationFocus,
+    heroModelPath,
+    homeGerLevel,
+    homeLivestock,
+    onHeroAtStationChange,
+  });
 
   useEffect(() => {
     onRegisterFlyHome?.(goToHomeGer);

@@ -1,5 +1,7 @@
 import cors from "cors";
 import express from "express";
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { env } from "./config.js";
 import { healthRouter } from "./routes/health.js";
 import { usersRouter } from "./routes/users.js";
@@ -17,6 +19,11 @@ app.use(
   })
 );
 app.use(express.json());
+
+// Local uploads (admin game images, etc.)
+const uploadsDir = join(process.cwd(), "uploads");
+mkdirSync(uploadsDir, { recursive: true });
+app.use("/uploads", express.static(uploadsDir));
 
 app.use(healthRouter);
 app.use("/api", gamesPublicRouter);

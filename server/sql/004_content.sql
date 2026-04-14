@@ -1,5 +1,3 @@
--- Heroes, map stations (уртуу), UI strings for dashboard sidebar — admin-managed.
-
 CREATE TABLE IF NOT EXISTS heroes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,

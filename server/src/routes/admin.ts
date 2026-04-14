@@ -1,5 +1,8 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import multer from "multer";
+import { mkdirSync } from "node:fs";
+import { join, extname } from "node:path";
 import { z } from "zod";
 import { env } from "../config.js";
 import { pool } from "../db.js";
@@ -16,6 +19,7 @@ const gameBody = z.object({
   name_en: z.string().min(1).max(500),
   description_mn: z.string().max(10000).optional().default(""),
   description_en: z.string().max(10000).optional().default(""),
+  image_url: z.string().optional(),
   is_available: z.boolean(),
   show_on_home: z.boolean().optional().default(true),
   sort_order: z.number().int(),
@@ -95,6 +99,36 @@ adminRouter.post("/login", (req, res) => {
 });
 
 adminRouter.use(requireAdminJwt);
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = join(process.cwd(), "uploads", "games");
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const safeExt = extname(file.originalname || "").toLowerCase() || ".jpg";
+      const ext =
+        safeExt === ".png" || safeExt === ".jpg" || safeExt === ".jpeg" || safeExt === ".webp"
+          ? safeExt
+          : ".jpg";
+      const name = `game_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
+      cb(null, name);
+    },
+  }),
+  limits: { fileSize: 6 * 1024 * 1024 },
+  fileFilter: ((req, file, cb) => {
+    const ok = ["image/png", "image/jpeg", "image/webp"].includes(file.mimetype);
+    if (!ok) {
+      (req as unknown as { fileValidationError?: string }).fileValidationError =
+        "Invalid file type";
+      cb(null, false);
+      return;
+    }
+    cb(null, true);
+  }) as multer.Options["fileFilter"],
+});
 
 adminRouter.get("/treasury", async (_req, res) => {
   try {
@@ -183,7 +217,7 @@ adminRouter.get("/users", async (_req, res) => {
 
 adminRouter.get("/games", async (_req, res) => {
   const result = await pool.query(
-    `SELECT id, slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order,
+    `SELECT id, slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order,
             created_at, updated_at
      FROM games
      ORDER BY sort_order ASC, name_en ASC`
@@ -200,15 +234,16 @@ adminRouter.post("/games", async (req, res) => {
   const b = parsed.data;
   try {
     const result = await pool.query(
-      `INSERT INTO games (slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       RETURNING id, slug, name_mn, name_en, description_mn, description_en, is_available, sort_order, created_at, updated_at`,
+      `INSERT INTO games (slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       RETURNING id, slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order, created_at, updated_at`,
       [
         b.slug,
         b.name_mn,
         b.name_en,
         b.description_mn,
         b.description_en,
+        b.image_url ?? null,
         b.is_available,
         b.show_on_home ?? true,
         b.sort_order,
@@ -260,6 +295,10 @@ adminRouter.put("/games/:id", async (req, res) => {
     fields.push(`description_en = $${n++}`);
     values.push(p.description_en);
   }
+  if ((p as { image_url?: string }).image_url !== undefined) {
+    fields.push(`image_url = $${n++}`);
+    values.push((p as { image_url?: string }).image_url ?? null);
+  }
   if (p.is_available !== undefined) {
     fields.push(`is_available = $${n++}`);
     values.push(p.is_available);
@@ -281,7 +320,7 @@ adminRouter.put("/games/:id", async (req, res) => {
 
   const result = await pool.query(
     `UPDATE games SET ${fields.join(", ")} WHERE id = $${n}
-     RETURNING id, slug, name_mn, name_en, description_mn, description_en, is_available, show_on_home, sort_order, created_at, updated_at`,
+     RETURNING id, slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order, created_at, updated_at`,
     values
   );
   if (result.rowCount === 0) {
@@ -303,6 +342,41 @@ adminRouter.delete("/games/:id", async (req, res) => {
     return;
   }
   res.status(204).send();
+});
+
+adminRouter.post("/games/:id/image", upload.single("file"), async (req, res) => {
+  const id = z.string().uuid().safeParse(req.params.id);
+  if (!id.success) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const fv = (req as unknown as { fileValidationError?: string }).fileValidationError;
+  if (fv) {
+    res.status(415).json({ error: fv });
+    return;
+  }
+  const f = req.file;
+  if (!f) {
+    res.status(400).json({ error: "Missing file" });
+    return;
+  }
+  const imageUrl = `/uploads/games/${f.filename}`;
+  try {
+    const result = await pool.query(
+      `UPDATE games SET image_url = $1, updated_at = now()
+       WHERE id = $2
+       RETURNING id, image_url`,
+      [imageUrl, id.data],
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json({ game: result.rows[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Upload failed";
+    res.status(500).json({ error: msg });
+  }
 });
 
 adminRouter.get("/heroes", async (_req, res) => {

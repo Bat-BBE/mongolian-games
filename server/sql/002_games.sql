@@ -1,5 +1,3 @@
--- Catalog of traditional games (MN/EN copy + slug for GameModal routing).
-
 CREATE TABLE IF NOT EXISTS games (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug TEXT NOT NULL UNIQUE,

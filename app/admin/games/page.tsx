@@ -24,7 +24,9 @@ import {
   adminCreateGame,
   adminDeleteGame,
   adminListGames,
+  adminUploadGameImage,
   adminUpdateGame,
+  getApiBaseUrl,
   type GameRow,
 } from "@/lib/api";
 
@@ -66,6 +68,7 @@ export default function AdminGamesPage() {
     name_en: "",
     description_mn: "",
     description_en: "",
+    image_url: null,
     is_available: false,
     show_on_home: true,
     sort_order: 0,
@@ -87,6 +90,7 @@ export default function AdminGamesPage() {
         name_en: "",
         description_mn: "",
         description_en: "",
+        image_url: null,
         is_available: false,
         show_on_home: true,
         sort_order: 0,
@@ -110,6 +114,7 @@ export default function AdminGamesPage() {
         name_en: editing.name_en,
         description_mn: editing.description_mn,
         description_en: editing.description_en,
+        image_url: editing.image_url,
         is_available: editing.is_available,
         show_on_home: editing.show_on_home,
         sort_order: editing.sort_order,
@@ -119,6 +124,20 @@ export default function AdminGamesPage() {
       setMsg("Хадгалагдлаа.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Алдаа");
+    }
+  };
+
+  const handleUploadImage = async (file: File) => {
+    const t = token?.trim();
+    if (!t || !editing) return;
+    setMsg(null);
+    try {
+      const { game } = await adminUploadGameImage(t, editing.id, file);
+      setEditing((prev) => (prev ? { ...prev, image_url: game.image_url } : prev));
+      await load();
+      setMsg("Зураг шинэчлэгдлээ.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Upload алдаа");
     }
   };
 
@@ -435,6 +454,42 @@ export default function AdminGamesPage() {
                     )
                   }
                   className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)] min-h-[72px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Зураг (Landing / Games)</Label>
+                {editing.image_url ? (
+                  <div className="flex items-start gap-3">
+                    <img
+                      alt="game"
+                      className="h-16 w-28 rounded-md border border-[var(--admin-border)] object-cover bg-black/20"
+                      src={
+                        editing.image_url.startsWith("http")
+                          ? editing.image_url
+                          : `${getApiBaseUrl()}${editing.image_url}`
+                      }
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs text-[var(--admin-muted)] break-all">
+                        {editing.image_url}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-xs text-[var(--admin-muted)]">
+                    Зураг байхгүй (икон fallback-тай).
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleUploadImage(f);
+                    e.currentTarget.value = "";
+                  }}
+                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
               <div className="flex items-center gap-2">

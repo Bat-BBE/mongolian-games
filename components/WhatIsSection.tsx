@@ -8,6 +8,7 @@ import {
   LuGlobe as GlobeIcon,
   LuBookOpen as BookOpenIcon,
 } from "react-icons/lu";
+import Image from "next/image";
 
 import { useApp } from "./AppContext";
 
@@ -21,6 +22,15 @@ const ICONS = [
 ];
 
 const NUMS = ["I", "II", "III", "IV", "V", "VI"];
+
+const ABOUT_IMAGES = [
+  "/images/about/mongolian-game.png",
+  "/images/about/nuudelcin.png",
+  "/images/about/ai-mongolia.png",
+  "/images/about/mongolian_childrens.png",
+  "/images/about/mongol-3d.png",
+  "/images/about/image.png",
+];
 
 export default function WhatIsSection() {
   const { t } = useApp();
@@ -67,6 +77,7 @@ export default function WhatIsSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {t.whatIs.items.map((item, i) => {
             const Icon = ICONS[i];
+            const img = ABOUT_IMAGES[i % ABOUT_IMAGES.length];
 
             return (
               <article
@@ -84,8 +95,17 @@ export default function WhatIsSection() {
                   {NUMS[i]}
                 </span>
 
-                <div className="icon-vessel w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  {Icon && <Icon className="text-primary w-8 h-8" strokeWidth={1.5} />}
+                <div className="w-24 h-16 rounded-2xl overflow-hidden border border-white/10 bg-black/10 mx-auto mb-6 relative">
+                  <Image
+                    src={img}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                    priority={i < 2}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                  <div className="absolute -bottom-2 -right-2 w-16 h-16 rounded-full bg-primary/10 blur-xl" />
                 </div>
 
                 <h3 className="font-display font-bold text-foreground text-lg mb-4 leading-snug">

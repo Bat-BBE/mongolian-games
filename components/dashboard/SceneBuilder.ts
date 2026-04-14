@@ -45,15 +45,14 @@ function distPointSegment2D(
   return Math.hypot(px - qx, pz - qz);
 }
 
-/** Бүх өртөөний үндсэн гэр — ижил том хэмжээ (дүүрэг гэрүүдээс ялгарна). */
-const STATION_MAIN_GER_SCALE = 2.72;
-const STATION_SATELLITE_GER_SCALE_MIN = 1.58;
-const STATION_SATELLITE_GER_SCALE_MAX = 1.88;
-/** Станцын төвөөс мод, чулуу хол байрлуулах радиус (гэр дээр давхардахгүй). */
-/** Гол гэр / төвөөс мал, чулуу, модыг илүү зайтай байрлуулна */
-const STATION_CENTER_CLEAR = 42;
-/** Улаанбаатар — төв ордны хашаа том; мод мал гадна талд илүү хол */
-const STATION_CENTER_CLEAR_ULAANBAATAR = 54;
+/** urtuunuudiin ger busad urtuunuudees tom baina shuu */
+const STATION_MAIN_GER_SCALE = 3.2;
+const STATION_SATELLITE_GER_SCALE_MIN = 1.68;
+const STATION_SATELLITE_GER_SCALE_MAX = 1.98;
+/** urtuunuus hol bairluulah mod, chuluu, rock */
+const STATION_CENTER_CLEAR = 62;
+/** ub-bogdiin urtuu hol bairluulah */
+const STATION_CENTER_CLEAR_ULAANBAATAR = 74;
 
 type StationPeripheryPreset = {
   trees?: number;
@@ -357,7 +356,6 @@ export class SceneBuilder {
   public markerMeshes = new Map<string, THREE.Mesh>();
   public labelAnchors = new Map<string, THREE.Vector3>();
   public doorAnchors = new Map<string, THREE.Vector3>();
-  /** Centerline points for station-to-station roads (world x/z, y=0). */
   public roadPaths = new Map<string, THREE.Vector3[]>();
 
   constructor(
@@ -376,7 +374,6 @@ export class SceneBuilder {
     geo.scale(-1, 1, -1);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
-    /** Эрт хавар: зөөлөн цэнхэр дээд, доод ирмэг бага зэрэг дулаан саарал */
     const zenith = { r: 0.22, g: 0.48, b: 0.9 };
     const horizon = { r: 0.78, g: 0.82, b: 0.93 };
     for (let i = 0; i < pos.count; i++) {
@@ -477,7 +474,7 @@ export class SceneBuilder {
 
   buildTrees(): void {
     // Хангайн нурууны ой
-    for (let i = 0; i < 55; i++) {
+    for (let i = 0; i < 105; i++) {
       const x = rand(-70, -20),
         z = rand(-30, -5);
       const h = terrainHeight(x, z);
@@ -485,7 +482,7 @@ export class SceneBuilder {
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.6, 1.3));
     }
     // Хэнтийн ой
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 105; i++) {
       const x = rand(14, 52),
         z = rand(-26, -5);
       const h = terrainHeight(x, z);
@@ -493,7 +490,7 @@ export class SceneBuilder {
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.5, 1.1));
     }
     // Орхон голын хөвөөний ой
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 105; i++) {
       const z = rand(-28, 14);
       const rx = -32 + Math.sin(z * 0.08) * 6;
       const x = rx + rand(-10, 10);
@@ -501,7 +498,7 @@ export class SceneBuilder {
       if (h > -0.5 && h < 5) this.makeTree(x, z, rand(0.4, 0.95));
     }
     // Хөвсгөлийн эргийн ой
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 105; i++) {
       const angle = rand(0, Math.PI * 2);
       const r = rand(12, 20);
       const x = -63 + Math.cos(angle) * r;
@@ -509,13 +506,13 @@ export class SceneBuilder {
       this.makeTree(x, z, rand(0.6, 1.2));
     }
     // Тэрэлжийн ой
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 105; i++) {
       const x = rand(10, 24),
         z = rand(-14, -2);
       this.makeTree(x + rand(-1, 1), z + rand(-1, 1), rand(0.5, 1.0));
     }
     // Бэлчээрийн сийрэг бут
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 80; i++) {
       const x = rand(-130, 70),
         z = rand(-45, 20);
       const h = terrainHeight(x, z);
@@ -572,11 +569,7 @@ export class SceneBuilder {
       new THREE.CylinderGeometry(2.7 * s, 2.7 * s, 2.2 * s, 24, 1, true),
       new THREE.MeshStandardMaterial({
         color:
-          stationId === "home"
-            ? 0xfffaf2
-            : isStation
-              ? 0xfff6ea
-              : 0xede0c8,
+          stationId === "home" ? 0xfffaf2 : isStation ? 0xfff6ea : 0xede0c8,
         roughness: stationId === "home" ? 0.48 : 0.65,
         map: tex,
       }),
@@ -642,11 +635,7 @@ export class SceneBuilder {
       const pat = new THREE.Mesh(
         new THREE.BoxGeometry(0.6 * s, 0.12 * s, 0.06 * s),
         mkMat(
-          isStation
-            ? stationId === "home"
-              ? 0xffe8a0
-              : 0xf0c020
-            : 0xe05030,
+          isStation ? (stationId === "home" ? 0xffe8a0 : 0xf0c020) : 0xe05030,
           0.8,
         ),
       );
@@ -693,7 +682,11 @@ export class SceneBuilder {
       this.markerMeshes.set(stationId, marker);
 
       const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(stationId === "home" ? 0.95 * s : 0.78 * s, 12, 12),
+        new THREE.SphereGeometry(
+          stationId === "home" ? 0.95 * s : 0.78 * s,
+          12,
+          12,
+        ),
         new THREE.MeshBasicMaterial({
           color: mc,
           transparent: true,
@@ -900,10 +893,7 @@ export class SceneBuilder {
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
     g.add(roof);
-    const fin = new THREE.Mesh(
-      new THREE.SphereGeometry(0.2 * s, 8, 6),
-      goldM,
-    );
+    const fin = new THREE.Mesh(new THREE.SphereGeometry(0.2 * s, 8, 6), goldM);
     fin.position.y = 1.35 * s + 1.15 * s + 0.25 * s;
     g.add(fin);
     g.position.set(x, hy, z);
@@ -1018,9 +1008,11 @@ export class SceneBuilder {
   }
 
   /** Spawn player's livestock near the home ger (visual only). */
-  buildPlayerLivestockNearHome(
-    livestock?: { sheep: number; horse: number; camel: number },
-  ): void {
+  buildPlayerLivestockNearHome(livestock?: {
+    sheep: number;
+    horse: number;
+    camel: number;
+  }): void {
     if (!livestock) return;
     const x = PLAYER_HOME_X;
     const z = PLAYER_HOME_Z;
@@ -1041,7 +1033,8 @@ export class SceneBuilder {
       const r = Math.random();
       const kind = r < 0.52 ? "sheep" : r < 0.82 ? "goat" : "yak";
       const sc = kind === "yak" ? 1.35 : kind === "goat" ? 0.92 : 1.12;
-      const bodyMat = kind === "yak" ? yakMat : kind === "goat" ? goatMat : sheepMat;
+      const bodyMat =
+        kind === "yak" ? yakMat : kind === "goat" ? goatMat : sheepMat;
       const body = new THREE.Mesh(
         new THREE.SphereGeometry(0.38 * sc, 12, 10),
         bodyMat,
@@ -1308,10 +1301,7 @@ export class SceneBuilder {
         new THREE.CylinderGeometry(
           0.02,
           0.04,
-          rand(
-            0.16,
-            isGobi ? 0.34 : isForest ? 0.55 : isAlpine ? 0.22 : 0.48,
-          ),
+          rand(0.16, isGobi ? 0.34 : isForest ? 0.55 : isAlpine ? 0.22 : 0.48),
           4,
         ),
         mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.88),
@@ -1523,15 +1513,7 @@ export class SceneBuilder {
     if (p.trees && p.trees > 0) {
       const nt = Math.max(0, Math.floor(p.trees * 0.35));
       if (nt > 0)
-        this.scatterPeripheryTrees(
-          cx,
-          cz,
-          nt,
-          tr,
-          smin,
-          smax,
-          centerClear,
-        );
+        this.scatterPeripheryTrees(cx, cz, nt, tr, smin, smax, centerClear);
     }
 
     if (p.decorGers && p.decorGers > 0) {
@@ -1548,14 +1530,12 @@ export class SceneBuilder {
 
     if (p.camels && p.camels > 0) {
       const nc = Math.max(0, Math.floor(p.camels * 0.3));
-      if (nc > 0)
-        this.scatterPeripheryCamels(cx, cz, nc, p.camelRadius ?? 48);
+      if (nc > 0) this.scatterPeripheryCamels(cx, cz, nc, p.camelRadius ?? 48);
     }
 
     if (p.horses && p.horses > 0) {
       const nh = Math.max(0, Math.floor(p.horses * 0.28));
-      if (nh > 0)
-        this.scatterPeripheryHorses(cx, cz, nh, p.horseRadius ?? 44);
+      if (nh > 0) this.scatterPeripheryHorses(cx, cz, nh, p.horseRadius ?? 44);
     }
 
     if (p.rocks && p.rocks > 0)
@@ -1589,7 +1569,9 @@ export class SceneBuilder {
 
   /** Бүх төрлийн өртөөнд ижил: тойрог гэр, хашаа, овоо, төвийн гол гэр */
   private layoutStandardGerCamp(x: number, z: number, stationId: string): void {
-    const ringSeed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const ringSeed = stationId
+      .split("")
+      .reduce((a, c) => a + c.charCodeAt(0), 0);
     const ringR = 28.5 + (ringSeed % 5) * 0.45;
     for (let i = 0; i < 10; i++) {
       const ang = (i / 10) * Math.PI * 2 + rand(-0.04, 0.04);
@@ -1674,13 +1656,7 @@ export class SceneBuilder {
         this.layoutStandardGerCamp(x, z, s.id);
       }
       this.decorateStationPeriphery(s.id, x, z);
-      this.makeStationSignboard(
-        x,
-        z,
-        s.name,
-        s.id,
-        s.region ?? cfg.region,
-      );
+      this.makeStationSignboard(x, z, s.name, s.id, s.region ?? cfg.region);
     });
   }
 
@@ -1719,9 +1695,7 @@ export class SceneBuilder {
     ctx.fillText(title, 320, 78);
     if (regionLabel?.trim()) {
       const sub =
-        regionLabel.length > 36
-          ? `${regionLabel.slice(0, 35)}…`
-          : regionLabel;
+        regionLabel.length > 36 ? `${regionLabel.slice(0, 35)}…` : regionLabel;
       ctx.font = "26px 'Georgia','Times New Roman',serif";
       ctx.fillStyle = "rgba(210, 195, 170, 0.95)";
       ctx.fillText(sub, 320, 138);
@@ -1856,11 +1830,7 @@ export class SceneBuilder {
       const gateX = x;
       this.doorAnchors.set(
         id,
-        new THREE.Vector3(
-          gateX,
-          terrainHeight(gateX, gateZ) + 0.42,
-          gateZ,
-        ),
+        new THREE.Vector3(gateX, terrainHeight(gateX, gateZ) + 0.42, gateZ),
       );
     }
     g.position.set(x, hy, z);
@@ -2574,11 +2544,7 @@ export class SceneBuilder {
       const pivot = new THREE.Group();
       const bx = rand(-1, 1) > 0 ? rand(-290, 290) : rand(-220, 220);
       const bz = rand(-1, 1) > 0 ? rand(-240, 240) : rand(-180, 180);
-      pivot.position.set(
-        bx + rand(-35, 35),
-        rand(52, 118),
-        bz + rand(-35, 35),
-      );
+      pivot.position.set(bx + rand(-35, 35), rand(52, 118), bz + rand(-35, 35));
       const arm = new THREE.Group();
       arm.position.x = rand(8, 34);
       const body = new THREE.Mesh(
@@ -2611,15 +2577,9 @@ export class SceneBuilder {
 
   buildGrassTufts(): void {
     /** Эрт хаврын шар ногоон — хэт тод биш, бэлчээр дүүрэн */
-    const springSteppe = [
-      0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c, 0xa3b08a,
-    ];
-    const springForest = [
-      0x5a6b48, 0x4d5c3c, 0x677a52, 0x5f6d44,
-    ];
-    const springGobi = [
-      0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888,
-    ];
+    const springSteppe = [0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c, 0xa3b08a];
+    const springForest = [0x5a6b48, 0x4d5c3c, 0x677a52, 0x5f6d44];
+    const springGobi = [0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888];
     const springAlpine = [0x7a8a70, 0x8a9a80, 0x6a7a62];
 
     for (let i = 0; i < 1280; i++) {

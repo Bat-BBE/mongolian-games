@@ -97,6 +97,7 @@ export type GameRow = {
   name_en: string;
   description_mn: string;
   description_en: string;
+  image_url: string | null;
   is_available: boolean;
   show_on_home: boolean;
   sort_order: number;
@@ -559,6 +560,7 @@ export async function adminUpdateGame(
       | "name_en"
       | "description_mn"
       | "description_en"
+      | "image_url"
       | "is_available"
       | "show_on_home"
       | "sort_order"
@@ -588,6 +590,27 @@ export async function adminDeleteGame(token: string, id: string): Promise<void> 
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(data.error ?? `delete failed (${res.status})`);
   }
+}
+
+export async function adminUploadGameImage(
+  token: string,
+  gameId: string,
+  file: File,
+): Promise<{ game: Pick<GameRow, "id" | "image_url"> }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await apiFetch(`/api/admin/games/${encodeURIComponent(gameId)}/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: fd,
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    game?: { id: string; image_url: string | null };
+  };
+  if (!res.ok) throw new Error(data.error ?? `upload failed (${res.status})`);
+  if (!data.game) throw new Error("upload: missing game");
+  return { game: data.game };
 }
 
 export async function adminListHeroes(token: string): Promise<{ heroes: HeroRow[] }> {

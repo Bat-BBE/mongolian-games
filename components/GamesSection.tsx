@@ -4,7 +4,7 @@ import { LuDices as Dices, LuTarget as Target, LuZap as Zap, LuTrophy as Trophy,
 import { useApp } from "./AppContext";
 import { useEffect, useState } from "react";
 import GameModal from "@/components/game/gameModal";
-import { getGames, type GameRow } from "@/lib/api";
+import { getApiBaseUrl, getGames, type GameRow } from "@/lib/api";
 
 const ICONS = [Dices, Target, Zap, Trophy, Swords, Gamepad2];
 
@@ -103,6 +103,12 @@ export default function GamesSection() {
               const title = language === "mn" ? game.name_mn : game.name_en;
               const desc = language === "mn" ? game.description_mn : game.description_en;
               const isAvailable = game.is_available;
+              const imageSrc =
+                game.image_url && game.image_url.trim()
+                  ? game.image_url.startsWith("http")
+                    ? game.image_url
+                    : `${getApiBaseUrl()}${game.image_url}`
+                  : null;
               const articleClass = `glass-card group relative rounded-[1.75rem] overflow-hidden transition-all duration-500 ${
                 isAvailable ? "hover:-translate-y-2 cursor-pointer" : "opacity-60"
               }`;
@@ -135,12 +141,24 @@ export default function GamesSection() {
                       >
                         {String(i + 1).padStart(2, "0")}
                       </span>
-                      <div className="icon-vessel w-12 h-12 rounded-xl flex items-center justify-center">
-                        <Icon
-                          className="text-primary transition-colors duration-300"
-                          strokeWidth={1.6}
-                          style={{ width: "1.4rem", height: "1.4rem" }}
-                        />
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-black/10 flex items-center justify-center">
+                        {imageSrc ? (
+                          // Using <img> intentionally (remote API/static); keeps Next config simple.
+                          <img
+                            alt=""
+                            src={imageSrc}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="icon-vessel w-12 h-12 rounded-xl flex items-center justify-center">
+                            <Icon
+                              className="text-primary transition-colors duration-300"
+                              strokeWidth={1.6}
+                              style={{ width: "1.4rem", height: "1.4rem" }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
 
