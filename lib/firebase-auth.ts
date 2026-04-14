@@ -13,8 +13,7 @@ function defaultProgress(): Record<string, unknown> {
   return {
     xp: 0,
     xpMax: 100,
-    // Journey should start from the leftmost station for everyone.
-    currentStationId: "choibalsan",
+    currentStationId: "home",
     journeyDay: 1,
     doneStationIds: [],
   };
@@ -106,7 +105,7 @@ export async function registerEmail(email: string, heroId: HeroId) {
   const progress = {
     xp: 0,
     xpMax: 100,
-    currentStationId: "choibalsan",
+    currentStationId: "home",
     journeyDay: 1,
     doneStationIds: [] as string[],
   };

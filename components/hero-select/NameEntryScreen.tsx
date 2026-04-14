@@ -22,7 +22,7 @@ export function NameEntryScreen({
   const filled = emailValid;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-10 py-[clamp(40px,10vh,120px)] px-[clamp(16px,4vw,40px)] animate-fade-up bg-background">
+    <div className="flex flex-col items-center justify-center gap-6 sm:gap-7 py-[clamp(28px,6vh,72px)] px-[clamp(14px,3.5vw,32px)] animate-fade-up bg-background">
 
       {/* TITLE */}
       <div className="text-center max-w-2xl">

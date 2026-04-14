@@ -8,6 +8,17 @@ interface StationPopupProps {
   station: UrtuuStation | null;
   onClose: () => void;
   onPlay: (gameSlug: string, gameName?: string) => void;
+  /** Walk hero to this urtuu (map). */
+  onTravel?: () => void;
+  /** Walk hero back to ger. */
+  onReturnHome?: () => void;
+  /** Cancel travel and restore hero to position before «Очих». */
+  onReturnToPreviousSpot?: () => void;
+  travelLabel?: string;
+  returnHomeLabel?: string;
+  returnPrevLabel?: string;
+  /** When set, «Өмнөх байрлал» is shown (active autopilot). */
+  heroTargetId?: string | null;
   loreLabel: string;
   minigameLabel: string;
   regionLabel: string;
@@ -24,6 +35,13 @@ export function StationPopup({
   station,
   onClose,
   onPlay,
+  onTravel,
+  onReturnHome,
+  onReturnToPreviousSpot,
+  travelLabel = "Очих",
+  returnHomeLabel = "Гэр рүү буцах",
+  returnPrevLabel = "Өмнөх байрлал руу",
+  heroTargetId = null,
   loreLabel,
   minigameLabel,
   regionLabel,
@@ -51,8 +69,6 @@ export function StationPopup({
   const completed = new Set(
     stationSteps?.[station.id]?.completedGameSlugs?.map(String) ?? [],
   );
-  const nextRequired = list.find((g) => g.slug && !completed.has(g.slug))?.slug ?? null;
-
   const windowMs = 7 * 24 * 60 * 60 * 1000;
   const now = Date.now();
   const visits = (stationVisits?.[station.id] ?? [])
@@ -116,6 +132,39 @@ export function StationPopup({
               </span>
             </div>
 
+            {onTravel || onReturnHome ? (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {onTravel ? (
+                  <button
+                    type="button"
+                    onClick={onTravel}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-black transition-all hover:scale-[1.01]"
+                    style={{ background: "var(--gold-gradient)" }}
+                  >
+                    {travelLabel}
+                  </button>
+                ) : null}
+                {onReturnHome ? (
+                  <button
+                    type="button"
+                    onClick={onReturnHome}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-all"
+                  >
+                    {returnHomeLabel}
+                  </button>
+                ) : null}
+                {heroTargetId && onReturnToPreviousSpot ? (
+                  <button
+                    type="button"
+                    onClick={onReturnToPreviousSpot}
+                    className="px-4 py-2 rounded-xl text-[10px] font-semibold tracking-wide border border-white/15 bg-black/25 text-muted-foreground hover:text-foreground hover:bg-black/35 transition-all"
+                  >
+                    {returnPrevLabel}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
             <p className="text-[11px] font-display tracking-[0.12em] text-primary/90 mb-3">
               {gamesSectionLabel} ({list.length})
             </p>
@@ -130,15 +179,15 @@ export function StationPopup({
               {list.map((g) => (
                 (() => {
                   const isDone = g.slug ? completed.has(g.slug) : false;
-                  const isNext = g.slug ? g.slug === nextRequired : false;
                   const canStart =
-                    canPlay && Boolean(g.slug) && weeklyRemaining > 0 && isNext;
+                    canPlay && Boolean(g.slug) && weeklyRemaining > 0;
 
-                  const statusText = isDone
-                    ? doneHint
-                    : isNext
-                      ? "Дараагийн алхам"
-                      : lockedHint;
+                  const statusText =
+                    weeklyRemaining <= 0
+                      ? "7 хоногийн лимит дууссан"
+                      : isDone
+                        ? doneHint
+                        : lockedHint;
 
                   return (
                 <li

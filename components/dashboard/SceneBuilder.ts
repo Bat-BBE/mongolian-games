@@ -15,8 +15,45 @@ import {
   TERRAIN_D,
   TERRAIN_SEG,
   WORLD_SCALE,
+  STATION_SPREAD,
+  PLAYER_HOME_X,
+  PLAYER_HOME_Z,
 } from "./mapConstants";
 import type { UrtuuStation } from "./UrtuuNode";
+import { materialLibrary } from "./MaterialLibrary";
+import { TerrainBuilder } from "./TerrainBuilder";
+
+/** Цэгээс хэсэг хоёр цэгийн хоорондох хамгийн бага зай (x/z). */
+function distPointSegment2D(
+  px: number,
+  pz: number,
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number {
+  const abx = bx - ax;
+  const abz = bz - az;
+  const apx = px - ax;
+  const apz = pz - az;
+  const ab2 = abx * abx + abz * abz;
+  if (ab2 < 1e-8) return Math.hypot(apx, apz);
+  let t = (apx * abx + apz * abz) / ab2;
+  t = Math.max(0, Math.min(1, t));
+  const qx = ax + t * abx;
+  const qz = az + t * abz;
+  return Math.hypot(px - qx, pz - qz);
+}
+
+/** Бүх өртөөний үндсэн гэр — ижил том хэмжээ (дүүрэг гэрүүдээс ялгарна). */
+const STATION_MAIN_GER_SCALE = 2.72;
+const STATION_SATELLITE_GER_SCALE_MIN = 1.58;
+const STATION_SATELLITE_GER_SCALE_MAX = 1.88;
+/** Станцын төвөөс мод, чулуу хол байрлуулах радиус (гэр дээр давхардахгүй). */
+/** Гол гэр / төвөөс мал, чулуу, модыг илүү зайтай байрлуулна */
+const STATION_CENTER_CLEAR = 42;
+/** Улаанбаатар — төв ордны хашаа том; мод мал гадна талд илүү хол */
+const STATION_CENTER_CLEAR_ULAANBAATAR = 54;
 
 type StationPeripheryPreset = {
   trees?: number;
@@ -41,12 +78,12 @@ type StationPeripheryPreset = {
 
 const STATION_PERIPHERY: Record<string, StationPeripheryPreset> = {
   ulaanbaatar: {
-    trees: 16,
-    treeRadius: 42,
-    grassClumps: 22,
-    grassRadius: 38,
-    rocks: 6,
-    rockRadius: 28,
+    trees: 8,
+    treeRadius: 64,
+    grassClumps: 10,
+    grassRadius: 60,
+    rocks: 3,
+    rockRadius: 58,
   },
   zuunmod: {
     trees: 22,
@@ -334,33 +371,37 @@ export class SceneBuilder {
   }
 
   buildSky(): void {
-    const geo = new THREE.SphereGeometry(700, 48, 24);
+    const skyR = 4200;
+    const geo = new THREE.SphereGeometry(skyR, 64, 32);
     geo.scale(-1, 1, -1);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
+    /** Эрт хавар: зөөлөн цэнхэр дээд, доод ирмэг бага зэрэг дулаан саарал */
+    const zenith = { r: 0.22, g: 0.48, b: 0.9 };
+    const horizon = { r: 0.78, g: 0.82, b: 0.93 };
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
-      const t = Math.max(0, Math.min(1, (y + 700) / 1400));
+      const t = Math.max(0, Math.min(1, (y + skyR) / (skyR * 2)));
       const h = 1 - t;
-      let r = 0.78 * h + 0.42 * t;
-      let g = 0.76 * h + 0.5 * t;
-      let b = 0.74 * h + 0.56 * t;
+      let r = horizon.r * h + zenith.r * (1 - h);
+      let g = horizon.g * h + zenith.g * (1 - h);
+      let b = horizon.b * h + zenith.b * (1 - h);
       const n1 = Math.sin(x * 0.0055 + z * 0.0042);
       const n2 = Math.sin(x * 0.011 + z * 0.009 + y * 0.0012);
       const n3 = Math.sin(z * 0.013 + x * 0.007);
       const cloudRaw = n1 * 0.4 + n2 * 0.35 + n3 * 0.25;
-      const cloud = smoothstep(0.15, 0.92, cloudRaw * 0.5 + 0.5);
-      const cloudLift = cloud * (0.1 + 0.12 * h);
-      r += cloudLift;
-      g += cloudLift;
-      b += cloudLift * 1.02;
-      const haze = (1 - t) * 0.06;
+      const cloud = smoothstep(0.12, 0.9, cloudRaw * 0.5 + 0.5);
+      const cloudBright = cloud * (0.22 + 0.2 * (1 - h));
+      r += cloudBright * (0.98 - r);
+      g += cloudBright * (0.99 - g);
+      b += cloudBright * (1.0 - b);
+      const haze = h * h * 0.045;
       r += haze;
-      g += haze;
-      b += haze;
-      const maxC = 0.98;
+      g += haze * 1.02;
+      b += haze * 1.04;
+      const maxC = 0.995;
       colors[i * 3] = Math.min(maxC, r);
       colors[i * 3 + 1] = Math.min(maxC, g);
       colors[i * 3 + 2] = Math.min(maxC, b);
@@ -371,240 +412,18 @@ export class SceneBuilder {
     );
   }
 
+  /** Газар — `TerrainBuilder` + `materialLibrary`: UV, биом өнгө, хөрсний дэлгэрэнгүй. */
   buildTerrain(): void {
-    const geo = new THREE.PlaneGeometry(
-      TERRAIN_W,
-      TERRAIN_D,
-      TERRAIN_SEG,
-      TERRAIN_SEG,
-    );
-    geo.rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position;
-    const col = new Float32Array(pos.count * 3);
-
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i),
-        z = pos.getZ(i);
-      const h = terrainHeight(x, z);
-      pos.setY(i, h);
-
-      let r: number, g: number, b: number;
-
-      const biome = terrainBiome(x, z, h);
-      const orkhonX = -32 + Math.sin(z * 0.08) * 6;
-      const nearRiver =
-        Math.abs(x - orkhonX) < 10 ||
-        (Math.abs(x - 2) < 7 && z > -10 && z < 14);
-      const n = pseudoNoise2D(x * 0.5, z * 0.5);
-      const warm = smoothstep(-0.1, 0.9, n);
-
-      if (biome === "gobi") {
-        const t = Math.min((z - 22) / 24, 1);
-        r = 0.79 + t * 0.1 + warm * 0.03 + rand(-0.015, 0.015);
-        g = 0.68 + t * 0.06 + warm * 0.02 + rand(-0.015, 0.015);
-        b = 0.4 - t * 0.07 + rand(-0.015, 0.015);
-      } else if (biome === "river_plain" || (nearRiver && h < 3.5)) {
-        r = 0.22 + warm * 0.05 + rand(-0.02, 0.02);
-        g = 0.58 + warm * 0.1 + rand(-0.03, 0.03);
-        b = 0.2 + warm * 0.05 + rand(-0.02, 0.02);
-      } else if (biome === "forest") {
-        r = 0.2 + warm * 0.04 + rand(-0.02, 0.02);
-        g = 0.52 + warm * 0.1 + rand(-0.03, 0.03);
-        b = 0.14 + warm * 0.04 + rand(-0.015, 0.015);
-      } else if (biome === "high_alpine") {
-        const t = Math.min((h - 18) / 12, 1);
-        r = 0.76 + t * 0.19 + rand(-0.015, 0.015);
-        g = 0.74 + t * 0.2 + rand(-0.015, 0.015);
-        b = 0.72 + t * 0.22 + rand(-0.015, 0.015);
-      } else if (biome === "mountain") {
-        r = 0.32 + warm * 0.05 + rand(-0.03, 0.03);
-        g = 0.48 + warm * 0.08 + rand(-0.03, 0.03);
-        b = 0.22 + warm * 0.05 + rand(-0.025, 0.025);
-      } else if (h > 3) {
-        r = 0.38 + warm * 0.06 + rand(-0.03, 0.03);
-        g = 0.56 + warm * 0.1 + rand(-0.03, 0.03);
-        b = 0.2 + warm * 0.05 + rand(-0.02, 0.02);
-      } else if (nearRiver && h < 3) {
-        r = 0.22 + rand(-0.03, 0.03);
-        g = 0.58 + rand(-0.04, 0.04);
-        b = 0.2 + rand(-0.02, 0.02);
-      } else {
-        const gr = Math.max(0, 1 - h * 0.08);
-        r = 0.32 + gr * -0.06 + warm * 0.04 + rand(-0.03, 0.03);
-        g = 0.62 + gr * 0.14 + warm * 0.05 + rand(-0.03, 0.03);
-        b = 0.22 + gr * 0.08 + rand(-0.02, 0.02);
-      }
-      col[i * 3] = r;
-      col[i * 3 + 1] = g;
-      col[i * 3 + 2] = b;
-    }
-    geo.computeVertexNormals();
-    geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
-    const mesh = new THREE.Mesh(
-      geo,
-      new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.94,
-        metalness: 0,
-      }),
-    );
-    mesh.receiveShadow = true;
-    this.scene.add(mesh);
+    const tb = new TerrainBuilder(this.scene, materialLibrary);
+    const mesh = tb.buildTerrainWithUV();
+    mesh.name = "terrain";
+    mesh.userData.role = "ground";
   }
 
-  buildRivers(): void {
-    const riverMat = new THREE.MeshStandardMaterial({
-      color: 0x3a7aaf,
-      roughness: 0.04,
-      metalness: 0.38,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const tribMat = new THREE.MeshStandardMaterial({
-      color: 0x4a8abc,
-      roughness: 0.08,
-      metalness: 0.3,
-      transparent: true,
-      opacity: 0.8,
-    });
+  /** Гол, нуурын геометр хассан — зөвхөн газрын өндөр үлдэнэ */
+  buildRivers(): void {}
 
-    const pts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 100; i++) {
-      const t = i / 100,
-        rz = -28 + t * 55;
-      const rx = -32 + Math.sin(rz * 0.08) * 6 + Math.sin(rz * 0.05 + 1) * 3;
-      pts.push(new THREE.Vector3(rx, terrainHeight(rx, rz) + 0.15, rz));
-    }
-    this.scene.add(
-      new THREE.Mesh(
-        new THREE.TubeGeometry(
-          new THREE.CatmullRomCurve3(pts),
-          160,
-          2.0,
-          10,
-          false,
-        ),
-        riverMat,
-      ),
-    );
-
-    const tuulPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 60; i++) {
-      const t = i / 60,
-        rz = -12 + t * 26;
-      const rx = 2 + Math.sin(rz * 0.1) * 4 + Math.sin(rz * 0.07 + 0.5) * 2;
-      tuulPts.push(new THREE.Vector3(rx, terrainHeight(rx, rz) + 0.12, rz));
-    }
-    this.scene.add(
-      new THREE.Mesh(
-        new THREE.TubeGeometry(
-          new THREE.CatmullRomCurve3(tuulPts),
-          100,
-          1.4,
-          8,
-          false,
-        ),
-        riverMat,
-      ),
-    );
-
-    const selPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 50; i++) {
-      const t = i / 50,
-        rz = -28 - t * 22;
-      const rx = -22 + Math.sin(rz * 0.06) * 8;
-      selPts.push(new THREE.Vector3(rx, terrainHeight(rx, rz) + 0.12, rz));
-    }
-    this.scene.add(
-      new THREE.Mesh(
-        new THREE.TubeGeometry(
-          new THREE.CatmullRomCurve3(selPts),
-          80,
-          1.6,
-          8,
-          false,
-        ),
-        tribMat,
-      ),
-    );
-
-    const kherPts: THREE.Vector3[] = [];
-    for (let i = 0; i <= 60; i++) {
-      const t = i / 60,
-        rx = 12 + t * 60;
-      const rz = -2 + Math.sin(rx * 0.045) * 5;
-      kherPts.push(new THREE.Vector3(rx, terrainHeight(rx, rz) + 0.1, rz));
-    }
-    this.scene.add(
-      new THREE.Mesh(
-        new THREE.TubeGeometry(
-          new THREE.CatmullRomCurve3(kherPts),
-          100,
-          1.1,
-          8,
-          false,
-        ),
-        tribMat,
-      ),
-    );
-
-    const lakeMat = new THREE.MeshStandardMaterial({
-      color: 0x1a5a8a,
-      roughness: 0.02,
-      metalness: 0.55,
-      transparent: true,
-      opacity: 0.93,
-    });
-    const lakeShape = new THREE.Shape();
-    lakeShape.ellipse(0, 0, 5, 13, 0, Math.PI * 2, false, 0.15);
-    const lake = new THREE.Mesh(
-      new THREE.ShapeGeometry(lakeShape, 32),
-      lakeMat,
-    );
-    lake.rotation.x = -Math.PI / 2;
-    lake.position.set(-63, terrainHeight(-63, -44) + 0.25, -44);
-    this.scene.add(lake);
-
-    const uvsShape = new THREE.Shape();
-    uvsShape.ellipse(0, 0, 7, 5, 0, Math.PI * 2, false, 0);
-    const uvsLake = new THREE.Mesh(
-      new THREE.ShapeGeometry(uvsShape, 24),
-      lakeMat,
-    );
-    uvsLake.rotation.x = -Math.PI / 2;
-    uvsLake.position.set(-98, terrainHeight(-98, -38) + 0.22, -38);
-    this.scene.add(uvsLake);
-  }
-
-  buildBridge(): void {
-    [
-      [-32, -5],
-      [2, 4],
-    ].forEach(([bx, bz]) => {
-      const by = terrainHeight(bx, bz);
-      const bm = mkMat(0x7a5810, 0.8);
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(7, 0.45, 3.5), bm);
-      bridge.position.set(bx, by + 0.55, bz);
-      bridge.castShadow = true;
-      this.scene.add(bridge);
-      [-3.5, 3.5].forEach((side) => {
-        const rail = new THREE.Mesh(
-          new THREE.BoxGeometry(7, 0.28, 0.14),
-          mkMat(0x6a4a0e, 0.85),
-        );
-        rail.position.set(bx, by + 1.0, bz + side * 0.44);
-        this.scene.add(rail);
-        for (let p = -3; p <= 3; p += 1.4) {
-          const post = new THREE.Mesh(
-            new THREE.BoxGeometry(0.13, 0.85, 0.13),
-            mkMat(0x6a4a0e, 0.85),
-          );
-          post.position.set(bx + p, by + 0.82, bz + side * 0.44);
-          this.scene.add(post);
-        }
-      });
-    });
-  }
+  buildBridge(): void {}
 
   /** Гол нуурын эргийн зэгсний багц */
   private makeReedPatchAt(x: number, z: number, count: number): void {
@@ -626,29 +445,7 @@ export class SceneBuilder {
     this.scene.add(g);
   }
 
-  buildRiverReeds(): void {
-    for (let i = 0; i < 180; i++) {
-      const z = rand(-30, 24);
-      const orkhonX = -32 + Math.sin(z * 0.08) * 6 + Math.sin(z * 0.05 + 1) * 3;
-      const x = orkhonX + rand(-4.8, 4.8);
-      if (terrainHeight(x, z) < 4.5) this.makeReedPatchAt(x, z, randInt(5, 11));
-    }
-
-    for (let i = 0; i < 120; i++) {
-      const z = rand(-12, 14);
-      const tuulX = 2 + Math.sin(z * 0.1) * 4 + Math.sin(z * 0.07 + 0.5) * 2;
-      const x = tuulX + rand(-3.8, 3.8);
-      if (terrainHeight(x, z) < 4.2) this.makeReedPatchAt(x, z, randInt(4, 9));
-    }
-
-    for (let i = 0; i < 70; i++) {
-      const a = rand(0, Math.PI * 2);
-      const r = rand(8.5, 13.8);
-      const x = -63 + Math.cos(a) * r;
-      const z = -44 + Math.sin(a) * r * 1.8;
-      this.makeReedPatchAt(x, z, randInt(5, 10));
-    }
-  }
+  buildRiverReeds(): void {}
 
   private makeTree(x: number, z: number, s = 1): void {
     const g = new THREE.Group();
@@ -680,7 +477,7 @@ export class SceneBuilder {
 
   buildTrees(): void {
     // Хангайн нурууны ой
-    for (let i = 0; i < 140; i++) {
+    for (let i = 0; i < 55; i++) {
       const x = rand(-70, -20),
         z = rand(-30, -5);
       const h = terrainHeight(x, z);
@@ -688,7 +485,7 @@ export class SceneBuilder {
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.6, 1.3));
     }
     // Хэнтийн ой
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 35; i++) {
       const x = rand(14, 52),
         z = rand(-26, -5);
       const h = terrainHeight(x, z);
@@ -696,7 +493,7 @@ export class SceneBuilder {
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.5, 1.1));
     }
     // Орхон голын хөвөөний ой
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 25; i++) {
       const z = rand(-28, 14);
       const rx = -32 + Math.sin(z * 0.08) * 6;
       const x = rx + rand(-10, 10);
@@ -704,7 +501,7 @@ export class SceneBuilder {
       if (h > -0.5 && h < 5) this.makeTree(x, z, rand(0.4, 0.95));
     }
     // Хөвсгөлийн эргийн ой
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 20; i++) {
       const angle = rand(0, Math.PI * 2);
       const r = rand(12, 20);
       const x = -63 + Math.cos(angle) * r;
@@ -712,13 +509,13 @@ export class SceneBuilder {
       this.makeTree(x, z, rand(0.6, 1.2));
     }
     // Тэрэлжийн ой
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 18; i++) {
       const x = rand(10, 24),
         z = rand(-14, -2);
       this.makeTree(x + rand(-1, 1), z + rand(-1, 1), rand(0.5, 1.0));
     }
     // Бэлчээрийн сийрэг бут
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 30; i++) {
       const x = rand(-130, 70),
         z = rand(-45, 20);
       const h = terrainHeight(x, z);
@@ -735,6 +532,8 @@ export class SceneBuilder {
     isStation = false,
     stationId = "",
   ): void {
+    const hy = terrainHeight(x, z);
+    const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
     const g = new THREE.Group();
     const base = new THREE.Mesh(
       new THREE.CylinderGeometry(2.8 * s, 2.9 * s, 0.3 * s, 24),
@@ -772,8 +571,13 @@ export class SceneBuilder {
     const wall = new THREE.Mesh(
       new THREE.CylinderGeometry(2.7 * s, 2.7 * s, 2.2 * s, 24, 1, true),
       new THREE.MeshStandardMaterial({
-        color: isStation ? 0xfff6ea : 0xede0c8,
-        roughness: 0.65,
+        color:
+          stationId === "home"
+            ? 0xfffaf2
+            : isStation
+              ? 0xfff6ea
+              : 0xede0c8,
+        roughness: stationId === "home" ? 0.48 : 0.65,
         map: tex,
       }),
     );
@@ -781,11 +585,13 @@ export class SceneBuilder {
     g.add(wall);
 
     const roofColor = isStation
-      ? stationId === this.currentStationId
-        ? 0x22cc66
-        : this.doneStationIds.includes(stationId)
-          ? 0xffaa00
-          : 0xcc4422
+      ? stationId === "home"
+        ? 0xf2c12e
+        : stationId === this.currentStationId
+          ? 0x22cc66
+          : this.doneStationIds.includes(stationId)
+            ? 0xffaa00
+            : 0xcc4422
       : [0xc8724a, 0xb86838, 0xd47a50][randInt(0, 2)];
     const roof = new THREE.Mesh(
       new THREE.ConeGeometry(2.8 * s, 1.6 * s, 24),
@@ -835,7 +641,14 @@ export class SceneBuilder {
       const angle = (i / 4) * Math.PI * 2 + 0.8;
       const pat = new THREE.Mesh(
         new THREE.BoxGeometry(0.6 * s, 0.12 * s, 0.06 * s),
-        mkMat(isStation ? 0xf0c020 : 0xe05030, 0.8),
+        mkMat(
+          isStation
+            ? stationId === "home"
+              ? 0xffe8a0
+              : 0xf0c020
+            : 0xe05030,
+          0.8,
+        ),
       );
       pat.position.set(
         Math.sin(angle) * 2.72 * s,
@@ -858,11 +671,19 @@ export class SceneBuilder {
       const markerMat = new THREE.MeshStandardMaterial({
         color: mc,
         emissive: mc,
-        emissiveIntensity: stationId === this.currentStationId ? 0.45 : 0.3,
-        roughness: 0.25,
+        emissiveIntensity:
+          stationId === "home"
+            ? 0.88
+            : stationId === this.currentStationId
+              ? 0.68
+              : 0.52,
+        roughness: 0.14,
+        metalness: 0.22,
       });
+      const markerMajor = stationId === "home" ? 2.38 * s : 2.12 * s;
+      const markerTube = stationId === "home" ? 0.29 * s : 0.24 * s;
       const marker = new THREE.Mesh(
-        new THREE.TorusGeometry(1.5 * s, 0.13 * s, 10, 40),
+        new THREE.TorusGeometry(markerMajor, markerTube, 12, 52),
         markerMat,
       );
       marker.userData.stationId = stationId;
@@ -872,17 +693,48 @@ export class SceneBuilder {
       this.markerMeshes.set(stationId, marker);
 
       const glow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.5 * s, 10, 10),
+        new THREE.SphereGeometry(stationId === "home" ? 0.95 * s : 0.78 * s, 12, 12),
         new THREE.MeshBasicMaterial({
           color: mc,
           transparent: true,
-          opacity: stationId === this.currentStationId ? 0.1 : 0.07,
+          opacity:
+            stationId === "home"
+              ? 0.22
+              : stationId === this.currentStationId
+                ? 0.16
+                : 0.11,
         }),
       );
       glow.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
       g.add(glow);
 
-      if (stationId === this.currentStationId) {
+      if (stationId === "home") {
+        const halo = new THREE.Mesh(
+          new THREE.TorusGeometry(2.72 * s, 0.1 * s, 10, 48),
+          new THREE.MeshStandardMaterial({
+            color: 0xffeeaa,
+            emissive: 0xffeeaa,
+            emissiveIntensity: 0.42,
+            roughness: 0.35,
+            metalness: 0.12,
+            transparent: true,
+            opacity: 0.9,
+          }),
+        );
+        halo.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
+        halo.rotation.x = Math.PI / 2;
+        g.add(halo);
+        const beamHome = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12 * s, 0.12 * s, 14 * s, 10),
+          new THREE.MeshBasicMaterial({
+            color: 0xb8f0ff,
+            transparent: true,
+            opacity: 0.34,
+          }),
+        );
+        beamHome.position.y = (2.2 + 1.6 + 7) * s + 0.3;
+        g.add(beamHome);
+      } else if (stationId === this.currentStationId) {
         const beam = new THREE.Mesh(
           new THREE.CylinderGeometry(0.07, 0.07, 9, 10),
           new THREE.MeshBasicMaterial({
@@ -895,17 +747,18 @@ export class SceneBuilder {
         g.add(beam);
       }
 
+      /** Шошгыг том гэр дээрх тэмдгийн цагирны орчимд (хаалганы оронд өндөр биш). */
       this.labelAnchors.set(
         stationId,
         new THREE.Vector3(
           x,
-          terrainHeight(x, z) + (2.2 + 1.6 + 0.9 + 2.8) * s + 0.3,
+          hy + gerLift + (2.2 + 1.6 + 0.9 + 0.42) * s + 0.3,
           z,
         ),
       );
     }
 
-    g.position.set(x, terrainHeight(x, z), z);
+    g.position.set(x, hy + gerLift, z);
     // Station gers: keep door consistently facing "forward" (+Z)
     // so doors/labels/picking feel predictable.
     g.rotation.y = isStation ? 0 : rotY;
@@ -929,9 +782,11 @@ export class SceneBuilder {
     w: number,
     d: number,
     rotY = 0,
+    withGate = true,
   ): void {
     const g = new THREE.Group(),
       fm = mkMat(0x9a7840, 0.95);
+    const gateW = 2.85;
     const pts: [number, number][] = [
       [-w / 2, -d / 2],
       [w / 2, -d / 2],
@@ -939,13 +794,57 @@ export class SceneBuilder {
       [-w / 2, d / 2],
       [-w / 2, -d / 2],
     ];
-    for (let s = 0; s < 4; s++) {
-      const [ax, az] = pts[s],
-        [bx, bz] = pts[s + 1];
-      const len = Math.sqrt((bx - ax) ** 2 + (bz - az) ** 2),
-        mx = (ax + bx) / 2,
-        mz = (az + bz) / 2,
-        ry = Math.atan2(bx - ax, bz - az);
+    const addEdge = (
+      ax: number,
+      az: number,
+      bx: number,
+      bz: number,
+      isGateEdge: boolean,
+    ): void => {
+      let sx = ax,
+        sz = az,
+        ex = bx,
+        ez = bz;
+      if (isGateEdge && withGate) {
+        const elen = Math.hypot(bx - ax, bz - az);
+        if (elen > gateW + 1.2) {
+          const ux = (bx - ax) / elen,
+            uz = (bz - az) / elen;
+          const midx = (ax + bx) / 2,
+            midz = (az + bz) / 2;
+          const half = gateW / 2;
+          addEdge(ax, az, midx - ux * half, midz - uz * half, false);
+          addEdge(midx + ux * half, midz + uz * half, bx, bz, false);
+          const gpx = midx - ux * half,
+            gpz = midz - uz * half;
+          const gqx = midx + ux * half,
+            gqz = midz + uz * half;
+          for (const [px, pz] of [
+            [gpx, gpz],
+            [gqx, gqz],
+          ] as [number, number][]) {
+            const post = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.09, 0.1, 1.35, 6),
+              fm,
+            );
+            post.position.set(px, 0.68, pz);
+            post.castShadow = true;
+            g.add(post);
+          }
+          const lintel = new THREE.Mesh(
+            new THREE.BoxGeometry(gateW * 1.02, 0.12, 0.12),
+            fm,
+          );
+          lintel.position.set(midx, 1.28, midz);
+          lintel.rotation.y = Math.atan2(bx - ax, bz - az);
+          g.add(lintel);
+          return;
+        }
+      }
+      const len = Math.sqrt((ex - sx) ** 2 + (ez - sz) ** 2),
+        mx = (sx + ex) / 2,
+        mz = (sz + ez) / 2,
+        ry = Math.atan2(ex - sx, ez - sz);
       [0.7, 0.4].forEach((py) => {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.09, 0.07), fm);
         rail.position.set(mx, py, mz);
@@ -959,26 +858,163 @@ export class SceneBuilder {
           new THREE.CylinderGeometry(0.065, 0.075, 1.1, 6),
           fm,
         );
-        post.position.set(ax + (bx - ax) * tt, 0.55, az + (bz - az) * tt);
+        post.position.set(sx + (ex - sx) * tt, 0.55, sz + (ez - sz) * tt);
         post.castShadow = true;
         g.add(post);
       }
+    };
+    for (let s = 0; s < 4; s++) {
+      const [ax, az] = pts[s],
+        [bx, bz] = pts[s + 1];
+      addEdge(ax, az, bx, bz, s === 0);
     }
     g.position.set(cx, terrainHeight(cx, cz), cz);
     g.rotation.y = rotY;
     this.scene.add(g);
   }
 
-  /** Player home base — single ger near the center (visual only). */
+  /** Гадна талд жижиг сүмийн дүрс — хийд/ордны хашааны гадна тойрог */
+  private makeMiniSumTemple(
+    x: number,
+    z: number,
+    rotY: number,
+    s: number,
+  ): void {
+    const hy = terrainHeight(x, z);
+    const g = new THREE.Group();
+    const wallM = mkMat(0xede4d4, 0.74);
+    const roofM = mkMat(0xb06818, 0.68);
+    const goldM = mkMat(0xd4a020, 0.32, 0.48);
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(2.4 * s, 1.35 * s, 1.75 * s),
+      wallM,
+    );
+    base.position.y = 0.68 * s;
+    base.castShadow = true;
+    g.add(base);
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(1.45 * s, 1.15 * s, 4),
+      roofM,
+    );
+    roof.position.y = 1.35 * s + 0.58 * s;
+    roof.rotation.y = Math.PI / 4;
+    roof.castShadow = true;
+    g.add(roof);
+    const fin = new THREE.Mesh(
+      new THREE.SphereGeometry(0.2 * s, 8, 6),
+      goldM,
+    );
+    fin.position.y = 1.35 * s + 1.15 * s + 0.25 * s;
+    g.add(fin);
+    g.position.set(x, hy, z);
+    g.rotation.y = rotY;
+    this.scene.add(g);
+  }
+
+  /**
+   * Орд / хийд — тойрог гэр, том хашаа (нэг хаалга), гадна жижиг сүмүүд.
+   * УБ: дотор 12–20 гэр, том хашаа.
+   */
+  private layoutSacredSiteCamp(
+    x: number,
+    z: number,
+    stationId: string,
+    kind: "palace" | "monastery",
+  ): void {
+    const seed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+
+    if (kind === "palace") {
+      const nGers = 12 + (seed % 9);
+      const ringR = 32 + (seed % 4) * 0.55;
+      for (let i = 0; i < nGers; i++) {
+        const ang = (i / nGers) * Math.PI * 2 + rand(-0.03, 0.03);
+        this.makeGer(
+          x + Math.cos(ang) * ringR,
+          z + Math.sin(ang) * ringR,
+          rand(0, Math.PI * 2),
+          rand(
+            STATION_SATELLITE_GER_SCALE_MIN * 0.82,
+            STATION_SATELLITE_GER_SCALE_MAX * 0.86,
+          ),
+          false,
+        );
+      }
+      const fw = 92;
+      const fd = 78;
+      this.makeFence(x, z, fw, fd, rand(0, Math.PI * 0.1), true);
+      const fh = Math.max(fw, fd) * 0.5;
+      const nMini = 11 + (seed % 6);
+      for (let i = 0; i < nMini; i++) {
+        const ang = (i / nMini) * Math.PI * 2 + rand(-0.14, 0.14);
+        const rad = fh + rand(10, 28);
+        this.makeMiniSumTemple(
+          x + Math.cos(ang) * rad,
+          z + Math.sin(ang) * rad,
+          ang + Math.PI / 2 + rand(-0.35, 0.35),
+          rand(0.82, 1.08),
+        );
+      }
+      return;
+    }
+
+    const nGers = 10;
+    const ringR = 19.5 + (seed % 4) * 0.5;
+    for (let i = 0; i < nGers; i++) {
+      const ang = (i / nGers) * Math.PI * 2 + rand(-0.04, 0.04);
+      this.makeGer(
+        x + Math.cos(ang) * ringR,
+        z + Math.sin(ang) * ringR,
+        rand(0, Math.PI * 2),
+        rand(
+          STATION_SATELLITE_GER_SCALE_MIN * 0.82,
+          STATION_SATELLITE_GER_SCALE_MAX * 0.86,
+        ),
+        false,
+      );
+    }
+    const isZuun = stationId === "zuunmod";
+    const fw = isZuun ? 72 : 68;
+    const fd = isZuun ? 64 : 60;
+    this.makeFence(x, z, fw, fd, isZuun ? 0 : rand(0, Math.PI * 0.16), true);
+    const fh = Math.max(fw, fd) * 0.5;
+    const nMini = 11 + (seed % 6);
+    for (let i = 0; i < nMini; i++) {
+      const ang = (i / nMini) * Math.PI * 2 + rand(-0.12, 0.12);
+      const rad = fh + rand(8, 24);
+      this.makeMiniSumTemple(
+        x + Math.cos(ang) * rad,
+        z + Math.sin(ang) * rad,
+        ang + Math.PI / 2 + rand(-0.28, 0.28),
+        rand(0.78, 1.02),
+      );
+    }
+  }
+
+  /** Player home base — Lv1 маш жижиг; түвшин өсөхөд томорч, нэмэлт жижиг гэрүүд гарна */
   buildPlayerHomeGer(gerLevel = 1): void {
-    const s = 1 + Math.max(0, Math.min(gerLevel - 1, 20)) * 0.08;
-    // Player home base — away from major stations.
-    const x = 90;
-    const z = 10;
-    // Use station-style marker so it can be clicked (special-cased as "home").
+    const x = PLAYER_HOME_X;
+    const z = PLAYER_HOME_Z;
+    const lv = Math.max(1, Math.min(gerLevel, 30));
+    const levelBoost = 1 + Math.max(0, lv - 1) * 0.048;
+    const starterMul =
+      lv <= 1 ? 0.58 : lv <= 2 ? 0.72 : lv <= 4 ? 0.88 : lv <= 8 ? 1.0 : 1.08;
+    const s = levelBoost * 1.72 * starterMul;
     this.makeGer(x, z, 0, s, true, "home");
-    // Small fence to hint “home yard”.
-    this.makeFence(x + 1.2, z + 1.0, 9, 7, Math.PI * 0.2);
+
+    const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+    if (extraGers > 0) {
+      const ringR = 13.5 + Math.min(lv * 0.45, 10);
+      for (let i = 0; i < extraGers; i++) {
+        const ang = (i / extraGers) * Math.PI * 2 + rand(-0.06, 0.06);
+        this.makeGer(
+          x + Math.cos(ang) * ringR,
+          z + Math.sin(ang) * ringR,
+          rand(0, Math.PI * 2),
+          s * 0.38 + rand(0, 0.06),
+          false,
+        );
+      }
+    }
   }
 
   /** Spawn player's livestock near the home ger (visual only). */
@@ -986,35 +1022,85 @@ export class SceneBuilder {
     livestock?: { sheep: number; horse: number; camel: number },
   ): void {
     if (!livestock) return;
-    const x = 90;
-    const z = 10;
+    const x = PLAYER_HOME_X;
+    const z = PLAYER_HOME_Z;
     const sheepN = Math.max(0, Math.min(12, Math.floor(livestock.sheep)));
     const horseN = Math.max(0, Math.min(4, Math.floor(livestock.horse)));
     const camelN = Math.max(0, Math.min(3, Math.floor(livestock.camel)));
+    if (sheepN + horseN + camelN === 0) return;
 
-    // Simple sheep blobs.
     const sheepMat = mkMat(0xf1e7d5, 0.92);
+    const goatMat = mkMat(0xe8dcc8, 0.9);
+    const yakMat = mkMat(0x4a3a32, 0.88);
     const hoofMat = mkMat(0x2a1508, 0.9);
     for (let i = 0; i < sheepN; i++) {
       const ox = rand(-5.2, 5.2);
       const oz = rand(3.2, 9.2);
       const y = terrainHeight(x + ox, z + oz);
       const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 10), sheepMat);
-      body.scale.set(1.25, 1.0, 1.0);
-      body.position.y = 0.45;
+      const r = Math.random();
+      const kind = r < 0.52 ? "sheep" : r < 0.82 ? "goat" : "yak";
+      const sc = kind === "yak" ? 1.35 : kind === "goat" ? 0.92 : 1.12;
+      const bodyMat = kind === "yak" ? yakMat : kind === "goat" ? goatMat : sheepMat;
+      const body = new THREE.Mesh(
+        new THREE.SphereGeometry(0.38 * sc, 12, 10),
+        bodyMat,
+      );
+      body.scale.set(kind === "yak" ? 1.35 : 1.22, 1.05, 1.15);
+      body.position.y = 0.48 * sc;
       g.add(body);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), mkMat(0x6a3a10, 0.9));
-      head.position.set(0.35, 0.55, 0);
+      if (kind === "yak") {
+        const hump = new THREE.Mesh(
+          new THREE.SphereGeometry(0.16 * sc, 8, 8),
+          mkMat(0x5c4a40, 0.85),
+        );
+        hump.position.set(-0.1, 0.72 * sc, 0);
+        hump.scale.set(1.1, 0.75, 0.9);
+        g.add(hump);
+      }
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry((kind === "goat" ? 0.17 : 0.19) * sc, 10, 10),
+        kind === "yak" ? yakMat : mkMat(0x6a3a10, 0.9),
+      );
+      head.position.set(0.42 * sc, 0.58 * sc, 0);
       g.add(head);
-      [-0.22, 0.22].forEach((lx) => {
-        [-0.16, 0.16].forEach((lz) => {
-          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.28, 6), hoofMat);
-          leg.position.set(lx, 0.16, lz);
+      if (kind === "sheep" || kind === "yak") {
+        const earL = new THREE.Mesh(
+          new THREE.ConeGeometry(0.06 * sc, 0.14 * sc, 6),
+          bodyMat,
+        );
+        earL.position.set(0.38 * sc, 0.68 * sc, 0.12 * sc);
+        earL.rotation.z = 0.5;
+        g.add(earL);
+        const earR = earL.clone();
+        earR.position.z = -0.12 * sc;
+        earR.rotation.z = -0.5;
+        g.add(earR);
+      }
+      if (kind === "goat") {
+        [-1, 1].forEach((sg) => {
+          const horn = new THREE.Mesh(
+            new THREE.ConeGeometry(0.035 * sc, 0.22 * sc, 6),
+            mkMat(0x3a2a18, 0.9),
+          );
+          horn.position.set(0.36 * sc, 0.78 * sc, sg * 0.1 * sc);
+          horn.rotation.z = sg * 0.65;
+          horn.rotation.x = 0.35;
+          g.add(horn);
+        });
+      }
+      const legW = kind === "yak" ? 0.26 : 0.22;
+      [-legW, legW].forEach((lx) => {
+        [-0.14, 0.14].forEach((lz) => {
+          const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.042 * sc, 0.048 * sc, 0.32 * sc, 6),
+            hoofMat,
+          );
+          leg.position.set(lx * sc, 0.17 * sc, lz);
           g.add(leg);
         });
       });
-      g.position.set(x + ox, y, z + oz);
+      g.position.set(x + ox, y + 0.04, z + oz);
       g.rotation.y = rand(0, Math.PI * 2);
       this.scene.add(g);
     }
@@ -1035,52 +1121,53 @@ export class SceneBuilder {
   }
 
   buildGerCamps(): void {
+    const S = STATION_SPREAD;
     [
-      // УБ хавийн том хороолол
-      { gx: 3, gz: 2, n: 7, sp: 14 },
-      { gx: -5, gz: -2, n: 5, sp: 10 },
-      { gx: 8, gz: 4, n: 4, sp: 9 },
-      // Орхон хөндий
-      { gx: -34, gz: -10, n: 5, sp: 12 },
-      { gx: -30, gz: -2, n: 5, sp: 11 },
-      { gx: -36, gz: 5, n: 4, sp: 9 },
-      // Хархорум орчим
-      { gx: -38, gz: 4, n: 5, sp: 10 },
-      { gx: -34, gz: 9, n: 4, sp: 8 },
-      // Арвайхээр орчим
-      { gx: -38, gz: 18, n: 4, sp: 9 },
-      // Баянхонгор
-      { gx: -56, gz: 20, n: 4, sp: 10 },
-      // Эрдэнэт
-      { gx: -27, gz: -22, n: 4, sp: 9 },
-      { gx: -23, gz: -18, n: 3, sp: 7 },
-      // Мөрөн
-      { gx: -63, gz: -32, n: 4, sp: 9 },
-      { gx: -58, gz: -28, n: 3, sp: 8 },
-      // Говь — сийрэг
-      { gx: -5, gz: 28, n: 3, sp: 14 },
-      { gx: 14, gz: 30, n: 2, sp: 10 },
-      { gx: -20, gz: 40, n: 2, sp: 10 },
-      { gx: 30, gz: 32, n: 2, sp: 9 },
-      { gx: 42, gz: 44, n: 2, sp: 9 },
-      // Зүүн тал
-      { gx: 55, gz: 2, n: 3, sp: 10 },
-      { gx: 65, gz: -20, n: 3, sp: 9 },
-      { gx: 58, gz: 12, n: 2, sp: 8 },
-      // Хэнтий
-      { gx: 35, gz: 2, n: 4, sp: 9 },
-      { gx: 48, gz: -12, n: 3, sp: 8 },
-      // Баруун
-      { gx: -80, gz: 0, n: 3, sp: 8 },
-      { gx: -80, gz: 16, n: 3, sp: 9 },
-      { gx: -100, gz: -6, n: 3, sp: 8 },
-      { gx: -98, gz: -36, n: 2, sp: 7 },
+      { gx: 3, gz: 2, n: 12, sp: 16 },
+      { gx: -5, gz: -2, n: 10, sp: 12 },
+      { gx: 8, gz: 4, n: 9, sp: 11 },
+      { gx: -34, gz: -10, n: 10, sp: 14 },
+      { gx: -30, gz: -2, n: 10, sp: 13 },
+      { gx: -36, gz: 5, n: 9, sp: 11 },
+      { gx: -38, gz: 4, n: 10, sp: 12 },
+      { gx: -34, gz: 9, n: 8, sp: 10 },
+      { gx: -38, gz: 18, n: 9, sp: 11 },
+      { gx: -56, gz: 20, n: 8, sp: 12 },
+      { gx: -27, gz: -22, n: 8, sp: 11 },
+      { gx: -23, gz: -18, n: 7, sp: 9 },
+      { gx: -63, gz: -32, n: 8, sp: 11 },
+      { gx: -58, gz: -28, n: 7, sp: 10 },
+      { gx: -5, gz: 28, n: 8, sp: 16 },
+      { gx: 14, gz: 30, n: 6, sp: 12 },
+      { gx: -20, gz: 40, n: 6, sp: 12 },
+      { gx: 30, gz: 32, n: 6, sp: 11 },
+      { gx: 42, gz: 44, n: 6, sp: 11 },
+      { gx: 55, gz: 2, n: 8, sp: 12 },
+      { gx: 65, gz: -20, n: 7, sp: 11 },
+      { gx: 58, gz: 12, n: 6, sp: 10 },
+      { gx: 35, gz: 2, n: 9, sp: 11 },
+      { gx: 48, gz: -12, n: 7, sp: 10 },
+      { gx: -80, gz: 0, n: 7, sp: 10 },
+      { gx: -80, gz: 16, n: 7, sp: 11 },
+      { gx: -100, gz: -6, n: 7, sp: 10 },
+      { gx: -98, gz: -36, n: 6, sp: 9 },
+      { gx: 20, gz: -55, n: 8, sp: 14 },
+      { gx: -50, gz: 55, n: 7, sp: 13 },
+      { gx: 75, gz: 35, n: 6, sp: 12 },
+      { gx: -120, gz: 25, n: 7, sp: 11 },
+      { gx: 90, gz: -45, n: 7, sp: 13 },
     ].forEach(({ gx, gz, n, sp }) => {
-      for (let i = 0; i < n; i++) {
-        const x = gx + rand(-sp / 2, sp / 2),
-          z = gz + rand(-sp / 2, sp / 2);
+      const cx = gx * S,
+        cz = gz * S,
+        spread = sp * S;
+      const count = Math.max(1, Math.round(n * 0.16));
+      const spreadWide = spread * 1.62;
+      for (let i = 0; i < count; i++) {
+        const x = cx + rand(-spreadWide / 2, spreadWide / 2),
+          z = cz + rand(-spreadWide / 2, spreadWide / 2);
+        if (this.distanceToNearestRoad(x, z) < 24) continue;
         this.makeGer(x, z, rand(0, Math.PI * 2), rand(0.8, 1.15));
-        if (Math.random() > 0.4)
+        if (Math.random() > 0.45)
           this.makeFence(
             x,
             z,
@@ -1090,6 +1177,14 @@ export class SceneBuilder {
           );
       }
     });
+    // Нэмэлт сийрэг гэр — талын дүүргэлт (бага тоо, замаас хол)
+    for (let k = 0; k < 12; k++) {
+      const x = rand(-220 * S, 200 * S),
+        z = rand(-130 * S, 120 * S);
+      if (terrainBiome(x, z, terrainHeight(x, z)) === "river_plain") continue;
+      if (this.distanceToNearestRoad(x, z) < 24) continue;
+      this.makeGer(x, z, rand(0, Math.PI * 2), rand(0.75, 1.12));
+    }
   }
 
   buildNomadDetails(): void {
@@ -1179,38 +1274,49 @@ export class SceneBuilder {
     });
   }
 
-  /** Станцын эргэн тойронд нэг багц өвс (бэлчээр / ой / говь) */
+  /** Станцын эргэн тойронд нэг багц өвс — buildGrassTufts-тай ижил хаврын өнгө */
   private makeGrassClumpAt(x: number, z: number): void {
     const h = terrainHeight(x, z);
-    if (h > 11 || h < -0.6) return;
+    if (h > 16 || h < -0.6) return;
     const biome = terrainBiome(x, z, h);
-    if (biome === "high_alpine") return;
     const isGobi = biome === "gobi";
     const isForest = biome === "forest" || biome === "river_plain";
+    const isAlpine = biome === "high_alpine";
     const g = new THREE.Group();
-    const bladeCount = isForest
-      ? randInt(5, 9)
-      : isGobi
-        ? randInt(2, 5)
-        : randInt(3, 7);
+    const bladeCount = isAlpine
+      ? randInt(1, 2)
+      : isForest
+        ? randInt(4, 8)
+        : isGobi
+          ? randInt(2, 4)
+          : randInt(3, 7);
+    const springSteppe = [0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c];
+    const springForest = [0x5a6b48, 0x4d5c3c, 0x677a52];
+    const springGobi = [0xb0aa78, 0xa29868, 0x9a9468];
+    const springAlpine = [0x7a8a70, 0x8a9a80];
+    const grassCols = isGobi
+      ? springGobi
+      : isForest
+        ? springForest
+        : isAlpine
+          ? springAlpine
+          : springSteppe;
     for (let b = 0; b < bladeCount; b++) {
       const bx = rand(-0.35, 0.35);
       const bz = rand(-0.35, 0.35);
-      const grassCols = isGobi
-        ? [0x9aaa60, 0x8a9a50, 0xaaaa68]
-        : isForest
-          ? [0x3f6f25, 0x4a7d2c, 0x588838, 0x6e9a4a]
-          : [0x5a8830, 0x4a7820, 0x6a9840, 0x7aaa50];
       const blade = new THREE.Mesh(
         new THREE.CylinderGeometry(
           0.02,
           0.04,
-          rand(0.18, isGobi ? 0.38 : isForest ? 0.72 : 0.62),
+          rand(
+            0.16,
+            isGobi ? 0.34 : isForest ? 0.55 : isAlpine ? 0.22 : 0.48,
+          ),
           4,
         ),
-        mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.9),
+        mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.88),
       );
-      blade.position.set(bx, rand(0.09, 0.3), bz);
+      blade.position.set(bx, rand(0.08, 0.28), bz);
       blade.rotation.z = rand(-0.35, 0.35);
       blade.rotation.x = rand(-0.22, 0.22);
       g.add(blade);
@@ -1239,10 +1345,15 @@ export class SceneBuilder {
     radius: number,
     scaleMin: number,
     scaleMax: number,
+    innerClearRadius = 0,
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const r = rand(radius * 0.2, radius);
+      const rMin =
+        innerClearRadius > 0
+          ? Math.max(innerClearRadius, radius * 0.28)
+          : radius * 0.2;
+      const r = rand(rMin, radius);
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       const h = terrainHeight(x, z);
@@ -1257,10 +1368,15 @@ export class SceneBuilder {
     cz: number,
     count: number,
     radius: number,
+    innerClearRadius = 0,
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const r = rand(radius * 0.22, radius);
+      const rMin =
+        innerClearRadius > 0
+          ? Math.max(innerClearRadius, radius * 0.28)
+          : radius * 0.22;
+      const r = rand(rMin, radius);
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       const h = terrainHeight(x, z);
@@ -1302,15 +1418,37 @@ export class SceneBuilder {
     cz: number,
     count: number,
     radius: number,
+    innerClear = 15,
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
       const r = rand(radius * 0.3, radius);
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
-      if (Math.hypot(x - cx, z - cz) < 7) continue;
+      if (Math.hypot(x - cx, z - cz) < innerClear) continue;
+      if (this.distanceToNearestRoad(x, z) < 24) continue;
       this.makeGer(x, z, rand(0, Math.PI * 2), rand(0.82, 1.12));
     }
+  }
+
+  /** Өртөө хоорондын замаас ойрхон байрлуулахгүй (сийрэг гэр). */
+  private distanceToNearestRoad(x: number, z: number): number {
+    let minD = Infinity;
+    this.roadPaths.forEach((center) => {
+      if (center.length < 2) return;
+      for (let i = 0; i < center.length - 1; i++) {
+        const d = distPointSegment2D(
+          x,
+          z,
+          center[i].x,
+          center[i].z,
+          center[i + 1].x,
+          center[i + 1].z,
+        );
+        if (d < minD) minD = d;
+      }
+    });
+    return minD;
   }
 
   private scatterPeripheryCamels(
@@ -1374,32 +1512,118 @@ export class SceneBuilder {
     const p = STATION_PERIPHERY[stationId];
     if (!p) return;
 
+    const centerClear =
+      stationId === "ulaanbaatar"
+        ? STATION_CENTER_CLEAR_ULAANBAATAR
+        : STATION_CENTER_CLEAR;
+
     const tr = p.treeRadius ?? 30;
     const smin = p.treeScaleMin ?? 0.45;
     const smax = p.treeScaleMax ?? 1.05;
-    if (p.trees && p.trees > 0)
-      this.scatterPeripheryTrees(cx, cz, p.trees, tr, smin, smax);
+    if (p.trees && p.trees > 0) {
+      const nt = Math.max(0, Math.floor(p.trees * 0.35));
+      if (nt > 0)
+        this.scatterPeripheryTrees(
+          cx,
+          cz,
+          nt,
+          tr,
+          smin,
+          smax,
+          centerClear,
+        );
+    }
 
-    if (p.decorGers && p.decorGers > 0)
-      this.scatterPeripheryDecorGers(cx, cz, p.decorGers, p.gerRadius ?? 32);
+    if (p.decorGers && p.decorGers > 0) {
+      const nd = Math.max(0, Math.round(p.decorGers * 0.38));
+      if (nd > 0)
+        this.scatterPeripheryDecorGers(
+          cx,
+          cz,
+          nd,
+          p.gerRadius ?? 32,
+          stationId === "ulaanbaatar" ? 46 : 15,
+        );
+    }
 
-    if (p.camels && p.camels > 0)
-      this.scatterPeripheryCamels(cx, cz, p.camels, p.camelRadius ?? 34);
+    if (p.camels && p.camels > 0) {
+      const nc = Math.max(0, Math.floor(p.camels * 0.3));
+      if (nc > 0)
+        this.scatterPeripheryCamels(cx, cz, nc, p.camelRadius ?? 48);
+    }
 
-    if (p.horses && p.horses > 0)
-      this.scatterPeripheryHorses(cx, cz, p.horses, p.horseRadius ?? 32);
+    if (p.horses && p.horses > 0) {
+      const nh = Math.max(0, Math.floor(p.horses * 0.28));
+      if (nh > 0)
+        this.scatterPeripheryHorses(cx, cz, nh, p.horseRadius ?? 44);
+    }
 
     if (p.rocks && p.rocks > 0)
-      this.scatterPeripheryRocks(cx, cz, p.rocks, p.rockRadius ?? 30);
+      this.scatterPeripheryRocks(
+        cx,
+        cz,
+        Math.max(0, Math.floor(p.rocks * 0.45)),
+        p.rockRadius ?? 30,
+        centerClear,
+      );
 
     if (p.ovoos && p.ovoos > 0)
       this.scatterPeripheryOvoos(cx, cz, p.ovoos, p.ovooRadius ?? 24);
 
     if (p.grassClumps && p.grassClumps > 0)
-      this.scatterGrassClumps(cx, cz, p.grassClumps, p.grassRadius ?? 34);
+      this.scatterGrassClumps(
+        cx,
+        cz,
+        Math.max(0, Math.floor(p.grassClumps * 0.45)),
+        p.grassRadius ?? 34,
+      );
 
     if (p.reedPatches && p.reedPatches > 0)
-      this.scatterPeripheryReeds(cx, cz, p.reedPatches, p.reedRadius ?? 36);
+      this.scatterPeripheryReeds(
+        cx,
+        cz,
+        Math.max(0, Math.floor(p.reedPatches * 0.4)),
+        p.reedRadius ?? 36,
+      );
+  }
+
+  /** Бүх төрлийн өртөөнд ижил: тойрог гэр, хашаа, овоо, төвийн гол гэр */
+  private layoutStandardGerCamp(x: number, z: number, stationId: string): void {
+    const ringSeed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const ringR = 28.5 + (ringSeed % 5) * 0.45;
+    for (let i = 0; i < 10; i++) {
+      const ang = (i / 10) * Math.PI * 2 + rand(-0.04, 0.04);
+      const gx = x + Math.cos(ang) * ringR;
+      const gz = z + Math.sin(ang) * ringR;
+      this.makeGer(
+        gx,
+        gz,
+        rand(0, Math.PI * 2),
+        rand(
+          STATION_SATELLITE_GER_SCALE_MIN * 0.82,
+          STATION_SATELLITE_GER_SCALE_MAX * 0.86,
+        ),
+        false,
+      );
+    }
+    this.makeGer(
+      x,
+      z,
+      rand(0, Math.PI * 2),
+      STATION_MAIN_GER_SCALE,
+      true,
+      stationId,
+    );
+    const fenceHalf = ringR + 12.5;
+    this.makeFence(
+      x,
+      z,
+      fenceHalf * 2,
+      fenceHalf * 1.72,
+      rand(0, Math.PI * 0.25),
+      true,
+    );
+    this.makeOvoo(x + 5, z + 4);
   }
 
   buildStationGers(stations: UrtuuStation[]): void {
@@ -1420,38 +1644,115 @@ export class SceneBuilder {
     stations.forEach((s) => {
       const cfg = STATION_CONFIGS[s.id];
       if (!cfg) return;
-      const x = cfg.wx * WORLD_SCALE,
-        z = cfg.wz * WORLD_SCALE;
+      const x = cfg.wx * WORLD_SCALE * STATION_SPREAD,
+        z = cfg.wz * WORLD_SCALE * STATION_SPREAD;
       const cur = s.id === this.currentStationId;
       const done = this.doneStationIds.includes(s.id);
 
-      if (PALACE_IDS.includes(s.id)) this.makePalace(x, z, s.id, cur, done);
-      else if (MONASTERY_IDS.includes(s.id))
+      if (PALACE_IDS.includes(s.id)) {
+        this.makePalace(x, z, s.id, cur, done);
+        this.layoutSacredSiteCamp(x, z, s.id, "palace");
+      } else if (MONASTERY_IDS.includes(s.id)) {
         this.makeMonastery(x, z, s.id, cur, done);
-      else if (MOUNTAIN_IDS.includes(s.id))
+        this.layoutSacredSiteCamp(x, z, s.id, "monastery");
+      } else if (MOUNTAIN_IDS.includes(s.id)) {
         this.makeMountainShrine(x, z, s.id, cur, done);
-      else if (LAKE_IDS.includes(s.id))
+        this.layoutStandardGerCamp(x, z, s.id);
+      } else if (LAKE_IDS.includes(s.id)) {
         this.makeLakeStation(x, z, s.id, cur, done);
-      else if (SAND_IDS.includes(s.id))
+        this.layoutStandardGerCamp(x, z, s.id);
+      } else if (SAND_IDS.includes(s.id)) {
         this.makeSandDunes(x, z, s.id, cur, done);
-      else if (ROCK_IDS.includes(s.id))
+        this.layoutStandardGerCamp(x, z, s.id);
+      } else if (ROCK_IDS.includes(s.id)) {
         this.makeRockSite(x, z, s.id, cur, done);
-      else if (NATPARK_IDS.includes(s.id))
+        this.layoutStandardGerCamp(x, z, s.id);
+      } else if (NATPARK_IDS.includes(s.id)) {
         this.makeNatPark(x, z, s.id, cur, done);
-      else {
-        // Slightly smaller stations so gers don't visually "stick together".
-        this.makeGer(x, z, rand(0, Math.PI * 2), 1.25, true, s.id);
-        for (let i = 0; i < 3; i++) {
-          const ox = rand(-9, 9),
-            oz = rand(-9, 9);
-          if (Math.abs(ox) < 4 && Math.abs(oz) < 4) continue;
-          this.makeGer(x + ox, z + oz, rand(0, Math.PI * 2), rand(0.9, 1.1));
-        }
-        this.makeFence(x, z, 18, 15, rand(0, Math.PI * 0.3));
-        this.makeOvoo(x + 5, z + 4);
+        this.layoutStandardGerCamp(x, z, s.id);
+      } else {
+        this.layoutStandardGerCamp(x, z, s.id);
       }
       this.decorateStationPeriphery(s.id, x, z);
+      this.makeStationSignboard(
+        x,
+        z,
+        s.name,
+        s.id,
+        s.region ?? cfg.region,
+      );
     });
+  }
+
+  /** Гадна тавигдсан самбар — өртөөний нэр, бүс */
+  private makeStationSignboard(
+    cx: number,
+    cz: number,
+    stationName: string,
+    stationId: string,
+    regionLabel?: string,
+  ): void {
+    if (typeof document === "undefined") return;
+    const seed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+    const ox = 12 + (seed % 8) * 0.55;
+    const oz = -10 - (seed % 6) * 0.45;
+    const sx = cx + ox;
+    const sz = cz + oz;
+    const hy = terrainHeight(sx, sz);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 640;
+    canvas.height = 200;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "rgba(32, 28, 22, 0.94)";
+    ctx.fillRect(0, 0, 640, 200);
+    ctx.strokeStyle = "rgba(190, 160, 110, 0.95)";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(10, 10, 620, 180);
+    ctx.fillStyle = "#f0e6d4";
+    ctx.font = "bold 38px 'Georgia','Times New Roman',serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const title =
+      stationName.length > 22 ? `${stationName.slice(0, 21)}…` : stationName;
+    ctx.fillText(title, 320, 78);
+    if (regionLabel?.trim()) {
+      const sub =
+        regionLabel.length > 36
+          ? `${regionLabel.slice(0, 35)}…`
+          : regionLabel;
+      ctx.font = "26px 'Georgia','Times New Roman',serif";
+      ctx.fillStyle = "rgba(210, 195, 170, 0.95)";
+      ctx.fillText(sub, 320, 138);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    const mat = new THREE.MeshStandardMaterial({
+      map: tex,
+      roughness: 0.88,
+      metalness: 0.05,
+      transparent: false,
+    });
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(16, 5), mat);
+    const wood = mkMat(0x4a3528, 0.9);
+    const postGeo = new THREE.CylinderGeometry(0.16, 0.19, 3.6, 8);
+    const postL = new THREE.Mesh(postGeo, wood);
+    const postR = new THREE.Mesh(postGeo, wood);
+    postL.position.set(-7.2, 1.8, 0);
+    postR.position.set(7.2, 1.8, 0);
+    postL.castShadow = true;
+    postR.castShadow = true;
+    board.position.set(0, 3.45, 0.06);
+    board.castShadow = true;
+    const yaw = ((seed % 80) / 80 - 0.5) * 0.5;
+    const grp = new THREE.Group();
+    grp.add(postL, postR, board);
+    grp.rotation.y = yaw;
+    grp.position.set(sx, hy, sz);
+    this.scene.add(grp);
   }
 
   private makePalace(
@@ -1550,6 +1851,18 @@ export class SceneBuilder {
       id,
       new THREE.Vector3(x, hy + 3 * 2.4 * sc + 13 * sc, z),
     );
+    {
+      const gateZ = z + (-12 * sc - 0.4);
+      const gateX = x;
+      this.doorAnchors.set(
+        id,
+        new THREE.Vector3(
+          gateX,
+          terrainHeight(gateX, gateZ) + 0.42,
+          gateZ,
+        ),
+      );
+    }
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1664,6 +1977,14 @@ export class SceneBuilder {
       id,
       new THREE.Vector3(x, hy + 3 * 1.8 * sc + 9 * sc, z),
     );
+    {
+      const ez = z - 9 * sc;
+      const ex = x;
+      this.doorAnchors.set(
+        id,
+        new THREE.Vector3(ex, terrainHeight(ex, ez) + 0.42, ez),
+      );
+    }
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1677,7 +1998,6 @@ export class SceneBuilder {
   ): void {
     const g = new THREE.Group();
     const hy = terrainHeight(x, z);
-    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
 
     (
       [
@@ -1719,9 +2039,6 @@ export class SceneBuilder {
     sRoof.position.set(5, 3.1, 3);
     g.add(sRoof);
 
-    this.makeOvoo(x + 2, z + 2);
-    this._stationMarker(g, id, 0, 4 * 4.0 + 12, 0, 1.2, mc, cur);
-    this.labelAnchors.set(id, new THREE.Vector3(x, hy + 4 * 4.0 + 16, z));
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1734,25 +2051,7 @@ export class SceneBuilder {
     done: boolean,
   ): void {
     const hy = terrainHeight(x, z);
-    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
     const g = new THREE.Group();
-
-    const lakeMat = new THREE.MeshStandardMaterial({
-      color: 0x1a5fa8,
-      roughness: 0.03,
-      metalness: 0.65,
-      transparent: true,
-      opacity: 0.88,
-    });
-    const lakeShape = new THREE.Shape();
-    lakeShape.ellipse(0, 0, 10, 6, 0, Math.PI * 2, false, 0.3);
-    const lakeMesh = new THREE.Mesh(
-      new THREE.ShapeGeometry(lakeShape, 24),
-      lakeMat,
-    );
-    lakeMesh.rotation.x = -Math.PI / 2;
-    lakeMesh.position.y = 0.2;
-    g.add(lakeMesh);
 
     for (let i = 0; i < 18; i++) {
       const ang = (i / 18) * Math.PI * 2;
@@ -1777,10 +2076,6 @@ export class SceneBuilder {
       );
     }
 
-    this.makeGer(x + 3, z + 8, rand(0, Math.PI * 2), 1.4, true, id);
-    this.makeFence(x + 3, z + 8, 12, 10, 0.2);
-    this._stationMarker(g, id, 3, 12, 8, 1.0, mc, cur);
-    this.labelAnchors.set(id, new THREE.Vector3(x + 3, hy + 15, z + 8));
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1793,7 +2088,6 @@ export class SceneBuilder {
     done: boolean,
   ): void {
     const hy = terrainHeight(x, z);
-    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
     const g = new THREE.Group();
     const sandMat = mkMat(0xd4b060, 0.96);
 
@@ -1841,9 +2135,6 @@ export class SceneBuilder {
     });
 
     this.makeCamel(x + 4, z - 3, rand(0, Math.PI * 2));
-    this.makeGer(x - 5, z + 5, rand(0, Math.PI * 2), 1.2, true, id);
-    this._stationMarker(g, id, -5, 12, 5, 1.0, mc, cur);
-    this.labelAnchors.set(id, new THREE.Vector3(x - 5, hy + 14, z + 5));
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1856,7 +2147,6 @@ export class SceneBuilder {
     done: boolean,
   ): void {
     const hy = terrainHeight(x, z);
-    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
     const g = new THREE.Group();
 
     (
@@ -1888,11 +2178,6 @@ export class SceneBuilder {
       g.add(sm);
     }
 
-    this.makeGer(x + 5, z - 4, rand(0, Math.PI * 2), 1.3, true, id);
-    this.makeFence(x + 5, z - 4, 12, 10, 0.1);
-    this.makeOvoo(x - 5, z + 3);
-    this._stationMarker(g, id, 5, 11, -4, 1.0, mc, cur);
-    this.labelAnchors.set(id, new THREE.Vector3(x + 5, hy + 14, z - 4));
     g.position.set(x, hy, z);
     this.scene.add(g);
   }
@@ -1904,36 +2189,18 @@ export class SceneBuilder {
     cur: boolean,
     done: boolean,
   ): void {
-    const hy = terrainHeight(x, z);
-    const mc = cur ? 0x44ff88 : done ? 0xffcc00 : 0xff6644;
-
-    for (let i = 0; i < 20; i++) {
-      this.makeTree(x + rand(-12, 12), z + rand(-10, 10), rand(0.7, 1.2));
+    for (let i = 0; i < 18; i++) {
+      let tx = x;
+      let tz = z;
+      for (let k = 0; k < 14; k++) {
+        tx = x + rand(-12, 12);
+        tz = z + rand(-10, 10);
+        if (Math.hypot(tx - x, tz - z) >= 22) break;
+      }
+      this.makeTree(tx, tz, rand(0.7, 1.2));
     }
 
-    const springMat = new THREE.MeshStandardMaterial({
-      color: 0x4a9ad4,
-      roughness: 0.05,
-      metalness: 0.4,
-      transparent: true,
-      opacity: 0.85,
-    });
-    const spring = new THREE.Mesh(new THREE.CircleGeometry(2.5, 20), springMat);
-    spring.rotation.x = -Math.PI / 2;
-    spring.position.set(x - 3, hy + 0.2, z + 2);
-    this.scene.add(spring);
-
     this.makeHorse(x + 5, z + 3, rand(0, Math.PI * 2), 0xb8622a, false);
-
-    this.makeGer(x + 2, z - 6, rand(0, Math.PI * 2), 1.4, true, id);
-    this.makeFence(x + 2, z - 6, 14, 12, 0.2);
-    this.makeOvoo(x + 7, z - 2);
-
-    const sg = new THREE.Group();
-    this._stationMarker(sg, id, 2, 11, -6, 1.0, mc, cur);
-    sg.position.set(x, hy, z);
-    this.scene.add(sg);
-    this.labelAnchors.set(id, new THREE.Vector3(x + 2, hy + 14, z - 6));
   }
 
   private _stationMarker(
@@ -1949,11 +2216,12 @@ export class SceneBuilder {
     const mat = new THREE.MeshStandardMaterial({
       color: mc,
       emissive: mc,
-      emissiveIntensity: cur ? 0.45 : 0.3,
-      roughness: 0.25,
+      emissiveIntensity: cur ? 0.68 : 0.52,
+      roughness: 0.14,
+      metalness: 0.2,
     });
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.6 * sc, 0.14 * sc, 10, 40),
+      new THREE.TorusGeometry(2.25 * sc, 0.24 * sc, 12, 52),
       mat,
     );
     ring.position.set(lx, ly, lz);
@@ -1961,11 +2229,11 @@ export class SceneBuilder {
     g.add(ring);
     this.markerMeshes.set(id, ring);
     const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.55 * sc, 10, 10),
+      new THREE.SphereGeometry(0.82 * sc, 12, 12),
       new THREE.MeshBasicMaterial({
         color: mc,
         transparent: true,
-        opacity: cur ? 0.1 : 0.07,
+        opacity: cur ? 0.16 : 0.11,
       }),
     );
     glow.position.set(lx, ly, lz);
@@ -2025,120 +2293,11 @@ export class SceneBuilder {
     this.scene.add(g);
   }
 
-  buildMountains(): void {
-    [
-      [-45, -20, 22, 16],
-      [-32, -16, 18, 13],
-      [-55, -26, 26, 18],
-      [-60, -22, 24, 16],
-      [-40, -28, 20, 14],
-      [-25, -12, 16, 11],
-      [-68, -16, 28, 20],
-      [-50, -10, 20, 13],
-      [-38, -22, 18, 12],
-    ].forEach(([x, z, h, r]) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, randInt(5, 8)),
-        mkMat(h > 20 ? 0xbcc0d8 : 0x9a9080, 0.94),
-      );
-      m.position.set(x, terrainHeight(x, z) + h / 2 - 3, z);
-      m.rotation.y = rand(0, Math.PI);
-      m.castShadow = true;
-      this.scene.add(m);
-      const snow = new THREE.Mesh(
-        new THREE.ConeGeometry(r * 0.28, h * 0.34, 8),
-        mkMat(0xeef2ff, 0.62),
-      );
-      snow.position.set(x, terrainHeight(x, z) + h - h * 0.18, z);
-      this.scene.add(snow);
-    });
-
-    [
-      [-90, 2, 30, 22],
-      [-84, 8, 26, 18],
-      [-96, -2, 28, 20],
-      [-88, -10, 24, 16],
-      [-80, 14, 24, 17],
-      [-102, 6, 26, 18],
-      [-92, 18, 22, 15],
-      [-84, -6, 20, 14],
-    ].forEach(([x, z, h, r]) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, randInt(5, 8)),
-        mkMat(h > 24 ? 0xaab0cc : 0x8a8472, 0.94),
-      );
-      m.position.set(x, terrainHeight(x, z) + h / 2 - 3, z);
-      m.rotation.y = rand(0, Math.PI);
-      m.castShadow = true;
-      this.scene.add(m);
-      const snow = new THREE.Mesh(
-        new THREE.ConeGeometry(r * 0.3, h * 0.36, 8),
-        mkMat(0xe8ecff, 0.6),
-      );
-      snow.position.set(x, terrainHeight(x, z) + h - h * 0.2, z);
-      this.scene.add(snow);
-    });
-
-    // Хэнтийн нуруу
-    [
-      [28, -18, 16, 11],
-      [20, -14, 14, 10],
-      [38, -22, 18, 13],
-      [45, -16, 14, 10],
-      [34, -10, 12, 9],
-    ].forEach(([x, z, h, r]) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, 7),
-        mkMat(0xa09888, 0.94),
-      );
-      m.position.set(x, terrainHeight(x, z) + h / 2 - 2, z);
-      m.rotation.y = rand(0, Math.PI);
-      m.castShadow = true;
-      this.scene.add(m);
-    });
-
-    // Говийн Алтай
-    [
-      [-70, 20, 18, 13],
-      [-60, 26, 14, 11],
-      [-78, 24, 20, 14],
-      [-65, 32, 13, 10],
-      [-75, 14, 16, 11],
-    ].forEach(([x, z, h, r]) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, 6),
-        mkMat(0x9a9070, 0.96),
-      );
-      m.position.set(x, terrainHeight(x, z) + h / 2 - 2, z);
-      m.rotation.y = rand(0, Math.PI);
-      m.castShadow = true;
-      this.scene.add(m);
-    });
-
-    // Бэлчээрийн бага толгодууд
-    [
-      [-12, 8, 5, 5],
-      [18, 6, 5, 4],
-      [-22, 14, 6, 5],
-      [28, 4, 4, 4],
-      [-38, 18, 6, 5],
-      [12, -4, 5, 4],
-      [52, 6, 4, 4],
-      [-48, 4, 5, 4],
-      [62, 12, 4, 4],
-      [-8, -8, 5, 4],
-      [22, -10, 5, 4],
-      [42, 20, 4, 4],
-    ].forEach(([x, z, h, r]) => {
-      const m = new THREE.Mesh(
-        new THREE.ConeGeometry(r, h, 7),
-        mkMat(0xa09878, 0.94),
-      );
-      m.position.set(x, terrainHeight(x, z) + h / 2 - 1.5, z);
-      m.rotation.y = rand(0, Math.PI);
-      this.scene.add(m);
-    });
-  }
+  /**
+   * Ерөнхий дүүргэсэн уулын конусыг хассан — гол харагдах уул нь өртөө бүрийн
+   * `buildStationGers` доторх `makeMountainShrine` болон газрын `terrainHeight`.
+   */
+  buildMountains(): void {}
 
   //Морь
   makeHorse(
@@ -2214,9 +2373,10 @@ export class SceneBuilder {
     mane.position.set(0.44, 1.25, 0);
     mane.rotation.z = -0.32;
     g.add(mane);
-    g.position.set(x, terrainHeight(x, z), z);
+    const groundY = terrainHeight(x, z);
+    g.position.set(x, groundY + 0.1, z);
     g.rotation.y = rotY;
-    g.scale.setScalar(rand(0.85, 1.1));
+    g.scale.setScalar(rand(1.12, 1.42) * 1.48);
     g.castShadow = true;
     this.scene.add(g);
     if (animate)
@@ -2267,46 +2427,27 @@ export class SceneBuilder {
     // Аймаг тус бүрийн орчимд сүрэг
     [
       { x: 4, z: 2 },
-      { x: -6, z: 5 },
-      { x: 10, z: -2 },
-      { x: -10, z: 2 },
       { x: -32, z: -10 },
-      { x: -28, z: -4 },
-      { x: -36, z: 4 },
-      { x: -34, z: -18 },
       { x: 35, z: 0 },
-      { x: 28, z: -8 },
-      { x: 42, z: -10 },
       { x: 52, z: -20 },
-      { x: 60, z: -22 },
-      { x: 55, z: 8 },
-      { x: 62, z: 4 },
       { x: -62, z: -30 },
-      { x: -56, z: -24 },
-      { x: -65, z: -18 },
       { x: -80, z: 0 },
-      { x: -85, z: 14 },
-      { x: -98, z: -4 },
       { x: 0, z: 28 },
-      { x: 15, z: 32 },
       { x: -18, z: 36 },
+      { x: 10, z: -2 },
+      { x: 28, z: -8 },
     ].forEach(({ x, z }) => {
       const orbitR = rand(5, 12),
         phase = rand(0, Math.PI * 2);
-      const hg = this.makeHorse(
+      this.makeHorse(
         x + Math.cos(phase) * orbitR,
         z + Math.sin(phase) * orbitR,
         rand(0, Math.PI),
         HORSE_COLORS[randInt(0, HORSE_COLORS.length - 1)],
-        true,
-        x,
-        z,
-        orbitR,
-        phase,
+        false,
       );
-      if (Math.random() > 0.4) this.makeRider(hg);
     });
-    for (let i = 0; i < 55; i++) {
+    for (let i = 0; i < 9; i++) {
       const x = rand(-120, 72),
         z = rand(-40, 50);
       const h = terrainHeight(x, z);
@@ -2364,9 +2505,10 @@ export class SceneBuilder {
       foot.scale.set(1.25, 0.48, 1.45);
       g.add(foot);
     });
-    g.position.set(x, terrainHeight(x, z), z);
+    const cground = terrainHeight(x, z);
+    g.position.set(x, cground + 0.12, z);
     g.rotation.y = rotY;
-    g.scale.setScalar(rand(0.88, 1.05));
+    g.scale.setScalar(rand(1.08, 1.28) * 1.42);
     g.castShadow = true;
     this.scene.add(g);
   }
@@ -2376,62 +2518,69 @@ export class SceneBuilder {
     [
       { x: -22, z: 30 },
       { x: -18, z: 34 },
-      { x: -25, z: 38 },
-      { x: -15, z: 32 },
       { x: 0, z: 32 },
-      { x: 5, z: 36 },
-      { x: -5, z: 40 },
       { x: 10, z: 34 },
       { x: 30, z: 28 },
-      { x: 35, z: 32 },
-      { x: 28, z: 36 },
       { x: 40, z: 30 },
-      { x: 42, z: 38 },
       { x: 45, z: 34 },
-      { x: 38, z: 42 },
-      { x: 50, z: 32 },
     ].forEach(({ x, z }) =>
       this.makeCamel(x + rand(-3, 3), z + rand(-3, 3), rand(0, Math.PI * 2)),
     );
   }
 
   buildClouds(): void {
-    for (let i = 0; i < 32; i++) {
+    for (let i = 0; i < 44; i++) {
       const cg = new THREE.Group();
-      for (let p = 0; p < randInt(4, 9); p++) {
-        const cs = rand(3, 7);
+      const puffN = randInt(4, 11);
+      for (let p = 0; p < puffN; p++) {
+        const cs = rand(2.5, 8);
         const cm = new THREE.Mesh(
-          new THREE.SphereGeometry(rand(0.9, 1.5) * cs, 9, 7),
+          new THREE.SphereGeometry(rand(0.85, 1.55) * cs, 9, 7),
           new THREE.MeshStandardMaterial({
-            color: 0xf4f8ff,
-            roughness: 1,
+            color: 0xffffff,
+            roughness: 0.95,
+            metalness: 0,
+            emissive: 0xe8f0ff,
+            emissiveIntensity: 0.1 + Math.random() * 0.08,
             transparent: true,
-            opacity: rand(0.78, 0.93),
+            opacity: rand(0.78, 0.96),
           }),
         );
         cm.position.set(
-          rand(-5, 5) * cs * 0.4,
-          rand(-0.7, 1.2) * cs * 0.25,
-          rand(-2, 2) * cs * 0.2,
+          rand(-6, 6) * cs * 0.42,
+          rand(-0.9, 1.4) * cs * 0.28,
+          rand(-3, 3) * cs * 0.22,
         );
         cg.add(cm);
       }
-      cg.position.set(rand(-220, 220), rand(50, 90), rand(-110, 90));
+      const ang = rand(0, Math.PI * 2);
+      const rad = rand(80, 420);
+      cg.position.set(
+        Math.cos(ang) * rad + rand(-40, 40),
+        rand(78, 168),
+        Math.sin(ang) * rad + rand(-40, 40),
+      );
       this.scene.add(cg);
       this.clouds.push({
         g: cg,
-        speed: rand(0.008, 0.024) * (Math.random() > 0.5 ? 1 : -0.5),
+        speed: rand(0.004, 0.034) * (Math.random() > 0.48 ? 1 : -1),
         alt: cg.position.y,
       });
     }
   }
 
   buildBirds(): void {
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 52; i++) {
       const pivot = new THREE.Group();
-      pivot.position.set(rand(-100, 80), rand(28, 65), rand(-80, 70));
+      const bx = rand(-1, 1) > 0 ? rand(-290, 290) : rand(-220, 220);
+      const bz = rand(-1, 1) > 0 ? rand(-240, 240) : rand(-180, 180);
+      pivot.position.set(
+        bx + rand(-35, 35),
+        rand(52, 118),
+        bz + rand(-35, 35),
+      );
       const arm = new THREE.Group();
-      arm.position.x = rand(10, 28);
+      arm.position.x = rand(8, 34);
       const body = new THREE.Mesh(
         new THREE.SphereGeometry(0.28, 6, 5),
         mkMat(0x222222, 0.8),
@@ -2450,9 +2599,9 @@ export class SceneBuilder {
       this.birds.push({
         pivot,
         arm,
-        speed: rand(0.25, 0.62),
-        radius: rand(10, 28),
-        yOff: rand(-4, 4),
+        speed: rand(0.18, 0.72),
+        radius: rand(9, 36),
+        yOff: rand(-9, 9),
         phase: rand(0, Math.PI * 2),
         wingMesh,
         alt: pivot.position.y,
@@ -2461,41 +2610,59 @@ export class SceneBuilder {
   }
 
   buildGrassTufts(): void {
-    for (let i = 0; i < 520; i++) {
-      const x = rand(-150, 80),
-        z = rand(-50, 55);
+    /** Эрт хаврын шар ногоон — хэт тод биш, бэлчээр дүүрэн */
+    const springSteppe = [
+      0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c, 0xa3b08a,
+    ];
+    const springForest = [
+      0x5a6b48, 0x4d5c3c, 0x677a52, 0x5f6d44,
+    ];
+    const springGobi = [
+      0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888,
+    ];
+    const springAlpine = [0x7a8a70, 0x8a9a80, 0x6a7a62];
+
+    for (let i = 0; i < 1280; i++) {
+      const x = rand(-200, 115),
+        z = rand(-65, 68);
       const h = terrainHeight(x, z);
-      if (h > 10 || h < -0.8) continue;
+      if (h > 18 || h < -0.85) continue;
       const g = new THREE.Group();
       const biome = terrainBiome(x, z, h);
-      if (biome === "high_alpine") continue;
       const isGobi = biome === "gobi";
       const isForest = biome === "forest" || biome === "river_plain";
-      const bladeCount = isForest
-        ? randInt(5, 9)
+      const isAlpine = biome === "high_alpine";
+      const bladeCount = isAlpine
+        ? randInt(1, 3)
+        : isForest
+          ? randInt(4, 8)
+          : isGobi
+            ? randInt(2, 5)
+            : randInt(4, 9);
+      const grassCols = isGobi
+        ? springGobi
+        : isForest
+          ? springForest
+          : isAlpine
+            ? springAlpine
+            : springSteppe;
+      const bladeH = isAlpine
+        ? rand(0.12, 0.28)
         : isGobi
-          ? randInt(2, 5)
-          : randInt(3, 7);
-      for (let b = 0; b < bladeCount; b++) {
-        const bx = rand(-0.35, 0.35),
-          bz = rand(-0.35, 0.35);
-        const grassCols = isGobi
-          ? [0x9aaa60, 0x8a9a50, 0xaaaa68]
+          ? rand(0.16, 0.36)
           : isForest
-            ? [0x3f6f25, 0x4a7d2c, 0x588838, 0x6e9a4a]
-            : [0x5a8830, 0x4a7820, 0x6a9840, 0x7aaa50];
+            ? rand(0.22, 0.58)
+            : rand(0.2, 0.52);
+      for (let b = 0; b < bladeCount; b++) {
+        const bx = rand(-0.42, 0.42),
+          bz = rand(-0.42, 0.42);
         const blade = new THREE.Mesh(
-          new THREE.CylinderGeometry(
-            0.02,
-            0.04,
-            rand(0.18, isGobi ? 0.38 : isForest ? 0.72 : 0.62),
-            4,
-          ),
-          mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.9),
+          new THREE.CylinderGeometry(0.018, 0.038, bladeH, 4),
+          mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.88),
         );
-        blade.position.set(bx, rand(0.09, 0.3), bz);
-        blade.rotation.z = rand(-0.35, 0.35);
-        blade.rotation.x = rand(-0.22, 0.22);
+        blade.position.set(bx, rand(0.08, 0.26), bz);
+        blade.rotation.z = rand(-0.38, 0.38);
+        blade.rotation.x = rand(-0.2, 0.2);
         g.add(blade);
       }
       g.position.set(x, h, z);
@@ -2533,7 +2700,11 @@ export class SceneBuilder {
     const pos = new Map<string, { wx: number; wz: number }>();
     stations.forEach((s) => {
       const cfg = STATION_CONFIGS[s.id];
-      if (cfg) pos.set(s.id, { wx: cfg.wx * WORLD_SCALE, wz: cfg.wz * WORLD_SCALE });
+      if (cfg)
+        pos.set(s.id, {
+          wx: cfg.wx * WORLD_SCALE * STATION_SPREAD,
+          wz: cfg.wz * WORLD_SCALE * STATION_SPREAD,
+        });
     });
 
     const roadMat = new THREE.MeshStandardMaterial({
@@ -2660,9 +2831,10 @@ export class SceneBuilder {
           const f = t / STEPS;
           const cx = a.wx + dx * f;
           const cz = a.wz + dz * f;
-          const jitter = Math.sin(f * Math.PI * 2.5) * 5;
-          const jx = cx + (-dz / perpLen) * jitter;
-          const jz = cz + (dx / perpLen) * jitter;
+          const jitter = Math.sin(f * Math.PI * 2.5) * 10;
+          const bow = Math.sin(f * Math.PI) * 32;
+          const jx = cx + (-dz / perpLen) * (jitter + bow);
+          const jz = cz + (dx / perpLen) * (jitter + bow);
           center.push(new THREE.Vector3(jx, 0, jz));
         }
 

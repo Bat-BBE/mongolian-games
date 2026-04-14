@@ -9,8 +9,8 @@ import {
   LuTrophy as Trophy,
 } from "react-icons/lu";
 import type { DashStrings, DashLang } from "./dashboard-strings";
-import type { StationGameBundleRow } from "@/lib/api";
-import { useState, useEffect } from "react";
+import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
+import { useState, useEffect, useMemo } from "react";
 
 interface LeftPanelProps {
   t: DashStrings;
@@ -29,6 +29,9 @@ interface LeftPanelProps {
   heroTier?: string;
   stationGames?: StationGameBundleRow[];
   currentStationId?: string;
+  /** Газрын 3D дээр баатар одоо байгаа өртөө (хаалганы дотор) — байхгүй бол `currentStationId` */
+  heroStationId?: string | null;
+  mapStations?: MapStationApiRow[];
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
   stationVisits?: Record<string, number[]>;
   treasury?: {
@@ -38,6 +41,8 @@ interface LeftPanelProps {
     gerLevel: number;
     livestock: { sheep: number; horse: number; camel: number };
   };
+  /** Газрын зураг дээр гэр рүү камер шилжүүлэх */
+  onGoToGer?: () => void;
   onOpenLeaderboard?: () => void;
 }
 
@@ -82,15 +87,44 @@ export function LeftPanel({
   heroTier,
   stationGames = [],
   currentStationId,
+  heroStationId = null,
+  mapStations = [],
   stationSteps,
   stationVisits,
   treasury,
+  onGoToGer,
   onOpenLeaderboard,
   lang,
 }: LeftPanelProps) {
   const xpPct = Math.round((xp / xpMax) * 100);
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+
+  /** Хаалганд биш үед зөвхөн гэр/төвийн агуулга — өртөө руу очоогүй үед прогрессийн станц самбарт харагдахгүй */
+  const activeStationId = heroStationId ?? "home";
+
+  const stationInfo = useMemo(
+    () => mapStations.find((s) => s.id === activeStationId),
+    [mapStations, activeStationId],
+  );
+
+  const displayGames: StationGameBundleRow[] = useMemo(() => {
+    if (activeStationId === "home") return [];
+    if (stationGames.length > 0) return stationGames;
+    const g = stationInfo?.games ?? [];
+    return g.map((game, i) => ({
+      id: `${activeStationId}-${game.slug}-${i}`,
+      slug: game.slug,
+      name_mn: game.name,
+      name_en: game.name,
+      description_mn: game.desc,
+      description_en: game.desc,
+      is_available: true,
+      station_sort: i,
+      reward_hint_mn: game.reward ?? "",
+      reward_hint_en: game.reward ?? "",
+    }));
+  }, [activeStationId, stationGames, stationInfo]);
 
   const NAV_ITEMS = [
     { id: "quest", Icon: Map, label: t.currentExpedition },
@@ -145,63 +179,112 @@ export function LeftPanel({
             <div className="relative glass p-4 rounded-2xl border border-primary/30 bg-background/80">
               <div className="flex items-center justify-between mb-2">
                 <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded uppercase font-bold">
-                  {t.mainQuest}
+                  {activeStationId !== "home"
+                    ? lang === "mn"
+                      ? "Одоогийн өртөө"
+                      : "Current station"
+                    : t.mainQuest}
                 </span>
               </div>
-              <h4 className="font-display text-base text-foreground mb-1.5 font-semibold">
-                {t.questTitle}
-              </h4>
-              <p className="text-xs text-foreground/70 mb-2 leading-relaxed line-clamp-2">
-                {t.questDesc}
-              </p>
-              {journeyDay != null &&
-                currentStationLabel &&
-                stationIndex != null &&
+              {activeStationId !== "home" && stationInfo ? (
+                <>
+                  <h4 className="font-display text-base text-foreground mb-1 font-semibold leading-snug">
+                    {stationInfo.name}
+                  </h4>
+                  {stationInfo.region ? (
+                    <p className="text-[11px] text-primary/85 mb-2 font-medium">
+                      {stationInfo.region}
+                    </p>
+                  ) : null}
+                  <p className="text-xs text-foreground/75 mb-2 leading-relaxed">
+                    {displayGames[0]
+                      ? lang === "mn"
+                        ? displayGames[0].description_mn
+                        : displayGames[0].description_en
+                      : t.questDesc}
+                  </p>
+                </>
+              ) : activeStationId !== "home" ? (
+                <>
+                  <h4 className="font-display text-base text-foreground mb-1.5 font-semibold leading-snug">
+                    {currentStationLabel?.trim() || activeStationId}
+                  </h4>
+                  <p className="text-xs text-foreground/70 mb-2 leading-relaxed">
+                    {t.questDesc}
+                  </p>
+                </>
+              ) : (
+                <>
+                  {onGoToGer ? (
+                    <button
+                      type="button"
+                      onClick={() => onGoToGer()}
+                      className="mt-1 w-full rounded-lg border border-amber-700/45 bg-amber-500/18 px-3 py-2.5 text-sm font-semibold text-amber-950 dark:text-amber-50 hover:bg-amber-500/28 transition-colors"
+                    >
+                      {t.mapGoToGer}
+                    </button>
+                  ) : null}
+                </>
+              )}
+              {activeStationId !== "home" &&
+                journeyDay != null &&
                 totalStations != null &&
                 totalStations > 0 && (
                   <p className="text-[10px] text-foreground/65 mb-3 leading-snug">
                     <span className="text-primary/90 font-semibold">
                       {t.journeyDayLabel} {journeyDay}
                     </span>
-                    <span className="text-foreground/50"> · </span>
-                    <span>
-                      {t.urtuuCounter} {stationIndex}/{totalStations}
-                    </span>
-                    <span className="text-foreground/50"> — </span>
-                    <span>{currentStationLabel}</span>
+                    {stationIndex != null && currentStationLabel ? (
+                      <>
+                        <span className="text-foreground/50"> · </span>
+                        <span>
+                          {t.urtuuCounter} {stationIndex}/{totalStations}
+                        </span>
+                        <span className="text-foreground/50"> — </span>
+                        <span>{currentStationLabel}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-foreground/50"> · </span>
+                        <span>
+                          {lang === "mn"
+                            ? "Бүх өртөө нээлттэй — газрын зураг дээр сонгоно"
+                            : "All stations open — select on the map"}
+                        </span>
+                      </>
+                    )}
                   </p>
                 )}
-              {stationGames.length > 0 && (
+              {activeStationId !== "home" && displayGames.length > 0 && (
                 <div className="mb-3 rounded-lg border border-primary/15 bg-background/40 px-2.5 py-2">
                   <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1.5">
                     {lang === "mn"
                       ? "Энэ өртөөний тоглоомууд"
                       : "Games at this station"}
                   </p>
-                  {currentStationId ? (
-                    <p className="text-[10px] text-foreground/60 mb-1.5">
-                      {(() => {
-                        const now = Date.now();
-                        const windowMs = 7 * 24 * 60 * 60 * 1000;
-                        const visits = (stationVisits?.[currentStationId] ?? [])
-                          .map((x) => Number(x))
-                          .filter((n) => Number.isFinite(n) && n >= now - windowMs);
-                        const rem = Math.max(0, 2 - visits.length);
-                        return lang === "mn"
-                          ? `7 хоногт үлдсэн боломж: ${rem}/2`
-                          : `Weekly plays remaining: ${rem}/2`;
-                      })()}
-                    </p>
-                  ) : null}
-                  <ul className="space-y-1">
-                    {stationGames.map((g) => {
+                  <p className="text-[10px] text-foreground/60 mb-1.5">
+                    {(() => {
+                      const now = Date.now();
+                      const windowMs = 7 * 24 * 60 * 60 * 1000;
+                      const visits = (stationVisits?.[activeStationId] ?? [])
+                        .map((x) => Number(x))
+                        .filter((n) => Number.isFinite(n) && n >= now - windowMs);
+                      const rem = Math.max(0, 2 - visits.length);
+                      return lang === "mn"
+                        ? `7 хоногт үлдсэн боломж: ${rem}/2`
+                        : `Weekly plays remaining: ${rem}/2`;
+                    })()}
+                  </p>
+                  <ul className="space-y-1 max-h-[min(40vh,220px)] overflow-y-auto pr-0.5">
+                    {displayGames.map((g) => {
                       const completed = new Set(
-                        (currentStationId
-                          ? stationSteps?.[currentStationId]?.completedGameSlugs
+                        (activeStationId
+                          ? stationSteps?.[activeStationId]?.completedGameSlugs
                           : []) ?? [],
                       );
                       const nextRequired =
-                        stationGames.find((x) => !completed.has(x.slug))?.slug ?? null;
+                        displayGames.find((x) => !completed.has(x.slug))?.slug ??
+                        null;
                       const status =
                         completed.has(g.slug)
                           ? (lang === "mn" ? "Дууссан" : "Done")
@@ -233,15 +316,6 @@ export function LeftPanel({
                   </ul>
                 </div>
               )}
-              <button
-                className="w-full py-2.5 text-white font-bold text-xs rounded-lg hover:scale-[1.02] transition-all uppercase tracking-widest shadow-lg"
-                style={{
-                  background: "var(--crimson-light, #B22222)",
-                  boxShadow: "0 4px 16px rgba(139,0,0,0.3)",
-                }}
-              >
-                {t.continueJourney}
-              </button>
             </div>
           </div>
         </div>
@@ -400,10 +474,9 @@ export function LeftPanel({
 
   return (
     <aside
-      className={`glass-panel border-r border-primary/10 flex flex-col z-20 bg-background/30 transition-all duration-300 ${
-        collapsed ? "w-24 p-3" : "w-80 p-4"
+      className={`glass-panel border-r border-primary/10 flex flex-col z-20 bg-background/30 transition-all duration-300 min-h-0 h-full shrink-0 ${
+        collapsed ? "w-24 p-3" : "w-80 min-w-[18rem] p-4"
       }`}
-      style={{ height: "calc(100vh - 2rem)", maxHeight: "850px" }}
     >
       <div
         className={`flex w-full ${collapsed ? "justify-center" : "justify-end"} shrink-0 mb-3`}
@@ -420,7 +493,7 @@ export function LeftPanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-hide pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
         {renderContent()}
       </div>
     </aside>

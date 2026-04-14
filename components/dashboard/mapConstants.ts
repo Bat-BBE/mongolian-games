@@ -45,6 +45,27 @@ export const STATION_CONFIGS: Record<string, {
 // Increase world spacing between stations/roads without changing 2D % positions.
 export const WORLD_SCALE = 1.35;
 
+/**
+ * Өртөө хоорондын зайг ихэсгэх (нэгж: зам/гэр/3D байрлал бүгд ижил координат системд).
+ */
+export const STATION_SPREAD = 2.45;
+
+/** Станцын wx/wz-аас дэлхийн XZ (бүх зам, гэр, камер ижил). */
+export function stationWorldXZ(wx: number, wz: number): { x: number; z: number } {
+  const f = WORLD_SCALE * STATION_SPREAD;
+  return { x: wx * f, z: wz * f };
+}
+
+/**
+ * Тоглогчийн гэр — Сүхбаатарын цаад тал (хойд зүг, эзгүй бэлчир).
+ * sukhbaatar: wx -45, wz -250 — түүнээс цааш хойд руу; ойрын өртөөнүүдээс (~100+ wx/wz нэгж) зайтай.
+ * Бүх өртөөтэй ижил: wx/wz × WORLD_SCALE × STATION_SPREAD
+ */
+export const PLAYER_HOME_WX = -130;
+export const PLAYER_HOME_WZ = -330;
+export const PLAYER_HOME_X = PLAYER_HOME_WX * WORLD_SCALE * STATION_SPREAD;
+export const PLAYER_HOME_Z = PLAYER_HOME_WZ * WORLD_SCALE * STATION_SPREAD;
+
 // ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ ЯВАХ ДАРААЛАЛ ──────────
 // Нар мандах зүүн бүс → Төв → Баруун бүс → Нар жаргах
 // wx утгаар зүүнээс (өндөр wx) баруун тийш (бага wx) буурах дарааллаар
@@ -94,9 +115,10 @@ export const HORSE_COLORS = [
   0x8a6030, 0x1a1008, 0xd4b890, 0xa06040,
 ];
 
-export const TERRAIN_W   = 3000;
-export const TERRAIN_D   = 1000;
-export const TERRAIN_SEG = 360;
+/** Газрын хэмжээ — өргөн тал (хязгаар багатай мэт харагдахуйц). */
+export const TERRAIN_W   = 12000;
+export const TERRAIN_D   = 10000;
+export const TERRAIN_SEG = 448;
 
 /** Firebase/хуучин өгөгдөлд `orkhon` гэж ирвэл зураг дээрх slug руу. */
 export function normalizeStationId(raw: string | undefined): string {
@@ -111,15 +133,26 @@ export function getStationJourneyIndex(stationId: string): number {
 }
 
 /**
- * Тоглогч зөвхөн одоогийн болон өмнөх өртөөнүүдэд очих боломжтой (дараагийг алгасахгүй).
+ * Газрын зураг дээрх аяллын дарааллын түгжээгүй — бүх өртөө руу очих боломжтой.
+ * 7 хоногийн тоглолтын хязгаар нь StationPopup / сервер дээр тооцогдоно.
  */
 export function isStationUnlockedInJourney(
   stationId: string,
-  currentStationId: string,
+  _currentStationId: string,
 ): boolean {
-  const idx = JOURNEY_ORDER.indexOf(stationId);
-  if (idx < 0) return false;
-  const curIdx = JOURNEY_ORDER.indexOf(currentStationId);
-  if (curIdx < 0) return idx === 0;
-  return idx <= curIdx;
+  if (stationId === "home") return true;
+  return Boolean(STATION_CONFIGS[stationId]);
+}
+
+/** Өртөө тутмын 7 хоногт үлдсэн тоглолтын тоо (хамгийн ихдээ 2). */
+export function stationWeeklyPlaysRemaining(
+  stationId: string,
+  stationVisits: Record<string, number[]> | undefined,
+): number {
+  const windowMs = 7 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const visits = (stationVisits?.[stationId] ?? [])
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && n >= now - windowMs);
+  return Math.max(0, 2 - visits.length);
 }

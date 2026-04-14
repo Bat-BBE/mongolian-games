@@ -44,30 +44,30 @@ export function terrainHeight(x: number, z: number): number {
 
   const hangaiDist = Math.sqrt(((x + 45) / 28) ** 2 + ((z + 18) / 12) ** 2);
   if (hangaiDist < 1) {
-    h += (1 - hangaiDist) * 18;
+    h += (1 - hangaiDist) * 24;
   } else if (hangaiDist < 2.2) {
-    h += Math.max(0, (2.2 - hangaiDist) / 1.2) * 8;
+    h += Math.max(0, (2.2 - hangaiDist) / 1.2) * 11;
   }
 
   const altaiDist = Math.sqrt(((x + 90) / 20) ** 2 + ((z - 5) / 18) ** 2);
   if (altaiDist < 1) {
-    h += (1 - altaiDist) * 22;
+    h += (1 - altaiDist) * 30;
   } else if (altaiDist < 2.0) {
-    h += Math.max(0, (2.0 - altaiDist) / 1.0) * 10;
+    h += Math.max(0, (2.0 - altaiDist) / 1.0) * 13;
   }
 
   const khentiiDist = Math.sqrt(((x - 35) / 22) ** 2 + ((z + 16) / 10) ** 2);
   if (khentiiDist < 1) {
-    h += (1 - khentiiDist) * 12;
+    h += (1 - khentiiDist) * 16;
   } else if (khentiiDist < 2.0) {
-    h += Math.max(0, (2.0 - khentiiDist) / 1.0) * 5;
+    h += Math.max(0, (2.0 - khentiiDist) / 1.0) * 7;
   }
 
   const gobiAltaiDist = Math.sqrt(((x + 72) / 18) ** 2 + ((z - 20) / 10) ** 2);
   if (gobiAltaiDist < 1) {
-    h += (1 - gobiAltaiDist) * 14;
+    h += (1 - gobiAltaiDist) * 19;
   } else if (gobiAltaiDist < 1.8) {
-    h += Math.max(0, (1.8 - gobiAltaiDist) / 0.8) * 6;
+    h += Math.max(0, (1.8 - gobiAltaiDist) / 0.8) * 8;
   }
 
   if (z > 20) {
@@ -93,6 +93,13 @@ export function terrainHeight(x: number, z: number): number {
   const tuulX = 2 + Math.sin(z * 0.1) * 4;
   if (Math.abs(x - tuulX) < 6 && z > -10 && z < 14) {
     h -= (1 - Math.abs(x - tuulX) / 6) * 1.2;
+  }
+
+  /** Гол талын хөндий — төв хэсэг илүү тэгш, алсын уул/оволго хадгалагдана */
+  const coreEll = Math.hypot(x / 400, z / 310);
+  if (coreEll < 1.2) {
+    const edgeBlend = smoothstep(0.28, 1.05, coreEll);
+    h *= 0.36 + 0.64 * edgeBlend;
   }
 
   return h;

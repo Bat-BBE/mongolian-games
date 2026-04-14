@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "../AppContext";
 import {
@@ -13,7 +13,7 @@ import { LeftPanel } from "./LeftPanel";
 import { MapArea } from "./MapArea";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer } from "@/components/hero-select/hero-data";
-import { JOURNEY_ORDER, normalizeStationId } from "./mapConstants";
+import { normalizeStationId } from "./mapConstants";
 import {
   getDashboardBundle,
   type MapStationApiRow,
@@ -107,6 +107,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [userEmail, setUserEmail] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
+  /** Газрын 3D дээр баатар аль өртөөний хаалганд байгаа — самбарын одоогийн өртөө */
+  const [heroMapStationId, setHeroMapStationId] = useState<string | null>(null);
+  const flyHomeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,13 +159,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           ? (prof.livestock as Record<string, unknown>)
           : {};
       const hero = bundle?.hero;
-      const bundleStation =
-        typeof bundle?.computed?.currentStationSlug === "string"
-          ? String(bundle.computed.currentStationSlug)
-          : typeof bundle?.currentStation?.slug === "string"
-            ? String(bundle.currentStation.slug)
-            : null;
-
       const name =
         bundle?.computed.displayHeroName &&
         String(bundle.computed.displayHeroName).length > 0
@@ -173,6 +169,15 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         String(bundle.computed.displayHeroTitle).length > 0
           ? String(bundle.computed.displayHeroTitle)
           : String(prof.heroTitle ?? "");
+
+      const rawCs =
+        typeof prog.currentStationId === "string"
+          ? String(prog.currentStationId).trim()
+          : "";
+      const resolvedStationId =
+        rawCs === "" || rawCs.toLowerCase() === "home"
+          ? "home"
+          : normalizeStationId(rawCs);
 
       setPlayer({
         name,
@@ -186,10 +191,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         xpMax: num(prog.xpMax, 100),
         accentColor:
           typeof hero?.color === "string" ? hero.color : String(prof.accentColor ?? "#ffd559"),
-        // Single source-of-truth: PostgreSQL dashboard-bundle
-        currentStationId: normalizeStationId(
-          bundleStation ?? (typeof prog.currentStationId === "string" ? prog.currentStationId : undefined)
-        ),
+        currentStationId: resolvedStationId,
         doneStationIds: prog.doneStationIds,
         bonusMultiplier: bundle?.computed.bonusMultiplier ?? "x1.5",
         bonusTitle: bundle?.computed.bonusTitle ?? "Steppe Speedster",
@@ -291,7 +293,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         onChanged={() => setGameReloadTick((n) => n + 1)}
       />
 
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden relative">
         <LeftPanel
           t={t}
           lang={lang}
@@ -308,9 +310,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           heroTier={player.heroTier}
           stationGames={stationGames}
           currentStationId={player.currentStationId}
+          heroStationId={heroMapStationId}
+          mapStations={mapStations}
           stationSteps={player.stationSteps}
           stationVisits={player.stationVisits}
           treasury={player.treasury}
+          onGoToGer={() => flyHomeRef.current?.()}
           onOpenLeaderboard={openLb}
         />
 
@@ -319,9 +324,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           userEmail={userEmail}
           homeGerLevel={player.homeGerLevel ?? 1}
           homeLivestock={player.homeLivestock}
-          currentStationId={
-            player.currentStationId?.trim() || JOURNEY_ORDER[0]
-          }
+          currentStationId={player.currentStationId?.trim() || "home"}
           doneStationIds={Array.isArray(player.doneStationIds) ? player.doneStationIds : []}
           stations={mapStations}
           heroModelPath={player.heroModelPath ?? null}
@@ -329,6 +332,10 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           stationVisits={player.stationVisits}
           onGameCompleted={() => setGameReloadTick((n) => n + 1)}
           onOpenHome={() => setHomeOpen(true)}
+          onRegisterFlyHome={(fn) => {
+            flyHomeRef.current = fn;
+          }}
+          onHeroAtStationChange={setHeroMapStationId}
         />
       </div>
     </div>

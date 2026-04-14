@@ -1,8 +1,12 @@
 "use client";
 
-import { LuChevronLeft as ChevronLeft, LuChevronRight as ChevronRight, LuSword as Sword } from "react-icons/lu";
+import {
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+  LuSword as Sword,
+} from "react-icons/lu";
 import { cn } from "@/lib/utils";
-import { HEROES } from "./hero-data";
+import { HEROES, type Hero } from "./hero-data";
 import type { HeroId, Lang, HeroStrings } from "./hero-strings";
 import HeroCard from "./hero-card";
 import { InfoPanel } from "./info-panel";
@@ -10,6 +14,7 @@ import { InfoPanel } from "./info-panel";
 interface HeroChooseScreenProps {
   t: HeroStrings;
   lang: Lang;
+  heroes?: Hero[] | null;
   playerName: string;
   selectedId: HeroId;
   setSelectedId: (id: HeroId) => void;
@@ -19,25 +24,29 @@ interface HeroChooseScreenProps {
 export function HeroChooseScreen({
   t,
   lang,
+  heroes,
   playerName,
   selectedId,
   setSelectedId,
   onPlay,
 }: HeroChooseScreenProps) {
-  const selectedHero = HEROES.find((h) => h.id === selectedId)!;
+  const roster = Array.isArray(heroes) && heroes.length > 0 ? heroes : HEROES;
+
+  const selectedHero = roster.find((h) => h.id === selectedId) ?? roster[0]!;
 
   const navigate = (dir: 1 | -1) => {
-    const idx = HEROES.findIndex((h) => h.id === selectedId);
-    const next = (idx + dir + HEROES.length) % HEROES.length;
-    setSelectedId(HEROES[next].id);
+    const idx = roster.findIndex((h) => h.id === selectedId);
+    const next = (idx + dir + roster.length) % roster.length;
+    setSelectedId(roster[next]!.id);
   };
+
+  const cardName = (h: Hero) => (lang === "mn" ? h.nameMn : h.nameEn);
+  const cardTitle = (h: Hero) => (lang === "mn" ? h.titleMn : h.titleEn);
 
   return (
     <div className="relative flex flex-col animate-scale-in w-full">
-
-      {/* Top Glow */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[clamp(120px,15vw,200px)] transition-all duration-700"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[clamp(88px,12vw,150px)] transition-all duration-700"
         style={{
           background: `radial-gradient(ellipse 80% 100% at 50% 0%, ${selectedHero.color}18 0%, transparent 100%)`,
         }}
@@ -46,27 +55,24 @@ export function HeroChooseScreen({
       <div
         className="h-px w-full"
         style={{
-          background: `linear-gradient(90deg, transparent, ${selectedHero.color}80, transparent)`
+          background: `linear-gradient(90deg, transparent, ${selectedHero.color}80, transparent)`,
         }}
       />
 
-      {/* CONTENT */}
       <div
         className="flex flex-col items-center"
         style={{
-          padding: "clamp(16px,4vw,40px)",
-          gap: "clamp(16px,2.5vw,28px)",
+          padding: "clamp(14px,2.5vw,28px)",
+          gap: "clamp(10px,1.8vw,20px)",
         }}
       >
-
-        {/* HEADER */}
         <div className="text-center max-w-xl">
           <p
             className="font-heritage italic"
             style={{
               color: "rgb(255,198,28)",
-              fontSize: "clamp(12px,1.5vw,16px)",
-              marginBottom: "4px",
+              fontSize: "clamp(12px,1.45vw,15px)",
+              marginBottom: "3px",
             }}
           >
             {t.greeting}{" "}
@@ -79,19 +85,18 @@ export function HeroChooseScreen({
           </p>
 
           <h2
-            className="font-display tracking-[0.2em]"
+            className="font-display tracking-[0.18em]"
             style={{
               color: "white",
               fontWeight: 400,
-              fontSize: "clamp(14px,1.8vw,20px)",
+              fontSize: "clamp(13px,1.65vw,19px)",
             }}
           >
             {t.chooseHero}
           </h2>
         </div>
 
-        <div className="relative w-full flex items-center justify-center mt-2">
-
+        <div className="relative w-full flex items-center justify-center mt-0">
           <NavArrow dir="left" onClick={() => navigate(-1)} />
 
           <div
@@ -102,16 +107,16 @@ export function HeroChooseScreen({
               snap-x snap-mandatory
             "
             style={{
-              gap: "clamp(8px,2vw,20px)",
-              padding: "clamp(10px,3vw,30px)",
+              gap: "clamp(8px,1.5vw,16px)",
+              padding: "clamp(8px,1.6vw,20px)",
               maxWidth: "100%",
             }}
           >
-            {HEROES.map((hero) => (
+            {roster.map((hero) => (
               <div key={hero.id} className="snap-center">
                 <HeroCard
-                  name={hero.name}
-                  title={hero.title ?? ""}
+                  name={cardName(hero)}
+                  title={cardTitle(hero)}
                   imageUrl={hero.imageUrl ?? ""}
                   modelPath={hero.modelPath}
                   accentColor={hero.color}
@@ -124,8 +129,8 @@ export function HeroChooseScreen({
           </div>
           <NavArrow dir="right" onClick={() => navigate(1)} />
         </div>
-        <div className="w-full max-w-[700px]">
-          <InfoPanel hero={selectedHero} selectedId={selectedId} t={t} />
+        <div className="w-full max-w-[min(100%,34rem)]">
+          <InfoPanel hero={selectedHero} lang={lang} t={t} />
         </div>
 
         <button
@@ -137,13 +142,13 @@ export function HeroChooseScreen({
             "transition-all duration-300",
             selectedHero.available
               ? "hover:-translate-y-0.5 hover:tracking-[0.28em] active:scale-[0.98]"
-              : "opacity-30 cursor-not-allowed"
+              : "opacity-30 cursor-not-allowed",
           )}
           style={{
-            fontSize: "clamp(11px,2vw,13px)",
-            letterSpacing: "0.2em",
-            padding: "clamp(12px,1.5vw,18px) clamp(20px,4vw,40px)",
-            width: "min(420px,100%)",
+            fontSize: "clamp(11px,1.9vw,13px)",
+            letterSpacing: "0.18em",
+            padding: "clamp(11px,1.4vw,16px) clamp(14px,3.2vw,34px)",
+            width: "min(380px,100%)",
 
             ...(selectedHero.available
               ? {
@@ -165,13 +170,12 @@ export function HeroChooseScreen({
 
           <Sword className="w-[clamp(14px,1.4vw,18px)] h-[clamp(14px,1.4vw,18px)]" />
         </button>
-
       </div>
 
       <div
         className="h-px w-full"
         style={{
-          background: `linear-gradient(90deg, transparent, ${selectedHero.color}40, transparent)`
+          background: `linear-gradient(90deg, transparent, ${selectedHero.color}40, transparent)`,
         }}
       />
     </div>

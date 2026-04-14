@@ -104,6 +104,12 @@
   --grad-crimson:  linear-gradient(135deg, #5a0000 0%, #8B0000 50%, #C9A84C 100%);
   --grad-hero:     linear-gradient(180deg, rgba(10,7,3,0.2) 0%, rgba(10,7,3,0.55) 55%, rgba(5,4,3,1) 100%);
   --grad-shimmer:  linear-gradient(105deg, transparent 30%, rgba(237,217,138,0.55) 50%, transparent 70%);
+  /**
+   * Нүүр hero — Ногоон нутаг, гол (Unsplash, Sodbayar Photography, Сэлэнгэ).
+   * https://unsplash.com/photos/a-river-running-through-a-lush-green-countryside-pM6ALGrv7yw
+   * Өөрийн зураг: public/images/hero-bg.jpg → --hero-bg-image: url("/images/hero-bg.jpg");
+   */
+  --hero-bg-image: url("https://images.unsplash.com/photo-1717489577924-54fbf10ba676?q=85&w=2400&auto=format&fit=crop");
 
   --glass-bg:     rgba(248, 242, 228, 0.68);
   --glass-border: rgba(201, 168, 76, 0.22);
@@ -374,10 +380,10 @@
   .hero-section {
     background:
       var(--grad-hero),
-      url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2070&auto=format&fit=crop');
-    /* url('https://news.mn/en/wp-content/uploads/sites/3/2020/07/6-530x352.jpeg'); */
+      var(--hero-bg-image);
     background-size: cover;
-    background-position: center 30%;
+    background-position: center 38%;
+    background-repeat: no-repeat;
     will-change: transform;
   }
 

@@ -177,7 +177,7 @@ gameRouter.post("/complete", async (req, res) => {
       return;
     }
 
-    // Validate step ordering using station_games.
+    // Games available at this station (any order — client chooses).
     const sg = await pool.query(
       `SELECT g.slug
        FROM station_games sg
@@ -192,18 +192,12 @@ gameRouter.post("/complete", async (req, res) => {
       return;
     }
 
-    const stationSteps = readStationSteps(progress);
-    const completed = new Set(stationSteps[stationSlug]?.completedGameSlugs ?? []);
-    const nextRequired = ordered.find((s) => !completed.has(s)) ?? null;
-
-    if (nextRequired && gameSlug !== nextRequired) {
-      res.status(409).json({
-        error: "Wrong step order",
-        expected: nextRequired,
-        received: gameSlug,
-      });
+    if (!ordered.includes(gameSlug)) {
+      res.status(400).json({ error: "Game not available at this station" });
       return;
     }
+
+    const stationSteps = readStationSteps(progress);
 
     // Record visit attempt regardless of win/lose (counts as a play).
     visitsByStation[stationSlug] = [...prevVisits, now];

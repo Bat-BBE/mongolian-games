@@ -88,6 +88,19 @@ export interface DashStrings {
   profileNoSession: string;
   dialogClose: string;
   mapRegionLabel: string;
+  /** Map: travel hero to selected urtuu */
+  mapTravelToStation: string;
+  /** Map: walk hero back to ger (home) */
+  mapReturnHome: string;
+  /** Map: cancel travel and restore hero to spot before «Очих» */
+  mapReturnToPreviousSpot: string;
+  /** Map: label above the player’s home ger (distinct from urtuu gers) */
+  mapYourGerTitle: string;
+  mapYourGerSubtitle: string;
+  /** Map: short pin text on the 3D home ger (keep brief) */
+  mapHomePinLabel: string;
+  /** Sidebar: jump camera to home ger on the 3D map */
+  mapGoToGer: string;
   gamesAtStation: string;
   gameStatusLocked: string;
   gameStatusDone: string;
@@ -547,6 +560,13 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товчоор нэвтэрнэ үү.",
     dialogClose: "Хаах",
     mapRegionLabel: "Бүс нутаг",
+    mapTravelToStation: "Очих",
+    mapReturnHome: "Гэр рүү буцах",
+    mapReturnToPreviousSpot: "Өмнөх байрлал руу",
+    mapYourGerTitle: "Чиний гэр",
+    mapYourGerSubtitle: "Тоглогчийн суурь · газрын зураг дээрх гэр",
+    mapHomePinLabel: "Гэр",
+    mapGoToGer: "Гэрт очих",
     gamesAtStation: "Тоглоомууд",
     gameStatusLocked: "Хүлээгдэж буй",
     gameStatusDone: "Дууссан",
@@ -1005,6 +1025,13 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "No player session found. Use Play on the home page to sign in.",
     dialogClose: "Close",
     mapRegionLabel: "Region",
+    mapTravelToStation: "Go there",
+    mapReturnHome: "Return to ger",
+    mapReturnToPreviousSpot: "Back to previous spot",
+    mapYourGerTitle: "Your ger",
+    mapYourGerSubtitle: "Your home base on the journey map",
+    mapHomePinLabel: "Home",
+    mapGoToGer: "Go to ger",
     gamesAtStation: "Games",
     gameStatusLocked: "Locked",
     gameStatusDone: "Completed",

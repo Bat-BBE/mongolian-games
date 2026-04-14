@@ -153,7 +153,11 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
 
     const sid = isFreshStart
       ? firstStationSlug
-      : normalizeStationId(progress.currentStationId);
+      : normalizeStationId(
+          typeof progress.currentStationId === "string"
+            ? progress.currentStationId
+            : firstStationSlug,
+        );
     const st = await pool.query(`SELECT * FROM map_stations WHERE slug = $1`, [
       sid,
     ]);
@@ -196,20 +200,18 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
     }
 
     const questTitle =
-      station &&
-      (lang === "mn"
-        ? (station.quest_hint_mn as string | null)
-        : (station.quest_hint_en as string | null))
-        ? String(lang === "mn" ? station.quest_hint_mn : station.quest_hint_en)
-        : (strings["sidebar.questTitle"] ?? "");
+      lang === "mn"
+        ? (strings["sidebar.homeQuestTitleMn"] ??
+          "Таны гэр — талын төв")
+        : (strings["sidebar.homeQuestTitleEn"] ??
+          "Your ger — heart of the steppe");
 
     const questDesc =
-      station &&
-      (lang === "mn"
-        ? (station.quest_desc_mn as string | null)
-        : (station.quest_desc_en as string | null))
-        ? String(lang === "mn" ? station.quest_desc_mn : station.quest_desc_en)
-        : (strings["sidebar.questDesc"] ?? "");
+      lang === "mn"
+        ? (strings["sidebar.homeQuestDescMn"] ??
+          "Зураг дээрх бүх өртөө руу чөлөөтэй очоод тогло. Өртөө бүрт 7 хоногт 2 удаа. Лимит дууссан өртөө түгжигдэнэ. Гэр дээр дараад гэрээ сайжруулж, мал худалдана.")
+        : (strings["sidebar.homeQuestDescEn"] ??
+          "Visit any station on the map and play. Each station allows 2 plays per 7 days, then it locks until the week resets. Open Home to upgrade your ger and buy livestock.");
 
     const bonusMultiplier =
       typeof hero?.bonus_multiplier === "string"
@@ -228,23 +230,7 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
         ? String(lang === "mn" ? station.name_mn : station.name_en)
         : "";
 
-    const stationIndex =
-      typeof station?.journey_index === "number"
-        ? (station.journey_index as number) + 1
-        : 1;
-
-    const stationSlugForGames =
-      typeof station?.slug === "string" ? station.slug : sid;
-    const gamesRes = await pool.query(
-      `SELECT g.id, g.slug, g.name_mn, g.name_en, g.description_mn, g.description_en, g.is_available,
-              sg.sort_order AS station_sort, sg.reward_hint_mn, sg.reward_hint_en
-       FROM station_games sg
-       INNER JOIN games g ON g.id = sg.game_id
-       WHERE sg.station_slug = $1 AND g.is_available = true
-       ORDER BY sg.sort_order ASC, g.sort_order ASC`,
-      [stationSlugForGames],
-    );
-    const stationGames = gamesRes.rows;
+    const stationGames: unknown[] = [];
 
     // Map stations for 3D map labels (dynamic names + positions + all linked games).
     const allStationsRes = await pool.query(
@@ -327,10 +313,7 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
           region: lang === "mn" ? s.region_mn : s.region_en,
           icon: s.icon,
           pos: { left: String(p.left ?? ""), top: String(p.top ?? "") },
-          available:
-            typeof station?.journey_index === "number"
-              ? s.journey_index <= (station.journey_index as number)
-              : s.journey_index === 0,
+          available: true,
           games,
           game: prev
             ? {
@@ -343,16 +326,17 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
         };
       }),
       computed: {
-        currentStationSlug:
-          typeof station?.slug === "string" ? station.slug : sid,
+        currentStationSlug: "home",
+        mapHubMode: true,
         journeyDay,
         questTitle,
         questDesc,
         bonusMultiplier,
         bonusTitle,
         tier: typeof hero?.tier === "string" ? hero.tier : "C",
-        currentStationLabel: stationLabel,
-        stationIndexOneBased: stationIndex,
+        currentStationLabel:
+          lang === "mn" ? "Гэр — төв" : "Home — your ger",
+        stationIndexOneBased: null as unknown as number,
         totalStations,
         displayHeroName:
           lang === "mn"

@@ -180,9 +180,9 @@ export default function HeroCard({
   return (
     <div
       className={cn(
-        'snap-start flex-shrink-0 w-36 group cursor-pointer transition-all duration-300 select-none',
+        'snap-start flex-shrink-0 w-[7.75rem] sm:w-36 group cursor-pointer transition-all duration-300 select-none',
         locked && 'opacity-50 cursor-not-allowed',
-        selected && !locked && 'scale-105 -translate-y-2',
+        selected && !locked && 'scale-[1.05] -translate-y-2',
         !selected && !locked && 'hover:scale-[1.03] hover:-translate-y-1',
       )}
       onClick={!locked ? onClick : undefined}
@@ -258,7 +258,7 @@ export default function HeroCard({
         )}
       </div>
 
-      <div className="mt-2.5 text-center px-1">
+      <div className="mt-2 text-center px-1">
         <h4
           className="text-sm font-bold uppercase tracking-wide transition-colors duration-300 truncate"
           style={{

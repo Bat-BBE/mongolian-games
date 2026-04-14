@@ -6,7 +6,13 @@ import { SceneBuilder } from "./SceneBuilder";
 import { AnimationController } from "./AnimationController";
 import type { LabelPos } from "./AnimationController";
 import type { UrtuuStation } from "./UrtuuNode";
-import { STATION_CONFIGS, JOURNEY_ORDER, WORLD_SCALE } from "./mapConstants";
+import {
+  PLAYER_HOME_X,
+  PLAYER_HOME_Z,
+  STATION_CONFIGS,
+  JOURNEY_ORDER,
+  stationWorldXZ,
+} from "./mapConstants";
 import { terrainBiome, terrainHeight } from "./sceneHelpers";
 import { createHeroAnimator, loadFbxModel, loadHeroClips } from "../map3d/heroFbx";
 
@@ -18,9 +24,9 @@ interface UseThreeSceneOptions {
   homeGerLevel?: number;
   homeLivestock?: { sheep: number; horse: number; camel: number };
   onSelectStation?: (stationId: string) => void;
-  onHeroArriveStation?: (stationId: string) => void;
   heroModelPath?: string | null;
-  heroTargetStationId?: string | null;
+  /** Баатар өртөөний дотор ороход (хаалганы дотор) */
+  onHeroAtStationChange?: (stationId: string | null) => void;
 }
 
 interface CameraTarget {
@@ -34,8 +40,11 @@ const CAMERA_LIMITS = {
   minPhi: 0.16,
   maxPhi: 1.2,
   minDist: 22,
-  maxDist: 320,
+  maxDist: 520,
 };
+
+/** Камер энэ зайнаас холдох (zoom out / overview) үед бүх харагдах өртөөний нэр гарна */
+const MAP_OVERVIEW_SHOW_ALL_LABELS_MIN_DIST = 285;
 
 const clamp = (v: number, min: number, max: number): number =>
   Math.max(min, Math.min(max, v));
@@ -50,6 +59,7 @@ function getJourneyStartStation(currentId: string): string {
 
 function resolveStationId(stationId: string): string {
   const id = typeof stationId === "string" ? stationId.trim() : "";
+  if (id === "home") return "home";
   if (id && STATION_CONFIGS[id]) return id;
   return getJourneyStartStation(id);
 }
@@ -57,8 +67,7 @@ function resolveStationId(stationId: string): string {
 function buildCameraTarget(stationId: string): CameraTarget {
   const id = resolveStationId(stationId);
   const cfg = STATION_CONFIGS[id];
-  const lx = cfg.wx * WORLD_SCALE,
-    lz = cfg.wz * WORLD_SCALE;
+  const { x: lx, z: lz } = stationWorldXZ(cfg.wx, cfg.wz);
   const ly = terrainHeight(lx, lz) + 2.6;
   const biome = terrainBiome(lx, lz, ly - 2.6);
   const slopeSample =
@@ -90,18 +99,173 @@ function buildCameraTarget(stationId: string): CameraTarget {
   };
 }
 
-// Player home base — place away from major stations (more “empty steppe”).
-const HOME_POS = { x: 90, z: 10 };
-function buildHomeCameraTarget(): CameraTarget {
-  const lx = HOME_POS.x;
-  const lz = HOME_POS.z;
-  const ly = terrainHeight(lx, lz) + 2.4;
+function buildHomeCameraTarget(lookAt: THREE.Vector3): CameraTarget {
   return {
-    lookAt: new THREE.Vector3(lx, ly, lz),
-    distance: 40,
+    lookAt: lookAt.clone(),
+    distance: 44,
     phi: 0.44,
     theta: 0.15,
   };
+}
+
+type HomeWayMarker = THREE.Group & {
+  userData: {
+    baseY: number;
+    phase: number;
+    pulseMats: THREE.MeshStandardMaterial[];
+    stationId: string;
+    sprite?: THREE.Sprite;
+    homeWayMarker?: boolean;
+  };
+};
+
+function findHomeWayMarkerGroup(
+  obj: THREE.Object3D | null,
+): HomeWayMarker | null {
+  let cur: THREE.Object3D | null = obj;
+  while (cur) {
+    const u = cur.userData as { homeWayMarker?: boolean };
+    if (u.homeWayMarker) return cur as HomeWayMarker;
+    cur = cur.parent;
+  }
+  return null;
+}
+
+/** Газрын дээрх сум + станцын нэр/дүрс — анимацыг onBeforeRender-д ажиллуулна. */
+function addNearestUrtuuGroundWayMarkers(
+  scene: THREE.Scene,
+  homeX: number,
+  homeZ: number,
+  outMarkers: HomeWayMarker[],
+  count = 4,
+): void {
+  const stationIds = Object.keys(STATION_CONFIGS);
+  const scored = stationIds
+    .map((id) => {
+      const { x: sx, z: sz } = stationWorldXZ(
+        STATION_CONFIGS[id].wx,
+        STATION_CONFIGS[id].wz,
+      );
+      const d = Math.hypot(sx - homeX, sz - homeZ);
+      return { id, d, sx, sz };
+    })
+    .sort((a, b) => a.d - b.d)
+    .slice(0, count);
+
+  scored.forEach((s, i) => {
+    const cfg = STATION_CONFIGS[s.id];
+    const ang = (i / Math.max(1, count)) * Math.PI * 2 + 0.42;
+    const ox = homeX + Math.cos(ang) * 5.2;
+    const oz = homeZ + Math.sin(ang) * 5.2;
+    const baseY = terrainHeight(ox, oz) + 0.08;
+    const dx = s.sx - ox;
+    const dz = s.sz - oz;
+    const yaw = Math.atan2(dx, dz);
+    const hue = 0.06 + (count > 1 ? (i / (count - 1)) * 0.11 : 0);
+    const col = new THREE.Color().setHSL(hue, 0.72, 0.52);
+    const pulseMats: THREE.MeshStandardMaterial[] = [];
+
+    const g = new THREE.Group() as HomeWayMarker;
+    g.position.set(ox, baseY, oz);
+    g.rotation.y = yaw;
+    g.userData = {
+      baseY,
+      phase: i * 1.7,
+      pulseMats,
+      stationId: s.id,
+      homeWayMarker: true,
+    };
+
+    const pad = new THREE.Mesh(
+      new THREE.RingGeometry(1.1, 1.55, 28),
+      new THREE.MeshStandardMaterial({
+        color: col,
+        roughness: 0.65,
+        metalness: 0.12,
+        emissive: col,
+        emissiveIntensity: 0.12,
+        side: THREE.DoubleSide,
+      }),
+    );
+    pad.rotation.x = -Math.PI / 2;
+    pad.position.y = 0.02;
+    pulseMats.push(pad.material as THREE.MeshStandardMaterial);
+    g.add(pad);
+
+    const shaftLen = 4.2;
+    const shaft = new THREE.Mesh(
+      new THREE.BoxGeometry(0.42, 0.1, shaftLen),
+      new THREE.MeshStandardMaterial({
+        color: col,
+        roughness: 0.55,
+        metalness: 0.08,
+        emissive: col,
+        emissiveIntensity: 0.1,
+      }),
+    );
+    shaft.position.set(0, 0.06, shaftLen * 0.5 + 0.35);
+    pulseMats.push(shaft.material as THREE.MeshStandardMaterial);
+    g.add(shaft);
+
+    const head = new THREE.Mesh(
+      new THREE.ConeGeometry(0.55, 1.05, 10),
+      new THREE.MeshStandardMaterial({
+        color: col,
+        roughness: 0.45,
+        metalness: 0.1,
+        emissive: col,
+        emissiveIntensity: 0.18,
+      }),
+    );
+    head.rotation.x = Math.PI / 2;
+    head.position.set(0, 0.08, shaftLen + 1.15);
+    pulseMats.push(head.material as THREE.MeshStandardMaterial);
+    g.add(head);
+
+    const canvas = document.createElement("canvas");
+    const cw = 300;
+    const ch = 88;
+    canvas.width = cw;
+    canvas.height = ch;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      const pad = 8;
+      ctx.fillStyle = "rgba(6,10,18,0.92)";
+      ctx.fillRect(pad, pad, cw - pad * 2, ch - pad * 2);
+      ctx.strokeStyle = `rgba(${Math.floor(col.r * 255)},${Math.floor(col.g * 255)},${Math.floor(col.b * 255)},0.85)`;
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(pad + 0.5, pad + 0.5, cw - pad * 2 - 1, ch - pad * 2 - 1);
+      ctx.font = "bold 26px system-ui,Segoe UI,sans-serif";
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillText(cfg.icon, 14, 38);
+      ctx.font = "600 15px system-ui,Segoe UI,sans-serif";
+      const name =
+        cfg.region.length > 16 ? cfg.region.slice(0, 15) + "…" : cfg.region;
+      ctx.fillText(name, 46, 34);
+      ctx.font = "400 12px system-ui,Segoe UI,sans-serif";
+      ctx.fillStyle = "rgba(203,213,225,0.9)";
+      const slug = s.id.replace(/_/g, " ");
+      const slugDraw = slug.length > 22 ? slug.slice(0, 20) + "…" : slug;
+      ctx.fillText(slugDraw, 46, 54);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+        depthTest: false,
+      }),
+    );
+    sprite.scale.set(7.2, 2.1, 1);
+    sprite.position.set(0, 2.85, shaftLen * 0.45);
+    sprite.visible = false;
+    g.add(sprite);
+    g.userData.sprite = sprite;
+
+    scene.add(g);
+    outMarkers.push(g);
+  });
 }
 
 function getSunPositionForStation(stationId: string): { angle: number } {
@@ -121,42 +285,49 @@ export function useThreeScene({
   homeGerLevel = 1,
   homeLivestock,
   onSelectStation,
-  onHeroArriveStation,
   heroModelPath,
-  heroTargetStationId,
+  onHeroAtStationChange,
 }: UseThreeSceneOptions) {
   const [labelPositions, setLabelPositions] = useState<
     Record<string, LabelPos>
   >({});
+  const [heroAtStationId, setHeroAtStationId] = useState<string | null>(null);
+  const [labelUi, setLabelUi] = useState<{
+    stationId: string | null;
+    alpha: number;
+  }>({ stationId: null, alpha: 0 });
+  const orbitCameraDistRef = useRef(120);
+  const showAllMapLabelsRef = useRef(false);
+  const [labelZoomScale, setLabelZoomScale] = useState(1);
+  const [showAllMapLabels, setShowAllMapLabels] = useState(false);
+  const labelUiThrottleRef = useRef<{ stationId: string | null; alpha: number }>(
+    { stationId: null, alpha: -1 },
+  );
 
   const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
   useEffect(() => {
     onSelectRef.current = onSelectStation ?? null;
   }, [onSelectStation]);
 
-  const onArriveRef = useRef<UseThreeSceneOptions["onHeroArriveStation"]>(null);
-  useEffect(() => {
-    onArriveRef.current = onHeroArriveStation ?? null;
-  }, [onHeroArriveStation]);
-
-  const heroTargetRef = useRef<string | null>(null);
-  useEffect(() => {
-    heroTargetRef.current = heroTargetStationId ?? null;
-  }, [heroTargetStationId]);
+  /** Updated in the render loop when the hero enters a door radius (marker click only then). */
+  const heroAtStationIdRef = useRef<string | null>(null);
 
   const flyToStationRef = useRef<((id: string, snap?: boolean) => void) | null>(
     null,
   );
+  const goToHomeGerRef = useRef<(() => void) | null>(null);
   const currentIdRef = useRef(resolveStationId(currentStationId));
   const animRef = useRef<
     import("./AnimationController").AnimationController | null
   >(null);
 
   useEffect(() => {
-    const resolved = resolveStationId(currentStationId);
+    const hub =
+      !currentStationId?.trim() || currentStationId.trim() === "home";
+    const resolved = hub ? "ulaanbaatar" : resolveStationId(currentStationId);
     currentIdRef.current = resolved;
     flyToStationRef.current?.(currentStationId, false);
-    animRef.current?.updateCurrentStation(resolved);
+    animRef.current?.updateCurrentStation(hub ? "" : resolveStationId(currentStationId));
   }, [currentStationId]);
 
   useEffect(() => {
@@ -164,26 +335,17 @@ export function useThreeScene({
     if (!container) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xb9c4ce, 0.0044);
+    scene.background = new THREE.Color(0x92c4e8);
+    scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00105);
 
     const W = container.clientWidth,
       H = container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(50, W / H, 0.5, 800);
+    const camera = new THREE.PerspectiveCamera(50, W / H, 1.2, 14000);
 
-    const firstStation = resolveStationId(currentStationId);
-    const initTarget = buildHomeCameraTarget();
-    camera.position.set(
-      initTarget.lookAt.x +
-        Math.sin(initTarget.theta) *
-          Math.cos(initTarget.phi) *
-          initTarget.distance,
-      initTarget.lookAt.y + Math.sin(initTarget.phi) * initTarget.distance,
-      initTarget.lookAt.z +
-        Math.cos(initTarget.theta) *
-          Math.cos(initTarget.phi) *
-          initTarget.distance,
-    );
-    camera.lookAt(initTarget.lookAt);
+    const hub =
+      !currentStationId?.trim() || currentStationId.trim() === "home";
+    const highlightStationId = hub ? "" : resolveStationId(currentStationId);
+    const sunStationId = hub ? "ulaanbaatar" : resolveStationId(currentStationId);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(W, H);
@@ -193,8 +355,21 @@ export function useThreeScene({
     renderer.toneMappingExposure = 1.03;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
+    renderer.domElement.style.display = "block";
 
-    const { angle: sunInitAngle } = getSunPositionForStation(firstStation);
+    const applyViewportSize = () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w < 2 || h < 2) return;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    };
+    const resizeObserver = new ResizeObserver(() => applyViewportSize());
+    resizeObserver.observe(container);
+
+    const { angle: sunInitAngle } = getSunPositionForStation(sunStationId);
 
     const SUN_RADIUS = 280;
     const SUN_HEIGHT_FACTOR = 0.7;
@@ -208,11 +383,11 @@ export function useThreeScene({
     sun.castShadow = true;
     sun.shadow.mapSize.set(4096, 4096);
     sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 600;
-    sun.shadow.camera.left = -200;
-    sun.shadow.camera.right = 200;
-    sun.shadow.camera.top = 200;
-    sun.shadow.camera.bottom = -200;
+    sun.shadow.camera.far = 9000;
+    sun.shadow.camera.left = -3200;
+    sun.shadow.camera.right = 3200;
+    sun.shadow.camera.top = 3200;
+    sun.shadow.camera.bottom = -3200;
     sun.shadow.bias = -0.0002;
     scene.add(sun);
 
@@ -228,7 +403,7 @@ export function useThreeScene({
 
     scene.add(new THREE.HemisphereLight(0x7ec8e3, 0xd4c27a, 0.48));
 
-    const builder = new SceneBuilder(scene, firstStation, doneStationIds);
+    const builder = new SceneBuilder(scene, highlightStationId, doneStationIds);
 
     builder.buildSky();
     builder.buildTerrain();
@@ -241,31 +416,65 @@ export function useThreeScene({
     builder.buildRocks();
     builder.buildPlayerHomeGer(homeGerLevel);
     builder.buildPlayerLivestockNearHome(homeLivestock);
-    builder.buildGerCamps();
-    builder.buildStationGers(stations);
     builder.buildRoads(stations);
+    builder.buildStationGers(stations);
+    builder.buildGerCamps();
     builder.buildNomadDetails();
     builder.buildHorses();
     builder.buildCamels();
     builder.buildClouds();
     builder.buildBirds();
 
+    let homeLookAt = new THREE.Vector3(
+      PLAYER_HOME_X,
+      terrainHeight(PLAYER_HOME_X, PLAYER_HOME_Z) + 2.5,
+      PLAYER_HOME_Z,
+    );
+    const doorHome = builder.doorAnchors.get("home");
+    if (doorHome) {
+      const hx = doorHome.x;
+      const hz = doorHome.z;
+      homeLookAt.set(
+        hx,
+        terrainHeight(hx, hz) + 2.7,
+        hz + 2.9,
+      );
+    }
+    const homeWayMarkers: HomeWayMarker[] = [];
+    addNearestUrtuuGroundWayMarkers(
+      scene,
+      PLAYER_HOME_X,
+      PLAYER_HOME_Z,
+      homeWayMarkers,
+      0,
+    );
+
+    const initTarget = buildHomeCameraTarget(homeLookAt);
+    camera.position.set(
+      initTarget.lookAt.x +
+        Math.sin(initTarget.theta) *
+          Math.cos(initTarget.phi) *
+          initTarget.distance,
+      initTarget.lookAt.y + Math.sin(initTarget.phi) * initTarget.distance,
+      initTarget.lookAt.z +
+        Math.cos(initTarget.theta) *
+          Math.cos(initTarget.phi) *
+          initTarget.distance,
+    );
+    camera.lookAt(initTarget.lookAt);
+
     const heroMixerRef = { current: null as THREE.AnimationMixer | null };
     const heroRootRef = { current: null as THREE.Object3D | null };
     const heroPlayRef = { current: null as ((name: string, fadeSec?: number) => void) | null };
-    const heroMoveRef = {
-      current: {
-        lastTarget: null as string | null,
-        lastArrived: null as string | null,
-        pathPts: null as THREE.Vector3[] | null,
-        pathLens: [] as number[],
-        totalLen: 0,
-        distAlong: 0,
-        speed: 18,
-      },
-    };
     /** Гар удирдлага: хурд тэгшлэгдэнэ (гэнэтийн шилжилт багасна). */
     const heroManualVelRef = { current: new THREE.Vector3(0, 0, 0) };
+    const heroKinematicRef = {
+      current: {
+        pos: new THREE.Vector3(),
+        ry: 0,
+        has: false,
+      },
+    };
     const manualKeysRef = {
       current: {
         up: false,
@@ -277,28 +486,6 @@ export function useThreeScene({
     };
     let disposed = false;
 
-    const stationWorldPos = (stationId: string): THREE.Vector3 => {
-      const id = resolveStationId(stationId);
-      const cfg = STATION_CONFIGS[id];
-      const x = cfg.wx * WORLD_SCALE;
-      const z = cfg.wz * WORLD_SCALE;
-      const y = terrainHeight(x, z);
-      return new THREE.Vector3(x, y, z);
-    };
-
-    const stationArrivalPos = (stationId: string): THREE.Vector3 => {
-      const id = resolveStationId(stationId);
-      const door = builder.doorAnchors.get(id);
-      if (door) {
-        // Station gers are oriented so the door faces +Z.
-        // Stand slightly in front of the door to avoid intersecting the ger mesh.
-        const pos = new THREE.Vector3(door.x, door.y, door.z + 2.2);
-        pos.y = terrainHeight(pos.x, pos.z);
-        return pos;
-      }
-      return stationWorldPos(id);
-    };
-
     if (heroModelPath && heroModelPath.trim()) {
       void (async () => {
         try {
@@ -308,8 +495,8 @@ export function useThreeScene({
             : rawPath;
           const root = await loadFbxModel(safePath);
           if (disposed) return;
-          // Map scale: manual control feels better when smaller.
-          root.scale.setScalar(0.02);
+          // Гэртэй харьцуулахад жижиг харагдуулна (гэрүүдийг томруулсан)
+          root.scale.setScalar(0.015);
           root.traverse((c) => {
             if (c instanceof THREE.Mesh) {
               c.castShadow = true;
@@ -326,8 +513,16 @@ export function useThreeScene({
           heroMixerRef.current = mixer;
           heroRootRef.current = root;
           heroPlayRef.current = play;
-          const p = stationArrivalPos(firstStation);
-          root.position.set(p.x, p.y, p.z);
+          const dh = builder.doorAnchors.get("home");
+          let sx = PLAYER_HOME_X;
+          let sz = PLAYER_HOME_Z + 4;
+          if (dh) {
+            sx = dh.x;
+            sz = dh.z + 3.4;
+          }
+          const sy = terrainHeight(sx, sz) + 0.02;
+          root.position.set(sx, sy, sz);
+          root.rotation.y = 0;
           play("idle", 0);
           scene.add(root);
         } catch {
@@ -361,47 +556,68 @@ export function useThreeScene({
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      const cb = onSelectRef.current;
-      if (!cb) return;
       const dx = e.clientX - downX;
       const dy = e.clientY - downY;
       const dist = Math.hypot(dx, dy);
       const dt = performance.now() - downAt;
-      // Don't treat drags as clicks.
       if (dist > 6 || dt > 900) return;
 
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
       raycaster.setFromCamera(mouse, camera);
+
+      if (homeWayMarkers.length) {
+        const hitsHome = raycaster.intersectObjects(homeWayMarkers, true);
+        if (hitsHome.length) {
+          const grp = findHomeWayMarkerGroup(hitsHome[0].object);
+          if (grp?.userData.sprite) {
+            const sp = grp.userData.sprite;
+            const was = sp.visible;
+            for (const m of homeWayMarkers) {
+              m.userData.sprite && (m.userData.sprite.visible = false);
+            }
+            if (!was) sp.visible = true;
+            return;
+          }
+        }
+        for (const m of homeWayMarkers) {
+          if (m.userData.sprite) m.userData.sprite.visible = false;
+        }
+      }
+
+      const cb = onSelectRef.current;
+      if (!cb) return;
       const targets = Array.from(builder.markerMeshes.values());
       const hits = raycaster.intersectObjects(targets, true);
       if (!hits.length) return;
       const sid = getStationId(hits[0].object);
-      if (sid) cb(sid);
+      if (sid && sid === heroAtStationIdRef.current) cb(sid);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
       const st = manualKeysRef.current;
-      if (e.key === "Shift") st.run = true;
-      if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") st.up = true;
-      if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") st.down = true;
-      if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") st.left = true;
-      if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") st.right = true;
-      // Cancel station autopilot quickly.
-      if (e.key === "Escape" || e.key === " ") {
-        heroTargetRef.current = null;
-        heroMoveRef.current.lastTarget = null;
-        heroMoveRef.current.pathPts = null;
-      }
+      st.run = e.shiftKey;
+      if (e.code === "KeyW" || e.key === "w" || e.key === "W" || e.key === "ArrowUp")
+        st.up = true;
+      if (e.code === "KeyS" || e.key === "s" || e.key === "S" || e.key === "ArrowDown")
+        st.down = true;
+      if (e.code === "KeyA" || e.key === "a" || e.key === "A" || e.key === "ArrowLeft")
+        st.left = true;
+      if (e.code === "KeyD" || e.key === "d" || e.key === "D" || e.key === "ArrowRight")
+        st.right = true;
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const st = manualKeysRef.current;
-      if (e.key === "Shift") st.run = false;
-      if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") st.up = false;
-      if (e.key === "s" || e.key === "S" || e.key === "ArrowDown") st.down = false;
-      if (e.key === "a" || e.key === "A" || e.key === "ArrowLeft") st.left = false;
-      if (e.key === "d" || e.key === "D" || e.key === "ArrowRight") st.right = false;
+      st.run = e.shiftKey;
+      if (e.code === "KeyW" || e.key === "w" || e.key === "W" || e.key === "ArrowUp")
+        st.up = false;
+      if (e.code === "KeyS" || e.key === "s" || e.key === "S" || e.key === "ArrowDown")
+        st.down = false;
+      if (e.code === "KeyA" || e.key === "a" || e.key === "A" || e.key === "ArrowLeft")
+        st.left = false;
+      if (e.code === "KeyD" || e.key === "d" || e.key === "D" || e.key === "ArrowRight")
+        st.right = false;
     };
 
     const cameraState = {
@@ -427,6 +643,8 @@ export function useThreeScene({
 
     // When the player manually drives the hero, keep camera centered on hero for a bit.
     const followHeroUntilRef = { current: 0 };
+    /** Газрын өндрийн лимитийг зөөлөн дагаж, эргүүлэхэд камер гэнэт үсрэхгүй. */
+    const cameraFloorSmoothedRef = { current: null as number | null };
 
     const cancelIntro = () => {
       cameraState.userInteracted = true;
@@ -437,7 +655,10 @@ export function useThreeScene({
     };
 
     function flyToStation(id: string, snap = false) {
-      const t = id === "home" ? buildHomeCameraTarget() : buildCameraTarget(id);
+      const t =
+        id === "home"
+          ? buildHomeCameraTarget(homeLookAt)
+          : buildCameraTarget(id);
       cameraState.targetLook.copy(t.lookAt);
       cameraState.targetDist = t.distance;
       cameraState.targetPhi = t.phi;
@@ -450,12 +671,46 @@ export function useThreeScene({
         cameraState.thetaVel = 0;
         cameraState.phiVel = 0;
         cameraState.distVel = 0;
+        cameraFloorSmoothedRef.current = null;
         cancelIntro();
       } else if (!cameraState.userInteracted) {
         cameraState.targetTheta = t.theta;
       }
     }
     flyToStationRef.current = flyToStation;
+
+    function goToHomeGer() {
+      flyToStation("home", true);
+      followHeroUntilRef.current = performance.now() + 3200;
+      heroManualVelRef.current.set(0, 0, 0);
+      manualKeysRef.current.up =
+        manualKeysRef.current.down =
+        manualKeysRef.current.left =
+        manualKeysRef.current.right =
+          false;
+      manualKeysRef.current.run = false;
+      const root = heroRootRef.current;
+      if (root) {
+        const dh = builder.doorAnchors.get("home");
+        let sx = PLAYER_HOME_X;
+        let sz = PLAYER_HOME_Z + 4;
+        if (dh) {
+          sx = dh.x;
+          sz = dh.z + 3.4;
+        }
+        const sy = terrainHeight(sx, sz) + 0.02;
+        root.position.set(sx, sy, sz);
+        root.rotation.y = Math.atan2(
+          PLAYER_HOME_X - sx,
+          PLAYER_HOME_Z - sz,
+        );
+        heroPlayRef.current?.("idle", 0.12);
+        heroKinematicRef.current.pos.copy(root.position);
+        heroKinematicRef.current.ry = root.rotation.y;
+        heroKinematicRef.current.has = true;
+      }
+    }
+    goToHomeGerRef.current = goToHomeGer;
 
     const onMouseDown = (e: MouseEvent) => {
       cancelIntro();
@@ -563,8 +818,14 @@ export function useThreeScene({
     renderer.domElement.addEventListener("dblclick", onDoubleClick);
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointerup", onPointerUp);
+    const onWindowBlur = () => {
+      const st = manualKeysRef.current;
+      st.up = st.down = st.left = st.right = false;
+      st.run = false;
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", onWindowBlur);
 
     const anim = new AnimationController({
       renderer,
@@ -579,15 +840,63 @@ export function useThreeScene({
       labelAnchors: builder.labelAnchors,
       doorAnchors: builder.doorAnchors,
       heroMixerRef,
-      currentStationId: firstStation,
-      onLabelUpdate: setLabelPositions,
+      heroRootRef,
+      heroKinematicRef,
+      currentStationId: highlightStationId,
+      onLabelUpdate: (ui) => {
+        setLabelPositions(ui);
+        const d = orbitCameraDistRef.current;
+        const t =
+          (d - CAMERA_LIMITS.minDist) /
+          (CAMERA_LIMITS.maxDist - CAMERA_LIMITS.minDist || 1);
+        const s = Math.max(
+          0.46,
+          Math.min(1.08, 1.05 - Math.max(0, Math.min(1, t)) * 0.58),
+        );
+        setLabelZoomScale(s);
+        const showAll = d > MAP_OVERVIEW_SHOW_ALL_LABELS_MIN_DIST;
+        if (showAllMapLabelsRef.current !== showAll) {
+          showAllMapLabelsRef.current = showAll;
+          setShowAllMapLabels(showAll);
+        }
+      },
       onBeforeRender: (elapsed: number, delta: number) => {
         const dt = Math.min(delta, 0.06);
-        const smoothPos = 1 - Math.exp(-(cameraState.isDragging ? 18 : 9) * dt);
-        const smoothRot =
-          1 - Math.exp(-(cameraState.isDragging ? 22 : 11) * dt);
+        let followSmooth = cameraState.isDragging ? 18 : 9;
+        const rootCam = heroRootRef.current;
+        if (rootCam && heroPlayRef.current) {
+          const st = manualKeysRef.current;
+          const mvx = (st.right ? 1 : 0) - (st.left ? 1 : 0);
+          const mvz = (st.up ? 1 : 0) - (st.down ? 1 : 0);
+          const klen = Math.sqrt(mvx * mvx + mvz * mvz);
+          if (klen > 0.01) {
+            followHeroUntilRef.current = performance.now() + 1800;
+            cameraState.targetLook.set(
+              rootCam.position.x,
+              rootCam.position.y + 2.2,
+              rootCam.position.z,
+            );
+            followSmooth = cameraState.isDragging ? 24 : 28;
+          } else if (followHeroUntilRef.current > performance.now()) {
+            cameraState.targetLook.set(
+              rootCam.position.x,
+              rootCam.position.y + 2.2,
+              rootCam.position.z,
+            );
+            followSmooth = cameraState.isDragging ? 20 : 17;
+          }
+        }
+        const smoothPos = 1 - Math.exp(-followSmooth * dt);
+        const smoothRot = 1 - Math.exp(
+          -(cameraState.isDragging ? 22 : 11) * dt,
+        );
 
         cameraState.targetTheta += cameraState.thetaVel;
+        while (cameraState.targetTheta > Math.PI)
+          cameraState.targetTheta -= Math.PI * 2;
+        while (cameraState.targetTheta < -Math.PI)
+          cameraState.targetTheta += Math.PI * 2;
+
         cameraState.targetPhi = clamp(
           cameraState.targetPhi + cameraState.phiVel,
           CAMERA_LIMITS.minPhi,
@@ -637,11 +946,23 @@ export function useThreeScene({
         );
         sun.intensity = 0.85 + dayFrac * 1.35;
 
-        const fogR = 0.66 + dayFrac * 0.1;
-        const fogG = 0.7 + dayFrac * 0.09;
-        const fogB = 0.74 + dayFrac * 0.07;
-        (scene.fog as THREE.FogExp2).color.setRGB(fogR, fogG, fogB);
+        const fogR = 0.58 + dayFrac * 0.1;
+        const fogG = 0.7 + dayFrac * 0.1;
+        const fogB = 0.84 + dayFrac * 0.08;
+        const fog = scene.fog as THREE.FogExp2;
+        fog.color.setRGB(fogR, fogG, fogB);
+        fog.density = 0.00105 + (1 - dayFrac) * 0.00012;
         renderer.toneMappingExposure = 0.86 + dayFrac * 0.24;
+
+        for (const m of homeWayMarkers) {
+          const { baseY, phase, pulseMats } = m.userData;
+          m.position.y =
+            baseY + Math.sin(elapsed * 2.6 + phase) * 0.16;
+          const pulse = 0.08 + Math.sin(elapsed * 3.4 + phase) * 0.07;
+          for (const mat of pulseMats) {
+            mat.emissiveIntensity = pulse;
+          }
+        }
 
         const finalCamPos = new THREE.Vector3(
           cameraState.currentLook.x +
@@ -655,8 +976,14 @@ export function useThreeScene({
               Math.cos(cameraState.currentPhi) *
               cameraState.currentDist,
         );
-        // Keep camera above terrain to avoid "digging" into the ground.
-        const floorY = terrainHeight(finalCamPos.x, finalCamPos.z) + 2.2;
+        // Keep camera above terrain — зөөлөн дагах (хурц уул/газар дээр гэнэт өсөхгүй).
+        const floorRaw = terrainHeight(finalCamPos.x, finalCamPos.z) + 2.55;
+        const prevF = cameraFloorSmoothedRef.current;
+        const floorY =
+          prevF == null
+            ? floorRaw
+            : prevF + (floorRaw - prevF) * (1 - Math.exp(-9 * dt));
+        cameraFloorSmoothedRef.current = floorY;
         if (finalCamPos.y < floorY) finalCamPos.y = floorY;
         if (cameraState.introActive) {
           const t = Math.min(1, cameraState.introT / cameraState.introDur);
@@ -683,30 +1010,32 @@ export function useThreeScene({
           camera.lookAt(cameraState.currentLook);
         }
         camera.updateMatrixWorld();
+        orbitCameraDistRef.current = cameraState.currentDist;
 
-        // --- Hero movement (manual first, then station autopilot) ---
+        // --- Hero movement (manual); door proximity runs every frame after move ---
         const root = heroRootRef.current;
         const play = heroPlayRef.current;
-        if (!root || !play) return;
-        const ms = heroMoveRef.current;
+        if (!root || !play) {
+          heroKinematicRef.current.has = false;
+          return;
+        }
 
-        // Manual: WASD/Arrows (Shift = run). Movement is camera-relative.
         const st = manualKeysRef.current;
         const mvx = (st.right ? 1 : 0) - (st.left ? 1 : 0);
-        // W = forward, S = backward
         const mvz = (st.up ? 1 : 0) - (st.down ? 1 : 0);
         const len = Math.sqrt(mvx * mvx + mvz * mvz);
         const hv = heroManualVelRef.current;
         if (len <= 0.01) {
-          hv.lerp(new THREE.Vector3(0, 0, 0), 1 - Math.exp(-14 * delta));
+          hv.multiplyScalar(Math.exp(-20 * delta));
+          if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
         }
         if (len > 0.01) {
-          followHeroUntilRef.current = performance.now() + 1400;
           const baseSpeed = st.run ? 22 : 12;
           const localDir = new THREE.Vector3(mvx / len, 0, mvz / len);
           const camForward = new THREE.Vector3();
           camera.getWorldDirection(camForward);
           camForward.y = 0;
+          if (camForward.lengthSq() < 1e-8) camForward.set(0, 0, 1);
           camForward.normalize();
           const camRight = new THREE.Vector3()
             .crossVectors(camForward, new THREE.Vector3(0, 1, 0))
@@ -717,10 +1046,14 @@ export function useThreeScene({
             .normalize();
 
           const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
-          hv.lerp(desiredVel, 1 - Math.exp(-16 * delta));
+          if (st.run) {
+            hv.copy(desiredVel);
+          } else {
+            hv.lerp(desiredVel, 1 - Math.exp(-16 * delta));
+          }
           root.position.addScaledVector(hv, delta);
-          root.position.x = clamp(root.position.x, -820, 650);
-          root.position.z = clamp(root.position.z, -520, 520);
+          root.position.x = clamp(root.position.x, -5600, 5600);
+          root.position.z = clamp(root.position.z, -4700, 4700);
           root.position.y = terrainHeight(root.position.x, root.position.z) + 0.02;
 
           const targetYaw = Math.atan2(worldDir.x, worldDir.z);
@@ -730,141 +1063,62 @@ export function useThreeScene({
           root.rotation.y += dy * (1 - Math.exp(-14 * delta));
 
           play(st.run ? "run" : "walk", 0.12);
-
-          // Manual input cancels any in-progress autopilot path.
-          heroTargetRef.current = null;
-          ms.pathPts = null;
-          ms.lastTarget = null;
-          return;
-        }
-
-        // Camera follow when manually moving (or shortly after).
-        if (followHeroUntilRef.current > performance.now()) {
-          cameraState.targetLook.set(root.position.x, root.position.y + 2.2, root.position.z);
-        }
-
-        // Autopilot: set by clicking labels/doors in the UI.
-        const tgtRaw = heroTargetRef.current;
-        if (!tgtRaw) {
+        } else {
           play("idle", 0.18);
-          return;
-        }
-        const tgt = resolveStationId(tgtRaw);
-
-        const buildAdj = () => {
-          const adj = new Map<string, Set<string>>();
-          for (const key of builder.roadPaths.keys()) {
-            const [a, b] = key.split("->");
-            if (!a || !b) continue;
-            if (!adj.has(a)) adj.set(a, new Set());
-            adj.get(a)!.add(b);
-          }
-          return adj;
-        };
-
-        const findRoute = (from: string, to: string): string[] | null => {
-          if (from === to) return [from];
-          const adj = buildAdj();
-          const q: string[] = [from];
-          const prev = new Map<string, string | null>();
-          prev.set(from, null);
-          while (q.length) {
-            const cur = q.shift()!;
-            const ns = adj.get(cur);
-            if (!ns) continue;
-            for (const n of ns) {
-              if (prev.has(n)) continue;
-              prev.set(n, cur);
-              if (n === to) {
-                const out: string[] = [];
-                let x: string | null = to;
-                while (x) {
-                  out.push(x);
-                  x = prev.get(x) ?? null;
-                }
-                out.reverse();
-                return out;
-              }
-              q.push(n);
-            }
-          }
-          return null;
-        };
-
-        const setPath = (fromId: string, toId: string) => {
-          const route = findRoute(fromId, toId);
-          if (!route || route.length < 2) {
-            ms.pathPts = null;
-            ms.totalLen = 0;
-            ms.pathLens = [];
-            ms.distAlong = 0;
-            return;
-          }
-          const pts: THREE.Vector3[] = [];
-          for (let i = 0; i < route.length - 1; i++) {
-            const seg = builder.roadPaths.get(`${route[i]}->${route[i + 1]}`);
-            if (!seg) continue;
-            for (let j = 0; j < seg.length; j++) {
-              if (i > 0 && j === 0) continue;
-              pts.push(seg[j].clone());
-            }
-          }
-          for (const p of pts) p.y = terrainHeight(p.x, p.z);
-          ms.pathPts = pts;
-          ms.pathLens = [0];
-          ms.totalLen = 0;
-          for (let i = 1; i < pts.length; i++) {
-            ms.totalLen += pts[i].distanceTo(pts[i - 1]);
-            ms.pathLens.push(ms.totalLen);
-          }
-          ms.distAlong = 0;
-          play("walk", 0.2);
-        };
-
-        const sampleAt = (d: number): { pos: THREE.Vector3; dir: THREE.Vector3 } => {
-          const pts = ms.pathPts;
-          if (!pts || pts.length < 2 || ms.totalLen <= 0) {
-            return { pos: root.position.clone(), dir: new THREE.Vector3(0, 0, 1) };
-          }
-          const clamped = Math.max(0, Math.min(ms.totalLen, d));
-          let i = 1;
-          while (i < ms.pathLens.length && ms.pathLens[i] < clamped) i++;
-          const i0 = Math.max(1, i);
-          const prevLen = ms.pathLens[i0 - 1];
-          const segLen = ms.pathLens[i0] - prevLen || 1;
-          const t = (clamped - prevLen) / segLen;
-          const a = pts[i0 - 1];
-          const b = pts[i0];
-          const pos = new THREE.Vector3().lerpVectors(a, b, t);
-          const dir = new THREE.Vector3().subVectors(b, a);
-          dir.y = 0;
-          dir.normalize();
-          return { pos, dir };
-        };
-
-        if (tgt !== ms.lastTarget) {
-          setPath(resolveStationId(currentIdRef.current), tgt);
-          ms.lastTarget = tgt;
         }
 
-        if (!ms.pathPts || ms.totalLen <= 0) return;
+        heroKinematicRef.current.pos.copy(root.position);
+        heroKinematicRef.current.ry = root.rotation.y;
+        heroKinematicRef.current.has = true;
 
-        // Autopilot speed tuned for the larger world scale.
-        ms.distAlong += (ms.speed * 0.75) * delta;
-        const { pos, dir } = sampleAt(ms.distAlong);
-        root.position.copy(pos);
-        root.position.y += 0.02;
-        if (dir.lengthSq() > 0) root.rotation.y = Math.atan2(dir.x, dir.z);
+        const INNER_R = 58;
+        const OUTER_R = 228;
+        const INNER_R2 = INNER_R * INNER_R;
+        const OUTER_R2 = OUTER_R * OUTER_R;
 
-        if (ms.distAlong >= ms.totalLen - 0.01) {
-          ms.pathPts = null;
-          play("idle", 0.25);
-          const sp = stationArrivalPos(tgt);
-          root.position.set(sp.x, sp.y, sp.z);
-          if (ms.lastArrived !== tgt) {
-            ms.lastArrived = tgt;
-            onArriveRef.current?.(tgt);
+        let nearestId: string | null = null;
+        let bestD2 = Infinity;
+        builder.doorAnchors.forEach((door, id) => {
+          const dx = root.position.x - door.x;
+          const dz = root.position.z - door.z;
+          const d2 = dx * dx + dz * dz;
+          if (d2 < bestD2) {
+            bestD2 = d2;
+            nearestId = id;
           }
+        });
+
+        const dist = Math.sqrt(bestD2);
+        const innerId =
+          nearestId != null && bestD2 <= INNER_R2 ? nearestId : null;
+        const labelId =
+          nearestId != null && bestD2 <= OUTER_R2 ? nearestId : null;
+        let approachAlpha = 0;
+        if (labelId != null && nearestId != null) {
+          if (bestD2 <= INNER_R2) approachAlpha = 1;
+          else {
+            approachAlpha = Math.max(
+              0,
+              Math.min(1, (OUTER_R - dist) / (OUTER_R - INNER_R)),
+            );
+          }
+        }
+
+        if (innerId !== heroAtStationIdRef.current) {
+          heroAtStationIdRef.current = innerId;
+          setHeroAtStationId(innerId);
+        }
+
+        const th = labelUiThrottleRef.current;
+        if (
+          th.stationId !== labelId ||
+          Math.abs(th.alpha - approachAlpha) > 0.035
+        ) {
+          labelUiThrottleRef.current = {
+            stationId: labelId,
+            alpha: approachAlpha,
+          };
+          setLabelUi({ stationId: labelId, alpha: approachAlpha });
         }
       },
     });
@@ -873,6 +1127,7 @@ export function useThreeScene({
     animRef.current = anim;
 
     return () => {
+      resizeObserver.disconnect();
       disposed = true;
       if (heroRootRef.current) {
         scene.remove(heroRootRef.current);
@@ -893,6 +1148,7 @@ export function useThreeScene({
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onWindowBlur);
       renderer.dispose();
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
@@ -903,5 +1159,21 @@ export function useThreeScene({
     flyToStationRef.current?.(id, snap);
   }, []);
 
-  return { labelPositions, flyToStation };
+  const goToHomeGer = useCallback(() => {
+    goToHomeGerRef.current?.();
+  }, []);
+
+  useEffect(() => {
+    onHeroAtStationChange?.(heroAtStationId);
+  }, [heroAtStationId, onHeroAtStationChange]);
+
+  return {
+    labelPositions,
+    flyToStation,
+    goToHomeGer,
+    heroAtStationId,
+    labelUi,
+    labelZoomScale,
+    showAllMapLabels,
+  };
 }

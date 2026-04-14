@@ -55,14 +55,24 @@ export function createHeroAnimator(
   const mixer = new THREE.AnimationMixer(root);
   const actions = new Map<string, THREE.AnimationAction>();
   for (const [name, clip] of Object.entries(clips)) {
-    actions.set(name, mixer.clipAction(clip));
+    const action = mixer.clipAction(clip);
+    action.clampWhenFinished = false;
+    if (name === "walk" || name === "run" || name === "idle") {
+      action.setLoop(THREE.LoopRepeat, Infinity);
+    }
+    actions.set(name, action);
   }
 
   let current = "";
   const play = (name: string, fadeSec = 0.25) => {
     const next = actions.get(name);
     if (!next) return;
-    if (current === name) return;
+    if (current === name) {
+      if (!next.isRunning()) {
+        next.reset().fadeIn(0.08).play();
+      }
+      return;
+    }
     const cur = current ? actions.get(current) : undefined;
     if (cur && cur !== next) cur.fadeOut(fadeSec);
     next.reset().fadeIn(fadeSec).play();
