@@ -1,7 +1,3 @@
-/**
- * Express API (server/). User sync uses /simple-sync — no Bearer token (demo / local only).
- */
-
 export type ApiHealth = {
   ok: boolean;
   db: boolean;
@@ -28,7 +24,7 @@ export function getApiBaseUrl(): string {
 
 export async function apiFetch(
   path: string,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<Response> {
   const p = path.startsWith("/") ? path : `/${path}`;
   return fetch(`${getApiBaseUrl()}${p}`, init);
@@ -43,7 +39,6 @@ export async function getApiHealth(): Promise<ApiHealth> {
   return res.json() as Promise<ApiHealth>;
 }
 
-/** Upsert user in PostgreSQL by email (no auth). */
 export async function syncAppUserSimple(body: {
   email: string;
   displayName?: string;
@@ -71,7 +66,7 @@ export async function syncAppUserSimple(body: {
 
 /** Full game row for dashboard — PostgreSQL is source of truth when populated. */
 export async function getGameProfileByEmail(
-  email: string
+  email: string,
 ): Promise<{ user: AppUserRow } | null> {
   const q = encodeURIComponent(email.trim());
   const res = await apiFetch(`/api/users/game-profile?email=${q}`);
@@ -89,7 +84,6 @@ export async function getGameProfileByEmail(
   return { user: data.user };
 }
 
-/** Game catalog row (PostgreSQL `games` table). */
 export type GameRow = {
   id: string;
   slug: string;
@@ -121,7 +115,6 @@ export async function getGames(): Promise<{ games: GameRow[] }> {
   return { games: data.games };
 }
 
-/** Өртөө бүр дээрх тоглоомын товч мэдээлэл (газрын зураг / popup). */
 export type MapStationGamePreview = {
   slug: string;
   name: string;
@@ -136,9 +129,7 @@ export type MapStationApiRow = {
   icon?: string;
   pos?: { left?: string; top?: string };
   available?: boolean;
-  /** Бүх холбогдсон тоглоом (admin-аас). */
   games?: MapStationGamePreview[];
-  /** Эхний тоглоом (хуучин клиентийн нийцлийн тулд). */
   game?: { slug?: string; name: string; desc: string; reward: string };
 };
 
@@ -188,11 +179,11 @@ export type DashboardBundle = {
 
 export async function getDashboardBundle(
   email: string,
-  lang: "mn" | "en"
+  lang: "mn" | "en",
 ): Promise<DashboardBundle> {
   const q = encodeURIComponent(email.trim());
   const res = await apiFetch(
-    `/api/content/dashboard-bundle?email=${q}&lang=${lang}`
+    `/api/content/dashboard-bundle?email=${q}&lang=${lang}`,
   );
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
@@ -224,7 +215,9 @@ export type LeaderboardEntry = {
   };
 };
 
-export async function getLeaderboard(): Promise<{ entries: LeaderboardEntry[] }> {
+export async function getLeaderboard(): Promise<{
+  entries: LeaderboardEntry[];
+}> {
   const res = await apiFetch("/api/leaderboard");
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
@@ -272,7 +265,8 @@ export async function homeUpgradeGer(body: {
     error?: string;
     user?: AppUserRow;
   };
-  if (!res.ok) throw new Error(data.error ?? `home upgrade failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `home upgrade failed (${res.status})`);
   if (!data.user) throw new Error("home upgrade: missing user");
   return { user: data.user };
 }
@@ -397,7 +391,7 @@ export const ADMIN_TOKEN_STORAGE_KEY = "mtga_admin_token";
 
 export async function adminLogin(
   username: string,
-  password: string
+  password: string,
 ): Promise<{ token: string }> {
   const res = await apiFetch("/api/admin/login", {
     method: "POST",
@@ -422,7 +416,9 @@ function adminBearerHeaders(token: string) {
   } as const;
 }
 
-export async function adminListGames(token: string): Promise<{ games: GameRow[] }> {
+export async function adminListGames(
+  token: string,
+): Promise<{ games: GameRow[] }> {
   const res = await apiFetch("/api/admin/games", {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -437,7 +433,9 @@ export async function adminListGames(token: string): Promise<{ games: GameRow[] 
   return { games: data.games };
 }
 
-export async function adminListUsers(token: string): Promise<{ users: AppUserRow[] }> {
+export async function adminListUsers(
+  token: string,
+): Promise<{ users: AppUserRow[] }> {
   const res = await apiFetch("/api/admin/users", {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -454,7 +452,7 @@ export async function adminListUsers(token: string): Promise<{ users: AppUserRow
 
 export async function adminListUsersV2(
   token: string,
-  opts?: { includeLocal?: boolean }
+  opts?: { includeLocal?: boolean },
 ): Promise<{ users: AppUserRow[] }> {
   const q = opts?.includeLocal ? "?includeLocal=true" : "";
   const res = await apiFetch(`/api/admin/users${q}`, {
@@ -471,9 +469,7 @@ export async function adminListUsersV2(
   return { users: data.users };
 }
 
-export async function adminGetTreasury(
-  token: string,
-): Promise<{
+export async function adminGetTreasury(token: string): Promise<{
   summary: {
     users: number;
     kp_total: number;
@@ -524,7 +520,8 @@ export async function adminGetTreasury(
     top?: unknown;
     users?: unknown;
   };
-  if (!res.ok) throw new Error(data.error ?? `admin treasury failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `admin treasury failed (${res.status})`);
   if (!data.summary || !data.top || !data.users) {
     throw new Error("admin treasury: incomplete response");
   }
@@ -533,7 +530,7 @@ export async function adminGetTreasury(
 
 export async function adminCreateGame(
   token: string,
-  body: Omit<GameRow, "id" | "created_at" | "updated_at">
+  body: Omit<GameRow, "id" | "created_at" | "updated_at">,
 ): Promise<{ game: GameRow }> {
   const res = await apiFetch("/api/admin/games", {
     method: "POST",
@@ -565,7 +562,7 @@ export async function adminUpdateGame(
       | "show_on_home"
       | "sort_order"
     >
-  >
+  >,
 ): Promise<{ game: GameRow }> {
   const res = await apiFetch(`/api/admin/games/${id}`, {
     method: "PUT",
@@ -581,7 +578,10 @@ export async function adminUpdateGame(
   return { game: data.game };
 }
 
-export async function adminDeleteGame(token: string, id: string): Promise<void> {
+export async function adminDeleteGame(
+  token: string,
+  id: string,
+): Promise<void> {
   const res = await apiFetch(`/api/admin/games/${id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
@@ -599,11 +599,14 @@ export async function adminUploadGameImage(
 ): Promise<{ game: Pick<GameRow, "id" | "image_url"> }> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await apiFetch(`/api/admin/games/${encodeURIComponent(gameId)}/image`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: fd,
-  });
+  const res = await apiFetch(
+    `/api/admin/games/${encodeURIComponent(gameId)}/image`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     game?: { id: string; image_url: string | null };
@@ -637,7 +640,9 @@ export async function adminUploadHeroImage(
   return { hero: data.hero };
 }
 
-export async function adminListHeroes(token: string): Promise<{ heroes: HeroRow[] }> {
+export async function adminListHeroes(
+  token: string,
+): Promise<{ heroes: HeroRow[] }> {
   const res = await apiFetch("/api/admin/heroes", {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -645,7 +650,8 @@ export async function adminListHeroes(token: string): Promise<{ heroes: HeroRow[
     error?: string;
     heroes?: HeroRow[];
   };
-  if (!res.ok) throw new Error(data.error ?? `heroes list failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `heroes list failed (${res.status})`);
   if (!data.heroes) throw new Error("missing heroes");
   return { heroes: data.heroes };
 }
@@ -670,7 +676,7 @@ export async function adminUpdateHero(
       | "sort_order"
       | "is_available"
     >
-  >
+  >,
 ): Promise<{ hero: HeroRow }> {
   const res = await apiFetch(`/api/admin/heroes/${encodeURIComponent(slug)}`, {
     method: "PUT",
@@ -681,7 +687,8 @@ export async function adminUpdateHero(
     error?: string;
     hero?: HeroRow;
   };
-  if (!res.ok) throw new Error(data.error ?? `hero update failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `hero update failed (${res.status})`);
   if (!data.hero) throw new Error("missing hero");
   return { hero: data.hero };
 }
@@ -719,73 +726,98 @@ export async function adminUpdateStation(
       | "quest_desc_mn"
       | "quest_desc_en"
     >
-  >
+  >,
 ): Promise<{ station: MapStationRow }> {
-  const res = await apiFetch(`/api/admin/stations/${encodeURIComponent(slug)}`, {
-    method: "PUT",
-    headers: adminBearerHeaders(token),
-    body: JSON.stringify(body),
-  });
+  const res = await apiFetch(
+    `/api/admin/stations/${encodeURIComponent(slug)}`,
+    {
+      method: "PUT",
+      headers: adminBearerHeaders(token),
+      body: JSON.stringify(body),
+    },
+  );
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     station?: MapStationRow;
   };
-  if (!res.ok) throw new Error(data.error ?? `station update failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `station update failed (${res.status})`);
   if (!data.station) throw new Error("missing station");
   return { station: data.station };
 }
 
-export async function adminDeleteUser(token: string, userId: string): Promise<void> {
+export async function adminDeleteUser(
+  token: string,
+  userId: string,
+): Promise<void> {
   const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
   if (res.status === 204) return;
   const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok) throw new Error(data.error ?? `user delete failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `user delete failed (${res.status})`);
 }
 
 export async function adminGetStationGames(
   token: string,
-  stationSlug: string
+  stationSlug: string,
 ): Promise<{ games: LinkedStationGameRow[] }> {
   const res = await apiFetch(
     `/api/admin/stations/${encodeURIComponent(stationSlug)}/games`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${token}` } },
   );
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     games?: LinkedStationGameRow[];
   };
-  if (!res.ok) throw new Error(data.error ?? `station games failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `station games failed (${res.status})`);
   return { games: data.games ?? [] };
 }
 
 export async function adminPutStationGames(
   token: string,
   stationSlug: string,
-  gameIds: string[]
-): Promise<{ ok: boolean; games: { id: string; slug: string; name_mn: string; name_en: string; sort_order: number }[] }> {
+  gameIds: string[],
+): Promise<{
+  ok: boolean;
+  games: {
+    id: string;
+    slug: string;
+    name_mn: string;
+    name_en: string;
+    sort_order: number;
+  }[];
+}> {
   const res = await apiFetch(
     `/api/admin/stations/${encodeURIComponent(stationSlug)}/games`,
     {
       method: "PUT",
       headers: adminBearerHeaders(token),
       body: JSON.stringify({ gameIds }),
-    }
+    },
   );
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     ok?: boolean;
-    games?: { id: string; slug: string; name_mn: string; name_en: string; sort_order: number }[];
+    games?: {
+      id: string;
+      slug: string;
+      name_mn: string;
+      name_en: string;
+      sort_order: number;
+    }[];
   };
-  if (!res.ok) throw new Error(data.error ?? `station games put failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `station games put failed (${res.status})`);
   return { ok: !!data.ok, games: data.games ?? [] };
 }
 
 export async function adminListUiStrings(
   token: string,
-  locale?: "mn" | "en"
+  locale?: "mn" | "en",
 ): Promise<{ strings: UiStringRow[] }> {
   const q = locale ? `?locale=${locale}` : "";
   const res = await apiFetch(`/api/admin/ui-strings${q}`, {
@@ -795,14 +827,15 @@ export async function adminListUiStrings(
     error?: string;
     strings?: UiStringRow[];
   };
-  if (!res.ok) throw new Error(data.error ?? `ui-strings failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `ui-strings failed (${res.status})`);
   if (!data.strings) throw new Error("missing strings");
   return { strings: data.strings };
 }
 
 export async function adminPutUiString(
   token: string,
-  body: { key: string; locale: "mn" | "en"; value: string }
+  body: { key: string; locale: "mn" | "en"; value: string },
 ): Promise<{ string: UiStringRow }> {
   const res = await apiFetch("/api/admin/ui-strings", {
     method: "PUT",
@@ -813,7 +846,8 @@ export async function adminPutUiString(
     error?: string;
     string?: UiStringRow;
   };
-  if (!res.ok) throw new Error(data.error ?? `ui-string put failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `ui-string put failed (${res.status})`);
   if (!data.string) throw new Error("missing string");
   return { string: data.string };
 }
@@ -821,7 +855,7 @@ export async function adminPutUiString(
 export async function adminPatchUserDisplayName(
   token: string,
   userId: string,
-  displayName: string
+  displayName: string,
 ): Promise<{ user: AppUserRow }> {
   const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
@@ -832,13 +866,14 @@ export async function adminPatchUserDisplayName(
     error?: string;
     user?: AppUserRow;
   };
-  if (!res.ok) throw new Error(data.error ?? `user patch failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data.error ?? `user patch failed (${res.status})`);
   if (!data.user) throw new Error("missing user");
   return { user: data.user };
 }
 
 export async function getAppUserByEmail(
-  email: string
+  email: string,
 ): Promise<{ user: AppUserRow }> {
   const q = encodeURIComponent(email.trim());
   const res = await apiFetch(`/api/users/simple-me?email=${q}`);
