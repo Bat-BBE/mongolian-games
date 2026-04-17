@@ -7,7 +7,10 @@ import {
   savePlayer,
   HEROES,
 } from "@/components/hero-select/hero-data";
-import { parseHeroId, type HeroId } from "@/components/hero-select/hero-strings";
+import {
+  parseHeroId,
+  type HeroId,
+} from "@/components/hero-select/hero-strings";
 import { getDashboardBundle, type MapStationApiRow } from "@/lib/api";
 import { normalizeStationId, STATION_CONFIGS } from "./mapConstants";
 import {
@@ -18,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DashLang, DashStrings } from "./dashboard-strings";
+import { getApiBaseUrl } from "@/lib/api";
 
 function num(v: unknown, fallback: number): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -27,9 +31,7 @@ function num(v: unknown, fallback: number): number {
 export type ProfilePanelProps = {
   t: DashStrings;
   lang: DashLang;
-  /** false бол өгөгдөл татахгүй (хаалттай модал) */
   active?: boolean;
-  /** Баатар амжилттай солигдсоны дараа */
   onHeroSaved?: () => void;
 };
 
@@ -56,6 +58,16 @@ export function ProfilePanel({
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
   const [saving, setSaving] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
+  const apiBase = getApiBaseUrl();
+
+  const resolveImg = useCallback(
+    (raw: unknown): string => {
+      const s = typeof raw === "string" ? raw.trim() : "";
+      if (!s) return "";
+      return s.startsWith("/") ? `${apiBase}${s}` : s;
+    },
+    [apiBase],
+  );
 
   const tickCooldown = useCallback(() => {
     setCooldownMs(getHeroChangeRemainingMs());
@@ -91,15 +103,17 @@ export function ProfilePanel({
         const prog = bundle.user.progress as Record<string, unknown>;
         const h = bundle.hero;
         setHeroName(
-          String(bundle.computed.displayHeroName ?? prof.heroName ?? "")
+          String(bundle.computed.displayHeroName ?? prof.heroName ?? ""),
         );
         setHeroTitle(
-          String(bundle.computed.displayHeroTitle ?? prof.heroTitle ?? "")
+          String(bundle.computed.displayHeroTitle ?? prof.heroTitle ?? ""),
         );
         setHeroImage(
-          typeof h?.image_url === "string"
-            ? h.image_url
-            : String(prof.heroImages ?? "")
+          resolveImg(
+            typeof h?.image_url === "string"
+              ? h.image_url
+              : (prof as any).heroImages,
+          ),
         );
         setTier(bundle.computed.tier ?? "—");
         setLevel(num(prof.level, 1));
@@ -128,7 +142,7 @@ export function ProfilePanel({
         const prog = data.progress as Record<string, unknown>;
         setHeroName(String(prof.heroName ?? ""));
         setHeroTitle(String(prof.heroTitle ?? ""));
-        setHeroImage(String(prof.heroImages ?? ""));
+        setHeroImage(resolveImg((prof as any).heroImages));
         setLevel(num(prof.level, 1));
         setKp(num(prof.kp, 0));
         setXp(num(prog.xp, 0));
@@ -139,15 +153,15 @@ export function ProfilePanel({
             : "";
         setCurrentStationLabel(
           curSid
-            ? STATION_CONFIGS[curSid as keyof typeof STATION_CONFIGS]?.region ??
-                curSid
-            : "—"
+            ? (STATION_CONFIGS[curSid as keyof typeof STATION_CONFIGS]
+                ?.region ?? curSid)
+            : "—",
         );
         const rawDone = prog.doneStationIds;
         setDoneIds(
           Array.isArray(rawDone)
             ? rawDone.map((x) => normalizeStationId(String(x)))
-            : []
+            : [],
         );
         const hid = parseHeroId(prof.heroId ?? saved.heroId);
         setCurrentHeroId(hid);
@@ -189,7 +203,7 @@ export function ProfilePanel({
 
   const loadingLabel = useMemo(
     () => (lang === "mn" ? "Ачаалж байна…" : "Loading…"),
-    [lang]
+    [lang],
   );
 
   if (!active) return null;
@@ -209,10 +223,9 @@ export function ProfilePanel({
   }
 
   return (
-    <div className="space-y-6 pr-1">
+    <div className="space-y-3 pr-1">
       <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-        <div className="shrink-0 w-24 h-24 rounded-full border-2 border-primary overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.35)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <div className="shrink-0 w-24 h-24 rounded-full overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.35)]">
           <img
             src={heroImage || "/images/shikhikhutag.png"}
             alt=""
@@ -235,33 +248,32 @@ export function ProfilePanel({
             {currentStationLabel}
           </p>
         </div>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              {t.profileLevelLabel}
+            </p>
+            <p className="text-xl font-semibold tabular-nums">{level}</p>
+          </div>
+          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              {t.profileXpLabel}
+            </p>
+            <p className="text-sm font-semibold tabular-nums leading-tight">
+              {xp} / {xpMax}
+            </p>
+          </div>
+          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+              {t.treasury}
+            </p>
+            <p className="text-xl font-semibold tabular-nums">{kp}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {t.profileLevelLabel}
-          </p>
-          <p className="text-xl font-semibold tabular-nums">{level}</p>
-        </div>
-        <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {t.profileXpLabel}
-          </p>
-          <p className="text-sm font-semibold tabular-nums leading-tight">
-            {xp} / {xpMax}
-          </p>
-        </div>
-        <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-          <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-            {t.treasury}
-          </p>
-          <p className="text-xl font-semibold tabular-nums">{kp}</p>
-        </div>
-      </div>
-
-      <section className="space-y-2">
-        <h3 className="font-display text-xs tracking-[0.15em] text-muted-foreground uppercase">
+      <section className="mb-4">
+        <h3 className="font-display text-xs tracking-[0.15em] text-muted-foreground uppercase mb-2">
           {t.profileVisitedStationsTitle}
         </h3>
         {doneIds.length === 0 ? (
@@ -280,26 +292,27 @@ export function ProfilePanel({
         )}
       </section>
 
-      <section className="space-y-3 border-t border-border pt-4">
+      <section className="space-y-2 border-t border-border pt-4">
         <h3 className="font-display text-xs tracking-[0.15em] text-muted-foreground uppercase">
           {t.profileChangeHeroTitle}
         </h3>
-        <p className="text-[11px] text-muted-foreground leading-snug">
-          {t.profileHeroOnCooldown}
-        </p>
-
-        <div
-          className={cn(
-            "rounded-xl border px-3 py-2 text-xs tabular-nums",
-            cooldownMs > 0
-              ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
-              : "border-primary/30 bg-primary/5"
-          )}
-        >
-          <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
-            {t.profileHeroCooldownLabel}:{" "}
-          </span>
-          {formatCooldownHMS(cooldownMs, lang)}
+        <div className="flex items-center gap-2 justify-between px-4">
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            {t.profileHeroOnCooldown}
+          </p>
+          <div
+            className={cn(
+              "rounded-xl border px-3 py-1 text-xs tabular-nums",
+              cooldownMs > 0
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-200"
+                : "border-primary/30 bg-primary/5",
+            )}
+          >
+            <span className="text-muted-foreground text-[10px] uppercase tracking-wider">
+              {t.profileHeroCooldownLabel}:{" "}
+            </span>
+            {formatCooldownHMS(cooldownMs, lang)}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -312,18 +325,17 @@ export function ProfilePanel({
                 disabled={!h.available}
                 onClick={() => setSelectedId(h.id)}
                 className={cn(
-                  "rounded-lg border overflow-hidden text-left transition-all",
+                  "rounded-lg border overflow-hidden text-left transition-all h-[180px] w-[140px]",
                   sel
                     ? "border-primary ring-2 ring-primary/40"
                     : "border-border hover:border-primary/50",
-                  !h.available && "opacity-40 cursor-not-allowed"
+                  !h.available && "opacity-40 cursor-not-allowed",
                 )}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={h.imageUrl}
                   alt=""
-                  className="w-full aspect-square object-cover"
+                  className="w-full aspect-square object-cover h-[154px]"
                 />
                 <div className="p-1.5 space-y-0">
                   <p className="text-[10px] font-display font-semibold truncate">

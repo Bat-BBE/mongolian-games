@@ -328,4 +328,4 @@ export class DetailedAnimalModels {
   }
 }
 
-export { DetailedAnimalModels };
+// (Already exported above as `export class DetailedAnimalModels`)

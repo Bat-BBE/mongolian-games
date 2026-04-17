@@ -388,4 +388,4 @@ export class DetailedEnvironmentBuilder {
   }
 }
 
-export { DetailedEnvironmentBuilder };
+// (Already exported above as `export class DetailedEnvironmentBuilder`)

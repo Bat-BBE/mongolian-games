@@ -42,8 +42,9 @@ interface CameraTarget {
 const CAMERA_LIMITS = {
   minPhi: 0.16,
   maxPhi: 1.2,
-  minDist: 22,
-  maxDist: 520,
+  // Closer camera for "hero nearby" feel.
+  minDist: 14,
+  maxDist: 460,
 };
 
 const MAP_OVERVIEW_SHOW_ALL_LABELS_MIN_DIST = 285;
@@ -78,13 +79,13 @@ function buildCameraTarget(stationId: string): CameraTarget {
   const terrainSteep = Math.min(slopeSample / 8, 1);
   const baseDistance =
     biome === "high_alpine" || biome === "mountain"
-      ? 66
+      ? 58
       : biome === "gobi"
-        ? 62
+        ? 54
         : biome === "forest"
-          ? 58
-          : 56;
-  const distance = baseDistance + terrainSteep * 12;
+          ? 52
+          : 50;
+  const distance = baseDistance + terrainSteep * 10;
   const phi =
     biome === "high_alpine"
       ? 0.48
@@ -104,7 +105,7 @@ function buildCameraTarget(stationId: string): CameraTarget {
 function buildHomeCameraTarget(lookAt: THREE.Vector3): CameraTarget {
   return {
     lookAt: lookAt.clone(),
-    distance: 44,
+    distance: 38,
     phi: 0.44,
     theta: 0.15,
   };
@@ -339,6 +340,7 @@ export function useThreeScene({
     if (!container) return;
 
     const scene = new THREE.Scene();
+    // Хуучин: цайвар цэнхэр тэнгэр + манан
     scene.background = new THREE.Color(0x92c4e8);
     scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00105);
 
@@ -352,13 +354,18 @@ export function useThreeScene({
       ? "ulaanbaatar"
       : resolveStationId(currentStationId);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(W, H);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.03;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Cap DPR to keep map smooth on mid-range GPUs.
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     container.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
 
@@ -369,7 +376,7 @@ export function useThreeScene({
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     };
     const resizeObserver = new ResizeObserver(() => applyViewportSize());
     resizeObserver.observe(container);
@@ -379,34 +386,37 @@ export function useThreeScene({
     const SUN_RADIUS = 280;
     const SUN_HEIGHT_FACTOR = 0.7;
 
-    const sun = new THREE.DirectionalLight(0xfff2dc, 2.05);
+    const sun = new THREE.DirectionalLight(0xffecd8, 2.15);
     sun.position.set(
       Math.cos(sunInitAngle) * SUN_RADIUS,
       Math.abs(Math.sin(sunInitAngle)) * SUN_RADIUS * SUN_HEIGHT_FACTOR + 20,
       -60,
     );
     sun.castShadow = true;
-    sun.shadow.mapSize.set(4096, 4096);
+    // 4096 shadows are expensive; 2048 is a good quality/perf tradeoff.
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.radius = 3.2;
+    sun.shadow.bias = -0.00028;
+    sun.shadow.normalBias = 0.025;
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 9000;
     sun.shadow.camera.left = -3200;
     sun.shadow.camera.right = 3200;
     sun.shadow.camera.top = 3200;
     sun.shadow.camera.bottom = -3200;
-    sun.shadow.bias = -0.0002;
     scene.add(sun);
 
-    scene.add(new THREE.AmbientLight(0x7aa8cc, 0.58));
+    scene.add(new THREE.AmbientLight(0xa8b8d8, 0.52));
 
-    const fill = new THREE.DirectionalLight(0xadd4f8, 0.42);
+    const fill = new THREE.DirectionalLight(0xc8dce8, 0.38);
     fill.position.set(-60, 40, -30);
     scene.add(fill);
 
-    const backlight = new THREE.DirectionalLight(0xf0d890, 0.18);
+    const backlight = new THREE.DirectionalLight(0xffc878, 0.28);
     backlight.position.set(15, 10, 100);
     scene.add(backlight);
 
-    scene.add(new THREE.HemisphereLight(0x7ec8e3, 0xd4c27a, 0.48));
+    scene.add(new THREE.HemisphereLight(0x8ec0e8, 0x6a9a45, 0.52));
 
     const builder = new SceneBuilder(scene, highlightStationId, doneStationIds);
 
@@ -490,7 +500,8 @@ export function useThreeScene({
     let disposed = false;
 
     if (heroModelPath && heroModelPath.trim()) {
-      void (async () => {
+      const run = () => {
+        void (async () => {
         try {
           const rawPath = heroModelPath.trim();
           const safePath = rawPath.endsWith(".fbx.fbx")
@@ -533,7 +544,17 @@ export function useThreeScene({
           // eslint-disable-next-line no-console
           console.warn("Hero model failed to load for map:", heroModelPath);
         }
-      })();
+        })();
+      };
+      // Defer heavy FBX parsing to avoid blocking the first map paint.
+      const ric = (globalThis as any).requestIdleCallback as
+        | ((cb: () => void, opts?: { timeout?: number }) => void)
+        | undefined;
+      if (typeof ric === "function") {
+        ric(run, { timeout: 1500 });
+      } else {
+        setTimeout(run, 0);
+      }
     }
 
     const raycaster = new THREE.Raycaster();

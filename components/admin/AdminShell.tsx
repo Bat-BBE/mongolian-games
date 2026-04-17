@@ -191,7 +191,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             <Link href="/" onClick={() => setMobileOpen(false)}>
               <Home className="size-3.5 stroke-[1.5]" />
-              {!sidebarCollapsed && <span>Сайт</span>}
+              {!sidebarCollapsed && <span>Нүүр</span>}
               <ExternalLink className="size-3 opacity-50 stroke-[1.5]" />
             </Link>
           </Button>

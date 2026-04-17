@@ -19,7 +19,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
-import { adminListHeroes, adminUpdateHero, type HeroRow } from "@/lib/api";
+import {
+  adminListHeroes,
+  adminUpdateHero,
+  adminUploadHeroImage,
+  type HeroRow,
+} from "@/lib/api";
+import { getApiBaseUrl } from "@/lib/api";
 
 export default function AdminHeroesPage() {
   const { token } = useAdminAuth();
@@ -27,6 +33,9 @@ export default function AdminHeroesPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [editing, setEditing] = useState<HeroRow | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const apiBase = getApiBaseUrl();
 
   const load = useCallback(async () => {
     const t = token?.trim();
@@ -72,6 +81,30 @@ export default function AdminHeroesPage() {
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Алдаа");
     }
+  };
+
+  const handleUpload = async () => {
+    const t = token?.trim();
+    if (!t || !editing || !pickedFile) return;
+    setUploading(true);
+    setMsg(null);
+    try {
+      const { hero } = await adminUploadHeroImage(t, editing.slug, pickedFile);
+      setEditing((p) => (p ? { ...p, image_url: hero.image_url } : p));
+      setPickedFile(null);
+      setMsg("Зураг амжилттай солигдлоо.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Upload алдаа");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const previewUrl = (raw: string | null | undefined): string => {
+    const s = typeof raw === "string" ? raw.trim() : "";
+    if (!s) return "";
+    if (s.startsWith("/")) return `${apiBase}${s}`;
+    return s;
   };
 
   return (
@@ -302,18 +335,66 @@ export default function AdminHeroesPage() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3">
-                {/* <div className="space-y-1.5">
-                  <Label>image_url</Label>
+                <div className="space-y-2">
+                  <Label>Зураг (image_url)</Label>
                   <Input
-                    value={editing.image_url}
+                    value={editing.image_url ?? ""}
                     onChange={(e) =>
                       setEditing((p) =>
                         p ? { ...p, image_url: e.target.value } : p,
                       )
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
+                    placeholder="/uploads/heroes/hero_....png эсвэл https://..."
                   />
-                </div> */}
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setPickedFile(e.target.files?.[0] ?? null)
+                      }
+                      className="block w-full text-sm file:mr-4 file:rounded-lg file:border-0 file:bg-[var(--admin-elevated)] file:px-4 file:py-2 file:text-[var(--admin-text)] file:shadow-xs file:hover:bg-white/[0.06] text-[var(--admin-muted)] border border-[var(--admin-border)] rounded-lg bg-[var(--admin-elevated)]"
+                    />
+                    {pickedFile ? (
+                      <div className="text-xs text-[var(--admin-muted)]">
+                        Сонгосон файл:{" "}
+                        <span className="text-[var(--admin-text)]">
+                          {pickedFile.name}
+                        </span>{" "}
+                        ({Math.round(pickedFile.size / 1024)} KB)
+                      </div>
+                    ) : null}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={!pickedFile || uploading}
+                        onClick={() => void handleUpload()}
+                      >
+                        {uploading ? "Upload..." : "Зураг upload хийх"}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={uploading}
+                        onClick={() => setPickedFile(null)}
+                      >
+                        Цуцлах
+                      </Button>
+                    </div>
+                    {editing.image_url?.trim() ? (
+                      <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-elevated)] p-2">
+                        <img
+                          src={previewUrl(editing.image_url)}
+                          alt=""
+                          className="w-full h-40 object-contain rounded-lg"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
                 {/* <div className="space-y-1.5">
                   <Label>model_path</Label>
                   <Input

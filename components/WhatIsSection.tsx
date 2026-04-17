@@ -46,7 +46,7 @@ export default function WhatIsSection() {
           width: 800,
           height: 400,
           background:
-            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 7%, transparent) 0%, transparent 70%)",
+            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 14%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 10%, transparent) 35%, transparent 72%)",
           animationDelay: "1s",
         }}
       />
@@ -125,7 +125,7 @@ export default function WhatIsSection() {
                   className="absolute inset-0 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                   style={{
                     background:
-                      "radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in oklch, var(--primary) 8%, transparent), transparent)",
+                      "radial-gradient(ellipse 80% 50% at 50% 0%, color-mix(in oklch, var(--primary) 16%, transparent), color-mix(in oklch, var(--gold-bright) 12%, transparent) 38%, transparent 75%)",
                   }}
                 />
               </article>

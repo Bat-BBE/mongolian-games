@@ -1,34 +1,53 @@
 import * as THREE from "three";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { clone as skelClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export type HeroClips = Record<string, THREE.AnimationClip>;
 
+const fbxLoader = new FBXLoader();
+const modelCache = new Map<string, Promise<THREE.Group>>();
+const clipCache = new Map<string, Promise<THREE.AnimationClip>>();
+
 export async function loadFbxModel(modelPath: string): Promise<THREE.Group> {
-  const loader = new FBXLoader();
-  return new Promise((resolve, reject) => {
-    loader.load(
-      modelPath,
-      (obj) => resolve(obj),
-      undefined,
-      (err) => reject(err),
-    );
-  });
+  const key = modelPath.trim();
+  if (!key) throw new Error("Missing modelPath");
+  let p = modelCache.get(key);
+  if (!p) {
+    p = new Promise((resolve, reject) => {
+      fbxLoader.load(
+        key,
+        (obj) => resolve(obj),
+        undefined,
+        (err) => reject(err),
+      );
+    });
+    modelCache.set(key, p);
+  }
+  const base = await p;
+  // FBX models often include skeletons; use SkeletonUtils.clone for safe reuse.
+  return skelClone(base) as THREE.Group;
 }
 
 export async function loadFbxClip(path: string): Promise<THREE.AnimationClip> {
-  const loader = new FBXLoader();
-  return new Promise((resolve, reject) => {
-    loader.load(
-      path,
-      (animObj) => {
-        const clip = animObj.animations?.[0];
-        if (!clip) reject(new Error(`Missing animation clip in ${path}`));
-        else resolve(clip);
-      },
-      undefined,
-      (err) => reject(err),
-    );
-  });
+  const key = path.trim();
+  if (!key) throw new Error("Missing clip path");
+  let p = clipCache.get(key);
+  if (!p) {
+    p = new Promise((resolve, reject) => {
+      fbxLoader.load(
+        key,
+        (animObj) => {
+          const clip = animObj.animations?.[0];
+          if (!clip) reject(new Error(`Missing animation clip in ${key}`));
+          else resolve(clip);
+        },
+        undefined,
+        (err) => reject(err),
+      );
+    });
+    clipCache.set(key, p);
+  }
+  return await p;
 }
 
 export async function loadHeroClips(

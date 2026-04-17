@@ -178,7 +178,6 @@ export class CinematicSceneBuilder {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.antialias = true;
   }
 
   /**
@@ -211,4 +210,4 @@ export class CinematicSceneBuilder {
   }
 }
 
-export { CinematicSceneBuilder };
+// (Already exported above as `export class CinematicSceneBuilder`)

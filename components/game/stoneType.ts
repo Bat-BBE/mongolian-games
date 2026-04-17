@@ -4,7 +4,6 @@
 
 export type GamePhase =
   | "pick"      // Тоглогч чулуу сонгож байна
-  | "reveal"    // Хоёулаа нударга нээж байна
   | "guess"     // Тоглогч нийлбэрийг таана
   | "result"    // Үр дүн харагдаж байна
 
@@ -13,7 +12,8 @@ export interface RoundResult {
   computerStones: number   // Компьютерийн чулуу
   total:          number   // Нийлбэр
   playerGuess:    number   // Тоглогчийн таасан тоо
-  playerWon:      boolean  // Тоглогч хожсон уу
+  computerGuess:  number   // Компьютерийн таасан тоо
+  outcome: "player" | "computer" | "none"; // Раундын дүн
 }
 
 export interface GameState {
@@ -21,6 +21,7 @@ export interface GameState {
   playerStones:   number | null   // Тоглогчийн сонгосон чулуу
   computerStones: number | null   // Компьютерийн нуусан чулуу
   playerGuess:    number | null   // Тоглогчийн таасан тоо
+  computerGuess:  number | null   // Компьютерийн таасан тоо
   score:          { player: number; computer: number }
   round:          number
   history:        RoundResult[]
@@ -28,7 +29,7 @@ export interface GameState {
 }
 
 export const MAX_STONES = 5   // Нэг тоглогч хамгийн ихдээ 5 чулуу атгана
-export const WIN_SCORE  = 5   // Хэдэн раунд хожсон бол ялна
+export const WIN_SCORE  = 3   // Хэдэн раунд хожсон бол ялна
 
 // ── AI логик ──────────────────────────────────
 // Компьютер ухаалаг байдлаар чулуу сонгоно
@@ -50,6 +51,32 @@ export function computerPickStones(history: RoundResult[]): number {
   return Math.max(0, Math.min(MAX_STONES, base + jitter))
 }
 
+/** Компьютерийн таалт: өөрийн атгасан чулуундаа (>= stones+1) суурилж таана. */
+export function computerGuessTotal(args: {
+  playerStones: number;
+  computerStones: number;
+  playerGuess: number;
+}): number {
+  const { playerStones, computerStones, playerGuess } = args;
+  const min = Math.max(computerStones + 1, 0);
+  const max = MAX_STONES * 2;
+  // Prefer plausible totals (close to expectation), avoid copying player guess if possible.
+  const expected = Math.min(max, Math.max(min, playerStones + computerStones));
+  const candidates = Array.from({ length: max - min + 1 }, (_, i) => min + i)
+    .filter((n) => n !== playerGuess);
+  if (candidates.length === 0) return expected;
+  // Weighted pick around expected.
+  const pick = () => {
+    const r = Math.random();
+    const span = Math.max(1, Math.round((max - min) * 0.35));
+    const delta = Math.round((r - 0.5) * 2 * span);
+    const v = expected + delta;
+    const clamped = Math.max(min, Math.min(max, v));
+    return candidates.includes(clamped) ? clamped : candidates[Math.floor(Math.random() * candidates.length)]!;
+  };
+  return pick();
+}
+
 // ── Тоглогчийн таах боломжит тоонууд ─────────
 // Хоёр тоглогч тус бүр 0-5 чулуу → нийлбэр 0-10
 export function getPossibleTotals(): number[] {
@@ -58,11 +85,14 @@ export function getPossibleTotals(): number[] {
 
 // ── Раундын мэдэгдэл үүсгэх ──────────────────
 export function buildMessage(result: RoundResult): string {
-  const { playerStones, computerStones, total, playerGuess, playerWon } = result
-  if (playerWon) {
-    return `🎉 Зөв! ${playerStones} + ${computerStones} = ${total}. Та хожлоо!`
+  const { playerStones, computerStones, total, playerGuess, computerGuess, outcome } = result
+  if (outcome === "player") {
+    return `🎉 Та зөв таалаа! ${playerStones} + ${computerStones} = ${total} (Та: ${playerGuess}, COM: ${computerGuess})`
   }
-  return `❌ Буруу. ${playerStones} + ${computerStones} = ${total}, та ${playerGuess} гэж тааж байв.`
+  if (outcome === "computer") {
+    return `😔 Компьютер зөв таалаа. ${playerStones} + ${computerStones} = ${total} (Та: ${playerGuess}, COM: ${computerGuess})`
+  }
+  return `🤝 Хоёулаа буруу. ${playerStones} + ${computerStones} = ${total} (Та: ${playerGuess}, COM: ${computerGuess})`
 }
 
 export const INITIAL_STATE: GameState = {
@@ -70,6 +100,7 @@ export const INITIAL_STATE: GameState = {
   playerStones:   null,
   computerStones: null,
   playerGuess:    null,
+  computerGuess:  null,
   score:          { player: 0, computer: 0 },
   round:          1,
   history:        [],

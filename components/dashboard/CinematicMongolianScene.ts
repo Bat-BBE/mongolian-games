@@ -379,4 +379,4 @@ const camera = cinemaicScene.getCamera();
 const renderer = cinemaicScene.getRenderer();
 */
 
-export { CinematicMongolianScene };
+// (Already exported above as `export class CinematicMongolianScene`)

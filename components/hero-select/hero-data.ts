@@ -2,10 +2,8 @@ import type { HeroId } from "./hero-strings";
 
 export type HeroStats = { wisdom: number; strength: number; speed: number };
 
-/** Баатар — UI + DB-аас (getContentHeroes) нэг мөр болгоно. */
 export interface Hero {
   id: HeroId;
-  /** Хуучин нийцлийн тулд голчлон MN */
   name: string;
   title: string;
   nameMn: string;
@@ -18,7 +16,6 @@ export interface Hero {
   color: string;
   emissive?: string;
   stats: HeroStats;
-  /** DB `bio_mn` / `bio_en` — хоосон бол доор тайлбар харуулахгүй */
   bioMn: string;
   bioEn: string;
 }
@@ -27,12 +24,12 @@ export const HEROES: Hero[] = [
   {
     id: "shikhikhutag",
     name: "Шихихутаг",
-    title: "Хаадын Зөвлөх",
+    title: "Их Монгол Улсын дээд заргач",
     nameMn: "Шихихутаг",
     nameEn: "Shikhikhutag",
-    titleMn: "Хаадын Зөвлөх",
-    titleEn: "The Judge",
-    imageUrl: "/images/shihihutag.jpg",
+    titleMn: "Их Монгол Улсын дээд заргач",
+    titleEn: "The Great Announcer of the Mongol Empire",
+    imageUrl: "/images/shihihutag.png",
     modelPath: "/models/hero-2.fbx",
     available: true,
     color: "#ffd559",
@@ -44,12 +41,12 @@ export const HEROES: Hero[] = [
   {
     id: "tatatunga",
     name: "Тататунга",
-    title: "Бичгийн Эзэн",
+    title: "Их бичгийн багш",
     nameMn: "Тататунга",
     nameEn: "Tatatunga",
-    titleMn: "Бичгийн Эзэн",
-    titleEn: "The Scribe",
-    imageUrl: "/images/tatatunga.png",
+    titleMn: "Их бичгийн багш",
+    titleEn: "The Master of the Great Script",
+    imageUrl: "/images/tatatunga1.png",
     modelPath: "/models/X Bot.fbx",
     available: true,
     color: "#00A3E0",
@@ -60,13 +57,13 @@ export const HEROES: Hero[] = [
   },
   {
     id: "subutai",
-    name: "Сүбэдэй",
-    title: "Дайны Баатар",
-    nameMn: "Сүбэдэй",
-    nameEn: "Subutai",
-    titleMn: "Дайны Баатар",
-    titleEn: "The General",
-    imageUrl: "/images/subutai.png",
+    name: "Болд Чинсан",
+    title: "Түүхч, төрийн түшээ",
+    nameMn: "Болд Чинсан",
+    nameEn: "Bold Chinsan",
+    titleMn: "Түүхч, төрийн түшээ",
+    titleEn: "Historian and Statesman",
+    imageUrl: "/images/boldchinsan.png",
     modelPath: "/models/X Bot.fbx.fbx",
     available: true,
     color: "#C0392B",
@@ -77,13 +74,13 @@ export const HEROES: Hero[] = [
   },
   {
     id: "rashid",
-    name: "Рашид",
-    title: "Түүхч Эрдэмтэн",
-    nameMn: "Рашид",
-    nameEn: "Rashid-al-Din",
-    titleMn: "Түүхч Эрдэмтэн",
-    titleEn: "The Historian",
-    imageUrl: "/images/rashid.png",
+    name: "Чойжи-Одсэр",
+    title: "Монгол хэл шинжлэлийн эрдэмтэн",
+    nameMn: "Чойжи-Одсэр",
+    nameEn: "Choijiodser",
+    titleMn: "Монгол хэл шинжлэлийн эрдэмтэн",
+    titleEn: "Mongolian Linguistics Scholar",
+    imageUrl: "/images/choijiodser.png",
     modelPath: "/models/X Bot.fbx",
     available: true,
     color: "#9B59B6",

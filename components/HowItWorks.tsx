@@ -16,7 +16,7 @@ export default function HowItWorks() {
           width: 500,
           height: 500,
           background:
-            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 6%, transparent) 0%, transparent 70%)",
+            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 13%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 10%, transparent) 35%, transparent 72%)",
         }}
       />
 

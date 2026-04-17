@@ -22,7 +22,7 @@ export class DetailedGerBuilder {
   ): THREE.Group {
     const group = new THREE.Group();
     group.position.set(
-      ...position[0],
+      position[0],
       baseOnTerrain ? position[1] + 0.1 : position[1],
       position[2],
     );
@@ -380,4 +380,4 @@ export class DetailedGerBuilder {
   }
 }
 
-export { DetailedGerBuilder };
+// (Already exported above as `export class DetailedGerBuilder`)

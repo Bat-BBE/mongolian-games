@@ -23,34 +23,49 @@ export class TextureManager {
     canvas.height = height;
     const ctx = canvas.getContext("2d")!;
 
-    // Base green color (steppe grass)
-    ctx.fillStyle = "#6a8c4a";
+    const grd = ctx.createLinearGradient(0, 0, width, height);
+    grd.addColorStop(0, "#5a7a42");
+    grd.addColorStop(0.45, "#6f8f52");
+    grd.addColorStop(0.72, "#7a9858");
+    grd.addColorStop(1, "#8faa6a");
+    ctx.fillStyle = grd;
     ctx.fillRect(0, 0, width, height);
 
-    // Add grass blade patterns
-    ctx.fillStyle = "rgba(100, 120, 60, 0.3)";
-    for (let i = 0; i < width * height * 0.001; i++) {
-      const x = Math.random() * width;
-      const y = Math.random() * height;
-      const w = Math.random() * 3 + 1;
-      const h = Math.random() * 8 + 4;
-      ctx.fillRect(x, y, w, h);
+    for (let pass = 0; pass < 3; pass++) {
+      ctx.fillStyle = `rgba(${60 + pass * 25}, ${90 + pass * 15}, ${40 + pass * 10}, ${0.12 + pass * 0.06})`;
+      for (let i = 0; i < width * height * 0.0018; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const w = Math.random() * 2.5 + 0.5;
+        const h = Math.random() * 14 + 3;
+        ctx.fillRect(x, y, w, h);
+      }
     }
 
-    // Add subtle noise
+    ctx.strokeStyle = "rgba(45, 65, 28, 0.08)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 90; i++) {
+      const x = Math.random() * width;
+      ctx.beginPath();
+      ctx.moveTo(x, Math.random() * height);
+      ctx.lineTo(x + (Math.random() - 0.5) * 6, Math.random() * height);
+      ctx.stroke();
+    }
+
     const imageData = ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 30;
-      data[i] += noise; // R
-      data[i + 1] += noise * 0.8; // G
-      data[i + 2] += noise * 0.5; // B
+      const noise = (Math.random() - 0.5) * 38;
+      data[i] += noise;
+      data[i + 1] += noise * 0.75;
+      data[i + 2] += noise * 0.45;
     }
     ctx.putImageData(imageData, 0, 0);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(4, 4);
+    texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.LinearFilter;
     texture.minFilter = THREE.LinearMipmapLinearFilter;
     texture.generateMipmaps = true;

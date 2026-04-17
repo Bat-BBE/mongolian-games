@@ -31,8 +31,9 @@ export class MaterialLibrary {
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true,
       map: detailMap,
-      roughness: 0.93,
-      metalness: 0,
+      roughness: 0.91,
+      metalness: 0.02,
+      envMapIntensity: 0.4,
       side: THREE.FrontSide,
     });
 
@@ -51,9 +52,10 @@ export class MaterialLibrary {
 
     const material = new THREE.MeshStandardMaterial({
       map: this.textureManager.getGrassTexture(),
-      roughness: 0.85,
+      roughness: 0.78,
       metalness: 0,
-      color: 0x6a8c4a,
+      envMapIntensity: 0.35,
+      color: 0x5c7638,
     });
 
     this.materials.set(key, material);

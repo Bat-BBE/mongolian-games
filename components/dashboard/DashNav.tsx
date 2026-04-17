@@ -25,7 +25,6 @@ interface DashNavProps {
   playerTitle: string;
   avatarUrl: string;
   level: number;
-  /** Нэвтрэлтийн и-мэйл (профайл хэсэгт). */
   userEmail: string;
   onOpenProfile: () => void;
   onLogout: () => void;
@@ -165,7 +164,7 @@ export function DashNav({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              className="flex items-center gap-[clamp(6px,1vw,12px)] rounded-2xl pl-1 pr-2 py-1 border border-white/10 bg-background/40 hover:bg-primary/10 hover:border-primary/30 transition-colors text-left max-w-[min(280px,50vw)]"
+              className="flex items-center gap-[clamp(6px,1vw,12px)] rounded-lg pl-2 pr-2 py-1 border bg-background/40 hover:bg-primary/10 hover:border-primary/30 transition-colors text-left max-w-[min(280px,50vw)]"
             >
               <div className="text-right hidden sm:block min-w-0 flex-1">
                 <p
@@ -183,7 +182,8 @@ export function DashNav({
                   style={{
                     fontSize: "clamp(8px,0.7vw,11px)",
                     letterSpacing: "0.08em",
-                    color: "color-mix(in oklch,var(--foreground)60%,transparent)",
+                    color:
+                      "color-mix(in oklch,var(--foreground)60%,transparent)",
                   }}
                 >
                   {playerTitle}
@@ -198,7 +198,7 @@ export function DashNav({
                 }}
               >
                 <img
-                  src={avatarUrl}
+                  src={avatarUrl || "/images/shikhikhutag.png"}
                   alt=""
                   className="w-full h-full rounded-full object-cover border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
                 />

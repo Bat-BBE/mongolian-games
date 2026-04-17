@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  GameState, GamePhase, MAX_STONES,
-  getPossibleTotals, WIN_SCORE,
-} from "./stoneType"
+import { GameState, MAX_STONES, getPossibleTotals, WIN_SCORE } from "./stoneType"
 
 interface Props {
   state:     GameState
@@ -11,6 +8,8 @@ interface Props {
   onGuess:   (n: number) => void
   onNext:    () => void
   onRestart: () => void
+  rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[]
+  sessionGain?: { coins: number; gems: number }
 }
 
 function Divider() {
@@ -183,24 +182,45 @@ function ResultPanel({
         <>
           {last && (
             <div style={{
-              background: last.playerWon
-                ? "rgba(96,192,96,0.12)"
-                : "rgba(224,96,80,0.12)",
-              border: `1px solid ${last.playerWon ? "#60c06044" : "#e0605044"}`,
+              background:
+                last.outcome === "player"
+                  ? "rgba(96,192,96,0.12)"
+                  : last.outcome === "computer"
+                    ? "rgba(224,96,80,0.12)"
+                    : "rgba(200,160,48,0.10)",
+              border:
+                last.outcome === "player"
+                  ? "1px solid #60c06044"
+                  : last.outcome === "computer"
+                    ? "1px solid #e0605044"
+                    : "1px solid rgba(200,160,48,0.22)",
               borderRadius: 12,
               padding: "12px 16px",
               marginBottom: 14,
             }}>
               <div style={{ fontSize: 28, marginBottom: 6 }}>
-                {last.playerWon ? "✅" : "❌"}
+                {last.outcome === "player"
+                  ? "✅"
+                  : last.outcome === "computer"
+                    ? "❌"
+                    : "🤝"}
               </div>
               <div style={{
-                color: last.playerWon ? "#60c060" : "#e06050",
+                color:
+                  last.outcome === "player"
+                    ? "#60c060"
+                    : last.outcome === "computer"
+                      ? "#e06050"
+                      : "#f0c040",
                 fontSize: 16,
                 fontWeight: "bold",
                 marginBottom: 4,
               }}>
-                {last.playerWon ? "Зөв таалаа!" : "Буруу тааллаа"}
+                {last.outcome === "player"
+                  ? "Та зөв таалаа!"
+                  : last.outcome === "computer"
+                    ? "Компьютер зөв таалаа!"
+                    : "Хоёулаа буруу"}
               </div>
               <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>
                 Та <b style={{ color: "#f0c040" }}>{last.playerStones}</b>🪨 +
@@ -208,7 +228,7 @@ function ResultPanel({
                 = <b style={{ color: "#f0c040" }}>{last.total}</b>
               </div>
               <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
-                Та <b>{last.playerGuess}</b> гэж тааж байлаа
+                Та <b>{last.playerGuess}</b>, COM <b>{last.computerGuess}</b> гэж таалаа
               </div>
             </div>
           )}
@@ -242,23 +262,37 @@ function HistoryDots({ history }: { history: GameState["history"] }) {
   if (history.length === 0) return null
   return (
     <div style={{ display: "flex", gap: 4, justifyContent: "center", marginTop: 8 }}>
-      {history.map((r, i) => (
-        <div
-          key={i}
-          title={`Раунд ${i + 1}: ${r.playerWon ? "хожсон" : "хожигдсон"}`}
-          style={{
-            width: 10, height: 10,
-            borderRadius: "50%",
-            background: r.playerWon ? "#60c060" : "#e06050",
-            opacity: 0.8,
-          }}
-        />
-      ))}
+      {history.map((r, i) => {
+        const won = r.outcome === "player"
+        const lost = r.outcome === "computer"
+        const label = won ? "хожсон" : lost ? "хожигдсон" : "тэнцсэн"
+        const bg = won ? "#60c060" : lost ? "#e06050" : "#c8a030"
+        return (
+          <div
+            key={i}
+            title={`Раунд ${i + 1}: ${label}`}
+            style={{
+              width: 10, height: 10,
+              borderRadius: "50%",
+              background: bg,
+              opacity: 0.8,
+            }}
+          />
+        )
+      })}
     </div>
   )
 }
 
-export default function StoneGameUI({ state, onPick, onGuess, onNext, onRestart }: Props) {
+export default function StoneGameUI({
+  state,
+  onPick,
+  onGuess,
+  onNext,
+  onRestart,
+  rewardEvents = [],
+  sessionGain,
+}: Props) {
   const panel: React.CSSProperties = {
     position: "absolute",
     background: "rgba(6,4,2,0.90)",
@@ -274,6 +308,82 @@ export default function StoneGameUI({ state, onPick, onGuess, onNext, onRestart 
 
   return (
     <>
+      {/* ── Reward toasts (floating +3 coins, +1 gem) ── */}
+      <div
+        style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 20 }}
+      >
+        <div style={{ position: "absolute", top: 18, left: "50%", transform: "translateX(-50%)" }}>
+          {rewardEvents.map((e) => (
+              <div
+                key={e.id}
+                style={{
+                  marginBottom: 8,
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border:
+                      e.kind === "coins"
+                        ? "1px solid rgba(240,192,64,0.55)"
+                        : "1px solid rgba(96,192,255,0.55)",
+                    background:
+                      e.kind === "coins"
+                        ? "linear-gradient(135deg, rgba(200,160,48,0.26), rgba(240,192,64,0.12))"
+                        : "linear-gradient(135deg, rgba(96,192,255,0.22), rgba(180,220,255,0.10))",
+                    color: e.kind === "coins" ? "#f0c040" : "#bfe6ff",
+                    fontSize: 13,
+                    fontWeight: 900,
+                    letterSpacing: 1.2,
+                    fontFamily: "'Noto Serif', Georgia, serif",
+                    boxShadow:
+                      e.kind === "coins"
+                        ? "0 10px 40px rgba(200,160,48,0.18)"
+                        : "0 10px 40px rgba(96,192,255,0.14)",
+                    animation: "rewardFloat 1.25s ease forwards",
+                  }}
+                >
+                  {e.text}
+                </div>
+              </div>
+            ))}
+        </div>
+
+        {/* Session gain chip (realtime feel) */}
+        {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) ? (
+          <div
+            style={{
+              position: "absolute",
+              top: 18,
+              right: 18,
+              padding: "10px 12px",
+              borderRadius: 14,
+              background: "rgba(6,4,2,0.78)",
+              border: "1px solid rgba(200,160,48,0.22)",
+              backdropFilter: "blur(14px)",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.55)",
+              color: "white",
+              fontFamily: "'Noto Serif', Georgia, serif",
+            }}
+          >
+            <div style={{ color: "#c8a030", fontSize: 10, letterSpacing: 3, marginBottom: 4 }}>
+              ШАГНАЛ (SESSION)
+            </div>
+            <div style={{ display: "flex", gap: 10, fontSize: 12, color: "#ddd" }}>
+              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+                🪙 +{sessionGain.coins}
+              </span>
+              <span style={{ color: "#bfe6ff", fontWeight: "bold" }}>
+                💎 +{sessionGain.gems}
+              </span>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
       {/* ── Зүүн самбар: тоглоомын удирдлага ── */}
       <div style={{ ...panel, top: 20, left: 20, width: 290 }}>
 
@@ -308,15 +418,6 @@ export default function StoneGameUI({ state, onPick, onGuess, onNext, onRestart 
                 ✓ {state.playerStones} чулуу сонгосон — нударгаа зангидаж байна...
               </div>
             )}
-          </div>
-        )}
-
-        {state.phase === "reveal" && (
-          <div style={{ textAlign: "center", padding: "10px 0" }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>🤜 🤛</div>
-            <div style={{ color: "#c8a030", fontSize: 14, letterSpacing: 2 }}>
-              Нударга нээж байна...
-            </div>
           </div>
         )}
 
@@ -355,25 +456,22 @@ export default function StoneGameUI({ state, onPick, onGuess, onNext, onRestart 
         ))}
 
         <Divider />
-        {/* Компьютерийн нуусан чулуу (reveal болсны дараа) */}
-        {(state.phase === "guess" || state.phase === "result") && state.computerStones !== null && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#888", fontSize: 11, marginBottom: 4 }}>Компьютер нуусан</div>
-            <div style={{ fontSize: 24, color: "#e0a050" }}>
-              {"🪨".repeat(state.computerStones)}
-              {state.computerStones === 0 && <span style={{ color: "#666" }}>—</span>}
-            </div>
-            <div style={{ color: "#e0a050", fontSize: 18, fontWeight: "bold" }}>
-              {state.computerStones} чулуу
-            </div>
-          </div>
-        )}
+        {/* Requirement: 컴-ийн атгасан чулууг UI дээр урьдчилж харуулахгүй */}
+        <div style={{ color: "#666", fontSize: 11, textAlign: "center", lineHeight: 1.5 }}>
+          COM чулуугаа нууна. Та зөвхөн нийлбэрийг таана.
+        </div>
       </div>
 
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
+        }
+        @keyframes rewardFloat {
+          0%   { opacity: 0; transform: translateY(10px) scale(0.98); }
+          15%  { opacity: 1; transform: translateY(0px)  scale(1); }
+          70%  { opacity: 1; transform: translateY(-18px) scale(1.02); }
+          100% { opacity: 0; transform: translateY(-32px) scale(1.03); }
         }
       `}</style>
     </>

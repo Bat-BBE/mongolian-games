@@ -181,13 +181,13 @@ export class TerrainBuilder {
       g = 0.7 + t * 0.05 + warm * 0.018 + rand(-0.015, 0.015);
       b = 0.44 - t * 0.06 + rand(-0.015, 0.015);
     } else if (biome === "river_plain" || (nearRiver && h < 3.5)) {
-      r = 0.32 + warm * 0.06 + rand(-0.02, 0.02);
-      g = 0.48 + warm * 0.07 + rand(-0.025, 0.025);
-      b = 0.26 + warm * 0.05 + rand(-0.02, 0.02);
+      r = 0.28 + warm * 0.06 + rand(-0.02, 0.02);
+      g = 0.5 + warm * 0.08 + rand(-0.025, 0.025);
+      b = 0.24 + warm * 0.05 + rand(-0.02, 0.02);
     } else if (biome === "forest") {
-      r = 0.32 + warm * 0.05 + rand(-0.02, 0.02);
-      g = 0.44 + warm * 0.07 + rand(-0.025, 0.025);
-      b = 0.22 + warm * 0.04 + rand(-0.015, 0.015);
+      r = 0.26 + warm * 0.05 + rand(-0.02, 0.02);
+      g = 0.46 + warm * 0.08 + rand(-0.025, 0.025);
+      b = 0.2 + warm * 0.04 + rand(-0.015, 0.015);
     } else if (biome === "high_alpine") {
       const t = Math.min((h - 18) / 12, 1);
       r = 0.76 + t * 0.19 + rand(-0.015, 0.015);
@@ -207,9 +207,10 @@ export class TerrainBuilder {
       b = 0.26 + rand(-0.02, 0.02);
     } else {
       const gr = Math.max(0, 1 - h * 0.065);
-      r = 0.46 + gr * 0.06 + warm * 0.04 + rand(-0.02, 0.02);
-      g = 0.52 + gr * 0.08 + warm * 0.04 + rand(-0.02, 0.02);
-      b = 0.3 + gr * 0.05 + rand(-0.018, 0.018);
+      /* Өвс ногоо тал — олив, lime, ойн ногоон */
+      r = 0.4 + gr * 0.08 + warm * 0.04 + rand(-0.02, 0.02);
+      g = 0.54 + gr * 0.1 + warm * 0.05 + rand(-0.02, 0.02);
+      b = 0.26 + gr * 0.06 + rand(-0.018, 0.018);
     }
 
     return { r, g, b };

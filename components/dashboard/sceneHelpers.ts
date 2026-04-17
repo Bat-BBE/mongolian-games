@@ -6,12 +6,33 @@ export const rand = (a: number, b: number): number =>
 export const randInt = (a: number, b: number): number =>
   Math.floor(rand(a, b + 1));
 
+/**
+ * Стандарт PBR — гэр, чулуу, ургамалд ижил гэрэл тусгалтай харагдуулна.
+ */
 export const mkMat = (
   color: number,
   rough = 0.85,
   metal = 0,
 ): THREE.MeshStandardMaterial =>
-  new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
+  new THREE.MeshStandardMaterial({
+    color,
+    roughness: rough,
+    metalness: metal,
+    envMapIntensity: 0.55,
+  });
+
+/** Мал, ноос — бага металл, зөөлөн тусгал */
+export function mkFurMat(
+  color: number,
+  rough = 0.78,
+): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: rough,
+    metalness: 0.04,
+    envMapIntensity: 0.42,
+  });
+}
 
 export type TerrainBiome =
   | "high_alpine"

@@ -3,6 +3,7 @@ import {
   rand,
   randInt,
   mkMat,
+  mkFurMat,
   terrainHeight,
   terrainBiome,
   pseudoNoise2D,
@@ -374,6 +375,7 @@ export class SceneBuilder {
     geo.scale(-1, 1, -1);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
+    // Хуучин: цайвар цэнхэр тэнгэр (өдрийн цэлмэг)
     const zenith = { r: 0.22, g: 0.48, b: 0.9 };
     const horizon = { r: 0.78, g: 0.82, b: 0.93 };
     for (let i = 0; i < pos.count; i++) {
@@ -424,7 +426,7 @@ export class SceneBuilder {
 
   /** Гол нуурын эргийн зэгсний багц */
   private makeReedPatchAt(x: number, z: number, count: number): void {
-    const reedColors = [0x6f8f42, 0x7d9a4b, 0x5f7f36, 0x94ab5f];
+    const reedColors = [0x5f7f36, 0x6d9440, 0x4a7028, 0x7cb342];
     const y = terrainHeight(x, z);
     if (y > 6) return;
     const g = new THREE.Group();
@@ -447,11 +449,12 @@ export class SceneBuilder {
   private makeTree(x: number, z: number, s = 1): void {
     const g = new THREE.Group();
     const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.11 * s, 0.17 * s, 1.4 * s, 7),
-      mkMat(0x4a3018, 0.95),
+      new THREE.CylinderGeometry(0.11 * s, 0.17 * s, 1.4 * s, 12),
+      mkMat(0x4a3018, 0.93),
     );
     trunk.position.y = 0.7 * s;
     trunk.castShadow = true;
+    trunk.receiveShadow = true;
     g.add(trunk);
     [
       { color: 0x1a4e12, r: 1.3, h: 2.0, y: 1.4 },
@@ -460,14 +463,28 @@ export class SceneBuilder {
       { color: 0x1e5414, r: 0.42, h: 1.0, y: 5.0 },
     ].forEach((l) => {
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(l.r * s, l.h * s, 7),
-        mkMat(l.color, 0.88),
+        new THREE.ConeGeometry(l.r * s, l.h * s, 12),
+        mkMat(l.color, 0.82),
       );
       cone.position.y = l.y * s;
       cone.rotation.y = rand(0, Math.PI);
+      cone.rotation.z = rand(-0.08, 0.08);
       cone.castShadow = true;
+      cone.receiveShadow = true;
       g.add(cone);
     });
+    for (let b = 0; b < 5; b++) {
+      const br = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02 * s, 0.03 * s, 0.55 * s, 6),
+        mkMat(0x3a2810, 0.9),
+      );
+      const ang = (b / 5) * Math.PI * 2 + rand(0, 0.5);
+      br.position.set(Math.cos(ang) * 0.55 * s, 1.15 * s, Math.sin(ang) * 0.55 * s);
+      br.rotation.z = Math.cos(ang) * 0.85;
+      br.rotation.x = Math.sin(ang) * 0.35;
+      br.castShadow = true;
+      g.add(br);
+    }
     g.position.set(x, terrainHeight(x, z), z);
     this.scene.add(g);
   }
@@ -540,38 +557,80 @@ export class SceneBuilder {
     g.add(base);
 
     const cv = document.createElement("canvas");
-    cv.width = 256;
-    cv.height = 128;
+    cv.width = 512;
+    cv.height = 256;
     const ctx = cv.getContext("2d")!;
-    ctx.fillStyle = "#ede0c8";
-    ctx.fillRect(0, 0, 256, 128);
-    ctx.strokeStyle = "#c4a878";
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 36; i++) {
+    const fg = ctx.createLinearGradient(0, 0, 0, 256);
+    fg.addColorStop(0, "#f6eed8");
+    fg.addColorStop(0.5, "#ebe0c8");
+    fg.addColorStop(1, "#d4c4a0");
+    ctx.fillStyle = fg;
+    ctx.fillRect(0, 0, 512, 256);
+    const feltNoise = ctx.getImageData(0, 0, 512, 256);
+    for (let i = 0; i < feltNoise.data.length; i += 4) {
+      const n = (Math.random() - 0.5) * 22;
+      feltNoise.data[i] += n;
+      feltNoise.data[i + 1] += n * 0.92;
+      feltNoise.data[i + 2] += n * 0.78;
+    }
+    ctx.putImageData(feltNoise, 0, 0);
+    ctx.strokeStyle = "rgba(150, 118, 72, 0.38)";
+    ctx.lineWidth = 1.25;
+    for (let i = 0; i < 52; i++) {
+      const ox = (i % 7) * 0.15;
       ctx.beginPath();
-      ctx.moveTo(i * 7.5, 0);
-      ctx.lineTo(i * 7.5, 128);
+      ctx.moveTo(i * 9.85 + ox, 0);
+      ctx.lineTo(i * 9.85 + ox * 0.5, 256);
       ctx.stroke();
     }
-    ctx.strokeStyle = "#d4b888";
-    ctx.lineWidth = 1;
-    for (let j = 0; j < 6; j++) {
+    ctx.strokeStyle = "rgba(110, 88, 52, 0.2)";
+    ctx.lineWidth = 0.9;
+    for (let j = 0; j < 14; j++) {
       ctx.beginPath();
-      ctx.moveTo(0, j * 22);
-      ctx.lineTo(256, j * 22);
+      ctx.moveTo(0, j * 18.5 + 3);
+      ctx.lineTo(512, j * 18.5 + 1.5);
       ctx.stroke();
     }
     const tex = new THREE.CanvasTexture(cv);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(5, 1);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+
+    const bumpCv = document.createElement("canvas");
+    bumpCv.width = 256;
+    bumpCv.height = 128;
+    const bctx = bumpCv.getContext("2d")!;
+    const bd = bctx.createImageData(256, 128);
+    for (let y = 0; y < 128; y++) {
+      for (let x = 0; x < 256; x++) {
+        const i = (y * 256 + x) * 4;
+        const v =
+          112 +
+          (Math.random() - 0.5) * 42 +
+          Math.sin(x * 0.12 + y * 0.08) * 18;
+        bd.data[i] = v;
+        bd.data[i + 1] = v;
+        bd.data[i + 2] = v;
+        bd.data[i + 3] = 255;
+      }
+    }
+    bctx.putImageData(bd, 0, 0);
+    const bumpTex = new THREE.CanvasTexture(bumpCv);
+    bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+    bumpTex.repeat.set(5, 1);
 
     const wall = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.7 * s, 2.7 * s, 2.2 * s, 24, 1, true),
+      new THREE.CylinderGeometry(2.7 * s, 2.7 * s, 2.2 * s, 32, 1, true),
       new THREE.MeshStandardMaterial({
         color:
           stationId === "home" ? 0xfffaf2 : isStation ? 0xfff6ea : 0xede0c8,
-        roughness: stationId === "home" ? 0.48 : 0.65,
+        roughness: stationId === "home" ? 0.4 : 0.54,
+        metalness: 0.03,
         map: tex,
+        bumpMap: bumpTex,
+        bumpScale: 0.042,
+        envMapIntensity: 0.5,
       }),
     );
     wall.position.y = 1.1 * s + 0.3;
@@ -587,15 +646,20 @@ export class SceneBuilder {
             : 0xcc4422
       : [0xc8724a, 0xb86838, 0xd47a50][randInt(0, 2)];
     const roof = new THREE.Mesh(
-      new THREE.ConeGeometry(2.8 * s, 1.6 * s, 24),
-      mkMat(roofColor, 0.78),
+      new THREE.ConeGeometry(2.8 * s, 1.6 * s, 28),
+      new THREE.MeshStandardMaterial({
+        color: roofColor,
+        roughness: 0.66,
+        metalness: 0.06,
+        envMapIntensity: 0.45,
+      }),
     );
     roof.position.y = (2.2 + 0.8) * s + 0.3;
     g.add(roof);
 
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.4 * s, 0.12 * s, 10, 28),
-      mkMat(0xd89030, 0.45, 0.4),
+      new THREE.TorusGeometry(0.4 * s, 0.12 * s, 14, 40),
+      mkMat(0xd89030, 0.45, 0.42),
     );
     ring.position.y = (2.2 + 1.6) * s + 0.3;
     ring.rotation.x = Math.PI / 2;
@@ -1681,11 +1745,27 @@ export class SceneBuilder {
     canvas.height = 200;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "rgba(32, 28, 22, 0.94)";
+    const bg = ctx.createLinearGradient(0, 0, 640, 200);
+    bg.addColorStop(0, "rgba(28, 24, 18, 0.98)");
+    bg.addColorStop(0.5, "rgba(38, 32, 26, 0.96)");
+    bg.addColorStop(1, "rgba(22, 18, 14, 0.98)");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, 640, 200);
+    ctx.strokeStyle = "rgba(55, 44, 32, 0.55)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 640; x += 3) {
+      const g = Math.sin(x * 0.04 + seed * 0.01) * 8;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + g * 0.02, 200);
+      ctx.stroke();
+    }
     ctx.strokeStyle = "rgba(190, 160, 110, 0.95)";
     ctx.lineWidth = 5;
     ctx.strokeRect(10, 10, 620, 180);
+    ctx.strokeStyle = "rgba(120, 95, 60, 0.45)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(16, 16, 608, 168);
     ctx.fillStyle = "#f0e6d4";
     ctx.font = "bold 38px 'Georgia','Times New Roman',serif";
     ctx.textAlign = "center";
@@ -1706,13 +1786,14 @@ export class SceneBuilder {
     tex.needsUpdate = true;
     const mat = new THREE.MeshStandardMaterial({
       map: tex,
-      roughness: 0.88,
-      metalness: 0.05,
+      roughness: 0.82,
+      metalness: 0.06,
+      envMapIntensity: 0.42,
       transparent: false,
     });
     const board = new THREE.Mesh(new THREE.PlaneGeometry(16, 5), mat);
-    const wood = mkMat(0x4a3528, 0.9);
-    const postGeo = new THREE.CylinderGeometry(0.16, 0.19, 3.6, 8);
+    const wood = mkMat(0x3d2e22, 0.92);
+    const postGeo = new THREE.CylinderGeometry(0.16, 0.19, 3.6, 12);
     const postL = new THREE.Mesh(postGeo, wood);
     const postR = new THREE.Mesh(postGeo, wood);
     postL.position.set(-7.2, 1.8, 0);
@@ -2282,31 +2363,50 @@ export class SceneBuilder {
     phase = 0,
   ): THREE.Group {
     const g = new THREE.Group();
-    const hm = mkMat(color, 0.82),
-      dk = mkMat(0x2a1508, 0.88);
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 0.42), hm);
+    const hm = materialLibrary.getHideMaterial(color);
+    const dk = mkFurMat(0x2a1508, 0.86);
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(1.05, 0.52, 0.44),
+      hm,
+    );
     body.position.y = 0.9;
     body.rotation.z = 0.04;
+    body.castShadow = true;
     g.add(body);
     const neck = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.13, 0.16, 0.58, 9),
+      new THREE.CylinderGeometry(0.13, 0.17, 0.62, 12),
       hm,
     );
     neck.position.set(0.42, 1.15, 0);
     neck.rotation.z = -0.52;
+    neck.castShadow = true;
     g.add(neck);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.25), hm);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.27, 0.27), hm);
     head.position.set(0.68, 1.38, 0);
+    head.castShadow = true;
     g.add(head);
     const snout = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.2), hm);
     snout.position.set(0.9, 1.31, 0);
+    snout.castShadow = true;
     g.add(snout);
-    const eye = new THREE.Mesh(
-      new THREE.SphereGeometry(0.03, 6, 6),
-      mkMat(0x0a0a0a, 0.2),
-    );
-    eye.position.set(0.79, 1.41, 0.11);
+    const eyeMat = mkMat(0x1a1208, 0.25);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 10), eyeMat);
+    eye.position.set(0.79, 1.41, 0.12);
     g.add(eye);
+    const eye2 = eye.clone();
+    eye2.position.z = -0.12;
+    g.add(eye2);
+    const earL = new THREE.Mesh(
+      new THREE.ConeGeometry(0.07, 0.16, 8),
+      hm,
+    );
+    earL.position.set(0.62, 1.52, 0.1);
+    earL.rotation.set(0.35, 0, -0.45);
+    g.add(earL);
+    const earR = earL.clone();
+    earR.position.z = -0.1;
+    earR.rotation.z = 0.45;
+    g.add(earR);
     const legGroups: THREE.Group[] = [];
     [
       [0.3, 0, -0.15],
@@ -2316,33 +2416,48 @@ export class SceneBuilder {
     ].forEach(([lx, , lz]) => {
       const lg = new THREE.Group();
       const upper = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.07, 0.06, 0.42, 8),
+        new THREE.CylinderGeometry(0.07, 0.06, 0.42, 10),
         hm,
       );
       upper.position.y = -0.21;
+      upper.castShadow = true;
       lg.add(upper);
       const lower = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.055, 0.048, 0.38, 8),
+        new THREE.CylinderGeometry(0.055, 0.048, 0.38, 10),
         hm,
       );
       lower.position.y = -0.6;
+      lower.castShadow = true;
       lg.add(lower);
       const hoof = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.09, 0.16), dk);
       hoof.position.y = -0.82;
+      hoof.castShadow = true;
       lg.add(hoof);
       lg.position.set(lx, 0.75, lz);
       g.add(lg);
       legGroups.push(lg);
     });
-    (g as any)._legGroups = legGroups;
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.75, 8), dk);
+    (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups =
+      legGroups;
+    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.82, 10), dk);
     tail.position.set(-0.56, 0.95, 0);
     tail.rotation.z = 1.35;
+    tail.castShadow = true;
     g.add(tail);
-    const mane = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.28, 0.2), dk);
-    mane.position.set(0.44, 1.25, 0);
-    mane.rotation.z = -0.32;
-    g.add(mane);
+    for (let m = 0; m < 5; m++) {
+      const maneStrand = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.028, 0.04, 0.22 + m * 0.04, 6),
+        dk,
+      );
+      maneStrand.position.set(
+        0.32 + m * 0.04,
+        1.18 + m * 0.05,
+        (m % 2 === 0 ? 1 : -1) * 0.06,
+      );
+      maneStrand.rotation.z = -0.42 - m * 0.05;
+      maneStrand.castShadow = true;
+      g.add(maneStrand);
+    }
     const groundY = terrainHeight(x, z);
     g.position.set(x, groundY + 0.1, z);
     g.rotation.y = rotY;
@@ -2433,31 +2548,52 @@ export class SceneBuilder {
   }
 
   makeCamel(x: number, z: number, rotY = 0): void {
-    const g = new THREE.Group(),
-      cm = mkMat(0xc8a060, 0.9),
-      dk = mkMat(0x8a6030, 0.9);
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.62, 0.58), cm);
+    const g = new THREE.Group();
+    const furC = [0xc8a060, 0xb89050, 0xd0a070, 0xbea068][randInt(0, 3)];
+    const cm = materialLibrary.getHideMaterial(furC);
+    const dk = mkFurMat(0x6a4028, 0.88);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.64, 0.6), cm);
     body.position.y = 1.2;
+    body.castShadow = true;
     g.add(body);
     [
       [-0.28, 1.54],
       [0.28, 1.54],
     ].forEach(([ox, oy]) => {
-      const hump = new THREE.Mesh(new THREE.SphereGeometry(0.25, 12, 9), cm);
+      const hump = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), cm);
       hump.position.set(ox, oy, 0);
-      hump.scale.set(0.78, 1.05, 0.68);
+      hump.scale.set(0.8, 1.08, 0.7);
+      hump.castShadow = true;
       g.add(hump);
     });
     const neck = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.15, 0.18, 0.75, 9),
+      new THREE.CylinderGeometry(0.15, 0.19, 0.78, 12),
       cm,
     );
     neck.position.set(0.7, 1.5, 0);
     neck.rotation.z = -0.42;
+    neck.castShadow = true;
     g.add(neck);
-    const chead = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.28, 0.28), cm);
+    const chead = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.3, 0.3), cm);
     chead.position.set(1.12, 1.72, 0);
+    chead.castShadow = true;
     g.add(chead);
+    const earC = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.14, 8), cm);
+    earC.position.set(1.08, 1.86, 0.12);
+    earC.rotation.set(0.2, 0, -0.6);
+    g.add(earC);
+    const earC2 = earC.clone();
+    earC2.position.z = -0.12;
+    earC2.rotation.z = 0.6;
+    g.add(earC2);
+    const tailC = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.03, 0.55, 8),
+      dk,
+    );
+    tailC.position.set(-0.72, 1.15, 0);
+    tailC.rotation.z = 0.85;
+    tailC.castShadow = true;
+    g.add(tailC);
     [
       [0.45, 0, -0.22],
       [0.45, 0, 0.22],
@@ -2465,14 +2601,16 @@ export class SceneBuilder {
       [-0.45, 0, 0.22],
     ].forEach(([lx, , lz]) => {
       const leg = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.07, 1.1, 9),
+        new THREE.CylinderGeometry(0.09, 0.07, 1.1, 10),
         cm,
       );
       leg.position.set(lx, 0.58, lz);
+      leg.castShadow = true;
       g.add(leg);
-      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 9, 7), dk);
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), dk);
       foot.position.set(lx, 0.07, lz);
       foot.scale.set(1.25, 0.48, 1.45);
+      foot.castShadow = true;
       g.add(foot);
     });
     const cground = terrainHeight(x, z);
@@ -2499,7 +2637,8 @@ export class SceneBuilder {
   }
 
   buildClouds(): void {
-    for (let i = 0; i < 44; i++) {
+    // Clouds are heavy (many meshes). Keep count modest for performance.
+    for (let i = 0; i < 26; i++) {
       const cg = new THREE.Group();
       const puffN = randInt(4, 11);
       for (let p = 0; p < puffN; p++) {
@@ -2540,7 +2679,7 @@ export class SceneBuilder {
   }
 
   buildBirds(): void {
-    for (let i = 0; i < 52; i++) {
+    for (let i = 0; i < 28; i++) {
       const pivot = new THREE.Group();
       const bx = rand(-1, 1) > 0 ? rand(-290, 290) : rand(-220, 220);
       const bz = rand(-1, 1) > 0 ? rand(-240, 240) : rand(-180, 180);
@@ -2582,7 +2721,43 @@ export class SceneBuilder {
     const springGobi = [0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888];
     const springAlpine = [0x7a8a70, 0x8a9a80, 0x6a7a62];
 
-    for (let i = 0; i < 1280; i++) {
+    const matPool = (cols: number[]) =>
+      cols.map((c) => {
+        const m = mkMat(c, 0.7);
+        m.envMapIntensity = 0.3;
+        return m;
+      });
+    const matsSteppe = matPool(springSteppe);
+    const matsForest = matPool(springForest);
+    const matsGobi = matPool(springGobi);
+    const matsAlpine = matPool(springAlpine);
+    const planePoolSteppe = springSteppe.map((c) => {
+      const m = mkMat(c, 0.68);
+      m.side = THREE.DoubleSide;
+      m.envMapIntensity = 0.28;
+      return m;
+    });
+    const planePoolForest = springForest.map((c) => {
+      const m = mkMat(c, 0.68);
+      m.side = THREE.DoubleSide;
+      m.envMapIntensity = 0.28;
+      return m;
+    });
+    const planePoolGobi = springGobi.map((c) => {
+      const m = mkMat(c, 0.68);
+      m.side = THREE.DoubleSide;
+      m.envMapIntensity = 0.28;
+      return m;
+    });
+    const planePoolAlpine = springAlpine.map((c) => {
+      const m = mkMat(c, 0.68);
+      m.side = THREE.DoubleSide;
+      m.envMapIntensity = 0.28;
+      return m;
+    });
+
+    // Grass tufts dominate draw calls; reduce count for smooth map.
+    for (let i = 0; i < 900; i++) {
       const x = rand(-200, 115),
         z = rand(-65, 68);
       const h = terrainHeight(x, z);
@@ -2593,37 +2768,60 @@ export class SceneBuilder {
       const isForest = biome === "forest" || biome === "river_plain";
       const isAlpine = biome === "high_alpine";
       const bladeCount = isAlpine
-        ? randInt(1, 3)
+        ? randInt(1, 4)
         : isForest
-          ? randInt(4, 8)
+          ? randInt(5, 11)
           : isGobi
-            ? randInt(2, 5)
-            : randInt(4, 9);
-      const grassCols = isGobi
-        ? springGobi
+            ? randInt(2, 6)
+            : randInt(5, 12);
+      const cylMats = isGobi
+        ? matsGobi
         : isForest
-          ? springForest
+          ? matsForest
           : isAlpine
-            ? springAlpine
-            : springSteppe;
+            ? matsAlpine
+            : matsSteppe;
+      const plMats = isGobi
+        ? planePoolGobi
+        : isForest
+          ? planePoolForest
+          : isAlpine
+            ? planePoolAlpine
+            : planePoolSteppe;
       const bladeH = isAlpine
         ? rand(0.12, 0.28)
         : isGobi
           ? rand(0.16, 0.36)
           : isForest
-            ? rand(0.22, 0.58)
-            : rand(0.2, 0.52);
+            ? rand(0.22, 0.62)
+            : rand(0.2, 0.55);
       for (let b = 0; b < bladeCount; b++) {
         const bx = rand(-0.42, 0.42),
           bz = rand(-0.42, 0.42);
-        const blade = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.018, 0.038, bladeH, 4),
-          mkMat(grassCols[randInt(0, grassCols.length - 1)], 0.88),
-        );
-        blade.position.set(bx, rand(0.08, 0.26), bz);
-        blade.rotation.z = rand(-0.38, 0.38);
-        blade.rotation.x = rand(-0.2, 0.2);
-        g.add(blade);
+        const ci = randInt(0, cylMats.length - 1);
+        if (b % 3 === 0) {
+          const blade = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.016, 0.036, bladeH, 5),
+            cylMats[ci],
+          );
+          blade.position.set(bx, rand(0.08, 0.26), bz);
+          blade.rotation.z = rand(-0.42, 0.42);
+          blade.rotation.x = rand(-0.22, 0.22);
+          // Grass casting shadows is very expensive; let terrain/trees carry shadows.
+          blade.castShadow = false;
+          g.add(blade);
+        } else {
+          const ph = bladeH * 1.08;
+          const blade = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.06, ph),
+            plMats[ci],
+          );
+          blade.position.set(bx, ph * 0.5 + rand(0, 0.12), bz);
+          blade.rotation.y = rand(0, Math.PI);
+          blade.rotation.x = rand(-0.25, 0.25);
+          blade.castShadow = false;
+          g.add(blade);
+        }
       }
       g.position.set(x, h, z);
       this.scene.add(g);
@@ -2641,9 +2839,13 @@ export class SceneBuilder {
       const nearMtn = h > 5;
       for (let j = 0; j < randInt(1, nearMtn ? 6 : 3); j++) {
         const size = nearMtn ? rand(0.3, 1.3) : rand(0.15, 0.65);
+        const stoneMat = materialLibrary
+          .getStoneMaterial(randInt(0, 2))
+          .clone();
+        stoneMat.color = new THREE.Color(nearMtn ? 0x787060 : 0x888070);
         const rm = new THREE.Mesh(
-          new THREE.DodecahedronGeometry(size * rand(0.5, 1.8), 0),
-          mkMat(nearMtn ? 0x787060 : 0x888070, 0.96),
+          new THREE.DodecahedronGeometry(size * rand(0.5, 1.8), 1),
+          stoneMat,
         );
         rm.position.set(rand(-0.6, 0.6), rand(0.1, 0.4), rand(-0.6, 0.6));
         rm.rotation.set(rand(0, Math.PI), rand(0, Math.PI), rand(0, Math.PI));

@@ -1,20 +1,52 @@
 "use client"
 
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { OrbitControls, Environment } from "@react-three/drei"
 import { Suspense, useState, useCallback, useEffect, useRef } from "react"
 import * as THREE from "three"
-import { useFrame } from "@react-three/fiber"
 import StoneHand from "./stoneHand"
 import StoneGameUI from "./stoneGameUI"
 import {
   GameState, INITIAL_STATE,
-  computerPickStones, buildMessage, WIN_SCORE,
+  computerPickStones, computerGuessTotal, buildMessage, WIN_SCORE,
 } from "./stoneType"
+import { useAuth } from "@/components/AuthContext"
+import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api"
 
 export type StoneGameProps = {
   onComplete?: (result: "win" | "lose") => void;
 };
+
+function CinematicCamera({ phase }: { phase: GameState["phase"] }) {
+  const { camera } = useThree()
+  const targetPos = useRef(new THREE.Vector3(0, 4, 7))
+  const targetLook = useRef(new THREE.Vector3(0, 0, 0))
+
+  useEffect(() => {
+    if (phase === "result") {
+      targetPos.current.set(0.2, 3.35, 6.2)
+      targetLook.current.set(0, 0.25, 0.2)
+      return
+    }
+    if (phase === "guess") {
+      targetPos.current.set(0, 3.9, 7.4)
+      targetLook.current.set(0, 0.15, 0)
+      return
+    }
+    // pick
+    targetPos.current.set(0, 4.15, 7.8)
+    targetLook.current.set(0, 0.05, 0)
+  }, [phase])
+
+  useFrame((_, dt) => {
+    const k = 1 - Math.exp(-6.5 * dt)
+    camera.position.lerp(targetPos.current, k)
+    const look = new THREE.Vector3()
+    look.copy(targetLook.current)
+    camera.lookAt(look)
+  })
+  return null
+}
 
 function GameTable() {
   return (
@@ -112,9 +144,9 @@ function GameScene({
   state: GameState
   burstActive: boolean
 }) {
-  const isReveal = state.phase === "reveal" || state.phase === "guess" || state.phase === "result"
-  const showPlayerStones   = isReveal && state.playerStones   !== null
-  const showComputerStones = isReveal && state.computerStones !== null
+  const showPlayerStones = state.playerStones !== null && (state.phase === "guess" || state.phase === "result")
+  // Requirement: robot stones should NOT be shown until after result.
+  const showComputerStones = state.phase === "result" && state.computerStones !== null
 
   return (
     <>
@@ -126,7 +158,8 @@ function GameScene({
         isOpen={showPlayerStones}
         isPlayer={true}
         position={[-2.0, 0.1, 0.5]}
-        revealAnim={isReveal}
+        revealAnim={state.phase === "result"}
+        phase={state.phase}
       />
 
       {/* Компьютерийн нударга — баруун тал */}
@@ -135,7 +168,8 @@ function GameScene({
         isOpen={showComputerStones}
         isPlayer={false}
         position={[2.0, 0.1, 0.5]}
-        revealAnim={isReveal}
+        revealAnim={state.phase === "result"}
+        phase={state.phase}
       />
 
       {/* Чулуу нисэх эффект */}
@@ -146,9 +180,63 @@ function GameScene({
 
 // ── Үндсэн тоглоомын компонент ────────────────
 export default function StoneGame({ onComplete }: StoneGameProps) {
+  const { user } = useAuth()
   const [state,       setState]       = useState<GameState>(INITIAL_STATE)
   const [burstActive, setBurstActive] = useState(false)
   const sentRef = useRef(false)
+  const rewardQueuedRef = useRef({ coins: 0, gems: 0 })
+  const [rewardEvents, setRewardEvents] = useState<
+    { id: string; text: string; kind: "coins" | "gems" }[]
+  >([])
+  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 })
+
+  const applyReward = useCallback(async (delta: { coins?: number; gems?: number }) => {
+    const email = user?.email?.trim()
+    if (!email) return
+    const dCoins = delta.coins ?? 0
+    const dGems = delta.gems ?? 0
+    if (!dCoins && !dGems) return
+
+    // Update UI immediately; sync in background.
+    rewardQueuedRef.current.coins += dCoins
+    rewardQueuedRef.current.gems += dGems
+    setSessionGain((p) => ({ coins: p.coins + dCoins, gems: p.gems + dGems }))
+
+    const now = Date.now()
+    const addEvt = (kind: "coins" | "gems", text: string) => {
+      const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`
+      setRewardEvents((prev) => [...prev, { id, kind, text }])
+      setTimeout(() => {
+        setRewardEvents((prev) => prev.filter((e) => e.id !== id))
+      }, 1350)
+    }
+    if (dCoins) addEvt("coins", `+${dCoins} 🪙`)
+    if (dGems) addEvt("gems", `+${dGems} 💎`)
+
+    try {
+      const profileRes = await getGameProfileByEmail(email)
+      const current = profileRes?.user?.profile && typeof profileRes.user.profile === "object"
+        ? (profileRes.user.profile as Record<string, unknown>)
+        : {}
+      const invRaw = (current as any).inventory
+      const inv = (invRaw && typeof invRaw === "object") ? (invRaw as Record<string, unknown>) : {}
+      const coins = typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0)
+      const gems = typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0)
+
+      const nextProfile = {
+        ...current,
+        inventory: {
+          ...inv,
+          coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
+          gems: (Number.isFinite(gems) ? gems : 0) + dGems,
+        },
+      } as Record<string, unknown>
+
+      await syncAppUserSimple({ email, profile: nextProfile })
+    } catch {
+      // Ignore sync errors (still realtime in UI).
+    }
+  }, [user?.email])
 
   // ── Тоглогч чулуу сонгоно ──
   const handlePick = useCallback((n: number) => {
@@ -161,15 +249,8 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
       ...prev,
       playerStones:   n,
       computerStones: compStones,
-      phase:          "reveal",
+      phase:          "guess",
     }))
-
-    // 1.2 секундын дараа нударга нээнэ
-    setTimeout(() => {
-      setState((prev) => ({ ...prev, phase: "guess" }))
-      setBurstActive(true)
-      setTimeout(() => setBurstActive(false), 1500)
-    }, 1200)
   }, [state.phase, state.history])
 
   // ── Тоглогч нийлбэр таана ──
@@ -178,30 +259,53 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
     if (state.playerStones === null || state.computerStones === null) return
 
     const total     = state.playerStones + state.computerStones
-    const playerWon = guess === total
+    const compGuess = computerGuessTotal({
+      playerStones: state.playerStones,
+      computerStones: state.computerStones,
+      playerGuess: guess,
+    })
+
+    const playerCorrect = guess === total
+    const compCorrect = compGuess === total
+    const outcome: "player" | "computer" | "none" =
+      playerCorrect ? "player" : compCorrect ? "computer" : "none"
 
     const roundResult = {
       playerStones:   state.playerStones,
       computerStones: state.computerStones,
       total,
       playerGuess:    guess,
-      playerWon,
+      computerGuess:  compGuess,
+      outcome,
     }
 
     const newScore = {
-      player:   state.score.player   + (playerWon ? 1 : 0),
-      computer: state.score.computer + (playerWon ? 0 : 1),
+      player:   state.score.player   + (outcome === "player" ? 1 : 0),
+      computer: state.score.computer + (outcome === "computer" ? 1 : 0),
     }
 
     setState((prev) => ({
       ...prev,
       playerGuess: guess,
+      computerGuess: compGuess,
       phase:       "result",
       score:       newScore,
       history:     [...prev.history, roundResult],
       message:     buildMessage(roundResult),
     }))
-  }, [state])
+
+    // Visual burst when revealing result.
+    setBurstActive(true)
+    setTimeout(() => setBurstActive(false), 1500)
+
+    // Rewards: +3 coins per round win, +1 gem if you win the match (3 wins).
+    if (outcome === "player") {
+      void applyReward({ coins: 3 })
+      if (newScore.player >= WIN_SCORE) {
+        void applyReward({ gems: 1 })
+      }
+    }
+  }, [applyReward, state])
 
   // ── Дараагийн раунд ──
   const handleNext = useCallback(() => {
@@ -211,6 +315,7 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
       playerStones:   null,
       computerStones: null,
       playerGuess:    null,
+      computerGuess:  null,
       round:          prev.round + 1,
       message:        "",
     }))
@@ -220,6 +325,8 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
   const handleRestart = useCallback(() => {
     setState(INITIAL_STATE)
     sentRef.current = false
+    setRewardEvents([])
+    setSessionGain({ coins: 0, gems: 0 })
   }, [])
 
   useEffect(() => {
@@ -238,6 +345,7 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
         shadows
         style={{ width: "100%", height: "100%" }}
       >
+        <CinematicCamera phase={state.phase} />
         <ambientLight intensity={0.35} />
         <directionalLight
           position={[4, 10, 5]}
@@ -246,10 +354,10 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
         />
-        <pointLight position={[-3, 4, -3]} intensity={0.4} color="#ffd080" />
-        <pointLight position={[ 3, 3,  3]} intensity={0.25} color="#c0d0ff" />
+        <pointLight position={[-3, 4, -3]} intensity={0.45} color="#ffd080" />
+        <pointLight position={[ 3, 3,  3]} intensity={0.22} color="#c0d0ff" />
         {/* Тоглоомын талбайн доор нэмэлт гэрэл */}
-        <pointLight position={[0, -0.2, 0]} intensity={0.3} color="#c8a030" />
+        <pointLight position={[0, -0.2, 0]} intensity={0.34} color="#c8a030" />
 
         <Suspense fallback={null}>
           <Environment preset="night" />
@@ -257,6 +365,7 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
         </Suspense>
 
         <OrbitControls
+          enabled={state.phase !== "result"}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.4}
           minDistance={4}
@@ -272,6 +381,8 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
         onGuess={handleGuess}
         onNext={handleNext}
         onRestart={handleRestart}
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
       />
     </div>
   )

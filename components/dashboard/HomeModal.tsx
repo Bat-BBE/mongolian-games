@@ -45,6 +45,8 @@ export function HomeModal({
   const [gems, setGems] = useState(0);
   const [gerLevel, setGerLevel] = useState(1);
   const [sheep, setSheep] = useState(0);
+  const [goat, setGoat] = useState(0);
+  const [cow, setCow] = useState(0);
   const [horse, setHorse] = useState(0);
   const [camel, setCamel] = useState(0);
 
@@ -66,6 +68,8 @@ export function HomeModal({
         setGerLevel(Math.max(1, Math.floor(num(ger.level, 1))));
         const ls = isPlainRecord(prof.livestock) ? prof.livestock : {};
         setSheep(Math.max(0, Math.floor(num(ls.sheep, 0))));
+        setGoat(Math.max(0, Math.floor(num(ls.goat, 0))));
+        setCow(Math.max(0, Math.floor(num(ls.cow, 0))));
         setHorse(Math.max(0, Math.floor(num(ls.horse, 0))));
         setCamel(Math.max(0, Math.floor(num(ls.camel, 0))));
       })
@@ -97,7 +101,7 @@ export function HomeModal({
     }
   }
 
-  async function buy(kind: "sheep" | "horse" | "camel") {
+  async function buy(kind: "sheep" | "goat" | "cow" | "horse" | "camel") {
     if (!email) return;
     setLoading(true);
     setErr(null);
@@ -134,12 +138,20 @@ export function HomeModal({
           </p>
           <div className="flex flex-wrap gap-2 text-sm">
             <Chip>🐑 {sheep}</Chip>
+            <Chip>🐐 {goat}</Chip>
+            <Chip>🐄 {cow}</Chip>
             <Chip>🐎 {horse}</Chip>
             <Chip>🐫 {camel}</Chip>
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
             <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("sheep")}>
               {lang === "mn" ? "Хонь авах" : "Buy sheep"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("goat")}>
+              {lang === "mn" ? "Ямаа авах" : "Buy goat"}
+            </Button>
+            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("cow")}>
+              {lang === "mn" ? "Үхэр авах" : "Buy cow"}
             </Button>
             <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("horse")}>
               {lang === "mn" ? "Морь авах" : "Buy horse"}

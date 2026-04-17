@@ -39,7 +39,7 @@ interface LeftPanelProps {
     coins: number;
     gems: number;
     gerLevel: number;
-    livestock: { sheep: number; horse: number; camel: number };
+    livestock: { sheep: number; goat: number; cow: number; horse: number; camel: number };
   };
   /** Газрын зураг дээр гэр рүү камер шилжүүлэх */
   onGoToGer?: () => void;
@@ -216,13 +216,42 @@ export function LeftPanel({
               ) : (
                 <>
                   {onGoToGer ? (
-                    <button
-                      type="button"
-                      onClick={() => onGoToGer()}
-                      className="mt-1 w-full rounded-lg border border-amber-700/45 bg-amber-500/18 px-3 py-2.5 text-sm font-semibold text-amber-950 dark:text-amber-50 hover:bg-amber-500/28 transition-colors"
-                    >
-                      {t.mapGoToGer}
-                    </button>
+                    <div className="mt-1 space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => onGoToGer()}
+                        className="w-full rounded-lg border border-amber-700/45 bg-amber-500/18 px-3 py-2.5 text-sm font-semibold text-amber-950 dark:text-amber-50 hover:bg-amber-500/28 transition-colors"
+                      >
+                        {t.mapGoToGer}
+                      </button>
+                      <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
+                        <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
+                          {lang === "mn" ? "Хэрхэн тоглох вэ?" : "How to play"}
+                        </p>
+                        <ul className="text-[11px] text-foreground/70 leading-relaxed space-y-1">
+                          <li>
+                            {lang === "mn"
+                              ? "1) Газрын зураг дээр өртөө сонгоод хаалган дээр нь очно."
+                              : "1) Pick a station on the map and reach its gate."}
+                          </li>
+                          <li>
+                            {lang === "mn"
+                              ? "2) Өртөө бүр дээр мини-тоглоом тоглоод шагнал авна."
+                              : "2) Play the station minigames to earn rewards."}
+                          </li>
+                          <li>
+                            {lang === "mn"
+                              ? "3) Нэг өртөөнд 7 хоногт 2 л удаа тоглоно."
+                              : "3) Each station allows 2 plays per 7 days."}
+                          </li>
+                          <li>
+                            {lang === "mn"
+                              ? "4) Гэр дээр “Go to ger” дарж гэрээ сайжруулж, мал худалдаж авна."
+                              : "4) Use “Go to ger” to upgrade your ger and buy livestock."}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
                   ) : null}
                 </>
               )}
@@ -316,6 +345,24 @@ export function LeftPanel({
                   </ul>
                 </div>
               )}
+
+              {activeStationId !== "home" && (t.questTitle?.trim() || t.questDesc?.trim()) ? (
+                <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
+                  <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
+                    {lang === "mn" ? "Өртөөний түүх" : "Station story"}
+                  </p>
+                  {t.questTitle?.trim() ? (
+                    <p className="text-[11px] text-foreground/80 font-semibold leading-snug">
+                      {t.questTitle}
+                    </p>
+                  ) : null}
+                  {t.questDesc?.trim() ? (
+                    <p className="text-[11px] text-foreground/70 leading-relaxed mt-1">
+                      {t.questDesc}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -348,6 +395,12 @@ export function LeftPanel({
               <div className="flex flex-wrap gap-2 text-xs text-foreground/85 tabular-nums">
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
                   🐑 {(treasury?.livestock.sheep ?? 0).toLocaleString()}
+                </span>
+                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
+                  🐐 {(treasury?.livestock.goat ?? 0).toLocaleString()}
+                </span>
+                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
+                  🐄 {(treasury?.livestock.cow ?? 0).toLocaleString()}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
                   🐎 {(treasury?.livestock.horse ?? 0).toLocaleString()}

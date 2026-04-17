@@ -14,7 +14,7 @@ interface MapAreaProps {
   t: DashStrings;
   userEmail: string;
   homeGerLevel?: number;
-  homeLivestock?: { sheep: number; horse: number; camel: number };
+  homeLivestock?: { sheep: number; goat: number; cow: number; horse: number; camel: number };
   currentStationId: string;
   doneStationIds: string[];
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;

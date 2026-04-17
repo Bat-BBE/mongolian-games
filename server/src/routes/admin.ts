@@ -130,6 +130,41 @@ const upload = multer({
   }) as multer.Options["fileFilter"],
 });
 
+const heroImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = join(process.cwd(), "uploads", "heroes");
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const safeExt = extname(file.originalname || "").toLowerCase() || ".jpg";
+      const ext =
+        safeExt === ".png" ||
+        safeExt === ".jpg" ||
+        safeExt === ".jpeg" ||
+        safeExt === ".webp"
+          ? safeExt
+          : ".jpg";
+      const name = `hero_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
+      cb(null, name);
+    },
+  }),
+  // Allow a bit larger images (PNG can be big)
+  limits: { fileSize: 12 * 1024 * 1024 },
+  fileFilter: ((req, file, cb) => {
+    // Be lenient: accept any image/* to avoid PNG edge-cases.
+    const ok = typeof file.mimetype === "string" && file.mimetype.startsWith("image/");
+    if (!ok) {
+      (req as unknown as { fileValidationError?: string }).fileValidationError =
+        "Invalid file type";
+      cb(null, false);
+      return;
+    }
+    cb(null, true);
+  }) as multer.Options["fileFilter"],
+});
+
 adminRouter.get("/treasury", async (_req, res) => {
   try {
     const result = await pool.query(
@@ -139,6 +174,8 @@ adminRouter.get("/treasury", async (_req, res) => {
          COALESCE(sum((profile->'inventory'->>'coins')::int), 0)::int AS coins_total,
          COALESCE(sum((profile->'inventory'->>'gems')::int), 0)::int AS gems_total,
          COALESCE(sum((profile->'livestock'->>'sheep')::int), 0)::int AS sheep_total,
+         COALESCE(sum((profile->'livestock'->>'goat')::int), 0)::int AS goat_total,
+         COALESCE(sum((profile->'livestock'->>'cow')::int), 0)::int AS cow_total,
          COALESCE(sum((profile->'livestock'->>'horse')::int), 0)::int AS horse_total,
          COALESCE(sum((profile->'livestock'->>'camel')::int), 0)::int AS camel_total,
          COALESCE(avg((profile->'ger'->>'level')::int), 1)::float AS ger_level_avg
@@ -153,6 +190,8 @@ adminRouter.get("/treasury", async (_req, res) => {
               COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
               COALESCE((profile->'inventory'->>'gems')::int, 0) AS gems,
               COALESCE((profile->'livestock'->>'sheep')::int, 0) AS sheep,
+              COALESCE((profile->'livestock'->>'goat')::int, 0) AS goat,
+              COALESCE((profile->'livestock'->>'cow')::int, 0) AS cow,
               COALESCE((profile->'livestock'->>'horse')::int, 0) AS horse,
               COALESCE((profile->'livestock'->>'camel')::int, 0) AS camel,
               COALESCE(
@@ -172,6 +211,8 @@ adminRouter.get("/treasury", async (_req, res) => {
               COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
               COALESCE((profile->'inventory'->>'gems')::int, 0) AS gems,
               COALESCE((profile->'livestock'->>'sheep')::int, 0) AS sheep,
+              COALESCE((profile->'livestock'->>'goat')::int, 0) AS goat,
+              COALESCE((profile->'livestock'->>'cow')::int, 0) AS cow,
               COALESCE((profile->'livestock'->>'horse')::int, 0) AS horse,
               COALESCE((profile->'livestock'->>'camel')::int, 0) AS camel,
               COALESCE(
@@ -378,6 +419,46 @@ adminRouter.post("/games/:id/image", upload.single("file"), async (req, res) => 
     res.status(500).json({ error: msg });
   }
 });
+
+adminRouter.post(
+  "/heroes/:slug/image",
+  heroImageUpload.single("file"),
+  async (req, res) => {
+    const slug = z.string().min(1).safeParse(req.params.slug);
+    if (!slug.success) {
+      res.status(400).json({ error: "Invalid slug" });
+      return;
+    }
+    const fv = (req as unknown as { fileValidationError?: string })
+      .fileValidationError;
+    if (fv) {
+      res.status(415).json({ error: fv });
+      return;
+    }
+    const f = req.file;
+    if (!f) {
+      res.status(400).json({ error: "Missing file" });
+      return;
+    }
+    const imageUrl = `/uploads/heroes/${f.filename}`;
+    try {
+      const result = await pool.query(
+        `UPDATE heroes SET image_url = $1, updated_at = now()
+         WHERE slug = $2
+         RETURNING id, slug, image_url`,
+        [imageUrl, slug.data],
+      );
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: "Hero not found" });
+        return;
+      }
+      res.json({ hero: result.rows[0] });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      res.status(500).json({ error: msg });
+    }
+  },
+);
 
 adminRouter.get("/heroes", async (_req, res) => {
   try {

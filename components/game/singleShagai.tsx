@@ -5,6 +5,7 @@ import { useBox } from "@react-three/cannon";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ShagaiSide, SHAGAI_INFO, detectSide } from "./fourBonusType";
+import { useGLTF } from "@react-three/drei";
 
 interface SingleShagaiProps {
   id: number;
@@ -88,6 +89,22 @@ export default function SingleShagai({
   const settleRef = useRef(0);
   const reportedRef = useRef(false);
   const glowRef = useRef<THREE.PointLight>(null);
+  const gltf = useGLTF("/models/shagai_approx.glb");
+  const model = useMemo(() => {
+    const scene = (gltf as any)?.scene as THREE.Object3D | undefined;
+    if (!scene) return null;
+    const clone = scene.clone(true);
+    clone.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        const m = o as THREE.Mesh;
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
+    return clone;
+  }, [gltf]);
+
+  // Fallback geometry (in case GLB fails to load)
   const geo = useMemo(() => buildShagaiGeo(), []);
 
   // Physics box
@@ -188,6 +205,29 @@ export default function SingleShagai({
     ? SHAGAI_INFO[resultSide].glow
     : "rgba(255,255,255,0.1)";
 
+  useEffect(() => {
+    if (!model) return;
+    const col = new THREE.Color(highlight ? sideColor : "#ddd0aa");
+    model.traverse((o) => {
+      if (!(o as THREE.Mesh).isMesh) return;
+      const mesh = o as THREE.Mesh;
+      const mat = mesh.material as
+        | THREE.MeshStandardMaterial
+        | THREE.MeshStandardMaterial[];
+      const mats = Array.isArray(mat) ? mat : [mat];
+      for (const m of mats) {
+        if (!m) continue;
+        // Keep original textures, only add a gentle emissive tint when highlighted.
+        m.emissive = highlight ? col : new THREE.Color(0x000000);
+        m.emissiveIntensity = highlight ? 0.12 : 0;
+        m.roughness = Math.min(0.9, Math.max(0.35, m.roughness ?? 0.55));
+        m.metalness = Math.min(0.25, Math.max(0.0, m.metalness ?? 0.05));
+        (m as any).envMapIntensity = (m as any).envMapIntensity ?? 0.45;
+        m.needsUpdate = true;
+      }
+    });
+  }, [model, highlight, sideColor]);
+
   return (
     <group
       ref={(node) => {
@@ -195,16 +235,33 @@ export default function SingleShagai({
         (groupRef as React.MutableRefObject<THREE.Group | null>).current = node;
       }}
     >
-      {/* Гол бие */}
-      <mesh castShadow receiveShadow geometry={geo}>
-        <meshStandardMaterial
-          color={highlight ? sideColor : "#ddd0aa"}
-          roughness={0.5}
-          metalness={highlight ? 0.12 : 0.04}
-          emissive={highlight ? sideColor : "#000000"}
-          emissiveIntensity={highlight ? 0.15 : 0}
-        />
+      {/* Physics collider (invisible): keep stable even if the visual model changes */}
+      <mesh visible={false}>
+        <boxGeometry args={[0.98, 0.7, 1.52]} />
+        <meshStandardMaterial />
       </mesh>
+
+      {/* Visual model (preferred) */}
+      {model ? (
+        <primitive
+          object={model}
+          // Fit inside collider
+          scale={0.72}
+          rotation={[0, Math.PI / 2, 0]}
+          position={[0, -0.1, 0]}
+        />
+      ) : (
+        // Fallback: procedural geometry if GLB not available
+        <mesh castShadow receiveShadow geometry={geo}>
+          <meshStandardMaterial
+            color={highlight ? sideColor : "#ddd0aa"}
+            roughness={0.5}
+            metalness={highlight ? 0.12 : 0.04}
+            emissive={highlight ? sideColor : "#000000"}
+            emissiveIntensity={highlight ? 0.15 : 0}
+          />
+        </mesh>
+      )}
 
       {/* Морийн тал тэмдэг */}
       <group position={[0, 0.3, 0.08]} rotation={[Math.PI / 2, 0, 0]}>
@@ -252,3 +309,5 @@ export default function SingleShagai({
     </group>
   );
 }
+
+useGLTF.preload("/models/shagai_approx.glb");

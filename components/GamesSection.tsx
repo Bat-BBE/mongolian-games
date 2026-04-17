@@ -60,7 +60,7 @@ export default function GamesSection() {
             width: 900,
             height: 500,
             background:
-              "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 10%, transparent) 0%, transparent 65%)",
+              "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 16%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 12%, transparent) 35%, transparent 72%)",
           }}
         />
 
@@ -73,7 +73,7 @@ export default function GamesSection() {
               ❖ &nbsp; Gameplay &nbsp; ❖
             </p>
             <h2
-              className="font-display font-bold uppercase tracking-widest text-gold"
+              className="font-display font-bold uppercase tracking-widest text-gold text-gold-glow"
               style={{ fontSize: "clamp(1.6rem, 3.5vw, 2.4rem)" }}
             >
               {t.games.heading}

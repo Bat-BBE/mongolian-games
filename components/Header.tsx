@@ -174,15 +174,17 @@ export default function Header() {
         isScrolled ? "py-2" : "py-3 md:py-5"
       }`}
       style={{
+        // Softer dark header: less blue, warmer ink.
         background: isScrolled
-          ? "background"
-          : "background",
+          ? "color-mix(in oklch, var(--background) 86%, transparent)"
+          : "color-mix(in oklch, var(--background) 68%, transparent)",
         borderBottom: isScrolled
-          ? "1px solid color-mix(in oklch, var(--primary) 18%, var(--border))"
-          : "background",
+          ? "1px solid color-mix(in oklch, var(--primary) 14%, var(--border))"
+          : "1px solid transparent",
         boxShadow: isScrolled
-          ? "0 4px 32px -8px color-mix(in oklch, var(--primary) 12%, transparent)"
-          : "background",
+          ? "0 10px 40px -18px color-mix(in oklch, black 55%, transparent)"
+          : "0 1px 0 color-mix(in oklch, var(--primary) 10%, transparent)",
+        backdropFilter: "blur(18px) saturate(1.25)",
       }}
     >
       <div

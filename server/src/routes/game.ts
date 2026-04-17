@@ -18,7 +18,7 @@ const homeUpgradeBody = z.object({
 
 const homeBuyBody = z.object({
   email: z.string().min(3),
-  kind: z.enum(["sheep", "horse", "camel"]),
+  kind: z.enum(["sheep", "goat", "cow", "horse", "camel"]),
   qty: z.number().int().min(1).max(10),
 });
 
@@ -73,6 +73,8 @@ function computeWealthScore(profile: Record<string, unknown>): number {
   const gerLevel = Math.max(0, Math.floor(num(ger.level, 1)));
   const ls = isPlainRecord(profile.livestock) ? (profile.livestock as Record<string, unknown>) : {};
   const sheep = Math.max(0, Math.floor(num(ls.sheep, 0)));
+  const goat = Math.max(0, Math.floor(num(ls.goat, 0)));
+  const cow = Math.max(0, Math.floor(num(ls.cow, 0)));
   const horse = Math.max(0, Math.floor(num(ls.horse, 0)));
   const camel = Math.max(0, Math.floor(num(ls.camel, 0)));
 
@@ -85,6 +87,8 @@ function computeWealthScore(profile: Record<string, unknown>): number {
     coins * 1 +
     gems * 25 +
     sheep * 30 +
+    goat * 26 +
+    cow * 95 +
     horse * 160 +
     camel * 220 +
     gerLevel * 500;
@@ -97,9 +101,18 @@ function upgradeCost(gerLevel: number): { coins: number; kp: number } {
   return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
 }
 
-function livestockCost(kind: "sheep" | "horse" | "camel", qty: number): { coins: number } {
+function livestockCost(kind: "sheep" | "goat" | "cow" | "horse" | "camel", qty: number): { coins: number } {
   const q = Math.max(1, Math.floor(qty));
-  const unit = kind === "sheep" ? 120 : kind === "horse" ? 650 : 820;
+  const unit =
+    kind === "sheep"
+      ? 120
+      : kind === "goat"
+        ? 110
+        : kind === "cow"
+          ? 420
+          : kind === "horse"
+            ? 650
+            : 820;
   return { coins: unit * q };
 }
 
@@ -108,18 +121,18 @@ function rewardFor(gameSlug: string): {
   kp: number;
   coins: number;
   gems: number;
-  livestock?: Partial<{ sheep: number; horse: number; camel: number }>;
+  livestock?: Partial<{ sheep: number; goat: number; cow: number; horse: number; camel: number }>;
   gerLevelDelta?: number;
 } {
-  // Defaults: small progression. You can adjust per minigame.
-  const base = { xp: 40, kp: 15, coins: 20, gems: 0 } as const;
+  // Defaults: slow progression (avoid inflating leaderboard too fast).
+  const base = { xp: 12, kp: 4, coins: 8, gems: 0 } as const;
   switch (gameSlug) {
     case "shagai":
-      return { ...base, xp: 55, kp: 20, coins: 35, gems: 0, livestock: { sheep: 1 } };
+      return { ...base, xp: 16, kp: 6, coins: 10, gems: 0, livestock: { sheep: 1 } };
     case "stone-guess":
-      return { ...base, xp: 45, kp: 18, coins: 28, gems: 0 };
+      return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
     case "four-bones":
-      return { ...base, xp: 65, kp: 24, coins: 40, gems: 1 };
+      return { ...base, xp: 20, kp: 7, coins: 12, gems: 1 };
     default:
       return { ...base };
   }
@@ -238,6 +251,8 @@ gameRouter.post("/complete", async (req, res) => {
       const ls = isPlainRecord(profile.livestock) ? { ...(profile.livestock as Record<string, unknown>) } : {};
       const add = rwd.livestock ?? {};
       ls.sheep = Math.max(0, Math.floor(num(ls.sheep, 0) + (add.sheep ?? 0)));
+      ls.goat = Math.max(0, Math.floor(num(ls.goat, 0) + (add.goat ?? 0)));
+      ls.cow = Math.max(0, Math.floor(num(ls.cow, 0) + (add.cow ?? 0)));
       ls.horse = Math.max(0, Math.floor(num(ls.horse, 0) + (add.horse ?? 0)));
       ls.camel = Math.max(0, Math.floor(num(ls.camel, 0) + (add.camel ?? 0)));
       profile.livestock = ls;
@@ -245,7 +260,7 @@ gameRouter.post("/complete", async (req, res) => {
       profile.wealthScore = computeWealthScore(profile);
     } else {
       // Small consolation: still track attempts, tiny XP.
-      progress.xp = num(progress.xp, 0) + 5;
+      progress.xp = num(progress.xp, 0) + 1;
     }
 
     const upd = await pool.query(

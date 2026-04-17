@@ -99,7 +99,7 @@ export default function Hero() {
   useEffect(() => {
     if (theme === "dark") {
       setOverlayColor(
-        "linear-gradient(180deg, rgba(8,6,3,0.30) 0%, rgba(8,6,3,0.60) 55%, rgba(5,4,2,1) 100%)",
+        "linear-gradient(180deg, rgba(18,12,8,0.35) 0%, rgba(12,8,20,0.55) 40%, rgba(8,10,22,0.92) 100%)",
       );
     } else {
       setOverlayColor(
@@ -121,7 +121,7 @@ export default function Hero() {
           width: 700,
           height: 350,
           background:
-            "radial-gradient(ellipse, rgba(201,168,76,0.16) 0%, transparent 70%)",
+            "radial-gradient(ellipse, rgba(232,197,71,0.26) 0%, rgba(232,197,71,0.10) 32%, transparent 72%)",
         }}
       />
 
@@ -167,7 +167,7 @@ export default function Hero() {
             letterSpacing: "-0.01em",
           }}
         >
-          <span className="text-gold">{t.hero.title2}</span>
+          <span className="text-gold text-gold-glow">{t.hero.title2}</span>
         </h1>
 
         <div className="flex items-center gap-5 mb-8 opacity-0 animate-fade-in delay-4">

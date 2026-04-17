@@ -17,7 +17,7 @@ export default function Features() {
           width: 900,
           height: 300,
           background:
-            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 6%, transparent) 0%, transparent 65%)",
+            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 14%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 12%, transparent) 38%, transparent 72%)",
         }}
       />
       <div className="text-center mb-10">

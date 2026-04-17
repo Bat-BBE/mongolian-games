@@ -37,19 +37,25 @@ function isPlainRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
-function readStationSteps(progress: Record<string, unknown>): Record<string, { completedGameSlugs: string[] }> {
+function readStationSteps(
+  progress: Record<string, unknown>,
+): Record<string, { completedGameSlugs: string[] }> {
   const raw = progress.stationSteps;
   if (!isPlainRecord(raw)) return {};
   const out: Record<string, { completedGameSlugs: string[] }> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (!isPlainRecord(v)) continue;
     const arr = (v as Record<string, unknown>).completedGameSlugs;
-    out[k] = { completedGameSlugs: Array.isArray(arr) ? arr.map((x) => String(x)) : [] };
+    out[k] = {
+      completedGameSlugs: Array.isArray(arr) ? arr.map((x) => String(x)) : [],
+    };
   }
   return out;
 }
 
-function readStationVisits(progress: Record<string, unknown>): Record<string, number[]> {
+function readStationVisits(
+  progress: Record<string, unknown>,
+): Record<string, number[]> {
   const raw = progress.stationVisits;
   if (!isPlainRecord(raw)) return {};
   const out: Record<string, number[]> = {};
@@ -89,13 +95,13 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     stationSteps?: Record<string, { completedGameSlugs: string[] }>;
     stationVisits?: Record<string, number[]>;
     homeGerLevel?: number;
-    homeLivestock?: { sheep: number; horse: number; camel: number };
+    homeLivestock?: { sheep: number; goat: number; cow: number; horse: number; camel: number };
     treasury?: {
       kp: number;
       coins: number;
       gems: number;
       gerLevel: number;
-      livestock: { sheep: number; horse: number; camel: number };
+      livestock: { sheep: number; goat: number; cow: number; horse: number; camel: number };
     };
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -107,7 +113,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [userEmail, setUserEmail] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
-  /** Газрын 3D дээр баатар аль өртөөний хаалганд байгаа — самбарын одоогийн өртөө */
   const [heroMapStationId, setHeroMapStationId] = useState<string | null>(null);
   const flyHomeRef = useRef<(() => void) | null>(null);
 
@@ -150,14 +155,15 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
 
       const prof = data.profile as Record<string, unknown>;
       const prog = data.progress as Record<string, unknown>;
-      const inv =
-        isPlainRecord(prof.inventory) ? (prof.inventory as Record<string, unknown>) : {};
-      const gerRec =
-        isPlainRecord(prof.ger) ? (prof.ger as Record<string, unknown>) : {};
-      const lsRec =
-        isPlainRecord(prof.livestock)
-          ? (prof.livestock as Record<string, unknown>)
-          : {};
+      const inv = isPlainRecord(prof.inventory)
+        ? (prof.inventory as Record<string, unknown>)
+        : {};
+      const gerRec = isPlainRecord(prof.ger)
+        ? (prof.ger as Record<string, unknown>)
+        : {};
+      const lsRec = isPlainRecord(prof.livestock)
+        ? (prof.livestock as Record<string, unknown>)
+        : {};
       const hero = bundle?.hero;
       const name =
         bundle?.computed.displayHeroName &&
@@ -183,14 +189,18 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         name,
         title,
         image:
-          typeof hero?.image_url === "string" ? hero.image_url : String(prof.heroImages ?? ""),
+          typeof hero?.image_url === "string"
+            ? hero.image_url
+            : String(prof.heroImages ?? ""),
         level: num(prof.level, 1),
         kp: num(prof.kp, 0),
         tokens: { used: 0, max: 20 },
         xp: num(prog.xp, 0),
         xpMax: num(prog.xpMax, 100),
         accentColor:
-          typeof hero?.color === "string" ? hero.color : String(prof.accentColor ?? "#ffd559"),
+          typeof hero?.color === "string"
+            ? hero.color
+            : String(prof.accentColor ?? "#ffd559"),
         currentStationId: resolvedStationId,
         doneStationIds: prog.doneStationIds,
         bonusMultiplier: bundle?.computed.bonusMultiplier ?? "x1.5",
@@ -211,6 +221,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         homeGerLevel: num(gerRec.level, 1),
         homeLivestock: {
           sheep: num(lsRec.sheep, 0),
+          goat: num(lsRec.goat, 0),
+          cow: num(lsRec.cow, 0),
           horse: num(lsRec.horse, 0),
           camel: num(lsRec.camel, 0),
         },
@@ -221,6 +233,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           gerLevel: num(gerRec.level, 1),
           livestock: {
             sheep: num(lsRec.sheep, 0),
+            goat: num(lsRec.goat, 0),
+            cow: num(lsRec.cow, 0),
             horse: num(lsRec.horse, 0),
             camel: num(lsRec.camel, 0),
           },
@@ -325,7 +339,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           homeGerLevel={player.homeGerLevel ?? 1}
           homeLivestock={player.homeLivestock}
           currentStationId={player.currentStationId?.trim() || "home"}
-          doneStationIds={Array.isArray(player.doneStationIds) ? player.doneStationIds : []}
+          doneStationIds={
+            Array.isArray(player.doneStationIds) ? player.doneStationIds : []
+          }
           stations={mapStations}
           heroModelPath={player.heroModelPath ?? null}
           stationSteps={player.stationSteps}

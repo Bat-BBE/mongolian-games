@@ -60,7 +60,6 @@ export class PBRMaterialLibrary {
       roughness: 0.8,
       metalness: 0.0,
       normalScale: new THREE.Vector2(1.5, 1.5),
-      thicknessMap: undefined,
       aoMapIntensity: 0.9,
     });
 

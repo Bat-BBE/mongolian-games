@@ -279,7 +279,7 @@ export async function homeUpgradeGer(body: {
 
 export async function homeBuyLivestock(body: {
   email: string;
-  kind: "sheep" | "horse" | "camel";
+  kind: "sheep" | "goat" | "cow" | "horse" | "camel";
   qty: number;
 }): Promise<{ user: AppUserRow }> {
   const res = await apiFetch("/api/game/home/buy", {
@@ -611,6 +611,30 @@ export async function adminUploadGameImage(
   if (!res.ok) throw new Error(data.error ?? `upload failed (${res.status})`);
   if (!data.game) throw new Error("upload: missing game");
   return { game: data.game };
+}
+
+export async function adminUploadHeroImage(
+  token: string,
+  heroSlug: string,
+  file: File,
+): Promise<{ hero: { id: string; slug: string; image_url: string } }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await apiFetch(
+    `/api/admin/heroes/${encodeURIComponent(heroSlug)}/image`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    hero?: { id: string; slug: string; image_url: string };
+  };
+  if (!res.ok) throw new Error(data.error ?? `upload failed (${res.status})`);
+  if (!data.hero) throw new Error("upload: missing hero");
+  return { hero: data.hero };
 }
 
 export async function adminListHeroes(token: string): Promise<{ heroes: HeroRow[] }> {
