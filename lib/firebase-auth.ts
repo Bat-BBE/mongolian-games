@@ -97,6 +97,7 @@ export async function registerEmail(email: string, heroId: HeroId) {
     heroName: hero.name,
     heroTitle: hero.title,
     heroImages: hero.imageUrl,
+    heroModelPath: hero.modelPath,
     level: 1,
     kp: 0,
     accentColor: hero.color,

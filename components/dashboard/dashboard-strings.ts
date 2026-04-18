@@ -111,8 +111,8 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМ",
     knowledgePoints: "Мэдлэгийн Оноо",
     dailyTokens: "Өдрийн Токен",
-    rank: "Зэрэг Дэвших",
-    rankTitle: "Элч",
+    rank: "Урамшуулал",
+    rankTitle: "Хувь",
     nav: {
       dashboard: "Хяналтын самбар",
       map: "Газрын зураг",
@@ -576,8 +576,8 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     title: "MONGOLIAN TRADITIONAL GAMES",
     knowledgePoints: "Knowledge Points",
     dailyTokens: "Daily Tokens",
-    rank: "Rank Progression",
-    rankTitle: "Messenger",
+    rank: "Reward",
+    rankTitle: "Rank",
     nav: {
       dashboard: "Dashboard",
       map: "Map",
@@ -1058,7 +1058,7 @@ const SIDEBAR_STRING_KEYS: Record<string, keyof DashStrings> = {
 export function mergeDashboardSidebar(
   base: DashStrings,
   apiStrings: Record<string, string>,
-  computed?: Partial<Pick<DashStrings, "questTitle" | "questDesc">>
+  computed?: Partial<Pick<DashStrings, "questTitle" | "questDesc">>,
 ): DashStrings {
   const next: DashStrings = { ...base };
   const mut = next as unknown as Record<string, string>;

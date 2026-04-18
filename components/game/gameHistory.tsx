@@ -37,7 +37,7 @@ export default function GameHistory({ history }: GameHistoryProps) {
         padding: "14px 18px",
         backdropFilter: "blur(14px)",
         boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-        fontFamily: "'Noto Serif', Georgia, serif",
+        fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
         color: "white",
         zIndex: 10,
         transition: "width 0.35s ease",
@@ -64,7 +64,7 @@ export default function GameHistory({ history }: GameHistoryProps) {
             padding: "3px 12px",
             fontSize: 11,
             cursor: "pointer",
-            fontFamily: "'Noto Serif', Georgia, serif",
+            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             letterSpacing: 1,
           }}
         >

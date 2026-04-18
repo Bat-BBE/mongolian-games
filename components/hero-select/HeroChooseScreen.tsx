@@ -85,9 +85,8 @@ export function HeroChooseScreen({
           </p>
 
           <h2
-            className="font-display tracking-[0.18em]"
+            className="font-display tracking-[0.18em] text-foreground"
             style={{
-              color: "white",
               fontWeight: 400,
               fontSize: "clamp(13px,1.65vw,19px)",
             }}
@@ -158,9 +157,12 @@ export function HeroChooseScreen({
                   border: "none",
                 }
               : {
-                  background: "rgba(255,255,255,0.04)",
-                  color: "rgba(255,255,255,0.2)",
-                  border: "1px solid rgba(255,255,255,0.06)",
+                  background:
+                    "color-mix(in oklch, var(--foreground) 4%, transparent)",
+                  color:
+                    "color-mix(in oklch, var(--foreground) 30%, transparent)",
+                  border:
+                    "1px solid color-mix(in oklch, var(--foreground) 10%, transparent)",
                 }),
           }}
         >
@@ -194,15 +196,10 @@ function NavArrow({
   return (
     <button
       onClick={onClick}
-      className="absolute z-10 transition-all duration-200"
+      className="absolute z-10 transition-all duration-200 text-muted-foreground hover:text-foreground"
       style={{
         [dir]: "clamp(-8px,1vw,6px)",
-        color: "rgba(255,255,255,0.35)",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.color = "white")}
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.color = "rgba(255,255,255,0.35)")
-      }
     >
       <Icon className="w-[clamp(20px,2.2vw,30px)] h-[clamp(20px,2.2vw,30px)]" />
     </button>

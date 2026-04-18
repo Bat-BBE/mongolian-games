@@ -22,6 +22,26 @@ export function getApiBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
+/**
+ * Resolve an asset URL that was returned by the backend (hero.image_url,
+ * game.image_url, etc.) into something the browser can load.
+ *
+ * - Absolute URLs (http/https/data/blob) are returned as-is.
+ * - `/uploads/**` paths come from the admin upload endpoint and are served
+ *   by the backend API server, so we prepend the API base.
+ * - Any other relative path (e.g. `/images/shihihutag.png`) is served from
+ *   the Next.js `public/` folder so it must stay relative to the frontend.
+ */
+export function resolveAssetUrl(raw: unknown): string {
+  const s = typeof raw === "string" ? raw.trim() : "";
+  if (!s) return "";
+  if (/^(?:https?:|data:|blob:)/i.test(s)) return s;
+  if (s.startsWith("/uploads/")) {
+    return `${getApiBaseUrl()}${s}`;
+  }
+  return s;
+}
+
 export async function apiFetch(
   path: string,
   init: RequestInit = {},

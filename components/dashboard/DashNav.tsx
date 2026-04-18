@@ -200,7 +200,7 @@ export function DashNav({
                 <img
                   src={avatarUrl || "/images/shikhikhutag.png"}
                   alt=""
-                  className="w-full h-full rounded-full object-cover border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
+                  className="w-full h-full rounded-full object-contain border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
                 />
 
                 <div

@@ -45,8 +45,8 @@ export function InfoPanel({ hero, lang, t }: InfoPanelProps) {
 
         {!hero.available && (
           <span
-            className="font-display text-[9px] tracking-[0.3em] uppercase px-3 py-1 rounded-sm shrink-0"
-            style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.12)" }}
+            className="font-display text-[9px] tracking-[0.3em] uppercase px-3 py-1 rounded-sm shrink-0 text-muted-foreground"
+            style={{ border: "1px solid color-mix(in oklch, var(--foreground) 12%, transparent)" }}
           >
             🔒 {t.locked}
           </span>

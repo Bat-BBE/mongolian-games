@@ -78,9 +78,7 @@ export function StationLabels({
         const isSelected = station.id === selectedId;
         const icon = STATION_CONFIGS[station.id]?.icon ?? "📍";
         const firstGameName =
-          station.games?.[0]?.name?.trim() ||
-          station.gameName?.trim() ||
-          "";
+          station.games?.[0]?.name?.trim() || station.gameName?.trim() || "";
         const gameCount = station.games?.length ?? (firstGameName ? 1 : 0);
         const homeTitle = homeLabelTitle?.trim() || station.name;
         const homeSub = homeLabelSubtitle?.trim();
@@ -104,12 +102,11 @@ export function StationLabels({
             ? 0.76
             : 0.34 + 0.66 * ap;
         const opacity = baseOpacity * farFade;
-        const blurPx =
-          isPlayerHome
+        const blurPx = isPlayerHome
+          ? 0
+          : showAllVisibleLabels && !isDoorStation
             ? 0
-            : showAllVisibleLabels && !isDoorStation
-              ? 0
-              : Math.max(0, 3.2 * (1 - ap));
+            : Math.max(0, 3.2 * (1 - ap));
 
         return (
           <div
@@ -188,7 +185,9 @@ export function StationLabels({
                   </span>
                 )}
 
-                <span className="text-xs leading-none">{isPlayerHome ? "🏠" : icon}</span>
+                <span className="text-xs leading-none">
+                  {isPlayerHome ? "🛖" : icon}
+                </span>
 
                 <span className="flex flex-col items-start gap-0 leading-tight">
                   {isPlayerHome ? (

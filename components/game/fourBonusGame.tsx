@@ -13,7 +13,12 @@ import {
   INITIAL_STATE,
   ShagaiSide,
   isDorvenBerkh,
+  rollRobotSides,
+  scoreRoll,
+  TARGET_SCORE,
 } from "./fourBonusType";
+import { useAuth } from "@/components/AuthContext";
+import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api";
 
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
@@ -31,7 +36,9 @@ function GameTable() {
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0, 0]}>
         <planeGeometry args={[25, 25]} />
-        <meshStandardMaterial color="#090705" roughness={1} />
+        {/* Warm dark brown instead of near-black so the mat doesn't look
+            like it's floating in a void. */}
+        <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
 
       <mesh
@@ -219,10 +226,10 @@ function GoldParticles({ active }: { active: boolean }) {
 }
 
 const START_POSITIONS: [number, number, number][] = [
-  [-1.5, 4.5, -0.8],
-  [-0.5, 5.0, 0.2],
-  [0.5, 5.5, -0.3],
-  [1.5, 4.8, 0.7],
+  [-2.0, 4.5, -1.0],
+  [-0.7, 5.0, 0.3],
+  [0.7, 5.5, -0.4],
+  [2.0, 4.8, 0.9],
 ];
 
 function getThrowParams(i: number): {
@@ -294,6 +301,7 @@ export default function FourBonesGame({
 }: {
   onComplete?: (result: "win" | "lose") => void;
 }) {
+  const { user } = useAuth();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -308,20 +316,84 @@ export default function FourBonesGame({
   const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
   const settledCount = useRef(0);
   const resultSentRef = useRef(false);
-  const isWin =
-    state.phase === "result" &&
-    state.history.length > 0 &&
-    state.history[state.history.length - 1].isDorvenBerkh;
+  const matchSentRef = useRef(false);
 
+  // Reward (floating toasts + persist to profile inventory).
+  const [rewardEvents, setRewardEvents] = useState<
+    { id: string; text: string; kind: "coins" | "gems" }[]
+  >([]);
+  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 });
+
+  const pushReward = useCallback((delta: { coins?: number; gems?: number }) => {
+    const dCoins = delta.coins ?? 0;
+    const dGems = delta.gems ?? 0;
+    if (!dCoins && !dGems) return;
+    setSessionGain((p) => ({
+      coins: p.coins + dCoins,
+      gems: p.gems + dGems,
+    }));
+    const now = Date.now();
+    const add = (kind: "coins" | "gems", text: string) => {
+      const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`;
+      setRewardEvents((prev) => [...prev, { id, kind, text }]);
+      setTimeout(() => {
+        setRewardEvents((prev) => prev.filter((e) => e.id !== id));
+      }, 1350);
+    };
+    if (dCoins) add("coins", `+${dCoins} 🪙`);
+    if (dGems) add("gems", `+${dGems} 💎`);
+
+    const email = user?.email?.trim();
+    if (!email) return;
+    (async () => {
+      try {
+        const profileRes = await getGameProfileByEmail(email);
+        const current =
+          profileRes?.user?.profile && typeof profileRes.user.profile === "object"
+            ? (profileRes.user.profile as Record<string, unknown>)
+            : {};
+        const invRaw = (current as any).inventory;
+        const inv =
+          invRaw && typeof invRaw === "object"
+            ? (invRaw as Record<string, unknown>)
+            : {};
+        const coins =
+          typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0);
+        const gems =
+          typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0);
+        const nextProfile = {
+          ...current,
+          inventory: {
+            ...inv,
+            coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
+            gems: (Number.isFinite(gems) ? gems : 0) + dGems,
+          },
+        } as Record<string, unknown>;
+        await syncAppUserSimple({ email, profile: nextProfile });
+      } catch {}
+    })();
+  }, [user?.email]);
+
+  // Match-over side-effect (rewards + onComplete).
   useEffect(() => {
-    if (!isWin) return;
-    if (resultSentRef.current) return;
-    resultSentRef.current = true;
-    onComplete?.("win");
-  }, [isWin, onComplete]);
+    if (state.phase !== "matchOver") return;
+    if (matchSentRef.current) return;
+    matchSentRef.current = true;
+    const won = state.playerScore >= state.robotScore;
+    if (won) {
+      pushReward({ coins: 6, gems: 1 });
+    }
+    onComplete?.(won ? "win" : "lose");
+  }, [state.phase, state.playerScore, state.robotScore, onComplete, pushReward]);
 
   const handleThrow = useCallback(() => {
-    if (state.phase === "throwing" || state.phase === "settling") return;
+    if (
+      state.phase !== "idle" &&
+      state.phase !== "playerResult" &&
+      state.phase !== "robotResult"
+    )
+      return;
+    // Robot's turn automatically follows, not via this button.
 
     const params = [0, 1, 2, 3].map((i) => getThrowParams(i));
     setThrowParams(params);
@@ -333,46 +405,119 @@ export default function FourBonesGame({
     setState((prev) => ({
       ...prev,
       phase: "throwing",
-      throws: [],
       totalThrows: prev.totalThrows + 1,
+      robotSides: null,
+      robotPoints: 0,
     }));
 
     setIsThrown(false);
     setTimeout(() => setIsThrown(true), 50);
   }, [state.phase]);
 
-  const handleSettle = useCallback((id: number, side: ShagaiSide) => {
-    if (settledRef.current[id] !== null) return;
+  const handleSettle = useCallback(
+    (id: number, side: ShagaiSide) => {
+      if (settledRef.current[id] !== null) return;
 
-    settledRef.current[id] = side;
-    settledCount.current += 1;
+      settledRef.current[id] = side;
+      settledCount.current += 1;
 
-    setSettledSides([...settledRef.current]);
-    setState((prev) => ({ ...prev, phase: "settling" }));
+      setSettledSides([...settledRef.current]);
+      setState((prev) => ({ ...prev, phase: "settling" }));
 
-    if (settledCount.current >= 4 && !resultSentRef.current) {
-      resultSentRef.current = true;
+      if (settledCount.current >= 4 && !resultSentRef.current) {
+        resultSentRef.current = true;
 
-      setTimeout(() => {
-        const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
-        const win = isDorvenBerkh(sides);
+        setTimeout(() => {
+          const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
+          const win = isDorvenBerkh(sides);
+          const { points } = scoreRoll(sides);
 
-        setState((prev) => ({
-          ...prev,
-          phase: "result",
-          history: [
-            ...prev.history,
-            { sides, isDorvenBerkh: win, throwNumber: prev.totalThrows },
-          ],
-          wins: prev.wins + (win ? 1 : 0),
-          streak: win ? prev.streak + 1 : 0,
-          bestStreak: win
-            ? Math.max(prev.bestStreak, prev.streak + 1)
-            : prev.bestStreak,
-        }));
-      }, 500);
+          // Small per-round reward so rewards feel alive.
+          if (points > 0) pushReward({ coins: points });
+
+          setState((prev) => {
+            const nextStreak = win ? prev.streak + 1 : 0;
+            return {
+              ...prev,
+              phase: "playerResult",
+              history: [
+                ...prev.history,
+                {
+                  turn: "player",
+                  sides,
+                  isDorvenBerkh: win,
+                  points,
+                  throwNumber: prev.totalThrows,
+                },
+              ],
+              playerScore: prev.playerScore + points,
+              streak: nextStreak,
+              bestStreak: Math.max(prev.bestStreak, nextStreak),
+              lastPlayerPoints: points,
+            };
+          });
+        }, 500);
+      }
+    },
+    [pushReward],
+  );
+
+  // After playerResult, schedule the robot's turn.
+  useEffect(() => {
+    if (state.phase !== "playerResult") return;
+    // If player already reached target, end match.
+    if (state.playerScore >= TARGET_SCORE) {
+      setState((prev) => ({ ...prev, phase: "matchOver" }));
+      return;
     }
-  }, []);
+    const t1 = setTimeout(() => {
+      setState((prev) => ({ ...prev, phase: "robotThinking" }));
+    }, 1400);
+    return () => clearTimeout(t1);
+  }, [state.phase, state.playerScore]);
+
+  // Robot thinking → reveal.
+  useEffect(() => {
+    if (state.phase !== "robotThinking") return;
+    const t1 = setTimeout(() => {
+      const sides = rollRobotSides();
+      const win = isDorvenBerkh(sides);
+      const { points } = scoreRoll(sides);
+      setState((prev) => ({
+        ...prev,
+        phase: "robotResult",
+        robotSides: sides,
+        robotPoints: points,
+        robotScore: prev.robotScore + points,
+        history: [
+          ...prev.history,
+          {
+            turn: "robot",
+            sides,
+            isDorvenBerkh: win,
+            points,
+            throwNumber: prev.totalThrows,
+          },
+        ],
+      }));
+    }, 1300);
+    return () => clearTimeout(t1);
+  }, [state.phase]);
+
+  // After robotResult, decide next step.
+  useEffect(() => {
+    if (state.phase !== "robotResult") return;
+    if (
+      state.playerScore >= TARGET_SCORE ||
+      state.robotScore >= TARGET_SCORE
+    ) {
+      const t1 = setTimeout(() => {
+        setState((prev) => ({ ...prev, phase: "matchOver" }));
+      }, 1100);
+      return () => clearTimeout(t1);
+    }
+    // Otherwise stay on robotResult; player can throw again.
+  }, [state.phase, state.playerScore, state.robotScore]);
 
   const handleReset = useCallback(() => {
     setState(INITIAL_STATE);
@@ -380,7 +525,13 @@ export default function FourBonesGame({
     settledCount.current = 0;
     setIsThrown(false);
     resultSentRef.current = false;
+    matchSentRef.current = false;
+    setRewardEvents([]);
+    setSessionGain({ coins: 0, gems: 0 });
   }, []);
+
+  const isWin =
+    state.phase === "matchOver" && state.playerScore >= state.robotScore;
 
   return (
     <div
@@ -388,7 +539,8 @@ export default function FourBonesGame({
         width: "100%",
         height: "100%",
         position: "relative",
-        background: "#080604",
+        background:
+          "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #241810 45%, #160e08 100%)",
         overflow: "hidden",
       }}
     >
@@ -447,6 +599,8 @@ export default function FourBonesGame({
         onThrow={handleThrow}
         onReset={handleReset}
         settledSides={settledSides}
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
       />
     </div>
   );

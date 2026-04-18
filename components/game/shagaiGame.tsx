@@ -3,11 +3,21 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import { Physics, usePlane } from "@react-three/cannon";
-import { Suspense, useState, useCallback, useEffect, useRef } from "react";
-import ShagaiModel from "./shagaiModel";
-import ShagaiUI from "./shagaiUI";
-import GameHistory, { ThrowRecord } from "./gameHistory";
-import { ShagaiSide, SHAgAI_SIDES } from "./shagai";
+import { Suspense, useState, useCallback, useRef, useEffect } from "react";
+import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
+import SingleShagai from "./singleShagai";
+import ShagaiTargetUI from "./shagaiTargetUI";
+import {
+  GameState,
+  INITIAL_STATE,
+  ShagaiSide,
+  rollRobotSides,
+  scoreTarget,
+  TARGET_SCORE,
+} from "./shagaiTargetType";
+import { useAuth } from "@/components/AuthContext";
+import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -17,8 +27,8 @@ function PhysicsFloor() {
   const [ref] = usePlane(() => ({
     rotation: [-Math.PI / 2, 0, 0],
     position: [0, 0, 0],
-    friction: 0.8,
-    restitution: 0.2,
+    friction: 0.85,
+    restitution: 0.18,
   }));
   return <mesh ref={ref as any} />;
 }
@@ -27,53 +37,62 @@ function GameTable() {
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0, 0]}>
-        <planeGeometry args={[30, 30]} />
-        <meshStandardMaterial color="#0d0a06" roughness={1} />
+        <planeGeometry args={[25, 25]} />
+        <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
 
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
-        position={[0, 0.002, 0]}
+        position={[0, 0.005, 0]}
+        scale={[1, 0.64, 1]}
       >
-        <circleGeometry args={[6, 72]} />
-        <meshStandardMaterial color="#183018" roughness={0.92} />
+        <circleGeometry args={[5.5, 64]} />
+        <meshStandardMaterial color="#1a2e1a" roughness={0.93} />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
-        <ringGeometry args={[5.95, 6.15, 72]} />
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.008, 0]}
+        scale={[1, 0.64, 1]}
+      >
+        <ringGeometry args={[5.4, 5.65, 64]} />
         <meshStandardMaterial
           color="#c8a030"
-          metalness={0.7}
-          roughness={0.25}
+          metalness={0.72}
+          roughness={0.22}
         />
       </mesh>
 
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.003, 0]}>
-        <ringGeometry args={[5.5, 5.6, 72]} />
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.007, 0]}
+        scale={[1, 0.64, 1]}
+      >
+        <ringGeometry args={[5.0, 5.1, 64]} />
         <meshStandardMaterial color="#a07820" metalness={0.5} roughness={0.4} />
       </mesh>
 
       {[
         {
-          pos: [6.5, 1.0, 0] as [number, number, number],
-          args: [0.3, 2.0, 13] as [number, number, number],
+          pos: [6, 1, 0] as [number, number, number],
+          args: [0.2, 2, 12] as [number, number, number],
         },
         {
-          pos: [-6.5, 1.0, 0] as [number, number, number],
-          args: [0.3, 2.0, 13] as [number, number, number],
+          pos: [-6, 1, 0] as [number, number, number],
+          args: [0.2, 2, 12] as [number, number, number],
         },
         {
-          pos: [0, 1.0, 6.5] as [number, number, number],
-          args: [13, 2.0, 0.3] as [number, number, number],
+          pos: [0, 1, 5] as [number, number, number],
+          args: [12, 2, 0.2] as [number, number, number],
         },
         {
-          pos: [0, 1.0, -6.5] as [number, number, number],
-          args: [13, 2.0, 0.3] as [number, number, number],
+          pos: [0, 1, -5] as [number, number, number],
+          args: [12, 2, 0.2] as [number, number, number],
         },
-      ].map((wall, i) => (
-        <mesh key={i} position={wall.pos}>
-          <boxGeometry args={wall.args} />
+      ].map((w, i) => (
+        <mesh key={i} position={w.pos}>
+          <boxGeometry args={w.args} />
           <meshStandardMaterial transparent opacity={0} />
         </mesh>
       ))}
@@ -81,57 +100,465 @@ function GameTable() {
   );
 }
 
-export default function ShagaiGame(props: ShagaiGameProps) {
-  const sentRef = useRef(false);
-  const [result, setResult] = useState<ShagaiSide | null>(null);
-  const [isRolling, setIsRolling] = useState(false);
-  const [throwCount, setThrowCount] = useState(0);
-  const [history, setHistory] = useState<ThrowRecord[]>([]);
-  const [score, setScore] = useState<Record<ShagaiSide, number>>({
-    horse: 0,
-    sheep: 0,
-    goat: 0,
-    camel: 0,
+function WinLightEffect({ active }: { active: boolean }) {
+  const light1 = useRef<THREE.PointLight>(null);
+  const light2 = useRef<THREE.PointLight>(null);
+
+  useFrame((state) => {
+    if (!active) return;
+    const t = state.clock.elapsedTime;
+    if (light1.current) {
+      light1.current.intensity = (Math.sin(t * 4) * 0.5 + 0.5) * 2;
+      light1.current.position.x = Math.sin(t * 2) * 3;
+    }
+    if (light2.current) {
+      light2.current.intensity = (Math.cos(t * 4) * 0.5 + 0.5) * 2;
+      light2.current.position.x = Math.cos(t * 2) * 3;
+    }
   });
 
+  if (!active) return null;
+  return (
+    <>
+      <pointLight
+        ref={light1}
+        color="#f0c040"
+        intensity={2}
+        distance={6}
+        position={[0, 3, 0]}
+      />
+      <pointLight
+        ref={light2}
+        color="#60c0ff"
+        intensity={1.5}
+        distance={6}
+        position={[0, 2, 0]}
+      />
+    </>
+  );
+}
+
+function GoldParticles({ active }: { active: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const particles = useRef(
+    Array.from({ length: 30 }, () => ({
+      pos: new THREE.Vector3(
+        (Math.random() - 0.5) * 4,
+        Math.random() * 2,
+        (Math.random() - 0.5) * 4,
+      ),
+      vel: new THREE.Vector3(
+        (Math.random() - 0.5) * 3,
+        Math.random() * 4 + 1,
+        (Math.random() - 0.5) * 3,
+      ),
+      life: Math.random(),
+      speed: 0.5 + Math.random(),
+    })),
+  );
+  const activeRef = useRef(false);
+
+  useEffect(() => {
+    if (active && !activeRef.current) {
+      activeRef.current = true;
+      particles.current.forEach((p) => {
+        p.pos.set((Math.random() - 0.5) * 2, 0.5, (Math.random() - 0.5) * 2);
+        p.vel.set(
+          (Math.random() - 0.5) * 4,
+          Math.random() * 5 + 2,
+          (Math.random() - 0.5) * 4,
+        );
+        p.life = 0;
+      });
+    }
+    if (!active) activeRef.current = false;
+  }, [active]);
+
+  useFrame((_, delta) => {
+    if (!groupRef.current || !active) return;
+    groupRef.current.children.forEach((child, i) => {
+      const p = particles.current[i];
+      p.life += delta * p.speed;
+      if (p.life > 1) p.life = 0;
+      p.vel.y -= 6 * delta;
+      p.pos.addScaledVector(p.vel, delta * 0.3);
+      child.position.copy(p.pos);
+      child.position.y = Math.max(0.1, child.position.y);
+      const s = (1 - p.life) * 0.08;
+      (child as THREE.Mesh).scale.setScalar(Math.max(0, s));
+    });
+  });
+
+  if (!active) return null;
+
+  return (
+    <group ref={groupRef}>
+      {particles.current.map((_, i) => (
+        <mesh key={i}>
+          <octahedronGeometry args={[0.06, 0]} />
+          <meshStandardMaterial
+            color={["#f0c040", "#c8a030", "#fff0a0", "#ffd060"][i % 4]}
+            emissive={["#f0c040", "#c8a030", "#fff0a0", "#ffd060"][i % 4]}
+            emissiveIntensity={0.5}
+            metalness={0.8}
+            roughness={0.2}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+const START_POSITIONS: [number, number, number][] = [
+  [-2.0, 4.5, -1.0],
+  [-0.7, 5.0, 0.3],
+  [0.7, 5.5, -0.4],
+  [2.0, 4.8, 0.9],
+];
+
+function getThrowParams(): {
+  vel: [number, number, number];
+  angVel: [number, number, number];
+} {
+  const spread = 2.5;
+  return {
+    vel: [
+      (Math.random() - 0.5) * spread * 2,
+      6 + Math.random() * 4,
+      (Math.random() - 0.5) * spread * 2,
+    ],
+    angVel: [
+      (Math.random() - 0.5) * 22,
+      (Math.random() - 0.5) * 18,
+      (Math.random() - 0.5) * 22,
+    ],
+  };
+}
+
+interface SceneProps {
+  throwParams: {
+    vel: [number, number, number];
+    angVel: [number, number, number];
+  }[];
+  isThrown: boolean;
+  settledSides: (ShagaiSide | null)[];
+  forcedSides: (ShagaiSide | null)[];
+  onSettle: (id: number, side: ShagaiSide) => void;
+  isWin: boolean;
+}
+
+function GameScene({
+  throwParams,
+  isThrown,
+  settledSides,
+  forcedSides,
+  onSettle,
+  isWin,
+}: SceneProps) {
+  const allDone = settledSides.every((s) => s !== null);
+
+  return (
+    <>
+      <GameTable />
+      <WinLightEffect active={isWin} />
+      <GoldParticles active={isWin} />
+
+      {[0, 1, 2, 3].map((i) => (
+        <SingleShagai
+          key={i}
+          id={i}
+          startPos={START_POSITIONS[i]}
+          throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
+          throwAngVel={throwParams[i]?.angVel ?? [5, 5, 5]}
+          isThrown={isThrown}
+          onSettle={onSettle}
+          highlight={isWin && allDone}
+          resultSide={settledSides[i]}
+          forcedSide={forcedSides[i]}
+        />
+      ))}
+    </>
+  );
+}
+
+export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
+  const { user } = useAuth();
+  const [state, setState] = useState<GameState>(INITIAL_STATE);
+  const [isThrown, setIsThrown] = useState(false);
+  const [throwParams, setThrowParams] = useState<
+    ReturnType<typeof getThrowParams>[]
+  >([0, 1, 2, 3].map(() => getThrowParams()));
+  const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  // Pre-decided outcomes for the current throw. Null means "let the physics
+  // pick randomly" (player's turn); populated means "bias the shagai so the
+  // visible result matches this" (robot's turn).
+  const [forcedSides, setForcedSides] = useState<(ShagaiSide | null)[]>([
+    null,
+    null,
+    null,
+    null,
+  ]);
+  const [currentTurn, setCurrentTurn] = useState<"player" | "robot">("player");
+  const currentTurnRef = useRef<"player" | "robot">("player");
+  const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
+  const settledCount = useRef(0);
+  const resultSentRef = useRef(false);
+  const matchSentRef = useRef(false);
+
+  // Coin/gem toasts
+  const [rewardEvents, setRewardEvents] = useState<
+    { id: string; text: string; kind: "coins" | "gems" }[]
+  >([]);
+  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 });
+
+  const pushReward = useCallback(
+    (delta: { coins?: number; gems?: number }) => {
+      const dCoins = delta.coins ?? 0;
+      const dGems = delta.gems ?? 0;
+      if (!dCoins && !dGems) return;
+      setSessionGain((p) => ({
+        coins: p.coins + dCoins,
+        gems: p.gems + dGems,
+      }));
+      const now = Date.now();
+      const add = (kind: "coins" | "gems", text: string) => {
+        const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`;
+        setRewardEvents((prev) => [...prev, { id, kind, text }]);
+        setTimeout(() => {
+          setRewardEvents((prev) => prev.filter((e) => e.id !== id));
+        }, 1350);
+      };
+      if (dCoins) add("coins", `+${dCoins} 🪙`);
+      if (dGems) add("gems", `+${dGems} 💎`);
+
+      const email = user?.email?.trim();
+      if (!email) return;
+      (async () => {
+        try {
+          const profileRes = await getGameProfileByEmail(email);
+          const current =
+            profileRes?.user?.profile &&
+            typeof profileRes.user.profile === "object"
+              ? (profileRes.user.profile as Record<string, unknown>)
+              : {};
+          const invRaw = (current as any).inventory;
+          const inv =
+            invRaw && typeof invRaw === "object"
+              ? (invRaw as Record<string, unknown>)
+              : {};
+          const coins =
+            typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0);
+          const gems =
+            typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0);
+          const nextProfile = {
+            ...current,
+            inventory: {
+              ...inv,
+              coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
+              gems: (Number.isFinite(gems) ? gems : 0) + dGems,
+            },
+          } as Record<string, unknown>;
+          await syncAppUserSimple({ email, profile: nextProfile });
+        } catch {}
+      })();
+    },
+    [user?.email],
+  );
+
+  // Match-over rewards + onComplete callback.
+  useEffect(() => {
+    if (state.phase !== "matchOver") return;
+    if (matchSentRef.current) return;
+    matchSentRef.current = true;
+    const won = state.winner === "player";
+    if (won) pushReward({ coins: 8, gems: 1 });
+    onComplete?.(won ? "win" : "lose", won ? 100 : 0);
+  }, [state.phase, state.winner, onComplete, pushReward]);
+
+  // Shared throw trigger used by both the player's manual "Throw" button and
+  // the robot's automatic turn. Resetting isThrown forces SingleShagai's
+  // throw-effect to re-fire.
+  const startThrow = useCallback(
+    (turn: "player" | "robot", forced: (ShagaiSide | null)[]) => {
+      const params = [0, 1, 2, 3].map(() => getThrowParams());
+      setThrowParams(params);
+      settledRef.current = [null, null, null, null];
+      settledCount.current = 0;
+      resultSentRef.current = false;
+      setSettledSides([null, null, null, null]);
+      setForcedSides(forced);
+      setCurrentTurn(turn);
+      currentTurnRef.current = turn;
+
+      setState((prev) => ({
+        ...prev,
+        phase: "throwing",
+        totalThrows:
+          turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
+        robotSides: turn === "robot" ? prev.robotSides : null,
+        robotPoints: turn === "robot" ? prev.robotPoints : 0,
+        robotLabel: turn === "robot" ? prev.robotLabel : "",
+      }));
+
+      setIsThrown(false);
+      setTimeout(() => setIsThrown(true), 50);
+    },
+    [],
+  );
+
   const handleThrow = useCallback(() => {
-    if (isRolling) return;
-    setIsRolling(true);
-    setResult(null);
-    setThrowCount((c) => c + 1);
-  }, [isRolling]);
+    if (
+      state.phase !== "idle" &&
+      state.phase !== "playerResult" &&
+      state.phase !== "robotResult"
+    )
+      return;
+    startThrow("player", [null, null, null, null]);
+  }, [state.phase, startThrow]);
 
-  const handleResult = useCallback((side: ShagaiSide) => {
-    setResult(side);
-    setIsRolling(false);
-    setScore((prev) => ({ ...prev, [side]: prev[side] + 1 }));
-    setHistory((prev) => [
-      ...prev,
-      { side, timestamp: new Date(), throwNumber: prev.length + 1 },
-    ]);
-  }, []);
+  const handleSettle = useCallback(
+    (id: number, side: ShagaiSide) => {
+      if (settledRef.current[id] !== null) return;
 
-  const handleLand = useCallback(() => {
-    setIsRolling(false);
-  }, []);
+      settledRef.current[id] = side;
+      settledCount.current += 1;
+
+      setSettledSides([...settledRef.current]);
+      setState((prev) => ({ ...prev, phase: "settling" }));
+
+      if (settledCount.current >= 4 && !resultSentRef.current) {
+        resultSentRef.current = true;
+
+        setTimeout(() => {
+          const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
+          const { points, labelKey } = scoreTarget(sides);
+          const turn = currentTurnRef.current;
+
+          if (turn === "player") {
+            // Small coin reward per non-zero scoring round (player only).
+            if (points > 0) pushReward({ coins: points });
+
+            setState((prev) => {
+              const tentative = prev.playerScore + points;
+              const exactWin = tentative === TARGET_SCORE;
+              const bust = tentative > TARGET_SCORE;
+              const finalScore = bust ? 0 : tentative;
+              const nextStreak = points > 0 && !bust ? prev.streak + 1 : 0;
+
+              const phase: GameState["phase"] = exactWin
+                ? "matchOver"
+                : "playerResult";
+              const winner: GameState["winner"] = exactWin
+                ? "player"
+                : prev.winner;
+
+              return {
+                ...prev,
+                phase,
+                history: [
+                  ...prev.history,
+                  {
+                    turn: "player",
+                    sides,
+                    points,
+                    label: labelKey,
+                    throwNumber: prev.totalThrows,
+                    bust,
+                    exactWin,
+                  },
+                ],
+                playerScore: finalScore,
+                streak: nextStreak,
+                bestStreak: Math.max(prev.bestStreak, nextStreak),
+                lastPlayerPoints: points,
+                lastPlayerLabel: labelKey,
+                winner,
+              };
+            });
+          } else {
+            setState((prev) => {
+              const tentative = prev.robotScore + points;
+              const exactWin = tentative === TARGET_SCORE;
+              const bust = tentative > TARGET_SCORE;
+              const finalScore = bust ? 0 : tentative;
+
+              const phase: GameState["phase"] = exactWin
+                ? "matchOver"
+                : "robotResult";
+              const winner: GameState["winner"] = exactWin
+                ? "robot"
+                : prev.winner;
+
+              return {
+                ...prev,
+                phase,
+                robotSides: sides,
+                robotPoints: points,
+                robotLabel: labelKey,
+                robotScore: finalScore,
+                history: [
+                  ...prev.history,
+                  {
+                    turn: "robot",
+                    sides,
+                    points,
+                    label: labelKey,
+                    throwNumber: prev.totalThrows,
+                    bust,
+                    exactWin,
+                  },
+                ],
+                winner,
+              };
+            });
+          }
+        }, 500);
+      }
+    },
+    [pushReward],
+  );
+
+  // After playerResult → robot takes a turn (unless the match already ended).
+  useEffect(() => {
+    if (state.phase !== "playerResult") return;
+    const t1 = setTimeout(() => {
+      setState((prev) => ({ ...prev, phase: "robotThinking" }));
+    }, 1200);
+    return () => clearTimeout(t1);
+  }, [state.phase]);
+
+  // Robot thinking → pre-roll the outcome, then physically throw the 4
+  // shagai so the player can see the roll on the mat. The resulting sides
+  // are biased by the forcedSide prop to match the pre-decided roll.
+  useEffect(() => {
+    if (state.phase !== "robotThinking") return;
+    const t1 = setTimeout(() => {
+      const sides = rollRobotSides();
+      startThrow("robot", sides);
+    }, 1100);
+    return () => clearTimeout(t1);
+  }, [state.phase, startThrow]);
 
   const handleReset = useCallback(() => {
-    setResult(null);
-    setHistory([]);
-    setScore({ horse: 0, sheep: 0, goat: 0, camel: 0 });
-    setThrowCount(0);
-    sentRef.current = false;
+    setState(INITIAL_STATE);
+    setSettledSides([null, null, null, null]);
+    setForcedSides([null, null, null, null]);
+    setCurrentTurn("player");
+    currentTurnRef.current = "player";
+    settledCount.current = 0;
+    setIsThrown(false);
+    resultSentRef.current = false;
+    matchSentRef.current = false;
+    setRewardEvents([]);
+    setSessionGain({ coins: 0, gems: 0 });
   }, []);
 
-  // MVP: after 5 completed throws, treat as a win.
-  useEffect(() => {
-    if (sentRef.current) return;
-    const pct = Math.min(100, Math.round((history.length / 5) * 100));
-    if (history.length >= 5) {
-      sentRef.current = true;
-      props.onComplete?.("win", pct);
-    }
-  }, [history.length, props]);
+  const isWin = state.phase === "matchOver" && state.winner === "player";
 
   return (
     <div
@@ -139,72 +566,70 @@ export default function ShagaiGame(props: ShagaiGameProps) {
         width: "100%",
         height: "100%",
         position: "relative",
-        background: "#080604",
+        background:
+          "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #241810 45%, #160e08 100%)",
         overflow: "hidden",
       }}
     >
       <Canvas
-        camera={{ position: [0, 10, 14], fov: 50 }}
+        camera={{ position: [0, 9, 13], fov: 50 }}
         shadows
         style={{ width: "100%", height: "100%" }}
       >
-        <ambientLight intensity={0.3} />
+        <ambientLight intensity={0.28} />
         <directionalLight
-          position={[6, 12, 6]}
+          position={[5, 14, 6]}
           intensity={1.4}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-camera-near={0.5}
           shadow-camera-far={50}
-          shadow-camera-left={-12}
-          shadow-camera-right={12}
-          shadow-camera-top={12}
-          shadow-camera-bottom={-12}
+          shadow-camera-left={-10}
+          shadow-camera-right={10}
+          shadow-camera-top={10}
+          shadow-camera-bottom={-10}
         />
-        <pointLight position={[-5, 6, -5]} intensity={0.3} color="#ffd080" />
-        <pointLight position={[5, 4, 5]} intensity={0.2} color="#c8d0ff" />
+        <pointLight position={[-4, 5, -4]} intensity={0.35} color="#ffd080" />
+        <pointLight position={[4, 4, 4]} intensity={0.2} color="#c0d4ff" />
 
         <Suspense fallback={null}>
           <Environment preset="night" />
-
           <Physics
             gravity={[0, -14, 0]}
-            defaultContactMaterial={{ friction: 0.7, restitution: 0.2 }}
+            defaultContactMaterial={{ friction: 0.75, restitution: 0.18 }}
           >
-            {/* ✅ usePlane — зөв физикийн шал */}
             <PhysicsFloor />
-
-            <GameTable />
-
-            <ShagaiModel
-              isThrown={isRolling}
-              onResult={handleResult}
-              onLand={handleLand}
+            <GameScene
+              throwParams={throwParams}
+              isThrown={isThrown}
+              settledSides={settledSides}
+              forcedSides={forcedSides}
+              onSettle={handleSettle}
+              isWin={isWin}
             />
           </Physics>
         </Suspense>
 
         <OrbitControls
-          minPolarAngle={Math.PI / 8}
-          maxPolarAngle={Math.PI / 2.2}
+          minPolarAngle={Math.PI / 9}
+          maxPolarAngle={Math.PI / 2.1}
           minDistance={6}
-          maxDistance={20}
+          maxDistance={18}
           enablePan={false}
           target={[0, 0, 0]}
         />
       </Canvas>
 
-      <ShagaiUI
-        result={result ? SHAgAI_SIDES[result] : null}
-        isRolling={isRolling}
-        throwCount={throwCount}
-        score={score}
+      <ShagaiTargetUI
+        state={state}
         onThrow={handleThrow}
         onReset={handleReset}
+        settledSides={settledSides}
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
+        currentTurn={currentTurn}
       />
-
-      <GameHistory history={history} />
     </div>
   );
 }

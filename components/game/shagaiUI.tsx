@@ -3,6 +3,88 @@
 import { ShagaiResult, SHAgAI_SIDES, ShagaiSide } from "./shagai";
 import { useState, useEffect } from "react";
 
+const SIDE_SPRITE_X: Record<ShagaiSide, string> = {
+  camel: "5%",
+  horse: "34%",
+  sheep: "64%",
+  goat: "95%",
+};
+
+export function ShagaiSideImage({
+  side,
+  size = 80,
+  highlight = false,
+}: {
+  side: ShagaiSide;
+  size?: number;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: "url('/images/shagai-sides.png')",
+        backgroundSize: "440% 260%",
+        backgroundPosition: `${SIDE_SPRITE_X[side]} 42%`,
+        backgroundRepeat: "no-repeat",
+        borderRadius: 12,
+        border: highlight
+          ? "2px solid rgba(240,192,64,0.9)"
+          : "2px solid rgba(200,160,48,0.35)",
+        boxShadow: highlight
+          ? "0 0 22px rgba(240,192,64,0.45), inset 0 0 8px rgba(0,0,0,0.3)"
+          : "0 4px 10px rgba(0,0,0,0.35)",
+        transition: "all 0.35s ease",
+      }}
+    />
+  );
+}
+
+function SidesLegend({ activeSide }: { activeSide: ShagaiSide | null }) {
+  const items: ShagaiSide[] = ["horse", "sheep", "goat", "camel"];
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, 1fr)",
+        gap: 6,
+        marginTop: 8,
+      }}
+    >
+      {items.map((s) => {
+        const info = SHAgAI_SIDES[s];
+        const active = activeSide === s;
+        return (
+          <div
+            key={s}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 3,
+              opacity: activeSide ? (active ? 1 : 0.35) : 1,
+              transition: "opacity 0.35s ease",
+            }}
+          >
+            <ShagaiSideImage side={s} size={44} highlight={active} />
+            <span
+              style={{
+                fontSize: 10,
+                letterSpacing: 1,
+                color: active ? "#f0c040" : "#aaa",
+                fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              }}
+            >
+              {info.name}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface ShagaiUIProps {
   result: ShagaiResult | null;
   isRolling: boolean;
@@ -88,7 +170,7 @@ function ScoreRow({
           <span style={{ fontSize: 16 }}>{info.symbol}</span>
           <span
             style={{
-              fontFamily: "'Noto Serif', Georgia, serif",
+              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               letterSpacing: 1,
             }}
           >
@@ -160,10 +242,10 @@ function ResultDisplay({
             animation: "bounce 0.4s infinite alternate",
           }}
         >
-          🎲
+          💢
         </div>
         <div style={{ color: "#aaa", fontSize: 14, letterSpacing: 3 }}>
-          Нисэж байна...
+          Бууж байна...
         </div>
       </div>
     );
@@ -174,7 +256,7 @@ function ResultDisplay({
       <div style={{ textAlign: "center", padding: "20px 0", opacity: 0.5 }}>
         <div style={{ fontSize: 36, marginBottom: 6 }}>🦴</div>
         <div style={{ color: "#888", fontSize: 13, letterSpacing: 2 }}>
-          Шагай шидэж эхлэ
+          Шагай шидэж эхэл
         </div>
       </div>
     );
@@ -201,26 +283,26 @@ function ResultDisplay({
     >
       <div
         style={{
-          fontSize: 56,
-          lineHeight: 1,
-          marginBottom: 6,
+          display: "flex",
+          justifyContent: "center",
+          marginBottom: 10,
           filter: `drop-shadow(0 0 18px ${sideColor}88)`,
         }}
       >
-        {result.symbol}
+        <ShagaiSideImage side={result.side} size={92} highlight />
       </div>
       <div
         style={{
           color: sideColor,
           fontSize: 26,
           fontWeight: "bold",
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           letterSpacing: 4,
           textShadow: `0 0 20px ${sideColor}88`,
           marginBottom: 8,
         }}
       >
-        {result.name}
+        {result.symbol} {result.name}
       </div>
       <GoldDivider />
       <div
@@ -275,22 +357,12 @@ export default function ShagaiUI({
           padding: "18px 18px 14px",
           backdropFilter: "blur(14px)",
           boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           color: "white",
           zIndex: 10,
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 4 }}>
-          <div
-            style={{
-              color: "#c8a030",
-              fontSize: 19,
-              fontWeight: "bold",
-              letterSpacing: 2,
-            }}
-          >
-            ᠱᠠᠭᠠᠢ
-          </div>
           <div style={{ color: "#888", fontSize: 10, letterSpacing: 4 }}>
             ШАГАЙ НААДАМ
           </div>
@@ -298,6 +370,7 @@ export default function ShagaiUI({
 
         <GoldDivider />
         <ResultDisplay result={result} isRolling={isRolling} />
+        <SidesLegend activeSide={result?.side ?? null} />
         <GoldDivider />
 
         <button
@@ -308,7 +381,7 @@ export default function ShagaiUI({
             padding: "13px 0",
             fontSize: 15,
             fontWeight: "bold",
-            fontFamily: "'Noto Serif', Georgia, serif",
+            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             letterSpacing: 2,
             background: isRolling
               ? "rgba(80,70,40,0.5)"
@@ -348,7 +421,7 @@ export default function ShagaiUI({
           padding: "16px 16px 12px",
           backdropFilter: "blur(14px)",
           boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-          fontFamily: "'Noto Serif', Georgia, serif",
+          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           color: "white",
           zIndex: 10,
         }}
@@ -421,7 +494,7 @@ export default function ShagaiUI({
               border: "1px solid rgba(255,255,255,0.1)",
               borderRadius: 8,
               cursor: "pointer",
-              fontFamily: "'Noto Serif', Georgia, serif",
+              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             }}
           >
             Шинээр эхлэх

@@ -11,7 +11,13 @@ import {
   parseHeroId,
   type HeroId,
 } from "@/components/hero-select/hero-strings";
-import { getDashboardBundle, type MapStationApiRow } from "@/lib/api";
+import {
+  getDashboardBundle,
+  getContentHeroes,
+  resolveAssetUrl,
+  type MapStationApiRow,
+  type HeroRow,
+} from "@/lib/api";
 import { normalizeStationId, STATION_CONFIGS } from "./mapConstants";
 import {
   formatCooldownHMS,
@@ -21,7 +27,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DashLang, DashStrings } from "./dashboard-strings";
-import { getApiBaseUrl } from "@/lib/api";
 
 function num(v: unknown, fallback: number): number {
   const n = typeof v === "number" ? v : Number(v);
@@ -58,15 +63,21 @@ export function ProfilePanel({
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
   const [saving, setSaving] = useState(false);
   const [cooldownMs, setCooldownMs] = useState(0);
-  const apiBase = getApiBaseUrl();
+  const [heroRows, setHeroRows] = useState<HeroRow[]>([]);
 
-  const resolveImg = useCallback(
-    (raw: unknown): string => {
-      const s = typeof raw === "string" ? raw.trim() : "";
-      if (!s) return "";
-      return s.startsWith("/") ? `${apiBase}${s}` : s;
+  // Look up a hero image by id — prefers the backend row so any admin
+  // upload (stored under `/uploads/heroes/...`) wins, and falls back to the
+  // bundled HEROES data so the UI never renders a broken image.
+  const heroImageById = useCallback(
+    (id: HeroId): string => {
+      const row =
+        heroRows.find((h) => h.slug === id) ||
+        heroRows.find((h) => h.id === id);
+      if (row?.image_url) return resolveAssetUrl(row.image_url);
+      const local = HEROES.find((h) => h.id === id);
+      return local?.imageUrl ?? "";
     },
-    [apiBase],
+    [heroRows],
   );
 
   const tickCooldown = useCallback(() => {
@@ -95,8 +106,12 @@ export function ProfilePanel({
       setCurrentHeroId(parseHeroId(saved.heroId));
 
       try {
-        const bundle = await getDashboardBundle(saved.name, lang);
+        const [bundle, heroesResp] = await Promise.all([
+          getDashboardBundle(saved.name, lang),
+          getContentHeroes().catch(() => ({ heroes: [] as HeroRow[] })),
+        ]);
         if (cancelled) return;
+        setHeroRows(heroesResp.heroes ?? []);
         setMapStations(bundle.mapStations ?? []);
         setUserEmail(String(bundle.user.email ?? saved.name));
         const prof = bundle.user.profile as Record<string, unknown>;
@@ -108,13 +123,20 @@ export function ProfilePanel({
         setHeroTitle(
           String(bundle.computed.displayHeroTitle ?? prof.heroTitle ?? ""),
         );
-        setHeroImage(
-          resolveImg(
-            typeof h?.image_url === "string"
-              ? h.image_url
-              : (prof as any).heroImages,
-          ),
-        );
+        // Prefer the authoritative hero row image; fall back to the saved
+        // profile value; finally use the bundled local portrait so the
+        // avatar never renders as a broken icon.
+        const heroId =
+          typeof prof.heroId === "string"
+            ? parseHeroId(prof.heroId)
+            : parseHeroId(saved.heroId);
+        const rowImg =
+          typeof h?.image_url === "string"
+            ? resolveAssetUrl(h.image_url)
+            : "";
+        const profImg = resolveAssetUrl((prof as any).heroImages);
+        const localImg = HEROES.find((x) => x.id === heroId)?.imageUrl ?? "";
+        setHeroImage(rowImg || profImg || localImg);
         setTier(bundle.computed.tier ?? "—");
         setLevel(num(prof.level, 1));
         setKp(num(prof.kp, 0));
@@ -126,12 +148,8 @@ export function ProfilePanel({
           ? rawDone.map((x) => normalizeStationId(String(x)))
           : [];
         setDoneIds(ids);
-        const hid =
-          typeof prof.heroId === "string"
-            ? parseHeroId(prof.heroId)
-            : parseHeroId(saved.heroId);
-        setCurrentHeroId(hid);
-        setSelectedId(hid);
+        setCurrentHeroId(heroId);
+        setSelectedId(heroId);
       } catch {
         const data = await getUserByEmail(saved.name);
         if (cancelled || !data) {
@@ -142,7 +160,12 @@ export function ProfilePanel({
         const prog = data.progress as Record<string, unknown>;
         setHeroName(String(prof.heroName ?? ""));
         setHeroTitle(String(prof.heroTitle ?? ""));
-        setHeroImage(resolveImg((prof as any).heroImages));
+        const hid0 = parseHeroId(prof.heroId ?? saved.heroId);
+        setHeroImage(
+          resolveAssetUrl((prof as any).heroImages) ||
+            HEROES.find((x) => x.id === hid0)?.imageUrl ||
+            "",
+        );
         setLevel(num(prof.level, 1));
         setKp(num(prof.kp, 0));
         setXp(num(prog.xp, 0));
@@ -333,7 +356,7 @@ export function ProfilePanel({
                 )}
               >
                 <img
-                  src={h.imageUrl}
+                  src={heroImageById(h.id) || h.imageUrl}
                   alt=""
                   className="w-full aspect-square object-cover h-[154px]"
                 />

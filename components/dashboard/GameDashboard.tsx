@@ -12,10 +12,11 @@ import { DashNav } from "./DashNav";
 import { LeftPanel } from "./LeftPanel";
 import { MapArea } from "./MapArea";
 import { getUserByEmail } from "@/lib/firebase-auth";
-import { loadPlayer } from "@/components/hero-select/hero-data";
+import { loadPlayer, HEROES } from "@/components/hero-select/hero-data";
 import { normalizeStationId } from "./mapConstants";
 import {
   getDashboardBundle,
+  resolveAssetUrl,
   type MapStationApiRow,
   type StationGameBundleRow,
 } from "@/lib/api";
@@ -185,13 +186,29 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           ? "home"
           : normalizeStationId(rawCs);
 
+      // Resolve hero avatar URL: backend rows may hand back
+      // `/uploads/heroes/x.jpg` (served by the API) or a bundled fallback
+      // like `/images/x.png` (served by Next.js `public/`). `resolveAssetUrl`
+      // picks the right origin. Falls back to the locally shipped hero
+      // portrait so the avatar never silently breaks.
+      const heroIdStr =
+        typeof prof.heroId === "string" ? prof.heroId : undefined;
+      const localHeroEntry = heroIdStr
+        ? HEROES.find((h) => h.id === heroIdStr)
+        : null;
+      const avatarImg =
+        resolveAssetUrl(
+          typeof hero?.image_url === "string"
+            ? hero.image_url
+            : (prof.heroImages as string | undefined),
+        ) ||
+        localHeroEntry?.imageUrl ||
+        "";
+
       setPlayer({
         name,
         title,
-        image:
-          typeof hero?.image_url === "string"
-            ? hero.image_url
-            : String(prof.heroImages ?? ""),
+        image: avatarImg,
         level: num(prof.level, 1),
         kp: num(prof.kp, 0),
         tokens: { used: 0, max: 20 },
@@ -210,12 +227,27 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         totalStations: bundle?.computed.totalStations,
         currentStationLabel: bundle?.computed.currentStationLabel,
         heroTier: bundle?.computed.tier,
-        heroModelPath:
-          typeof hero?.model_path === "string"
-            ? hero.model_path
-            : typeof prof.heroModelPath === "string"
-              ? String(prof.heroModelPath)
-              : null,
+        heroModelPath: (() => {
+          // Resolve the hero's 3D model:
+          //   1. Freshest: the server-side (PG) hero row.
+          //   2. Local authoritative hero-data (always matches the bundled
+          //      assets shipped with the current build; protects against
+          //      stale paths saved to Firebase/PG before heroes were swapped).
+          //   3. Whatever the user's saved profile says, as a last resort.
+          if (typeof hero?.model_path === "string" && hero.model_path.trim()) {
+            return hero.model_path;
+          }
+          const heroIdFromProfile =
+            typeof prof.heroId === "string" ? prof.heroId : null;
+          const localHero = heroIdFromProfile
+            ? HEROES.find((h) => h.id === heroIdFromProfile)
+            : null;
+          if (localHero?.modelPath) return localHero.modelPath;
+          if (typeof prof.heroModelPath === "string") {
+            return String(prof.heroModelPath);
+          }
+          return null;
+        })(),
         stationSteps: readStationSteps(prog),
         stationVisits: readStationVisits(prog),
         homeGerLevel: num(gerRec.level, 1),

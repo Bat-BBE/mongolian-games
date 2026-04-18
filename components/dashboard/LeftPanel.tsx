@@ -39,7 +39,13 @@ interface LeftPanelProps {
     coins: number;
     gems: number;
     gerLevel: number;
-    livestock: { sheep: number; goat: number; cow: number; horse: number; camel: number };
+    livestock: {
+      sheep: number;
+      goat: number;
+      cow: number;
+      horse: number;
+      camel: number;
+    };
   };
   /** Газрын зураг дээр гэр рүү камер шилжүүлэх */
   onGoToGer?: () => void;
@@ -246,8 +252,8 @@ export function LeftPanel({
                           </li>
                           <li>
                             {lang === "mn"
-                              ? "4) Гэр дээр “Go to ger” дарж гэрээ сайжруулж, мал худалдаж авна."
-                              : "4) Use “Go to ger” to upgrade your ger and buy livestock."}
+                              ? "4) Гэр дээр дарж гэрээ сайжруулж, мал худалдаж авна."
+                              : "4) Use to upgrade your ger and buy livestock."}
                           </li>
                         </ul>
                       </div>
@@ -297,7 +303,9 @@ export function LeftPanel({
                       const windowMs = 7 * 24 * 60 * 60 * 1000;
                       const visits = (stationVisits?.[activeStationId] ?? [])
                         .map((x) => Number(x))
-                        .filter((n) => Number.isFinite(n) && n >= now - windowMs);
+                        .filter(
+                          (n) => Number.isFinite(n) && n >= now - windowMs,
+                        );
                       const rem = Math.max(0, 2 - visits.length);
                       return lang === "mn"
                         ? `7 хоногт үлдсэн боломж: ${rem}/2`
@@ -312,14 +320,19 @@ export function LeftPanel({
                           : []) ?? [],
                       );
                       const nextRequired =
-                        displayGames.find((x) => !completed.has(x.slug))?.slug ??
-                        null;
-                      const status =
-                        completed.has(g.slug)
-                          ? (lang === "mn" ? "Дууссан" : "Done")
-                          : g.slug === nextRequired
-                            ? (lang === "mn" ? "Дараагийн" : "Next")
-                            : (lang === "mn" ? "Түгжээтэй" : "Locked");
+                        displayGames.find((x) => !completed.has(x.slug))
+                          ?.slug ?? null;
+                      const status = completed.has(g.slug)
+                        ? lang === "mn"
+                          ? "Дууссан"
+                          : "Done"
+                        : g.slug === nextRequired
+                          ? lang === "mn"
+                            ? "Дараагийн"
+                            : "Next"
+                          : lang === "mn"
+                            ? "Түгжээтэй"
+                            : "Locked";
 
                       return (
                         <li
@@ -333,9 +346,14 @@ export function LeftPanel({
                             <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
                               {status}
                             </span>
-                            {(lang === "mn" ? g.reward_hint_mn : g.reward_hint_en)?.trim() ? (
+                            {(lang === "mn"
+                              ? g.reward_hint_mn
+                              : g.reward_hint_en
+                            )?.trim() ? (
                               <span className="text-primary/80 text-[10px]">
-                                {lang === "mn" ? g.reward_hint_mn : g.reward_hint_en}
+                                {lang === "mn"
+                                  ? g.reward_hint_mn
+                                  : g.reward_hint_en}
                               </span>
                             ) : null}
                           </span>
@@ -346,7 +364,8 @@ export function LeftPanel({
                 </div>
               )}
 
-              {activeStationId !== "home" && (t.questTitle?.trim() || t.questDesc?.trim()) ? (
+              {activeStationId !== "home" &&
+              (t.questTitle?.trim() || t.questDesc?.trim()) ? (
                 <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
                   <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
                     {lang === "mn" ? "Өртөөний түүх" : "Station story"}
@@ -371,28 +390,29 @@ export function LeftPanel({
         <div className="w-full">
           <SectionTitle>{t.treasury}</SectionTitle>
           <div className="space-y-2 mt-1.5">
-            <TreasuryRow
-              label={lang === "mn" ? "Гэр" : "Ger"}
-              value={`Lv ${treasury?.gerLevel ?? 1}`}
-            />
-            <TreasuryRow
-              label={lang === "mn" ? "Эрдэнэс (МО)" : "KP"}
-              value={(treasury?.kp ?? 0).toLocaleString()}
-            />
-            <TreasuryRow
-              label={lang === "mn" ? "Зоос" : "Coins"}
-              value={(treasury?.coins ?? 0).toLocaleString()}
-              hint={lang === "mn" ? "₮" : "$"}
-            />
-            <TreasuryRow
-              label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
-              value={(treasury?.gems ?? 0).toLocaleString()}
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <TreasuryRow
+                label={lang === "mn" ? "Гэр" : "Ger"}
+                value={`Lv ${treasury?.gerLevel ?? 1}`}
+              />
+              <TreasuryRow
+                label={lang === "mn" ? "Эрдэнэс" : "KP"}
+                value={(treasury?.kp ?? 0).toLocaleString()}
+              />
+              <TreasuryRow
+                label={lang === "mn" ? "Зоос" : "Coins"}
+                value={(treasury?.coins ?? 0).toLocaleString()}
+              />
+              <TreasuryRow
+                label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
+                value={(treasury?.gems ?? 0).toLocaleString()}
+              />
+            </div>
             <div className="rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
                 {lang === "mn" ? "Мал сүрэг" : "Livestock"}
               </p>
-              <div className="flex flex-wrap gap-2 text-xs text-foreground/85 tabular-nums">
+              <div className="flex flex-wrap gap-1 text-xs text-foreground/85 tabular-nums">
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
                   🐑 {(treasury?.livestock.sheep ?? 0).toLocaleString()}
                 </span>
@@ -420,11 +440,6 @@ export function LeftPanel({
             <div className="flex justify-between text-[11px] text-foreground mb-1.5">
               <span className="font-bold uppercase tracking-wider text-primary">
                 {t.rankTitle}
-                {heroTier ? (
-                  <span className="ml-1.5 text-[9px] opacity-80 font-mono">
-                    · {heroTier}
-                  </span>
-                ) : null}
               </span>
               <span className="text-foreground font-medium">
                 {xp.toLocaleString()} / {xpMax.toLocaleString()}
@@ -442,7 +457,6 @@ export function LeftPanel({
           </div>
         </div>
 
-        {/* Leaderboard Section */}
         <div className="w-full">
           <SectionTitle>{t.leaderboard}</SectionTitle>
           <button
@@ -476,25 +490,6 @@ export function LeftPanel({
                     )}
                   </div>
                 ))}
-                <div className="w-7 h-7 rounded-full bg-background/90 border border-primary/30 flex items-center justify-center font-bold text-primary text-[10px]">
-                  +1.2k
-                </div>
-              </div>
-            </div>
-
-            <div className="h-9 w-px bg-primary/20 shrink-0" />
-
-            <div className="flex flex-col">
-              <span className="text-[7px] text-primary uppercase tracking-[0.2em] font-bold mb-1">
-                {t.activeBonus}
-              </span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-primary font-bold text-base font-display">
-                  {bonusMultiplier}
-                </span>
-                <span className="text-[10px] text-primary/70 uppercase tracking-widest">
-                  {bonusTitle}
-                </span>
               </div>
             </div>
           </button>

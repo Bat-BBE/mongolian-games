@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getApiBaseUrl, getContentHeroes, getLeaderboard, type LeaderboardEntry } from "@/lib/api";
+import { getApiBaseUrl, getContentHeroes, getLeaderboard, resolveAssetUrl, type LeaderboardEntry } from "@/lib/api";
 import { HEROES } from "@/components/hero-select/hero-data";
 import { parseHeroId } from "@/components/hero-select/hero-strings";
 import type { DashLang } from "./dashboard-strings";
@@ -62,10 +62,10 @@ function heroDisplayName(heroId: string | null): string {
   }
 }
 
-function resolveImg(apiBase: string, raw: unknown): string {
-  const s = typeof raw === "string" ? raw.trim() : "";
-  if (!s) return "";
-  return s.startsWith("/") ? `${apiBase}${s}` : s;
+// Kept around as a thin alias so call sites don't change; dispatches to the
+// shared helper that knows to only prefix `/uploads/**` with the API base.
+function resolveImg(_apiBase: string, raw: unknown): string {
+  return resolveAssetUrl(raw);
 }
 
 function PodiumCard({

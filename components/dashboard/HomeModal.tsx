@@ -9,7 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { loadPlayer } from "@/components/hero-select/hero-data";
-import { getDashboardBundle, homeBuyLivestock, homeUpgradeGer } from "@/lib/api";
+import {
+  getDashboardBundle,
+  homeBuyLivestock,
+  homeUpgradeGer,
+} from "@/lib/api";
 import type { DashLang, DashStrings } from "./dashboard-strings";
 import { cn } from "@/lib/utils";
 
@@ -79,12 +83,12 @@ export function HomeModal({
       .finally(() => setLoading(false));
   }, [open, lang]);
 
-  const title = useMemo(
-    () => (lang === "mn" ? "Миний гэр" : "My ger"),
-    [lang],
-  );
+  const title = useMemo(() => (lang === "mn" ? "Миний гэр" : "My ger"), [lang]);
 
-  const upgradeCost = useMemo(() => ({ coins: 200 + gerLevel * 80, kp: 60 + gerLevel * 15 }), [gerLevel]);
+  const upgradeCost = useMemo(
+    () => ({ coins: 200 + gerLevel * 80, kp: 60 + gerLevel * 15 }),
+    [gerLevel],
+  );
 
   async function doUpgrade() {
     if (!email) return;
@@ -120,16 +124,30 @@ export function HomeModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(100vw-1.5rem,560px)] max-h-[min(90vh,760px)] overflow-y-auto border border-primary/25 bg-background/98 backdrop-blur-xl">
         <DialogHeader>
-          <DialogTitle className="font-display tracking-wide">{title}</DialogTitle>
+          <DialogTitle className="font-display tracking-wide">
+            {title}
+          </DialogTitle>
         </DialogHeader>
 
         {err ? <p className="text-sm text-destructive">{err}</p> : null}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Stat label={lang === "mn" ? "Гэрийн түвшин" : "Ger level"} value={`Lv ${gerLevel}`} />
-          <Stat label={lang === "mn" ? "Эрдэнэс (МО)" : "KP"} value={kp.toLocaleString()} />
-          <Stat label={lang === "mn" ? "Зоос" : "Coins"} value={coins.toLocaleString()} />
-          <Stat label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"} value={gems.toLocaleString()} />
+          <Stat
+            label={lang === "mn" ? "Гэрийн түвшин" : "Ger level"}
+            value={`Lv ${gerLevel}`}
+          />
+          <Stat
+            label={lang === "mn" ? "Эрдэнэс" : "KP"}
+            value={kp.toLocaleString()}
+          />
+          <Stat
+            label={lang === "mn" ? "Зоос" : "Coins"}
+            value={coins.toLocaleString()}
+          />
+          <Stat
+            label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
+            value={gems.toLocaleString()}
+          />
         </div>
 
         <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
@@ -144,19 +162,44 @@ export function HomeModal({
             <Chip>🐫 {camel}</Chip>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("sheep")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => void buy("sheep")}
+            >
               {lang === "mn" ? "Хонь авах" : "Buy sheep"}
             </Button>
-            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("goat")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => void buy("goat")}
+            >
               {lang === "mn" ? "Ямаа авах" : "Buy goat"}
             </Button>
-            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("cow")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => void buy("cow")}
+            >
               {lang === "mn" ? "Үхэр авах" : "Buy cow"}
             </Button>
-            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("horse")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => void buy("horse")}
+            >
               {lang === "mn" ? "Морь авах" : "Buy horse"}
             </Button>
-            <Button type="button" variant="secondary" disabled={loading} onClick={() => void buy("camel")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading}
+              onClick={() => void buy("camel")}
+            >
               {lang === "mn" ? "Тэмээ авах" : "Buy camel"}
             </Button>
           </div>
@@ -171,7 +214,12 @@ export function HomeModal({
               ? `Үнэ: ${upgradeCost.coins} зоос + ${upgradeCost.kp} МО`
               : `Cost: ${upgradeCost.coins} coins + ${upgradeCost.kp} KP`}
           </p>
-          <Button type="button" className="w-full" disabled={loading} onClick={() => void doUpgrade()}>
+          <Button
+            type="button"
+            className="w-full"
+            disabled={loading}
+            onClick={() => void doUpgrade()}
+          >
             {loading ? "…" : lang === "mn" ? "Сайжруулах" : "Upgrade"}
           </Button>
         </div>
@@ -183,7 +231,9 @@ export function HomeModal({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="admin-panel rounded-xl p-3 text-center">
-      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <p className="text-sm font-semibold tabular-nums">{value}</p>
     </div>
   );
@@ -191,9 +241,12 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className={cn("text-xs px-2 py-1 rounded-full border border-primary/20 bg-primary/5")}>
+    <span
+      className={cn(
+        "text-xs px-2 py-1 rounded-full border border-primary/20 bg-primary/5",
+      )}
+    >
       {children}
     </span>
   );
 }
-
