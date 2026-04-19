@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { useHeroOrb } from '@/hooks/useHeroOrb';
+import { useEffect, useRef, useState } from "react";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { useHeroOrb } from "@/hooks/useHeroOrb";
 import {
   loadHeroModel,
   normalizeHeroHeight,
   pickClip,
-} from '@/components/map3d/heroFbx';
+} from "@/components/map3d/heroFbx";
 
 interface HeroActorProps {
   className?: string;
@@ -20,15 +20,17 @@ interface HeroActorProps {
 }
 
 export default function HeroActor({
-  className = '',
+  className = "",
   autoRotate = true,
-  backgroundColor = '#111827',
-  modelPath = '/models/hero1.glb',
+  backgroundColor = "#111827",
+  modelPath = "/models/hero-2.fbx",
 }: HeroActorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [animations, setAnimations] = useState<{ [key: string]: THREE.AnimationClip }>({});
-  const [currentAction, setCurrentAction] = useState<string>('idle');
+  const [animations, setAnimations] = useState<{
+    [key: string]: THREE.AnimationClip;
+  }>({});
+  const [currentAction, setCurrentAction] = useState<string>("idle");
   const [isSelected, setIsSelected] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
@@ -42,12 +44,11 @@ export default function HeroActor({
 
   useHeroOrb(
     containerRef as React.RefObject<HTMLCanvasElement | null>,
-    isSelected ? '#ff3366' : '#3b82f6',
-    isSelected ? '#ff0066' : '#1e3a8a',
+    isSelected ? "#ff3366" : "#3b82f6",
+    isSelected ? "#ff0066" : "#1e3a8a",
     isSelected,
-    isLocked
+    isLocked,
   );
-
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -55,25 +56,24 @@ export default function HeroActor({
     // External Mixamo-style clip files used as a fallback when the hero's
     // GLB does not embed its own animations.
     const fallbackAnimFiles = [
-      { name: 'idle', path: '/models/standing idle 01.fbx' },
-      { name: 'walkForward', path: '/models/standing walk forward.fbx' },
-      { name: 'walkBack', path: '/models/standing walk back.fbx' },
-      { name: 'walkLeft', path: '/models/standing walk left.fbx' },
-      { name: 'walkRight', path: '/models/standing walk right.fbx' },
-      { name: 'runForward', path: '/models/standing run forward.fbx' },
-      { name: 'runBack', path: '/models/standing run back.fbx' },
-      { name: 'runLeft', path: '/models/standing run left.fbx' },
-      { name: 'runRight', path: '/models/standing run right.fbx' },
-      { name: 'turnLeft', path: '/models/standing turn 90 left.fbx' },
-      { name: 'turnRight', path: '/models/standing turn 90 right.fbx' },
+      { name: "idle", path: "/models/standing idle 01.fbx" },
+      { name: "walkForward", path: "/models/standing walk forward.fbx" },
+      { name: "walkBack", path: "/models/standing walk back.fbx" },
+      { name: "walkLeft", path: "/models/standing walk left.fbx" },
+      { name: "walkRight", path: "/models/standing walk right.fbx" },
+      { name: "runForward", path: "/models/standing run forward.fbx" },
+      { name: "runBack", path: "/models/standing run back.fbx" },
+      { name: "runLeft", path: "/models/standing run left.fbx" },
+      { name: "runRight", path: "/models/standing run right.fbx" },
+      { name: "turnLeft", path: "/models/standing turn 90 left.fbx" },
+      { name: "turnRight", path: "/models/standing turn 90 right.fbx" },
     ];
 
     let disposed = false;
 
     const init = async () => {
-      const { root: object, clips: embeddedClips } = await loadHeroModel(
-        modelPath,
-      );
+      const { root: object, clips: embeddedClips } =
+        await loadHeroModel(modelPath);
       if (disposed) return;
       modelRef.current = object;
 
@@ -84,19 +84,25 @@ export default function HeroActor({
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(backgroundColor);
       sceneRef.current = scene;
-      
+
       const camera = new THREE.PerspectiveCamera(
         38,
         containerRef.current!.clientWidth / containerRef.current!.clientHeight,
         0.1,
-        1000
+        1000,
       );
       camera.position.set(3.2, 0.6, 5.2);
       camera.lookAt(0, 0, 0);
       cameraRef.current = camera;
 
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-      renderer.setSize(containerRef.current!.clientWidth, containerRef.current!.clientHeight);
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+      });
+      renderer.setSize(
+        containerRef.current!.clientWidth,
+        containerRef.current!.clientHeight,
+      );
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -118,11 +124,11 @@ export default function HeroActor({
       controls.maxDistance = 15;
       controls.target.set(0, 0, 0);
       controlsRef.current = controls;
-      
+
       // Add lights
       const ambientLight = new THREE.AmbientLight(0x404060);
       scene.add(ambientLight);
-      
+
       const mainLight = new THREE.DirectionalLight(0xffffff, 1.5);
       mainLight.position.set(5, 10, 7);
       mainLight.castShadow = true;
@@ -137,34 +143,34 @@ export default function HeroActor({
       mainLight.shadow.camera.near = 2;
       mainLight.shadow.camera.far = 20;
       scene.add(mainLight);
-      
+
       const fillLight = new THREE.DirectionalLight(0xffaa88, 0.8);
       fillLight.position.set(-5, 3, 5);
       scene.add(fillLight);
-      
+
       const backLight = new THREE.DirectionalLight(0x88aaff, 0.5);
       backLight.position.set(0, 2, -10);
       scene.add(backLight);
-      
+
       // Add ground grid and floor
       const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0x444444);
       gridHelper.position.y = -1;
       scene.add(gridHelper);
-      
+
       const planeGeometry = new THREE.CircleGeometry(8, 32);
-      const planeMaterial = new THREE.MeshStandardMaterial({ 
+      const planeMaterial = new THREE.MeshStandardMaterial({
         color: 0x223344,
         roughness: 0.7,
         metalness: 0.1,
         transparent: true,
-        opacity: 0.3
+        opacity: 0.3,
       });
       const plane = new THREE.Mesh(planeGeometry, planeMaterial);
       plane.rotation.x = -Math.PI / 2;
       plane.position.y = -1;
       plane.receiveShadow = true;
       scene.add(plane);
-      
+
       // Add character to scene
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
@@ -172,9 +178,9 @@ export default function HeroActor({
           child.receiveShadow = true;
         }
       });
-      
+
       scene.add(object);
-      
+
       const mixer = new THREE.AnimationMixer(object);
       mixerRef.current = mixer;
 
@@ -183,28 +189,69 @@ export default function HeroActor({
       //    this component already uses.
       const loadedAnimations: { [key: string]: THREE.AnimationClip } = {};
 
-      const tryRegister = (actionName: string, clip: THREE.AnimationClip | null) => {
+      const tryRegister = (
+        actionName: string,
+        clip: THREE.AnimationClip | null,
+      ) => {
         if (!clip) return false;
         loadedAnimations[actionName] = clip;
         const action = mixer.clipAction(clip);
         animationsRef.current.set(actionName, action);
-        if (actionName === 'idle') action.play();
+        if (actionName === "idle") action.play();
         return true;
       };
 
-      const embedIdle = pickClip(embeddedClips, ['idle']);
+      const embedIdle = pickClip(embeddedClips, ["idle"]);
       if (embedIdle) {
-        tryRegister('idle', embedIdle);
-        tryRegister('walkForward', pickClip(embeddedClips, ['walkforward', 'walk_forward', 'walk', 'forward']) ?? embedIdle);
-        tryRegister('walkBack', pickClip(embeddedClips, ['walkback', 'walk_back', 'back']) ?? embedIdle);
-        tryRegister('walkLeft', pickClip(embeddedClips, ['walkleft', 'walk_left', 'left']) ?? embedIdle);
-        tryRegister('walkRight', pickClip(embeddedClips, ['walkright', 'walk_right', 'right']) ?? embedIdle);
-        tryRegister('runForward', pickClip(embeddedClips, ['runforward', 'run']) ?? embedIdle);
-        tryRegister('runBack', pickClip(embeddedClips, ['runback']) ?? embedIdle);
-        tryRegister('runLeft', pickClip(embeddedClips, ['runleft']) ?? embedIdle);
-        tryRegister('runRight', pickClip(embeddedClips, ['runright']) ?? embedIdle);
-        tryRegister('turnLeft', pickClip(embeddedClips, ['turnleft', 'turn_left']) ?? embedIdle);
-        tryRegister('turnRight', pickClip(embeddedClips, ['turnright', 'turn_right']) ?? embedIdle);
+        tryRegister("idle", embedIdle);
+        tryRegister(
+          "walkForward",
+          pickClip(embeddedClips, [
+            "walkforward",
+            "walk_forward",
+            "walk",
+            "forward",
+          ]) ?? embedIdle,
+        );
+        tryRegister(
+          "walkBack",
+          pickClip(embeddedClips, ["walkback", "walk_back", "back"]) ??
+            embedIdle,
+        );
+        tryRegister(
+          "walkLeft",
+          pickClip(embeddedClips, ["walkleft", "walk_left", "left"]) ??
+            embedIdle,
+        );
+        tryRegister(
+          "walkRight",
+          pickClip(embeddedClips, ["walkright", "walk_right", "right"]) ??
+            embedIdle,
+        );
+        tryRegister(
+          "runForward",
+          pickClip(embeddedClips, ["runforward", "run"]) ?? embedIdle,
+        );
+        tryRegister(
+          "runBack",
+          pickClip(embeddedClips, ["runback"]) ?? embedIdle,
+        );
+        tryRegister(
+          "runLeft",
+          pickClip(embeddedClips, ["runleft"]) ?? embedIdle,
+        );
+        tryRegister(
+          "runRight",
+          pickClip(embeddedClips, ["runright"]) ?? embedIdle,
+        );
+        tryRegister(
+          "turnLeft",
+          pickClip(embeddedClips, ["turnleft", "turn_left"]) ?? embedIdle,
+        );
+        tryRegister(
+          "turnRight",
+          pickClip(embeddedClips, ["turnright", "turn_right"]) ?? embedIdle,
+        );
         setAnimations(loadedAnimations);
         setIsLoading(false);
       } else {
@@ -241,18 +288,19 @@ export default function HeroActor({
       animate();
 
       const handleResize = () => {
-        if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
+        if (!containerRef.current || !cameraRef.current || !rendererRef.current)
+          return;
         const width = containerRef.current.clientWidth;
         const height = containerRef.current.clientHeight;
         cameraRef.current.aspect = width / height;
         cameraRef.current.updateProjectionMatrix();
         rendererRef.current.setSize(width, height);
       };
-      window.addEventListener('resize', handleResize);
+      window.addEventListener("resize", handleResize);
 
       // Store cleanup on the component so the outer effect can call it.
       resizeCleanupRef.current = () => {
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener("resize", handleResize);
         if (rendererRef.current && containerRef.current) {
           if (containerRef.current.contains(rendererRef.current.domElement)) {
             containerRef.current.removeChild(rendererRef.current.domElement);
@@ -262,10 +310,12 @@ export default function HeroActor({
       };
     };
 
-    const resizeCleanupRef: { current: null | (() => void) } = { current: null };
+    const resizeCleanupRef: { current: null | (() => void) } = {
+      current: null,
+    };
     void init().catch((err) => {
       // eslint-disable-next-line no-console
-      console.warn('HeroActor: failed to load model', modelPath, err);
+      console.warn("HeroActor: failed to load model", modelPath, err);
       setIsLoading(false);
     });
 
@@ -279,31 +329,44 @@ export default function HeroActor({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isLoading) return;
 
-      if (e.code === 'Space') {
-        setIsSelected(prev => !prev);
+      if (e.code === "Space") {
+        setIsSelected((prev) => !prev);
       }
 
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
         setIsLocked(true);
       }
-      
+
       let newAction: string | null = null;
-      
-      switch(e.code) {
-        case 'KeyW': newAction = e.shiftKey ? 'runForward' : 'walkForward'; break;
-        case 'KeyS': newAction = e.shiftKey ? 'runBack' : 'walkBack'; break;
-        case 'KeyA': newAction = e.shiftKey ? 'runLeft' : 'walkLeft'; break;
-        case 'KeyD': newAction = e.shiftKey ? 'runRight' : 'walkRight'; break;
-        case 'KeyQ': newAction = 'turnLeft'; break;
-        case 'KeyE': newAction = 'turnRight'; break;
-        default: return;
+
+      switch (e.code) {
+        case "KeyW":
+          newAction = e.shiftKey ? "runForward" : "walkForward";
+          break;
+        case "KeyS":
+          newAction = e.shiftKey ? "runBack" : "walkBack";
+          break;
+        case "KeyA":
+          newAction = e.shiftKey ? "runLeft" : "walkLeft";
+          break;
+        case "KeyD":
+          newAction = e.shiftKey ? "runRight" : "walkRight";
+          break;
+        case "KeyQ":
+          newAction = "turnLeft";
+          break;
+        case "KeyE":
+          newAction = "turnRight";
+          break;
+        default:
+          return;
       }
-      
+
       if (newAction && newAction !== currentAction) {
         // Fade out current action, fade in new one
         const current = animationsRef.current.get(currentAction);
         const next = animationsRef.current.get(newAction);
-        
+
         if (current && next) {
           current.fadeOut(0.2);
           next.reset().fadeIn(0.2).play();
@@ -311,36 +374,36 @@ export default function HeroActor({
         }
       }
     };
-    
+
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
         setIsLocked(false);
       }
-      
-      if (['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE'].includes(e.code)) {
-        const idle = animationsRef.current.get('idle');
+
+      if (["KeyW", "KeyS", "KeyA", "KeyD", "KeyQ", "KeyE"].includes(e.code)) {
+        const idle = animationsRef.current.get("idle");
         const current = animationsRef.current.get(currentAction);
-        
-        if (idle && current && currentAction !== 'idle') {
+
+        if (idle && current && currentAction !== "idle") {
           current.fadeOut(0.2);
           idle.reset().fadeIn(0.2).play();
-          setCurrentAction('idle');
+          setCurrentAction("idle");
         }
       }
     };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
   }, [currentAction, isLoading]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className={`relative w-full h-full min-h-[500px] overflow-hidden ${className}`}
     >
       {isLoading && (
@@ -348,15 +411,16 @@ export default function HeroActor({
           <div className="text-white text-xl">Loading Hero Actor...</div>
         </div>
       )}
-      
+
       <div className="absolute bottom-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded text-sm z-20">
-        {isSelected ? '✨ Selected' : 'Click space to select'} | {isLocked ? '🔒 Locked' : 'Shift to lock'}
+        {isSelected ? "✨ Selected" : "Click space to select"} |{" "}
+        {isLocked ? "🔒 Locked" : "Shift to lock"}
       </div>
-      
+
       <div className="absolute bottom-4 right-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded text-sm z-20">
         Animation: {currentAction}
       </div>
-      
+
       <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded text-sm z-20">
         WASD: Walk | Shift+WASD: Run | Q/E: Turn
       </div>

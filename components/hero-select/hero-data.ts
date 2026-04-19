@@ -47,7 +47,7 @@ export const HEROES: Hero[] = [
     titleMn: "Их бичгийн багш",
     titleEn: "The Master of the Great Script",
     imageUrl: "/images/tatatunga1.png",
-    modelPath: "/models/hero2.glb",
+    modelPath: "/models/stading idle 01.fbx",
     available: true,
     color: "#00A3E0",
     emissive: "#00c0ff",
