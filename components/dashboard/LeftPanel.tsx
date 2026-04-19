@@ -433,7 +433,6 @@ export function LeftPanel({
           </div>
         </div>
 
-        {/* Progress Section */}
         <div className="w-full">
           <SectionTitle>{t.rank}</SectionTitle>
           <div className="glass bg-background/90 p-3 rounded-lg border border-primary/20 mt-1.5">
@@ -462,7 +461,7 @@ export function LeftPanel({
           <button
             type="button"
             onClick={() => onOpenLeaderboard?.()}
-            className="w-full text-left flex items-center justify-between gap-3 mt-1.5 rounded-xl border border-transparent hover:border-primary/25 hover:bg-primary/5 transition-colors p-1 -m-1"
+            className="w-full text-left flex items-center justify-between gap-3 mt-1.5 rounded-xl border border-transparent hover:border-primary/25 hover:bg-primary/5 transition-colors px-3 py-1 m-1"
           >
             <div className="flex flex-col">
               <span className="text-[8px] text-primary uppercase tracking-[0.2em] font-bold mb-1.5">

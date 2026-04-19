@@ -133,6 +133,12 @@ function rewardFor(gameSlug: string): {
       return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
     case "four-bones":
       return { ...base, xp: 20, kp: 7, coins: 12, gems: 1 };
+    case "horse-race":
+      return { ...base, xp: 22, kp: 8, coins: 14, gems: 1, livestock: { horse: 1 } };
+    case "shagai-guess":
+      return { ...base, xp: 18, kp: 6, coins: 11, gems: 1 };
+    case "puzzle":
+      return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
     default:
       return { ...base };
   }

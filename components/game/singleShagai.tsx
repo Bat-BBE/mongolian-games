@@ -107,18 +107,12 @@ export default function SingleShagai({
   const airtimeRef = useRef(0);
   const reportedRef = useRef(false);
   const glowRef = useRef<THREE.PointLight>(null);
-  // Tracks whether the player has actually thrown the shagai at least once.
-  // Before the first throw we keep the bone idle on the mat so it doesn't
-  // look like it's been auto-thrown when the game opens.
   const hasThrownRef = useRef(false);
-  // Slightly staggered rest spot on the mat (per shagai), low enough that
-  // the body sits on top of the floor plane without bouncing.
   const restPos: [number, number, number] = [
     startPos[0],
     PHYS_BOX[1] / 2 + 0.02,
     startPos[2],
   ];
-  // Pre-decided outcome + smooth snap machinery (mirrors ShagaiModel).
   const decidedSideRef = useRef<ShagaiSide>("sheep");
   const snapStartQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
   const snapTargetQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
@@ -147,9 +141,6 @@ export default function SingleShagai({
     return wrap;
   }, [gltf]);
 
-  // Measure the true visual rest height for each side from the real mesh
-  // vertices, so the bone sits flush on the floor no matter which face
-  // is up (the mesh is not symmetric around its bounding box center).
   useEffect(() => {
     if (!model) return;
     model.updateMatrix();
@@ -185,24 +176,15 @@ export default function SingleShagai({
     restHeightsRef.current = next;
   }, [model]);
 
-  // Fallback geometry (in case GLB fails to load)
   const geo = useMemo(() => buildShagaiGeo(), []);
 
-  // Physics box
   const [ref, api] = useBox(() => ({
     mass: 0.5,
-    // Start the shagai resting on the mat, not mid-air. The physics
-    // simulation will keep it quietly asleep until the player actually
-    // presses "Throw".
     position: restPos,
     args: PHYS_BOX,
     allowSleep: true,
     sleepSpeedLimit: 0.2,
     sleepTimeLimit: 0.2,
-    // Moderate values — friction low enough that the shagai can roll onto
-    // its wide face, damping low enough that it tumbles for a bit before
-    // coming to rest (otherwise it locks into whatever narrow side it
-    // first touched).
     restitution: 0.2,
     friction: 0.55,
     linearDamping: 0.22,
@@ -222,22 +204,16 @@ export default function SingleShagai({
     };
   }, [api]);
 
-  // Settle the bone onto the mat at mount so it doesn't jitter, then put it
-  // to sleep until the player throws.
   useEffect(() => {
     api.velocity.set(0, 0, 0);
     api.angularVelocity.set(0, 0, 0);
-    // Neutral flat resting rotation (sheep-up roughly): the exact face shown
-    // isn't important before the first throw.
     api.rotation.set(0, 0, 0);
     api.position.set(restPos[0], restPos[1], restPos[2]);
-    // Give the solver one frame to settle, then sleep.
     const t = setTimeout(() => api.sleep(), 50);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api]);
 
-  // Шидэх
   useEffect(() => {
     if (!isThrown) return;
     hasThrownRef.current = true;
@@ -246,12 +222,8 @@ export default function SingleShagai({
     snapActiveRef.current = false;
     snapElapsedRef.current = 0;
 
-    // Pre-decide the outcome: if a forced side was supplied (e.g. robot's
-    // turn with a pre-rolled outcome), use that; otherwise fall back to the
-    // weighted traditional distribution.
     decidedSideRef.current = forcedSide ?? weightedTraditionalSide();
 
-    // Wake up the body in case a previous throw ended with api.sleep().
     api.wakeUp();
     api.position.set(...startPos);
     api.rotation.set(
@@ -278,13 +250,10 @@ export default function SingleShagai({
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    // Before the first throw the shagai just sits on the mat — no airtime,
-    // no settle detection, no bias torque.
     if (!hasThrownRef.current) return;
 
     airtimeRef.current += delta;
 
-    // Floor safety: only catch the shagai if it falls BELOW the floor plane.
     if (posRef.current[1] < -0.2) {
       api.position.set(
         posRef.current[0],
@@ -304,10 +273,8 @@ export default function SingleShagai({
 
     const [vx, vy, vz] = velRef.current;
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
-    // Allow any resting orientation: widest half-dim of the box + buffer.
     const grounded = posRef.current[1] < 1.1;
 
-    // --- Smooth orientation snap to the pre-decided side ---------------
     if (snapActiveRef.current) {
       snapElapsedRef.current += delta;
       const t = Math.min(1, snapElapsedRef.current / SNAP_DURATION);
@@ -335,7 +302,6 @@ export default function SingleShagai({
       return;
     }
 
-    // --- Gentle in-flight bias toward the pre-decided orientation ----------
     if (airtimeRef.current > 0.25 && speed > 0.2) {
       const currentQuat = new THREE.Quaternion();
       groupRef.current.getWorldQuaternion(currentQuat);
@@ -389,7 +355,6 @@ export default function SingleShagai({
       const mats = Array.isArray(mat) ? mat : [mat];
       for (const m of mats) {
         if (!m) continue;
-        // Keep original textures, only add a gentle emissive tint when highlighted.
         m.emissive = highlight ? col : new THREE.Color(0x000000);
         m.emissiveIntensity = highlight ? 0.12 : 0;
         m.roughness = Math.min(0.9, Math.max(0.35, m.roughness ?? 0.55));
@@ -407,19 +372,14 @@ export default function SingleShagai({
         (groupRef as React.MutableRefObject<THREE.Group | null>).current = node;
       }}
     >
-      {/* Physics collider (invisible): keep stable even if the visual model changes */}
       <mesh visible={false}>
         <boxGeometry args={PHYS_BOX} />
         <meshStandardMaterial />
       </mesh>
 
-      {/* Visual model: pick the LAST shagai (3rd child) from the GLB,
-          auto-centered, auto-aligned, auto-scaled to fit the physics
-          collider. */}
       {model ? (
         <primitive object={model} position={[0, 0, 0]} />
       ) : (
-        // Fallback: procedural geometry if GLB not available
         <mesh castShadow receiveShadow geometry={geo}>
           <meshStandardMaterial
             color={highlight ? sideColor : "#ddd0aa"}
@@ -431,7 +391,6 @@ export default function SingleShagai({
         </mesh>
       )}
 
-      {/* Дөрвөн бэрх үед гэрэлтэх */}
       {highlight && (
         <pointLight
           ref={glowRef}

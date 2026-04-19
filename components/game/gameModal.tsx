@@ -5,6 +5,10 @@ import { useEffect } from "react";
 import ShagaiGame from "./shagaiGame";
 import StoneGame from "./stoneGame";
 import FourBonesGame from "./fourBonusGame";
+import HorseRaceGame from "./horseRaceGame";
+import ShagaiGuessGame from "./shagaiGuessGame";
+import MemoryMatchGame from "./memoryMatchGame";
+import KhorolGame from "./khorolGame";
 import { loadPlayer } from "@/components/hero-select/hero-data";
 import { completeGame } from "@/lib/api";
 
@@ -130,9 +134,17 @@ export default function GameModal({
           {gameType === "four-bones" && (
             <FourBonesGame onComplete={(r) => void submit(r)} />
           )}
+          {gameType === "horse-race" && (
+            <HorseRaceGame onComplete={(r, pct) => void submit(r, pct)} />
+          )}
+          {gameType === "shagai-guess" && (
+            <ShagaiGuessGame onComplete={(r, pct) => void submit(r, pct)} />
+          )}
           {gameType === "uichuur" && <ComingSoon name="Үйчүүр" />}
-          {gameType === "khorol" && <ComingSoon name="Хорол" />}
-          {gameType === "puzzle" && <ComingSoon name="Оньсон тоглоом" />}
+          {gameType === "khorol" && <KhorolGame />}
+          {gameType === "puzzle" && (
+            <MemoryMatchGame onComplete={(r, pct) => void submit(r, pct)} />
+          )}
           {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
         </div>
       </div>

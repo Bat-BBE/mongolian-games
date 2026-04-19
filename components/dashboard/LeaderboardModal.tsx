@@ -8,7 +8,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getApiBaseUrl, getContentHeroes, getLeaderboard, resolveAssetUrl, type LeaderboardEntry } from "@/lib/api";
+import {
+  getApiBaseUrl,
+  getContentHeroes,
+  getLeaderboard,
+  resolveAssetUrl,
+  type LeaderboardEntry,
+} from "@/lib/api";
 import { HEROES } from "@/components/hero-select/hero-data";
 import { parseHeroId } from "@/components/hero-select/hero-strings";
 import type { DashLang } from "./dashboard-strings";
@@ -40,15 +46,25 @@ function breakdownFrom(entry: LeaderboardEntry): {
       : null;
   const ls = entry.meta?.livestock;
   const sheep =
-    isPlainRecord(ls) && typeof ls.sheep === "number" ? (ls.sheep as number) : null;
+    isPlainRecord(ls) && typeof ls.sheep === "number"
+      ? (ls.sheep as number)
+      : null;
   const goat =
-    isPlainRecord(ls) && typeof (ls as any).goat === "number" ? ((ls as any).goat as number) : null;
+    isPlainRecord(ls) && typeof (ls as any).goat === "number"
+      ? ((ls as any).goat as number)
+      : null;
   const cow =
-    isPlainRecord(ls) && typeof (ls as any).cow === "number" ? ((ls as any).cow as number) : null;
+    isPlainRecord(ls) && typeof (ls as any).cow === "number"
+      ? ((ls as any).cow as number)
+      : null;
   const horse =
-    isPlainRecord(ls) && typeof ls.horse === "number" ? (ls.horse as number) : null;
+    isPlainRecord(ls) && typeof ls.horse === "number"
+      ? (ls.horse as number)
+      : null;
   const camel =
-    isPlainRecord(ls) && typeof ls.camel === "number" ? (ls.camel as number) : null;
+    isPlainRecord(ls) && typeof ls.camel === "number"
+      ? (ls.camel as number)
+      : null;
   return { kp, gerLevel, sheep, goat, cow, horse, camel };
 }
 
@@ -88,15 +104,14 @@ function PodiumCard({
 
   const scale = place === 1 ? "sm:scale-105 z-10" : "opacity-95";
 
-  const label =
-    place === 1 ? "🥇" : place === 2 ? "🥈" : "🥉";
+  const label = place === 1 ? "🥇" : place === 2 ? "🥈" : "🥉";
 
   if (!entry) {
     return (
       <div
         className={cn(
           "flex-1 min-w-0 rounded-2xl border border-dashed border-primary/20 bg-muted/20 p-4 text-center",
-          scale
+          scale,
         )}
       >
         <p className="text-2xl mb-1">{label}</p>
@@ -114,14 +129,16 @@ function PodiumCard({
       className={cn(
         "flex-1 min-w-0 rounded-2xl border-2 bg-gradient-to-b from-card to-background/90 p-4 flex flex-col items-center text-center gap-2",
         ring,
-        scale
+        scale,
       )}
     >
       <span className="text-2xl leading-none">{label}</span>
       <div
         className={cn(
           "size-14 rounded-full overflow-hidden bg-muted/30 ring-1 ring-primary/20",
-          place === 1 ? "shadow-[0_0_18px_rgba(212,175,55,0.35)]" : "shadow-[0_0_14px_rgba(212,175,55,0.22)]"
+          place === 1
+            ? "shadow-[0_0_18px_rgba(212,175,55,0.35)]"
+            : "shadow-[0_0_14px_rgba(212,175,55,0.22)]",
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -202,8 +219,14 @@ export function LeaderboardModal({
         const map: Record<string, string> = {};
         for (const h of heroes.heroes ?? []) {
           // Map by both slug and any id-style string to be safe.
-          map[String((h as any).slug)] = resolveImg(apiBase, (h as any).image_url);
-          map[String((h as any).id)] = resolveImg(apiBase, (h as any).image_url);
+          map[String((h as any).slug)] = resolveImg(
+            apiBase,
+            (h as any).image_url,
+          );
+          map[String((h as any).id)] = resolveImg(
+            apiBase,
+            (h as any).image_url,
+          );
         }
         setHeroImgs(map);
       })
@@ -218,11 +241,10 @@ export function LeaderboardModal({
     };
   }, [open]);
 
-  const title =
-    lang === "mn" ? "Мэдлэгийн онооны жагсаалт" : "Knowledge points ranking";
+  const title = lang === "mn" ? "Онооны жагсаалт" : "Knowledge points ranking";
   const subtitle =
     lang === "mn"
-      ? "Системд бүртгэлтэй тоглогчдын эрэмбэ"
+      ? "Нийт бүртгэлтэй тоглогчдын жагсаалт"
       : "Ranked players in the game";
 
   const top3 = entries.slice(0, 3);
@@ -250,15 +272,12 @@ export function LeaderboardModal({
           "max-h-[min(88vh,640px)] overflow-hidden flex flex-col p-0 gap-0",
           "border border-primary/30 bg-card/95 backdrop-blur-xl",
           "shadow-[0_24px_80px_-24px_color-mix(in_oklch,var(--primary)_35%,#0a0c18)]",
-          "ring-1 ring-primary/10"
+          "ring-1 ring-primary/10",
         )}
       >
         <DialogHeader className="px-5 pt-5 pb-3 shrink-0 border-b border-primary/20 bg-gradient-to-br from-primary/[0.12] via-transparent to-[color-mix(in_oklch,oklch(35%_0.08_155)_12%,transparent)]">
-          <DialogTitle className="font-display flex items-center gap-2.5 text-lg md:text-xl">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary/15 border border-primary/30">
-              <Trophy className="size-5 text-primary" strokeWidth={1.5} />
-            </span>
-            <span className="flex flex-col gap-0.5 text-left">
+          <DialogTitle className="font-display flex items-center gap-2.5 text-lg md:text-xl w-full justify-center">
+            <span className="flex flex-col items-center gap-0.5 text-center">
               <span>{title}</span>
               <span className="text-[11px] font-normal text-muted-foreground font-sans tracking-normal">
                 {subtitle}
@@ -284,9 +303,24 @@ export function LeaderboardModal({
           {!loading && !err && entries.length > 0 && (
             <>
               <div className="flex flex-row items-end justify-center gap-2 sm:gap-3 px-1">
-                <PodiumCard entry={second} place={2} lang={lang} heroImg={imgFor(second?.hero_id ?? null)} />
-                <PodiumCard entry={first} place={1} lang={lang} heroImg={imgFor(first?.hero_id ?? null)} />
-                <PodiumCard entry={third} place={3} lang={lang} heroImg={imgFor(third?.hero_id ?? null)} />
+                <PodiumCard
+                  entry={second}
+                  place={2}
+                  lang={lang}
+                  heroImg={imgFor(second?.hero_id ?? null)}
+                />
+                <PodiumCard
+                  entry={first}
+                  place={1}
+                  lang={lang}
+                  heroImg={imgFor(first?.hero_id ?? null)}
+                />
+                <PodiumCard
+                  entry={third}
+                  place={3}
+                  lang={lang}
+                  heroImg={imgFor(third?.hero_id ?? null)}
+                />
               </div>
 
               {rest.length > 0 && (
@@ -296,7 +330,7 @@ export function LeaderboardModal({
                     {lang === "mn" ? "Бусад тоглогчид" : "Other players"}
                   </p>
                   <ul className="space-y-1.5 pr-1">
-                    {rest.map((e) => (
+                    {rest.map((e) =>
                       (() => {
                         const b = breakdownFrom(e);
                         return (
@@ -310,7 +344,10 @@ export function LeaderboardModal({
                             <div className="size-10 rounded-full overflow-hidden bg-muted/30 ring-1 ring-primary/15 shrink-0">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={imgFor(e.hero_id) || "/images/shikhikhutag.png"}
+                                src={
+                                  imgFor(e.hero_id) ||
+                                  "/images/shikhikhutag.png"
+                                }
                                 alt=""
                                 className="w-full h-full object-cover"
                               />
@@ -360,8 +397,8 @@ export function LeaderboardModal({
                             </span>
                           </li>
                         );
-                      })()
-                    ))}
+                      })(),
+                    )}
                   </ul>
                 </div>
               )}

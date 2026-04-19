@@ -270,7 +270,7 @@ export default function AdminGamesPage() {
         )}
       </section>
 
-      {/* <section className="admin-panel p-6 space-y-5">
+      <section className="admin-panel p-6 space-y-5">
         <div className="flex items-center gap-2 text-[var(--admin-muted)]">
           <Plus className="size-5 stroke-[1.5]" />
           <h2 className="font-display text-sm tracking-[0.15em] uppercase">
@@ -374,7 +374,7 @@ export default function AdminGamesPage() {
           <Plus className="size-4" />
           Нэмэх
         </Button>
-      </section> */}
+      </section>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto border-[var(--admin-border)] bg-[var(--admin-bg)] text-[var(--admin-text)]">

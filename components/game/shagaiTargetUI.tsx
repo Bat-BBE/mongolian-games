@@ -73,13 +73,13 @@ type UiStrings = {
 function useI18n(): UiStrings & { language: "mn" | "en" } {
   const { language } = useApp();
   const en: UiStrings = {
-    title: "TARGET 32",
+    title: "Homboroi",
     subtitle: "4 SHAGAI · RACE TO EXACTLY 32 · VS ROBOT",
     overline: "ᠳᠥᠷᠪᠡᠨ ᠪᠡᠷᠬᠡ",
     rollingHint: "⏳ Shagai falling...",
     robotRolling: "🤖 Robot is throwing...",
-    throwButton: "🎲 Throw 4 Shagai",
-    throwingButton: "🎲 Rolling...",
+    throwButton: "Throw Shagai",
+    throwingButton: "Rolling...",
     waitingRobot: "🤖 Robot's turn...",
     yourTurn: (left) =>
       left > 0
@@ -139,23 +139,23 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     },
   };
   const mn: UiStrings = {
-    title: "ЗОРИЛГО 32",
-    subtitle: "4 ШАГАЙ · ЯГ 32 ОНОО РУУ ГҮЙЦЭХ · РОБОТТОЙ",
+    title: "Хомборой",
+    subtitle: "4 ШАГАЙ · ЯГ 32 ОНООНД ХҮРЭХ · РОБОТТОЙ",
     overline: "ᠳᠥᠷᠪᠡᠨ ᠪᠡᠷᠬᠡ",
     rollingHint: "⏳ Шагайнууд бууж байна...",
-    robotRolling: "🤖 Робот шидэж байна...",
-    throwButton: "💢 Шагай шидэх",
+    robotRolling: "🤖 Робот орхиж байна...",
+    throwButton: "💢 Шагай орхих",
     throwingButton: "💢 Бууж байна...",
     waitingRobot: "🤖 Роботын ээлж...",
     yourTurn: (left) =>
       left > 0
         ? `Таны ээлж — ${left} оноо дутуу (хэтэрвэл 0-с эхэлнэ)`
-        : "Та яг 32-д хүрлээ!",
-    youBusted: "💥 Хэтэрлээ — оноо 0 руу буулаа",
+        : "Та яг 32-т хүрлээ!",
+    youBusted: "💥 Хэтэрлээ — оноо 0-c эхэлнэ",
     robotBusted: "💥 Робот хэтэрлээ — роботын оноо 0 боллоо",
-    robotThinking: "🤖 Робот бодож байна...",
-    youWon: "🏆 ТА 32 ОНОО ЯГ АВЛАА!",
-    robotWon: "🤖 Робот 32 оноо авлаа",
+    robotThinking: "🤖 Робот орхиж байна...",
+    youWon: "ТА 32 ОНОО ЯГ АВЛАА!",
+    robotWon: "Робот 32 оноо авлаа",
     score: "Оноо",
     target: `Яг ${TARGET_SCORE} оноонд хүрвэл ялна`,
     you: "ТА",
@@ -165,9 +165,9 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     robotGot: (pts) => `+${pts} оноо роботонд`,
     rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
     howToPlay:
-      "4 шагай шидээд тохирсон талаар оноо хуримтлуулна. Яг 32 оноонд хүрвэл ялна. 32-оос давбал оноо 0-с дахин эхэлнэ.",
+      "4 шагай орхиод тохирсон талаар оноо хуримтлуулна. Яг 32 оноонд хүрвэл ялна. 32-оос давбал оноо 0-с дахин эхэлнэ.",
     rules: [
-      { n: "①", t: "4 шагай шидэх", d: "Ээлж бүрд" },
+      { n: "①", t: "4 шагай орхих", d: "Ээлж бүрд" },
       { n: "②", t: "Онооны тохирол", d: "Онооны хүснэгтийг харна уу" },
       { n: "③", t: "Роботын ээлж", d: "Автоматаар шидэнэ" },
       { n: "④", t: "Ялалт", d: "Түрүүлж яг 32 оноонд хүр" },
@@ -288,7 +288,8 @@ function CurrentResult({
                 fontSize: 10,
                 color: info ? info.color : "#555",
                 letterSpacing: 0.5,
-                fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+                fontFamily:
+                  "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               }}
             >
               {side ? sideName(side, language) : "—"}
@@ -545,7 +546,8 @@ export default function ShagaiTargetUI({
     padding: "16px 16px 14px",
     backdropFilter: "blur(16px)",
     boxShadow: "0 8px 40px rgba(0,0,0,0.7)",
-    fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    fontFamily:
+      "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
     color: "white",
     zIndex: 10,
     maxHeight: "calc(100% - 40px)",
@@ -611,7 +613,8 @@ export default function ShagaiTargetUI({
                   fontSize: 13,
                   fontWeight: 900,
                   letterSpacing: 1.2,
-                  fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+                  fontFamily:
+                    "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
                   boxShadow:
                     e.kind === "coins"
                       ? "0 10px 40px rgba(200,160,48,0.18)"
@@ -792,7 +795,8 @@ export default function ShagaiTargetUI({
             fontSize: 15,
             fontWeight: "bold",
             letterSpacing: 2,
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+            fontFamily:
+              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             background:
               matchOver || canThrow
                 ? "linear-gradient(135deg, #c8a030, #f0c040 50%, #c8a030)"
@@ -1084,7 +1088,8 @@ export default function ShagaiTargetUI({
               border: "1px solid rgba(255,255,255,0.08)",
               borderRadius: 8,
               cursor: "pointer",
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
@@ -1171,7 +1176,8 @@ function ScoreCell({
             color,
             fontSize: 18,
             fontWeight: "bold",
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+            fontFamily:
+              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           }}
         >
           {value}

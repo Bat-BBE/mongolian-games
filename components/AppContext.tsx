@@ -176,11 +176,11 @@ const mn: Translations = {
       },
       {
         name: "Хорол",
-        desc: "Монголчуудын уламжлалт хөлөгт тоглоом бөгөөд стратеги, хамтын ажиллагааг хөгжүүлдэг.",
+        desc: "Зэндмэнэ: 60 мод, жин, гэр эсвэл цай — тоглоом дотор бүрэн дүрмийн заавар.",
       },
       {
-        name: "Оньсон тоглоом",
-        desc: "Оюун ухаан сорих модон оньс тайлах уламжлалт тоглоом.",
+        name: "Хос ол",
+        desc: "Санах ой, логик — 4×4 дээр шагайн талыг хос болгон ол.",
       },
       {
         name: "Тэвэг өшиглөх",
@@ -343,11 +343,11 @@ const en: Translations = {
       },
       {
         name: "Khorol",
-        desc: "A traditional Mongolian board strategy game.",
+        desc: "Zendmene: 60 pieces, trump, gers or tea — full rules inside the game modal.",
       },
       {
-        name: "Puzzle Locks",
-        desc: "Traditional wooden puzzle games that challenge logical thinking.",
+        name: "Memory Pairs",
+        desc: "Train memory and logic — match pairs of shagai sides on a 4×4 grid before time runs out.",
       },
       {
         name: "Teveg",

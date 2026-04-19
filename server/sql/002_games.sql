@@ -55,18 +55,18 @@ VALUES
     'khorol',
     'Хорол',
     'Khorol',
-    'Монголчуудын уламжлалт хөлөгт тоглоом бөгөөд стратеги, хамтын ажиллагааг хөгжүүлдэг.',
-    'A traditional Mongolian board strategy game.',
+    'Зэндмэнэ: 60 мод (гар 12, газар 48), ахалтын дараалал, жин, тэгш тоотойд гэр, сондгойд цай хураах. Тоглоом дотор дүрмийн дэлгэц.',
+    'Zendmene (Khorol): 60 pieces, strength order, trump (jin), team gers or tea scoring for odd counts. In-app rules screen.',
     false,
     4
   ),
   (
     'puzzle',
-    'Оньсон тоглоом',
-    'Puzzle Locks',
-    'Оюун ухаан сорих модон оньс тайлах уламжлалт тоглоом.',
-    'Traditional wooden puzzle games that challenge logical thinking.',
-    false,
+    'Хос ол',
+    'Memory Pairs',
+    'Санах ой, анхаарал, логик шаардсан тоглоом: 4×4 талбарт нуугдсан шагайн талыг хос болгон илрүүлнэ. Хугацаа дуусахаас өмнө бүх хосыг таа.',
+    'A logic and memory game: reveal pairs of traditional shagai sides on a 4×4 grid. Match all pairs before time runs out.',
+    true,
     5
   ),
   (
@@ -86,5 +86,23 @@ VALUES
     'A simple but engaging guessing game that improves attention and memory.',
     true,
     7
+  ),
+  (
+    'horse-race',
+    'Шагайн морь уралдах',
+    'Shagai Horse Race',
+    'Шагайгаар мори уралдуулдаг уламжлалт тоглоом. 4 шагай шидэж морь буусан тоогоороо өөрийн мориноос 20 шагайт замаар урагш ахиулж, роботыг хожих.',
+    'A traditional Mongolian horse racing game played with shagai. Throw 4 shagai and advance your racer by the number of horse-landed sides, reaching the finish before the robot.',
+    true,
+    8
+  ),
+  (
+    'shagai-guess',
+    'Шагай таалцах',
+    'Shagai Guess',
+    'Хоёр тал ижил тоотой шагай хуваан авч, тойрог бүрд нуугдсан шагайныхаа зөв тоог таах тоглоом. Зөв таасан тал нуугдсан шагайг нь авна. Эхлээд шагайгаа хожигдсөн хэсэг хасагдана.',
+    'A traditional Mongolian guessing game. Both sides start with the same number of shagai, secretly hide some in their fist, and guess the combined hidden total. The correct guesser takes the shagai from the loser; the side that collects every shagai wins.',
+    true,
+    9
   )
 ON CONFLICT (slug) DO NOTHING;

@@ -13,7 +13,6 @@ import {
   INITIAL_STATE,
   ShagaiSide,
   isDorvenBerkh,
-  rollRobotSides,
   scoreRoll,
   TARGET_SCORE,
 } from "./fourBonusType";
@@ -264,7 +263,6 @@ interface SceneProps {
 }
 
 function GameScene({
-  state,
   throwParams,
   isThrown,
   settledSides,
@@ -313,6 +311,8 @@ export default function FourBonesGame({
     null,
     null,
   ]);
+  const [currentTurn, setCurrentTurn] = useState<"player" | "robot">("player");
+  const currentTurnRef = useRef<"player" | "robot">("player");
   const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
   const settledCount = useRef(0);
   const resultSentRef = useRef(false);
@@ -386,6 +386,33 @@ export default function FourBonesGame({
     onComplete?.(won ? "win" : "lose");
   }, [state.phase, state.playerScore, state.robotScore, onComplete, pushReward]);
 
+  const startThrow = useCallback((turn: "player" | "robot") => {
+    const params = [0, 1, 2, 3].map((i) => getThrowParams(i));
+    setThrowParams(params);
+    settledRef.current = [null, null, null, null];
+    settledCount.current = 0;
+    resultSentRef.current = false;
+    setSettledSides([null, null, null, null]);
+    setCurrentTurn(turn);
+    currentTurnRef.current = turn;
+
+    setState((prev) => ({
+      ...prev,
+      phase: "throwing",
+      // Only player throws advance the totalThrows counter (matches the
+      // other shagai games).
+      totalThrows:
+        turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
+      // Reset the previous robot result on the start of a new player throw
+      // so the robot panel doesn't show stale data.
+      robotSides: turn === "player" ? null : prev.robotSides,
+      robotPoints: turn === "player" ? 0 : prev.robotPoints,
+    }));
+
+    setIsThrown(false);
+    setTimeout(() => setIsThrown(true), 50);
+  }, []);
+
   const handleThrow = useCallback(() => {
     if (
       state.phase !== "idle" &&
@@ -393,26 +420,8 @@ export default function FourBonesGame({
       state.phase !== "robotResult"
     )
       return;
-    // Robot's turn automatically follows, not via this button.
-
-    const params = [0, 1, 2, 3].map((i) => getThrowParams(i));
-    setThrowParams(params);
-    settledRef.current = [null, null, null, null];
-    settledCount.current = 0;
-    resultSentRef.current = false;
-    setSettledSides([null, null, null, null]);
-
-    setState((prev) => ({
-      ...prev,
-      phase: "throwing",
-      totalThrows: prev.totalThrows + 1,
-      robotSides: null,
-      robotPoints: 0,
-    }));
-
-    setIsThrown(false);
-    setTimeout(() => setIsThrown(true), 50);
-  }, [state.phase]);
+    startThrow("player");
+  }, [state.phase, startThrow]);
 
   const handleSettle = useCallback(
     (id: number, side: ShagaiSide) => {
@@ -431,31 +440,52 @@ export default function FourBonesGame({
           const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
           const win = isDorvenBerkh(sides);
           const { points } = scoreRoll(sides);
+          const turn = currentTurnRef.current;
 
-          // Small per-round reward so rewards feel alive.
-          if (points > 0) pushReward({ coins: points });
+          if (turn === "player") {
+            // Small per-round reward so rewards feel alive.
+            if (points > 0) pushReward({ coins: points });
 
-          setState((prev) => {
-            const nextStreak = win ? prev.streak + 1 : 0;
-            return {
+            setState((prev) => {
+              const nextStreak = win ? prev.streak + 1 : 0;
+              return {
+                ...prev,
+                phase: "playerResult",
+                history: [
+                  ...prev.history,
+                  {
+                    turn: "player",
+                    sides,
+                    isDorvenBerkh: win,
+                    points,
+                    throwNumber: prev.totalThrows,
+                  },
+                ],
+                playerScore: prev.playerScore + points,
+                streak: nextStreak,
+                bestStreak: Math.max(prev.bestStreak, nextStreak),
+                lastPlayerPoints: points,
+              };
+            });
+          } else {
+            setState((prev) => ({
               ...prev,
-              phase: "playerResult",
+              phase: "robotResult",
+              robotSides: sides,
+              robotPoints: points,
+              robotScore: prev.robotScore + points,
               history: [
                 ...prev.history,
                 {
-                  turn: "player",
+                  turn: "robot",
                   sides,
                   isDorvenBerkh: win,
                   points,
                   throwNumber: prev.totalThrows,
                 },
               ],
-              playerScore: prev.playerScore + points,
-              streak: nextStreak,
-              bestStreak: Math.max(prev.bestStreak, nextStreak),
-              lastPlayerPoints: points,
-            };
-          });
+            }));
+          }
         }, 500);
       }
     },
@@ -476,33 +506,16 @@ export default function FourBonesGame({
     return () => clearTimeout(t1);
   }, [state.phase, state.playerScore]);
 
-  // Robot thinking → reveal.
+  // Robot thinking → physically throw its own 4 shagai (same mat as the
+  // player). handleSettle picks up the result once they come to rest and
+  // advances the phase to "robotResult".
   useEffect(() => {
     if (state.phase !== "robotThinking") return;
     const t1 = setTimeout(() => {
-      const sides = rollRobotSides();
-      const win = isDorvenBerkh(sides);
-      const { points } = scoreRoll(sides);
-      setState((prev) => ({
-        ...prev,
-        phase: "robotResult",
-        robotSides: sides,
-        robotPoints: points,
-        robotScore: prev.robotScore + points,
-        history: [
-          ...prev.history,
-          {
-            turn: "robot",
-            sides,
-            isDorvenBerkh: win,
-            points,
-            throwNumber: prev.totalThrows,
-          },
-        ],
-      }));
-    }, 1300);
+      startThrow("robot");
+    }, 1100);
     return () => clearTimeout(t1);
-  }, [state.phase]);
+  }, [state.phase, startThrow]);
 
   // After robotResult, decide next step.
   useEffect(() => {
@@ -522,6 +535,8 @@ export default function FourBonesGame({
   const handleReset = useCallback(() => {
     setState(INITIAL_STATE);
     setSettledSides([null, null, null, null]);
+    setCurrentTurn("player");
+    currentTurnRef.current = "player";
     settledCount.current = 0;
     setIsThrown(false);
     resultSentRef.current = false;

@@ -109,7 +109,7 @@ export interface DashStrings {
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
   mn: {
     title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМ",
-    knowledgePoints: "Мэдлэгийн Оноо",
+    knowledgePoints: "Цуглуулсан Оноо",
     dailyTokens: "Өдрийн Токен",
     rank: "Урамшуулал",
     rankTitle: "Хувь",
@@ -140,7 +140,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     },
 
     currentLocation: "Одоогийн байршил",
-    nextStation: "Дараагийн уртуу",
+    nextStation: "Дараагийн өртөө",
     locked: "Хаалттай",
 
     leaderboard: "Жагсаалт",
@@ -552,10 +552,10 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     profilePageTitle: "Тоглогчийн профайл",
     profileVisitedStationsTitle: "Очсон өртөөнүүд",
     profileChangeHeroTitle: "Баатар солих",
-    profileHeroCooldownLabel: "Дараагийн солилт хүртэл",
+    profileHeroCooldownLabel: "Дараагийн солих хүртэлх хугацаа:",
     profileHeroOnCooldown:
       "24 цаг тутамд нэг удаа баатраа солино. Дуусах хүртэл түр хүлээнэ үү.",
-    profileHeroConfirm: "Энэ баатрыг сонгох",
+    profileHeroConfirm: "Сонгох",
     profileNoSession:
       "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товчоор нэвтэрнэ үү.",
     dialogClose: "Хаах",
@@ -1031,7 +1031,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapYourGerTitle: "Your ger",
     mapYourGerSubtitle: "Your home base on the journey map",
     mapHomePinLabel: "Home",
-    mapGoToGer: "Go to ger",
+    mapGoToGer: "Home",
     gamesAtStation: "Games",
     gameStatusLocked: "Locked",
     gameStatusDone: "Completed",

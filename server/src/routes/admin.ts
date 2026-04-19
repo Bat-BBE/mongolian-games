@@ -19,7 +19,7 @@ const gameBody = z.object({
   name_en: z.string().min(1).max(500),
   description_mn: z.string().max(10000).optional().default(""),
   description_en: z.string().max(10000).optional().default(""),
-  image_url: z.string().optional(),
+  image_url: z.string().nullish(),
   is_available: z.boolean(),
   show_on_home: z.boolean().optional().default(true),
   sort_order: z.number().int(),

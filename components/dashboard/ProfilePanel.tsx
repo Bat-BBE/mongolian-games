@@ -65,9 +65,6 @@ export function ProfilePanel({
   const [cooldownMs, setCooldownMs] = useState(0);
   const [heroRows, setHeroRows] = useState<HeroRow[]>([]);
 
-  // Look up a hero image by id — prefers the backend row so any admin
-  // upload (stored under `/uploads/heroes/...`) wins, and falls back to the
-  // bundled HEROES data so the UI never renders a broken image.
   const heroImageById = useCallback(
     (id: HeroId): string => {
       const row =
@@ -123,17 +120,12 @@ export function ProfilePanel({
         setHeroTitle(
           String(bundle.computed.displayHeroTitle ?? prof.heroTitle ?? ""),
         );
-        // Prefer the authoritative hero row image; fall back to the saved
-        // profile value; finally use the bundled local portrait so the
-        // avatar never renders as a broken icon.
         const heroId =
           typeof prof.heroId === "string"
             ? parseHeroId(prof.heroId)
             : parseHeroId(saved.heroId);
         const rowImg =
-          typeof h?.image_url === "string"
-            ? resolveAssetUrl(h.image_url)
-            : "";
+          typeof h?.image_url === "string" ? resolveAssetUrl(h.image_url) : "";
         const profImg = resolveAssetUrl((prof as any).heroImages);
         const localImg = HEROES.find((x) => x.id === heroId)?.imageUrl ?? "";
         setHeroImage(rowImg || profImg || localImg);
@@ -248,7 +240,7 @@ export function ProfilePanel({
   return (
     <div className="space-y-3 pr-1">
       <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-        <div className="shrink-0 w-24 h-24 rounded-full overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.35)]">
+        <div className="shrink-0 w-22 h-30 rounded-full overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.35)]">
           <img
             src={heroImage || "/images/shikhikhutag.png"}
             alt=""
@@ -256,9 +248,6 @@ export function ProfilePanel({
           />
         </div>
         <div className="flex-1 text-center sm:text-left space-y-1 min-w-0">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-            {tier}
-          </p>
           <h2 className="font-display text-lg sm:text-xl tracking-wide">
             {heroName}
           </h2>
