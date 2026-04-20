@@ -6,13 +6,16 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   ShagaiSide,
-  weightedTraditionalSide,
-  buildTargetQuaternion,
+  biasSideForAirTorque,
+  detectShagaiSideFromQuaternion,
+  isShagaiOnkh,
+  SHAGAI_PHYS_BOX,
   SHAGAI_SIDE_UP_AXIS,
 } from "./shagai";
 import { useGLTF } from "@react-three/drei";
 
-const PHYS_BOX: [number, number, number] = [1.3, 0.5, 2.0];
+const PHYS_BOX = SHAGAI_PHYS_BOX;
+const MAX_ONKH_RETRIES = 14;
 
 export { pickLastShagai };
 
@@ -64,7 +67,9 @@ function pickLastShagai(
   targetSize: [number, number, number],
 ): THREE.Object3D | null {
   if (!root) return null;
-  debugDumpScene(root);
+  if (process.env.NODE_ENV === "development") {
+    debugDumpScene(root);
+  }
 
   const wrap = new THREE.Group();
 
@@ -96,12 +101,15 @@ function pickLastShagai(
     cloned.quaternion.copy(quat);
     cloned.scale.copy(scl);
     wrap.add(cloned);
-    console.log(
-      "[shagai] mode=multi-mesh, total=",
-      meshes.length,
-      "picked last:",
-      last.name || last.uuid,
-    );
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log(
+        "[shagai] mode=multi-mesh, total=",
+        meshes.length,
+        "picked last:",
+        last.name || last.uuid,
+      );
+    }
   } else {
     // Case 3: single mesh, possibly 3 islands merged in one geometry.
     const mesh = meshes[0]!;
@@ -109,11 +117,14 @@ function pickLastShagai(
     if (split && split.length >= 2) {
       const last = split[split.length - 1]!;
       wrap.add(last);
-      console.log(
-        "[shagai] mode=split-islands, islands=",
-        split.length,
-        "picked last",
-      );
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log(
+          "[shagai] mode=split-islands, islands=",
+          split.length,
+          "picked last",
+        );
+      }
     } else {
       // Truly a single shagai — just clone the mesh as is.
       mesh.updateWorldMatrix(true, false);
@@ -126,7 +137,10 @@ function pickLastShagai(
       cloned.quaternion.copy(quat);
       cloned.scale.copy(scl);
       wrap.add(cloned);
-      console.log("[shagai] mode=single-mesh (no split)");
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("[shagai] mode=single-mesh (no split)");
+      }
     }
   }
 
@@ -202,8 +216,9 @@ function fitToBox(
   const s = Math.min(sx, sy, sz) * 0.95;
   wrap.scale.setScalar(s);
 
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
     try {
+      // eslint-disable-next-line no-console
       console.log(
         "[shagai] aligned model. original size=",
         size
@@ -354,17 +369,12 @@ export default function ShagaiModel({
 }: ShagaiModelProps) {
   const groupRef = useRef<THREE.Group>(null);
   const velRef = useRef<[number, number, number]>([0, 0, 0]);
+  const angVelRef = useRef<[number, number, number]>([0, 0, 0]);
   const posRef = useRef<[number, number, number]>([0, 5, 0]);
   const airtimeRef = useRef(0);
   const reportedRef = useRef(false);
-  // Pre-decided side for the current throw and the snap machinery.
-  const decidedSideRef = useRef<ShagaiSide>("sheep");
-  const snapStartQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const snapTargetQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const snapStartPosRef = useRef<[number, number, number]>([0, 0, 0]);
-  const snapActiveRef = useRef(false);
-  const snapElapsedRef = useRef(0);
-  const SNAP_DURATION = 0.22; // seconds — quick enough to not be jarring
+  const biasTargetRef = useRef<ShagaiSide>("sheep");
+  const onkhRetryRef = useRef(0);
   // Rest heights measured from the actual visual mesh (not the collider)
   // so the bone sits flush on the floor no matter which face lands up.
   const restHeightsRef = useRef<Record<ShagaiSide, number>>({
@@ -384,13 +394,10 @@ export default function ShagaiModel({
     mass: 0.55,
     position: [0, 5, 0],
     args: PHYS_BOX,
-    // Moderate damping + friction: enough to settle quickly, but not so much
-    // that the shagai locks into a narrow-side rest. It must be allowed to
-    // tumble a bit after landing so it can roll onto its wide face.
-    restitution: 0.2,
-    friction: 0.55,
-    linearDamping: 0.22,
-    angularDamping: 0.22,
+    restitution: 0.14,
+    friction: 0.72,
+    linearDamping: 0.28,
+    angularDamping: 0.34,
   }));
 
   useEffect(() => {
@@ -400,9 +407,13 @@ export default function ShagaiModel({
     const u2 = api.position.subscribe((p) => {
       posRef.current = p;
     });
+    const u3 = api.angularVelocity.subscribe((w) => {
+      angVelRef.current = w;
+    });
     return () => {
       u1();
       u2();
+      u3();
     };
   }, [api]);
 
@@ -472,15 +483,15 @@ export default function ShagaiModel({
   }, [model]);
 
   useEffect(() => {
-    if (!isThrown) return;
+    if (!isThrown) {
+      onkhRetryRef.current = 0;
+      return;
+    }
 
     reportedRef.current = false;
     airtimeRef.current = 0;
-    snapActiveRef.current = false;
-    snapElapsedRef.current = 0;
-
-    // Pre-decide the outcome using the traditional distribution.
-    decidedSideRef.current = weightedTraditionalSide();
+    onkhRetryRef.current = 0;
+    biasTargetRef.current = biasSideForAirTorque();
 
     // Wake up the body in case a previous throw ended with api.sleep().
     api.wakeUp();
@@ -509,87 +520,67 @@ export default function ShagaiModel({
     const speed = Math.sqrt(
       velRef.current[0] ** 2 + velRef.current[1] ** 2 + velRef.current[2] ** 2,
     );
-    // Allow any resting orientation: widest half-dim of the box + buffer.
-    // (Y-up ≈ 0.25, X-up ≈ 0.65, Z-up / onkh ≈ 1.0 — all count as grounded.)
+    const [wx, wy, wz] = angVelRef.current;
+    const angSpeed = Math.sqrt(wx * wx + wy * wy + wz * wz);
     const grounded = posRef.current[1] < 1.2;
 
-    // --- Smooth orientation snap to the pre-decided side ---------------
-    if (snapActiveRef.current) {
-      snapElapsedRef.current += delta;
-      const t = Math.min(1, snapElapsedRef.current / SNAP_DURATION);
-      // Ease-in-out for a gentle settle motion.
-      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      const q = new THREE.Quaternion()
-        .copy(snapStartQuatRef.current)
-        .slerp(snapTargetQuatRef.current, e);
-      api.quaternion.set(q.x, q.y, q.z, q.w);
-      const targetY = restHeightsRef.current[decidedSideRef.current];
-      const startY = snapStartPosRef.current[1];
-      const py = startY + (targetY - startY) * e;
-      api.position.set(snapStartPosRef.current[0], py, snapStartPosRef.current[2]);
-      api.velocity.set(0, 0, 0);
-      api.angularVelocity.set(0, 0, 0);
-      if (t >= 1) {
-        snapActiveRef.current = false;
-        reportedRef.current = true;
-        // Put the body to sleep so it doesn't topple / drift after the snap.
-        api.sleep();
-        onLand();
-        onResult(decidedSideRef.current);
-      }
-      return;
-    }
-
-    // --- Gentle in-flight bias toward the pre-decided orientation ----------
-    // While the shagai is still moving we nudge the side we want to be "up"
-    // toward the world up vector. By the time physics comes to rest the
-    // bone is already close to the target pose, so the final snap is tiny
-    // and not visible as a jarring flip from one side to another.
-    if (airtimeRef.current > 0.25 && speed > 0.2) {
+    if (airtimeRef.current > 0.22 && speed > 0.12) {
       const currentQuat = new THREE.Quaternion();
       groupRef.current.getWorldQuaternion(currentQuat);
-      const targetLocal = SHAGAI_SIDE_UP_AXIS[decidedSideRef.current]
+      const targetLocal = SHAGAI_SIDE_UP_AXIS[biasTargetRef.current]
         .clone()
         .applyQuaternion(currentQuat);
       const worldUp = new THREE.Vector3(0, 1, 0);
       const alignDot = targetLocal.dot(worldUp);
-      if (alignDot < 0.98) {
+      if (alignDot < 0.9) {
         const torqueAxis = new THREE.Vector3()
           .crossVectors(targetLocal, worldUp)
           .normalize()
-          .multiplyScalar(1.4);
+          .multiplyScalar(3.8);
         api.applyTorque([torqueAxis.x, torqueAxis.y, torqueAxis.z]);
       }
     }
 
-    // --- Wait until the shagai is near rest, then start the snap --------
     const nearRest =
-      airtimeRef.current > 1.4 && speed < 0.8 && grounded;
-    // Safety: even if physics keeps the bone rolling forever, force a snap
-    // after enough airtime so the game never stalls.
-    const forceSnap = airtimeRef.current > 4.5;
-    if (nearRest || forceSnap) {
-      const currentQuat = new THREE.Quaternion();
-      groupRef.current.getWorldQuaternion(currentQuat);
-      snapStartQuatRef.current.copy(currentQuat);
-      snapTargetQuatRef.current.copy(
-        buildTargetQuaternion(decidedSideRef.current),
-      );
-      snapStartPosRef.current = [
-        posRef.current[0],
-        posRef.current[1],
-        posRef.current[2],
-      ];
-      snapElapsedRef.current = 0;
-      snapActiveRef.current = true;
-      if (typeof window !== "undefined") {
-        try {
-          console.log(
-            "[shagai] snapping to pre-decided side =",
-            decidedSideRef.current,
-          );
-        } catch {}
+      airtimeRef.current > 1.1 && speed < 0.28 && angSpeed < 0.22 && grounded;
+    const stall = airtimeRef.current > 9;
+    if (nearRest || stall) {
+      const q = new THREE.Quaternion();
+      groupRef.current.getWorldQuaternion(q);
+
+      if (isShagaiOnkh(q) && onkhRetryRef.current < MAX_ONKH_RETRIES) {
+        onkhRetryRef.current += 1;
+        airtimeRef.current = 0;
+        biasTargetRef.current = biasSideForAirTorque();
+        api.wakeUp();
+        api.position.set(0, 5, 0);
+        api.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+        );
+        api.velocity.set(
+          (Math.random() - 0.5) * 5.5,
+          7.0,
+          (Math.random() - 0.5) * 5.5,
+        );
+        api.angularVelocity.set(
+          (Math.random() - 0.5) * 12,
+          (Math.random() - 0.5) * 12,
+          (Math.random() - 0.5) * 12,
+        );
+        return;
       }
+
+      const side = detectShagaiSideFromQuaternion(q);
+      const y = restHeightsRef.current[side];
+      api.velocity.set(0, 0, 0);
+      api.angularVelocity.set(0, 0, 0);
+      api.position.set(posRef.current[0], y, posRef.current[2]);
+      api.sleep();
+      reportedRef.current = true;
+      onLand();
+      onResult(side);
     }
   });
 

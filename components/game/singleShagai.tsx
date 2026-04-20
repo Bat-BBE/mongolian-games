@@ -6,17 +6,38 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ShagaiSide, SHAGAI_INFO } from "./fourBonusType";
 import {
-  weightedTraditionalSide,
-  buildTargetQuaternion,
+  biasSideForAirTorque,
+  detectShagaiSideFromQuaternion,
+  isShagaiOnkh,
+  SHAGAI_PHYS_BOX,
   SHAGAI_SIDE_UP_AXIS,
 } from "./shagai";
 import { useGLTF } from "@react-three/drei";
 import { pickLastShagai } from "./shagaiModel";
 
-// Same anatomical aspect ratio as the single-shagai game, tuned to give a
-// balanced traditional distribution (sheep/goat dominant but horse/camel
-// still happen, onkh rare).
-const PHYS_BOX: [number, number, number] = [1.35, 0.55, 2.15];
+const PHYS_BOX = SHAGAI_PHYS_BOX;
+const MAX_ONKH_RETRIES = 14;
+
+/**
+ * Canvas дотор нэг удаа дуудаж, 4 шидэлтийн SingleShagai-д `pieceTemplate` өг.
+ * Ингэснээр pickLastShagai / fitToBox зөвхөн нэг удаа ажиллана (анхны ачаалал хурдан).
+ */
+export function useShagaiThrowPieceTemplate(): THREE.Object3D | null {
+  const gltf = useGLTF("/models/shagai_model.glb");
+  return useMemo(() => {
+    const scene = (gltf as any)?.scene as THREE.Object3D | undefined;
+    const wrap = pickLastShagai(scene, PHYS_BOX);
+    if (!wrap) return null;
+    wrap.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) {
+        const m = o as THREE.Mesh;
+        m.castShadow = true;
+        m.receiveShadow = true;
+      }
+    });
+    return wrap;
+  }, [gltf]);
+}
 
 interface SingleShagaiProps {
   id: number;
@@ -27,12 +48,8 @@ interface SingleShagaiProps {
   onSettle: (id: number, side: ShagaiSide) => void;
   highlight: boolean;
   resultSide: ShagaiSide | null;
-  /**
-   * Optional pre-decided outcome. When provided, the shagai will bias toward
-   * this side instead of picking a random weighted one. Used for the robot's
-   * turn so the visible 3D roll matches the pre-computed score.
-   */
-  forcedSide?: ShagaiSide | null;
+  /** @see useShagaiThrowPieceTemplate — нэг удаа үүсгэсэн загварыг дамжуулбал анхны ачаалал хөнгөрнө. */
+  pieceTemplate?: THREE.Object3D | null;
 }
 
 function buildShagaiGeo(): THREE.BufferGeometry {
@@ -99,7 +116,7 @@ export default function SingleShagai({
   onSettle,
   highlight,
   resultSide,
-  forcedSide,
+  pieceTemplate,
 }: SingleShagaiProps) {
   const groupRef = useRef<THREE.Group>(null);
   const velRef = useRef<[number, number, number]>([0, 0, 0]);
@@ -113,13 +130,10 @@ export default function SingleShagai({
     PHYS_BOX[1] / 2 + 0.02,
     startPos[2],
   ];
-  const decidedSideRef = useRef<ShagaiSide>("sheep");
-  const snapStartQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const snapTargetQuatRef = useRef<THREE.Quaternion>(new THREE.Quaternion());
-  const snapStartPosRef = useRef<[number, number, number]>(startPos);
-  const snapActiveRef = useRef(false);
-  const snapElapsedRef = useRef(0);
-  const SNAP_DURATION = 0.22;
+  const angVelRef = useRef<[number, number, number]>([0, 0, 0]);
+  /** Нисэх үед torque-ийн чиглэл — тал хэлэхэд detect ашиглана. */
+  const biasTargetRef = useRef<ShagaiSide>("sheep");
+  const onkhRetryRef = useRef(0);
   const restHeightsRef = useRef<Record<ShagaiSide, number>>({
     sheep: PHYS_BOX[2] / 2,
     goat: PHYS_BOX[2] / 2,
@@ -128,6 +142,17 @@ export default function SingleShagai({
   });
   const gltf = useGLTF("/models/shagai_model.glb");
   const model = useMemo(() => {
+    if (pieceTemplate) {
+      const wrap = pieceTemplate.clone(true) as THREE.Group;
+      wrap.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) {
+          const m = o as THREE.Mesh;
+          m.castShadow = true;
+          m.receiveShadow = true;
+        }
+      });
+      return wrap;
+    }
     const scene = (gltf as any)?.scene as THREE.Object3D | undefined;
     const wrap = pickLastShagai(scene, PHYS_BOX);
     if (!wrap) return null;
@@ -139,7 +164,7 @@ export default function SingleShagai({
       }
     });
     return wrap;
-  }, [gltf]);
+  }, [gltf, pieceTemplate]);
 
   useEffect(() => {
     if (!model) return;
@@ -185,10 +210,10 @@ export default function SingleShagai({
     allowSleep: true,
     sleepSpeedLimit: 0.2,
     sleepTimeLimit: 0.2,
-    restitution: 0.2,
-    friction: 0.55,
-    linearDamping: 0.22,
-    angularDamping: 0.22,
+    restitution: 0.14,
+    friction: 0.72,
+    linearDamping: 0.28,
+    angularDamping: 0.34,
   }));
 
   useEffect(() => {
@@ -198,9 +223,13 @@ export default function SingleShagai({
     const u2 = api.position.subscribe((p) => {
       posRef.current = p;
     });
+    const u3 = api.angularVelocity.subscribe((w) => {
+      angVelRef.current = w;
+    });
     return () => {
       u1();
       u2();
+      u3();
     };
   }, [api]);
 
@@ -215,14 +244,15 @@ export default function SingleShagai({
   }, [api]);
 
   useEffect(() => {
-    if (!isThrown) return;
+    if (!isThrown) {
+      onkhRetryRef.current = 0;
+      return;
+    }
     hasThrownRef.current = true;
     reportedRef.current = false;
     airtimeRef.current = 0;
-    snapActiveRef.current = false;
-    snapElapsedRef.current = 0;
-
-    decidedSideRef.current = forcedSide ?? weightedTraditionalSide();
+    onkhRetryRef.current = 0;
+    biasTargetRef.current = biasSideForAirTorque();
 
     api.wakeUp();
     api.position.set(...startPos);
@@ -245,7 +275,7 @@ export default function SingleShagai({
     return () => {
       clearTimeout(t);
     };
-  }, [isThrown]); // eslint-disable-line
+  }, [isThrown]);
 
   useFrame((_, delta) => {
     if (!groupRef.current) return;
@@ -272,69 +302,71 @@ export default function SingleShagai({
     }
 
     const [vx, vy, vz] = velRef.current;
+    const [wx, wy, wz] = angVelRef.current;
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+    const angSpeed = Math.sqrt(wx * wx + wy * wy + wz * wz);
     const grounded = posRef.current[1] < 1.1;
 
-    if (snapActiveRef.current) {
-      snapElapsedRef.current += delta;
-      const t = Math.min(1, snapElapsedRef.current / SNAP_DURATION);
-      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-      const q = new THREE.Quaternion()
-        .copy(snapStartQuatRef.current)
-        .slerp(snapTargetQuatRef.current, e);
-      api.quaternion.set(q.x, q.y, q.z, q.w);
-      const targetY = restHeightsRef.current[decidedSideRef.current];
-      const startY = snapStartPosRef.current[1];
-      const py = startY + (targetY - startY) * e;
-      api.position.set(
-        snapStartPosRef.current[0],
-        py,
-        snapStartPosRef.current[2],
-      );
-      api.velocity.set(0, 0, 0);
-      api.angularVelocity.set(0, 0, 0);
-      if (t >= 1) {
-        snapActiveRef.current = false;
-        reportedRef.current = true;
-        api.sleep();
-        onSettle(id, decidedSideRef.current);
-      }
-      return;
-    }
-
-    if (airtimeRef.current > 0.25 && speed > 0.2) {
+    if (airtimeRef.current > 0.22 && speed > 0.12) {
       const currentQuat = new THREE.Quaternion();
       groupRef.current.getWorldQuaternion(currentQuat);
-      const targetLocal = SHAGAI_SIDE_UP_AXIS[decidedSideRef.current]
+      const targetLocal = SHAGAI_SIDE_UP_AXIS[biasTargetRef.current]
         .clone()
         .applyQuaternion(currentQuat);
       const worldUp = new THREE.Vector3(0, 1, 0);
       const alignDot = targetLocal.dot(worldUp);
-      if (alignDot < 0.98) {
+      if (alignDot < 0.91) {
         const torqueAxis = new THREE.Vector3()
           .crossVectors(targetLocal, worldUp)
           .normalize()
-          .multiplyScalar(1.2);
+          .multiplyScalar(4.2);
         api.applyTorque([torqueAxis.x, torqueAxis.y, torqueAxis.z]);
       }
     }
 
-    const nearRest = airtimeRef.current > 1.4 && speed < 0.8 && grounded;
-    const forceSnap = airtimeRef.current > 4.5;
-    if (nearRest || forceSnap) {
-      const currentQuat = new THREE.Quaternion();
-      groupRef.current.getWorldQuaternion(currentQuat);
-      snapStartQuatRef.current.copy(currentQuat);
-      snapTargetQuatRef.current.copy(
-        buildTargetQuaternion(decidedSideRef.current),
-      );
-      snapStartPosRef.current = [
-        posRef.current[0],
-        posRef.current[1],
-        posRef.current[2],
-      ];
-      snapElapsedRef.current = 0;
-      snapActiveRef.current = true;
+    const nearRest =
+      airtimeRef.current > 1.1 &&
+      speed < 0.28 &&
+      angSpeed < 0.22 &&
+      grounded;
+    const stall = airtimeRef.current > 9;
+    if (nearRest || stall) {
+      const q = new THREE.Quaternion();
+      groupRef.current.getWorldQuaternion(q);
+
+      if (isShagaiOnkh(q) && onkhRetryRef.current < MAX_ONKH_RETRIES) {
+        onkhRetryRef.current += 1;
+        airtimeRef.current = 0;
+        biasTargetRef.current = biasSideForAirTorque();
+        api.wakeUp();
+        api.position.set(...startPos);
+        api.rotation.set(
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+          Math.random() * Math.PI * 2,
+        );
+        const j = (spread: number) => (Math.random() - 0.5) * spread;
+        api.velocity.set(
+          throwVel[0] + j(0.5),
+          throwVel[1],
+          throwVel[2] + j(0.5),
+        );
+        api.angularVelocity.set(
+          throwAngVel[0] + j(3),
+          throwAngVel[1] + j(3),
+          throwAngVel[2] + j(3),
+        );
+        return;
+      }
+
+      const side = detectShagaiSideFromQuaternion(q);
+      const y = restHeightsRef.current[side];
+      api.velocity.set(0, 0, 0);
+      api.angularVelocity.set(0, 0, 0);
+      api.position.set(posRef.current[0], y, posRef.current[2]);
+      api.sleep();
+      reportedRef.current = true;
+      onSettle(id, side);
     }
   });
 

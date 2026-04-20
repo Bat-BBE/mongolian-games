@@ -395,7 +395,7 @@ export default function AdminHeroesPage() {
                     ) : null}
                   </div>
                 </div>
-                {/* <div className="space-y-1.5">
+                <div className="space-y-1.5">
                   <Label>model_path</Label>
                   <Input
                     value={editing.model_path ?? ""}
@@ -406,7 +406,7 @@ export default function AdminHeroesPage() {
                     }
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
-                </div> */}
+                </div>
                 {/* <div className="space-y-1.5">
                   <Label>color</Label>
                   <Input

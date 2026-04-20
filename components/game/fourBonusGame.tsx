@@ -6,7 +6,7 @@ import { Physics, usePlane } from "@react-three/cannon";
 import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import SingleShagai from "./singleShagai";
+import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import FourBonesUI from "./fourBonusUI";
 import {
   GameState,
@@ -270,6 +270,7 @@ function GameScene({
   isWin,
 }: SceneProps) {
   const allDone = settledSides.every((s) => s !== null);
+  const pieceTemplate = useShagaiThrowPieceTemplate();
 
   return (
     <>
@@ -288,6 +289,7 @@ function GameScene({
           onSettle={onSettle}
           highlight={isWin && allDone}
           resultSide={settledSides[i]}
+          pieceTemplate={pieceTemplate}
         />
       ))}
     </>
@@ -585,7 +587,7 @@ export default function FourBonesGame({
           <Environment preset="night" />
           <Physics
             gravity={[0, -14, 0]}
-            defaultContactMaterial={{ friction: 0.75, restitution: 0.18 }}
+            defaultContactMaterial={{ friction: 0.88, restitution: 0.12 }}
           >
             <PhysicsFloor />
             <GameScene

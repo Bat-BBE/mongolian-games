@@ -12,7 +12,7 @@ import {
 } from "react";
 import * as THREE from "three";
 import { pickLastShagai } from "./shagaiModel";
-import { SHAGAI_SIDE_UP_AXIS } from "./shagai";
+import { SHAGAI_PHYS_BOX, SHAGAI_SIDE_UP_AXIS } from "./shagai";
 import ShagaiGuessUI from "./shagaiGuessUI";
 import {
   GuessState,
@@ -35,7 +35,7 @@ export type ShagaiGuessGameProps = {
 // Shared shagai template – cloned per instance so we can tint / scale freely
 // without re-parsing the GLB.
 // --------------------------------------------------------------------------
-const TILE_BOX: [number, number, number] = [1.35, 0.55, 2.15];
+const TILE_BOX = SHAGAI_PHYS_BOX;
 
 function useShagaiTemplate(): THREE.Object3D | null {
   const gltf = useGLTF("/models/shagai_model.glb");

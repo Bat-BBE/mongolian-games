@@ -16,11 +16,8 @@ import {
 import { terrainBiome, terrainHeight } from "./sceneHelpers";
 import {
   createHeroAnimator,
+  loadFbxModel,
   loadHeroClips,
-  loadHeroModel,
-  normalizeHeroHeight,
-  pickClip,
-  retargetClipToSkeleton,
 } from "../map3d/heroFbx";
 
 interface UseThreeSceneOptions {
@@ -482,19 +479,6 @@ export function useThreeScene({
     const heroPlayRef = {
       current: null as ((name: string, fadeSec?: number) => void) | null,
     };
-    // Procedural gait state for GLB heroes that ship without a skeleton
-    // (e.g. Tripo AI meshes). We fake walk/run by bobbing the model up and
-    // down and leaning slightly forward in the direction of travel.
-    const heroGaitRef = {
-      current: {
-        phase: 0,
-        /** "idle" | "walk" | "run" */
-        mode: "idle" as "idle" | "walk" | "run",
-        /** Whether the loaded model actually has a skeleton with real
-         *  animations. If so, we skip the procedural fake. */
-        isRigged: false,
-      },
-    };
     /** Гар удирдлага: хурд тэгшлэгдэнэ (гэнэтийн шилжилт багасна). */
     const heroManualVelRef = { current: new THREE.Vector3(0, 0, 0) };
     const heroKinematicRef = {
@@ -518,113 +502,48 @@ export function useThreeScene({
     if (heroModelPath && heroModelPath.trim()) {
       const run = () => {
         void (async () => {
-        try {
-          const rawPath = heroModelPath.trim();
-          // Legacy data sometimes has "/models/X Bot.fbx.fbx"; sanitize.
-          const safePath = rawPath.endsWith(".fbx.fbx")
-            ? rawPath.slice(0, -4)
-            : rawPath;
-          const { root, clips: embedded } = await loadHeroModel(safePath);
-          if (disposed) return;
-
-          // Normalize character height so FBX vs GLB sources look the same.
-          // ~2.2 world units reads as a visibly human-sized character next to
-          // the gers and props. `feetOffsetY` is how far the model's origin
-          // sits above its feet after scaling, and it must be added to every
-          // ground-snap so the hero doesn't sink through the terrain (GLB
-          // models often place the origin at the pelvis rather than the
-          // soles).
-          const { feetOffsetY } = normalizeHeroHeight(root, 2.2);
-          root.userData.feetOffsetY = feetOffsetY;
-          root.traverse((c) => {
-            if (c instanceof THREE.Mesh) {
-              c.castShadow = true;
-              c.receiveShadow = true;
+          try {
+            const rawPath = heroModelPath.trim();
+            const safePath = rawPath.endsWith(".fbx.fbx")
+              ? rawPath.slice(0, -4)
+              : rawPath;
+            const root = await loadFbxModel(safePath);
+            if (disposed) return;
+            // Гэртэй харьцуулахад жижиг харагдуулна (гэрүүдийг томруулсан)
+            root.scale.setScalar(0.015);
+            root.traverse((c) => {
+              if (c instanceof THREE.Mesh) {
+                c.castShadow = true;
+                c.receiveShadow = true;
+              }
+            });
+            const clips = await loadHeroClips({
+              idle: "/models/standing idle 01.fbx",
+              walk: "/models/standing walk forward.fbx",
+              run: "/models/standing run forward.fbx",
+            });
+            if (disposed) return;
+            const { mixer, play } = createHeroAnimator(root, clips);
+            heroMixerRef.current = mixer;
+            heroRootRef.current = root;
+            heroPlayRef.current = play;
+            const dh = builder.doorAnchors.get("home");
+            let sx = PLAYER_HOME_X;
+            let sz = PLAYER_HOME_Z + 4;
+            if (dh) {
+              sx = dh.x;
+              sz = dh.z + 3.4;
             }
-          });
-
-          // Try to resolve idle/walk/run from the model itself. Most custom
-          // GLB heroes only ship an idle clip (or none) so we fall back to
-          // the shared Mixamo FBX library whenever walk/run are missing.
-          // Mixamo's standard bone naming (`mixamorig:*`) tends to match,
-          // which makes the retargeting "just work" for those heroes.
-          const embedIdle = pickClip(embedded, ["idle"]);
-          const embedWalk = pickClip(embedded, ["walkforward", "walk"]);
-          const embedRun = pickClip(embedded, ["runforward", "run"]);
-
-          let externalClips: Record<string, THREE.AnimationClip> | null = null;
-          const needExternal =
-            !embedIdle || !embedWalk || !embedRun;
-          if (needExternal) {
-            try {
-              externalClips = await loadHeroClips({
-                idle: "/models/standing idle 01.fbx",
-                walk: "/models/standing walk forward.fbx",
-                run: "/models/standing run forward.fbx",
-              });
-            } catch {
-              externalClips = null;
-            }
+            const sy = terrainHeight(sx, sz) + 0.02;
+            root.position.set(sx, sy, sz);
+            root.rotation.y = 0;
+            play("idle", 0);
+            scene.add(root);
+          } catch {
+            // If hero fails to load, map still works.
+            // eslint-disable-next-line no-console
+            console.warn("Hero model failed to load for map:", heroModelPath);
           }
-          if (disposed) return;
-
-          const rawClips: Record<string, THREE.AnimationClip | undefined> = {
-            idle: embedIdle ?? externalClips?.idle ?? embedded[0],
-            walk: embedWalk ?? externalClips?.walk ?? embedIdle ?? embedded[0],
-            run:
-              embedRun ??
-              externalClips?.run ??
-              embedWalk ??
-              embedIdle ??
-              embedded[0],
-          };
-
-          // Mixamo FBX clips reference bones like `mixamorigHips.position`
-          // while many glTF heroes expose the bones as plain `Hips`, so we
-          // rewrite each track's bone name to match what actually exists in
-          // this skeleton. Without this step the mixer silently plays
-          // "nothing" and the hero looks frozen. Skip any slot that has no
-          // clip available so the animator below doesn't crash.
-          const clips: Record<string, THREE.AnimationClip> = {};
-          for (const name of ["idle", "walk", "run"] as const) {
-            const c = rawClips[name];
-            if (c) clips[name] = retargetClipToSkeleton(c, root);
-          }
-
-          // Detect whether the loaded model is actually rigged. Tripo AI /
-          // photogrammetry GLBs often contain only a single static mesh, in
-          // which case `clipAction` still runs but nothing ever moves. In
-          // that situation we fall back to the procedural gait below.
-          let hasSkeleton = false;
-          root.traverse((o) => {
-            const sm = o as Partial<THREE.SkinnedMesh> & {
-              isSkinnedMesh?: boolean;
-            };
-            if (sm.isSkinnedMesh) hasSkeleton = true;
-          });
-          heroGaitRef.current.isRigged = hasSkeleton;
-
-          const { mixer, play } = createHeroAnimator(root, clips);
-          heroMixerRef.current = mixer;
-          heroRootRef.current = root;
-          heroPlayRef.current = play;
-          const dh = builder.doorAnchors.get("home");
-          let sx = PLAYER_HOME_X;
-          let sz = PLAYER_HOME_Z + 4;
-          if (dh) {
-            sx = dh.x;
-            sz = dh.z + 3.4;
-          }
-          const sy = terrainHeight(sx, sz) + 0.02 + feetOffsetY;
-          root.position.set(sx, sy, sz);
-          root.rotation.y = 0;
-          play("idle", 0);
-          scene.add(root);
-        } catch {
-          // If hero fails to load, map still works.
-          // eslint-disable-next-line no-console
-          console.warn("Hero model failed to load for map:", heroModelPath);
-        }
         })();
       };
       // Defer heavy FBX parsing to avoid blocking the first map paint.
@@ -844,8 +763,7 @@ export function useThreeScene({
           sx = dh.x;
           sz = dh.z + 3.4;
         }
-        const feetOff = (root.userData.feetOffsetY as number) ?? 0;
-        const sy = terrainHeight(sx, sz) + 0.02 + feetOff;
+        const sy = terrainHeight(sx, sz) + 0.02;
         root.position.set(sx, sy, sz);
         root.rotation.y = Math.atan2(PLAYER_HOME_X - sx, PLAYER_HOME_Z - sz);
         heroPlayRef.current?.("idle", 0.12);
@@ -1196,11 +1114,8 @@ export function useThreeScene({
           root.position.addScaledVector(hv, delta);
           root.position.x = clamp(root.position.x, -5600, 5600);
           root.position.z = clamp(root.position.z, -4700, 4700);
-          {
-            const feetOff = (root.userData.feetOffsetY as number) ?? 0;
-            root.position.y =
-              terrainHeight(root.position.x, root.position.z) + 0.02 + feetOff;
-          }
+          root.position.y =
+            terrainHeight(root.position.x, root.position.z) + 0.02;
 
           const targetYaw = Math.atan2(worldDir.x, worldDir.z);
           let dy = targetYaw - root.rotation.y;
@@ -1209,38 +1124,8 @@ export function useThreeScene({
           root.rotation.y += dy * (1 - Math.exp(-14 * delta));
 
           play(st.run ? "run" : "walk", 0.12);
-          heroGaitRef.current.mode = st.run ? "run" : "walk";
         } else {
           play("idle", 0.18);
-          heroGaitRef.current.mode = "idle";
-        }
-
-        // Procedural "walk"/"run" gait for static (unrigged) hero GLBs.
-        // Applies a vertical bob and a small forward lean so the hero
-        // doesn't look like a frozen statue gliding across the terrain.
-        if (!heroGaitRef.current.isRigged) {
-          const gait = heroGaitRef.current;
-          const speed = hv.length();
-          const moving = speed > 0.2;
-          const running = moving && st.run;
-          const freq = running ? 11 : moving ? 6.5 : 1.5;
-          const amp = running ? 0.18 : moving ? 0.1 : 0.02;
-          const lean = running ? 0.18 : moving ? 0.1 : 0;
-          gait.phase += delta * freq;
-          // Two foot-strikes per full cycle → abs(sin) gives a classic
-          // up-down walk bob.
-          const bob = Math.abs(Math.sin(gait.phase)) * amp;
-          root.position.y += bob;
-          // Forward tilt (pitch) aligned with travel direction. We keep the
-          // yaw set above intact by writing to a second Euler channel.
-          root.rotation.x = lean + Math.sin(gait.phase * 2) * 0.03;
-          root.rotation.z = Math.sin(gait.phase) * (moving ? 0.04 : 0);
-        } else {
-          const root0 = heroRootRef.current;
-          if (root0) {
-            root0.rotation.x = 0;
-            root0.rotation.z = 0;
-          }
         }
 
         heroKinematicRef.current.pos.copy(root.position);

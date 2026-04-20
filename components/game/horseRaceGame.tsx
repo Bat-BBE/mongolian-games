@@ -6,10 +6,10 @@ import { Physics, usePlane } from "@react-three/cannon";
 import { Suspense, useState, useCallback, useRef, useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import SingleShagai from "./singleShagai";
+import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import HorseRaceUI from "./horseRaceUI";
 import { pickLastShagai } from "./shagaiModel";
-import { SHAGAI_SIDE_UP_AXIS } from "./shagai";
+import { SHAGAI_PHYS_BOX, SHAGAI_SIDE_UP_AXIS } from "./shagai";
 import {
   RaceState,
   INITIAL_RACE_STATE,
@@ -144,7 +144,7 @@ function RaceMat() {
 // 20 shagai can be packed edge-to-edge along world X in a single row.
 // All 20 share a single pre-built wrap that we clone for each tile.
 // --------------------------------------------------------------------------
-const TRACK_TILE_BOX: [number, number, number] = [1.35, 0.55, 2.15];
+const TRACK_TILE_BOX = SHAGAI_PHYS_BOX;
 // Match the visual size of the 4 thrown shagai (which render at scale 1.0
 // through the SingleShagai component).
 const TRACK_SCALE = 0.85;
@@ -310,7 +310,7 @@ function RaceTrack({
 // track at the current square and animates smoothly when advanced.
 // --------------------------------------------------------------------------
 const RACER_SCALE = 0.95;
-const RACER_TILE_BOX: [number, number, number] = [1.35, 0.55, 2.15];
+const RACER_TILE_BOX = SHAGAI_PHYS_BOX;
 
 function Racer({
   position,
@@ -507,6 +507,7 @@ function GameScene({
   currentTurn,
 }: SceneProps) {
   const template = useTrackTileTemplate();
+  const pieceTemplate = useShagaiThrowPieceTemplate();
 
   return (
     <>
@@ -520,9 +521,8 @@ function GameScene({
       />
 
       {/* Player racer sits in front of the track (closer to camera).
-          With scale 0.85 the track tile extends roughly ±0.91 in Z,
-          so we place the racer past that half-length plus its own
-          half-length to avoid overlap. */}
+          Tile half-extent in Z is ~SHAGAI_PHYS_BOX[2]·TRACK_SCALE; zOffset keeps
+          racers clear of the track mesh. */}
       <Racer
         position={playerPosition}
         zOffset={TRACK_Z + 2.1}
@@ -551,6 +551,7 @@ function GameScene({
           onSettle={onSettle}
           highlight={settledSides[i] === "horse"}
           resultSide={settledSides[i]}
+          pieceTemplate={pieceTemplate}
         />
       ))}
     </>
@@ -830,7 +831,7 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
           <Environment preset="night" />
           <Physics
             gravity={[0, -14, 0]}
-            defaultContactMaterial={{ friction: 0.75, restitution: 0.18 }}
+            defaultContactMaterial={{ friction: 0.88, restitution: 0.12 }}
           >
             <PhysicsFloor />
             <GameScene

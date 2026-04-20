@@ -6,13 +6,12 @@ import { Physics, usePlane } from "@react-three/cannon";
 import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import SingleShagai from "./singleShagai";
+import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import ShagaiTargetUI from "./shagaiTargetUI";
 import {
   GameState,
   INITIAL_STATE,
   ShagaiSide,
-  rollRobotSides,
   scoreTarget,
   TARGET_SCORE,
 } from "./shagaiTargetType";
@@ -242,7 +241,6 @@ interface SceneProps {
   }[];
   isThrown: boolean;
   settledSides: (ShagaiSide | null)[];
-  forcedSides: (ShagaiSide | null)[];
   onSettle: (id: number, side: ShagaiSide) => void;
   isWin: boolean;
 }
@@ -251,11 +249,11 @@ function GameScene({
   throwParams,
   isThrown,
   settledSides,
-  forcedSides,
   onSettle,
   isWin,
 }: SceneProps) {
   const allDone = settledSides.every((s) => s !== null);
+  const pieceTemplate = useShagaiThrowPieceTemplate();
 
   return (
     <>
@@ -274,7 +272,7 @@ function GameScene({
           onSettle={onSettle}
           highlight={isWin && allDone}
           resultSide={settledSides[i]}
-          forcedSide={forcedSides[i]}
+          pieceTemplate={pieceTemplate}
         />
       ))}
     </>
@@ -289,15 +287,6 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
     ReturnType<typeof getThrowParams>[]
   >([0, 1, 2, 3].map(() => getThrowParams()));
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
-    null,
-    null,
-    null,
-    null,
-  ]);
-  // Pre-decided outcomes for the current throw. Null means "let the physics
-  // pick randomly" (player's turn); populated means "bias the shagai so the
-  // visible result matches this" (robot's turn).
-  const [forcedSides, setForcedSides] = useState<(ShagaiSide | null)[]>([
     null,
     null,
     null,
@@ -383,33 +372,29 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
   // Shared throw trigger used by both the player's manual "Throw" button and
   // the robot's automatic turn. Resetting isThrown forces SingleShagai's
   // throw-effect to re-fire.
-  const startThrow = useCallback(
-    (turn: "player" | "robot", forced: (ShagaiSide | null)[]) => {
-      const params = [0, 1, 2, 3].map(() => getThrowParams());
-      setThrowParams(params);
-      settledRef.current = [null, null, null, null];
-      settledCount.current = 0;
-      resultSentRef.current = false;
-      setSettledSides([null, null, null, null]);
-      setForcedSides(forced);
-      setCurrentTurn(turn);
-      currentTurnRef.current = turn;
+  const startThrow = useCallback((turn: "player" | "robot") => {
+    const params = [0, 1, 2, 3].map(() => getThrowParams());
+    setThrowParams(params);
+    settledRef.current = [null, null, null, null];
+    settledCount.current = 0;
+    resultSentRef.current = false;
+    setSettledSides([null, null, null, null]);
+    setCurrentTurn(turn);
+    currentTurnRef.current = turn;
 
-      setState((prev) => ({
-        ...prev,
-        phase: "throwing",
-        totalThrows:
-          turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
-        robotSides: turn === "robot" ? prev.robotSides : null,
-        robotPoints: turn === "robot" ? prev.robotPoints : 0,
-        robotLabel: turn === "robot" ? prev.robotLabel : "",
-      }));
+    setState((prev) => ({
+      ...prev,
+      phase: "throwing",
+      totalThrows:
+        turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
+      robotSides: turn === "robot" ? prev.robotSides : null,
+      robotPoints: turn === "robot" ? prev.robotPoints : 0,
+      robotLabel: turn === "robot" ? prev.robotLabel : "",
+    }));
 
-      setIsThrown(false);
-      setTimeout(() => setIsThrown(true), 50);
-    },
-    [],
-  );
+    setIsThrown(false);
+    setTimeout(() => setIsThrown(true), 50);
+  }, []);
 
   const handleThrow = useCallback(() => {
     if (
@@ -418,7 +403,7 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
       state.phase !== "robotResult"
     )
       return;
-    startThrow("player", [null, null, null, null]);
+    startThrow("player");
   }, [state.phase, startThrow]);
 
   const handleSettle = useCallback(
@@ -532,14 +517,10 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
     return () => clearTimeout(t1);
   }, [state.phase]);
 
-  // Robot thinking → pre-roll the outcome, then physically throw the 4
-  // shagai so the player can see the roll on the mat. The resulting sides
-  // are biased by the forcedSide prop to match the pre-decided roll.
   useEffect(() => {
     if (state.phase !== "robotThinking") return;
     const t1 = setTimeout(() => {
-      const sides = rollRobotSides();
-      startThrow("robot", sides);
+      startThrow("robot");
     }, 1100);
     return () => clearTimeout(t1);
   }, [state.phase, startThrow]);
@@ -547,7 +528,6 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
   const handleReset = useCallback(() => {
     setState(INITIAL_STATE);
     setSettledSides([null, null, null, null]);
-    setForcedSides([null, null, null, null]);
     setCurrentTurn("player");
     currentTurnRef.current = "player";
     settledCount.current = 0;
@@ -597,14 +577,13 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
           <Environment preset="night" />
           <Physics
             gravity={[0, -14, 0]}
-            defaultContactMaterial={{ friction: 0.75, restitution: 0.18 }}
+            defaultContactMaterial={{ friction: 0.88, restitution: 0.12 }}
           >
             <PhysicsFloor />
             <GameScene
               throwParams={throwParams}
               isThrown={isThrown}
               settledSides={settledSides}
-              forcedSides={forcedSides}
               onSettle={handleSettle}
               isWin={isWin}
             />

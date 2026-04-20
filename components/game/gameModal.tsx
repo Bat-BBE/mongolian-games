@@ -2,6 +2,7 @@
 
 import { LuX as X } from "react-icons/lu";
 import { useEffect } from "react";
+import { useGLTF } from "@react-three/drei";
 import ShagaiGame from "./shagaiGame";
 import StoneGame from "./stoneGame";
 import FourBonesGame from "./fourBonusGame";
@@ -44,6 +45,18 @@ export default function GameModal({
       document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const usesShagaiModel = new Set([
+      "shagai",
+      "four-bones",
+      "horse-race",
+      "shagai-guess",
+    ]);
+    if (!usesShagaiModel.has(gameType)) return;
+    void useGLTF.preload("/models/shagai_model.glb");
+  }, [isOpen, gameType]);
 
   if (!isOpen) return null;
 
