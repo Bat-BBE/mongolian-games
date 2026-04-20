@@ -7,6 +7,7 @@ import {
   WIN_SCORE,
 } from "./stoneType";
 import { useApp } from "@/components/AppContext";
+import { playButtonClick, playHandPush } from "@/lib/uiSounds";
 
 interface Props {
   state: GameState;
@@ -234,7 +235,10 @@ function StonePicker({
         {Array.from({ length: MAX_STONES + 1 }, (_, i) => (
           <button
             key={i}
-            onClick={() => onPick(i)}
+            onClick={() => {
+              playHandPush();
+              onPick(i);
+            }}
             style={{
               width: 46,
               height: 46,
@@ -313,7 +317,10 @@ function GuessPicker({
         {totals.map((n) => (
           <button
             key={n}
-            onClick={() => onGuess(n)}
+            onClick={() => {
+              playButtonClick();
+              onGuess(n);
+            }}
             style={{
               width: 38,
               height: 38,
@@ -380,7 +387,13 @@ function ResultPanel({
           <div style={{ color: "#888", fontSize: 13, marginBottom: 16 }}>
             {state.score.player} : {state.score.computer}
           </div>
-          <button onClick={onRestart} style={primaryBtn("#c8a030", "#1a0e00")}>
+          <button
+            onClick={() => {
+              playButtonClick();
+              onRestart();
+            }}
+            style={primaryBtn("#c8a030", "#1a0e00")}
+          >
             {t.restart}
           </button>
         </>
@@ -444,7 +457,13 @@ function ResultPanel({
               </div>
             </div>
           )}
-          <button onClick={onNext} style={primaryBtn("#c8a030", "#1a0e00")}>
+          <button
+            onClick={() => {
+              playButtonClick();
+              onNext();
+            }}
+            style={primaryBtn("#c8a030", "#1a0e00")}
+          >
             {t.nextRound}
           </button>
         </>

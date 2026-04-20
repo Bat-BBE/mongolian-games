@@ -2,6 +2,7 @@
 
 import { ShagaiResult, SHAgAI_SIDES, ShagaiSide } from "./shagai";
 import { useState, useEffect } from "react";
+import { playButtonClick } from "@/lib/uiSounds";
 
 const SIDE_SPRITE_X: Record<ShagaiSide, string> = {
   camel: "5%",
@@ -374,7 +375,10 @@ export default function ShagaiUI({
         <GoldDivider />
 
         <button
-          onClick={onThrow}
+          onClick={() => {
+            playButtonClick();
+            onThrow();
+          }}
           disabled={isRolling}
           style={{
             width: "100%",
@@ -482,7 +486,10 @@ export default function ShagaiUI({
 
         {total > 0 && (
           <button
-            onClick={onReset}
+            onClick={() => {
+              playButtonClick();
+              onReset();
+            }}
             style={{
               width: "100%",
               marginTop: 12,

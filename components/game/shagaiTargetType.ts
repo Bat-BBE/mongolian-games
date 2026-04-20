@@ -102,6 +102,7 @@ export function detectSide(rotX: number, rotZ: number): ShagaiSide {
  * - Four identical sides (all horse / all sheep / ...)→ 4 pts
  * - Exactly 2 horse + 2 sheep                         → 2 pts
  * - Exactly 2 camel + 2 goat                          → 2 pts
+ * - Exactly 2 sheep + 2 goat                          → 2 pts
  * - Everything else                                    → 0 pts
  *
  * Returns a `labelKey` so the UI layer can localize the label.
@@ -111,7 +112,8 @@ export type ScoreLabelKey =
   | "berkh"
   | "ijil"
   | "moriHoni"
-  | "temeeYamaa";
+  | "temeeYamaa"
+  | "honiYamaa";
 
 export function scoreTarget(sides: ShagaiSide[]): {
   points: number;
@@ -133,6 +135,8 @@ export function scoreTarget(sides: ShagaiSide[]): {
     return { points: 2, labelKey: "moriHoni" };
   if (counts.camel === 2 && counts.goat === 2)
     return { points: 2, labelKey: "temeeYamaa" };
+  if (counts.sheep === 2 && counts.goat === 2)
+    return { points: 2, labelKey: "honiYamaa" };
   return { points: 0, labelKey: "" };
 }
 

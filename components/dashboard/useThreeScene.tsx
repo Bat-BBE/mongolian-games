@@ -16,8 +16,12 @@ import {
 import { terrainBiome, terrainHeight } from "./sceneHelpers";
 import {
   createHeroAnimator,
-  loadFbxModel,
+  countClipTracksBindingToRig,
   loadHeroClips,
+  loadHeroModel,
+  pickClip,
+  retargetClipToSkeleton,
+  type HeroClips,
 } from "../map3d/heroFbx";
 
 interface UseThreeSceneOptions {
@@ -507,7 +511,7 @@ export function useThreeScene({
             const safePath = rawPath.endsWith(".fbx.fbx")
               ? rawPath.slice(0, -4)
               : rawPath;
-            const root = await loadFbxModel(safePath);
+            const { root, clips: embeddedClips } = await loadHeroModel(safePath);
             if (disposed) return;
             // Гэртэй харьцуулахад жижиг харагдуулна (гэрүүдийг томруулсан)
             root.scale.setScalar(0.015);
@@ -517,13 +521,49 @@ export function useThreeScene({
                 c.receiveShadow = true;
               }
             });
-            const clips = await loadHeroClips({
+            const ext = await loadHeroClips({
               idle: "/models/standing idle 01.fbx",
               walk: "/models/standing walk forward.fbx",
               run: "/models/standing run forward.fbx",
             });
             if (disposed) return;
-            const { mixer, play } = createHeroAnimator(root, clips);
+
+            // Mixamo FBX-ийн ясны нэр өөр загвартай бол retarget хийхгүй бол
+            // толгой/хүрээ буруу эргэсэн харагдана.
+            const MIN_MOVE_BONES = 8;
+            const MIN_EMBEDDED_IDLE_BONES = 3;
+
+            const retargeted: HeroClips = {};
+            for (const [name, clip] of Object.entries(ext)) {
+              if (name === "idle") continue;
+              const r = retargetClipToSkeleton(clip, root);
+              if (countClipTracksBindingToRig(r, root) >= MIN_MOVE_BONES) {
+                retargeted[name] = r;
+              }
+            }
+
+            const embeddedIdle = pickClip(embeddedClips, [
+              "idle",
+              "stand",
+              "breathing",
+              "rest",
+            ]);
+            let idleClip: THREE.AnimationClip | undefined;
+            if (embeddedIdle) {
+              const r = retargetClipToSkeleton(embeddedIdle, root);
+              if (countClipTracksBindingToRig(r, root) >= MIN_EMBEDDED_IDLE_BONES) {
+                idleClip = r;
+              }
+            }
+            if (!idleClip && ext.idle) {
+              const r = retargetClipToSkeleton(ext.idle, root);
+              if (countClipTracksBindingToRig(r, root) >= MIN_MOVE_BONES) {
+                idleClip = r;
+              }
+            }
+            if (idleClip) retargeted.idle = idleClip;
+
+            const { mixer, play } = createHeroAnimator(root, retargeted);
             heroMixerRef.current = mixer;
             heroRootRef.current = root;
             heroPlayRef.current = play;

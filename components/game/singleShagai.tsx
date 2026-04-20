@@ -16,14 +16,13 @@ import {
 import { useGLTF } from "@react-three/drei";
 import { pickLastShagai } from "./shagaiModel";
 import type { KnockBurst } from "./shagaiSevenKnock";
+import { playShagaiLandSound } from "@/lib/shagaiLandSound";
 
 const PHYS_BOX = SHAGAI_PHYS_BOX;
-const MAX_ONKH_RETRIES = 14;
+const DEFAULT_MAX_ONKH_RETRIES = 14;
+/** Тогтоолтонд оньс хэвээр үлдэх магадлал (~1%); үлдсэн нь applyTorque/impulse-оор хазайлгана. */
+const SETTLE_ONKH_ACCEPT_PROBABILITY = 0.01;
 
-/**
- * Canvas дотор нэг удаа дуудаж, 4 шидэлтийн SingleShagai-д `pieceTemplate` өг.
- * Ингэснээр pickLastShagai / fitToBox зөвхөн нэг удаа ажиллана (анхны ачаалал хурдан).
- */
 export function useShagaiThrowPieceTemplate(): THREE.Object3D | null {
   const gltf = useGLTF("/models/shagai_model.glb");
   return useMemo(() => {
@@ -49,7 +48,6 @@ interface SingleShagaiProps {
   isThrown: boolean;
   onSettle: (id: number, side: ShagaiSide) => void;
   highlight: boolean;
-  /** Хос болсон шагай — бүдгэрүүлж тоглоомын талбарт үлдээх. */
   muted?: boolean;
   resultSide: ShagaiSide | null;
   /** @see useShagaiThrowPieceTemplate — нэг удаа үүсгэсэн загварыг дамжуулбал анхны ачаалал хөнгөрнө. */
@@ -65,6 +63,10 @@ interface SingleShagaiProps {
   >;
   /** false: тоглоомоос авсан — талбараас нуух, физик унтраах. */
   presentOnTable?: boolean;
+  /** Оньс давталтын дээд хязгаар (анхдагч 14). */
+  maxOnkhRetries?: number;
+  /** `isShagaiOnkh`-д — бага утга = илүү олон тохиолдолд оньс гэж үзнэ. */
+  onkhMinTipDot?: number;
 }
 
 function buildShagaiGeo(): THREE.BufferGeometry {
@@ -137,6 +139,8 @@ export default function SingleShagai({
   kinematicTargetRef,
   knockBurstRef,
   presentOnTable = true,
+  maxOnkhRetries = DEFAULT_MAX_ONKH_RETRIES,
+  onkhMinTipDot = 0.76,
 }: SingleShagaiProps) {
   const groupRef = useRef<THREE.Group>(null);
   const lastPosEmitRef = useRef(0);
@@ -144,6 +148,9 @@ export default function SingleShagai({
   const posRef = useRef<[number, number, number]>(startPos);
   const airtimeRef = useRef(0);
   const reportedRef = useRef(false);
+  /** Эхний газартай мөргөлт — onSettle хүртэл 1s+ хүлээгддэг тул дууг энд тоглуулна. */
+  const landSoundPlayedRef = useRef(false);
+  const wasAboveImpactRef = useRef(false);
   const glowRef = useRef<THREE.PointLight>(null);
   const hasThrownRef = useRef(false);
   const restPos: [number, number, number] = [
@@ -234,7 +241,7 @@ export default function SingleShagai({
     restitution: 0.14,
     friction: 0.72,
     linearDamping: 0.28,
-    angularDamping: 0.34,
+    angularDamping: 0.38,
   }));
 
   useEffect(() => {
@@ -271,6 +278,8 @@ export default function SingleShagai({
     }
     hasThrownRef.current = true;
     reportedRef.current = false;
+    landSoundPlayedRef.current = false;
+    wasAboveImpactRef.current = false;
     airtimeRef.current = 0;
     onkhRetryRef.current = 0;
     biasTargetRef.current = biasSideForAirTorque();
@@ -331,16 +340,14 @@ export default function SingleShagai({
         delete knockBurstRef.current[id];
         api.wakeUp();
         reportedRef.current = false;
+        landSoundPlayedRef.current = false;
+        wasAboveImpactRef.current = false;
         airtimeRef.current = 0;
         /** Мөргөлдөөний дараах өнхрөлт: шинэ bias (дөрвөн тал) — анхны тал руу «наалдахгүй». */
         biasTargetRef.current = biasSideForThrow();
         onkhRetryRef.current = 0;
         const v = velRef.current;
-        api.velocity.set(
-          v[0] + kb.lin[0],
-          v[1] + kb.lin[1],
-          v[2] + kb.lin[2],
-        );
+        api.velocity.set(v[0] + kb.lin[0], v[1] + kb.lin[1], v[2] + kb.lin[2]);
         const w = angVelRef.current;
         api.angularVelocity.set(
           w[0] + kb.ang[0],
@@ -375,6 +382,20 @@ export default function SingleShagai({
     const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
     const angSpeed = Math.sqrt(wx * wx + wy * wy + wz * wz);
     const grounded = posRef.current[1] < 1.1;
+    const py = posRef.current[1];
+
+    if (py > 0.68) wasAboveImpactRef.current = true;
+    if (
+      !landSoundPlayedRef.current &&
+      !muted &&
+      airtimeRef.current > 0.1 &&
+      wasAboveImpactRef.current &&
+      py <= 0.58 &&
+      py > 0.06
+    ) {
+      landSoundPlayedRef.current = true;
+      playShagaiLandSound();
+    }
 
     if (airtimeRef.current > 0.22 && speed > 0.12) {
       const currentQuat = new THREE.Quaternion();
@@ -393,17 +414,50 @@ export default function SingleShagai({
       }
     }
 
+    // Удаан хөдөлгөөн багатай, газарт ойрхон үед ч оньс руу «тааруулах» түлхэлт
+    if (
+      airtimeRef.current > 0.35 &&
+      grounded &&
+      speed < 0.55 &&
+      angSpeed < 0.55
+    ) {
+      const qSlow = new THREE.Quaternion();
+      groupRef.current.getWorldQuaternion(qSlow);
+      if (isShagaiOnkh(qSlow, onkhMinTipDot * 0.92)) {
+        biasTargetRef.current = biasSideForAirTorque();
+        const targetLocal = SHAGAI_SIDE_UP_AXIS[biasTargetRef.current]
+          .clone()
+          .applyQuaternion(qSlow);
+        const worldUp = new THREE.Vector3(0, 1, 0);
+        const alignDot = targetLocal.dot(worldUp);
+        if (alignDot < 0.94) {
+          let torqueAxis = new THREE.Vector3()
+            .crossVectors(targetLocal, worldUp)
+            .normalize();
+          if (torqueAxis.lengthSq() < 1e-8) {
+            torqueAxis.set(
+              (Math.random() - 0.5) * 2,
+              0,
+              (Math.random() - 0.5) * 2,
+            ).normalize();
+          }
+          torqueAxis.multiplyScalar(5.5);
+          api.applyTorque([torqueAxis.x, torqueAxis.y, torqueAxis.z]);
+        }
+      }
+    }
+
     const nearRest =
-      airtimeRef.current > 1.1 &&
-      speed < 0.28 &&
-      angSpeed < 0.22 &&
-      grounded;
+      airtimeRef.current > 1.1 && speed < 0.28 && angSpeed < 0.22 && grounded;
     const stall = airtimeRef.current > 9;
     if (nearRest || stall) {
       const q = new THREE.Quaternion();
       groupRef.current.getWorldQuaternion(q);
 
-      if (isShagaiOnkh(q) && onkhRetryRef.current < MAX_ONKH_RETRIES) {
+      if (
+        isShagaiOnkh(q, onkhMinTipDot) &&
+        onkhRetryRef.current < maxOnkhRetries
+      ) {
         onkhRetryRef.current += 1;
         airtimeRef.current = 0;
         biasTargetRef.current = biasSideForAirTorque();
@@ -428,6 +482,34 @@ export default function SingleShagai({
         return;
       }
 
+      if (
+        isShagaiOnkh(q, onkhMinTipDot) &&
+        !stall &&
+        Math.random() > SETTLE_ONKH_ACCEPT_PROBABILITY
+      ) {
+        api.wakeUp();
+        biasTargetRef.current = biasSideForAirTorque();
+        const targetLocal = SHAGAI_SIDE_UP_AXIS[biasTargetRef.current]
+          .clone()
+          .applyQuaternion(q);
+        const worldUp = new THREE.Vector3(0, 1, 0);
+        let torqueAxis = new THREE.Vector3().crossVectors(targetLocal, worldUp);
+        if (torqueAxis.lengthSq() < 1e-8) {
+          torqueAxis.set(
+            (Math.random() - 0.5) * 2,
+            0.04,
+            (Math.random() - 0.5) * 2,
+          );
+        }
+        torqueAxis.normalize().multiplyScalar(16);
+        api.applyTorque([torqueAxis.x, torqueAxis.y, torqueAxis.z]);
+        api.applyImpulse([0, 0.2, 0], [0, 0, 0]);
+        const j = () => (Math.random() - 0.5) * 5;
+        api.angularVelocity.set(j(), j() + 1.6, j());
+        airtimeRef.current = Math.max(0.62, airtimeRef.current - 0.42);
+        return;
+      }
+
       const side = detectShagaiSideFromQuaternion(q);
       const y = restHeightsRef.current[side];
       api.velocity.set(0, 0, 0);
@@ -435,6 +517,10 @@ export default function SingleShagai({
       api.position.set(posRef.current[0], y, posRef.current[2]);
       api.sleep();
       reportedRef.current = true;
+      if (!landSoundPlayedRef.current && !muted) {
+        playShagaiLandSound();
+        landSoundPlayedRef.current = true;
+      }
       onSettle(id, side);
     }
   });

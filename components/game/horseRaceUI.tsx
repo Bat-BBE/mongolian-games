@@ -5,6 +5,7 @@ import type { ShagaiSide } from "./shagai";
 import { SHAGAI_INFO, sideName } from "./fourBonusType";
 import { ShagaiSideImage } from "./shagaiUI";
 import { useApp } from "@/components/AppContext";
+import { playButtonClick } from "@/lib/uiSounds";
 
 interface Props {
   state: RaceState;
@@ -117,7 +118,7 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     waitingRobot: "Роботын ээлж…",
     playerTurn: (needed) => `Таны ээлж — ${needed} шагай үлдлээ`,
     robotTurn: "Роботын ээлж",
-    robotThinking: "Робот бодож байна...",
+    robotThinking: "Робот орхиж байна...",
     playerAdvanced: (h) => `+${h} урагш (${h} морь)`,
     robotAdvanced: (h) => `Робот +${h} (${h} морь)`,
     noMoveThisTurn: "Морь буугаагүй — ээлжээ алдлаа.",
@@ -668,7 +669,10 @@ export default function HorseRaceUI({
 
         {!matchOver && (
           <button
-            onClick={onThrow}
+            onClick={() => {
+              playButtonClick();
+              onThrow();
+            }}
             disabled={!canThrow}
             style={{
               width: "100%",
@@ -699,7 +703,10 @@ export default function HorseRaceUI({
 
         {matchOver && (
           <button
-            onClick={onReset}
+            onClick={() => {
+              playButtonClick();
+              onReset();
+            }}
             style={{
               width: "100%",
               padding: "11px 0",

@@ -5,6 +5,7 @@ import type { ShagaiSide } from "./shagaiTargetType";
 import { SHAGAI_INFO } from "./shagaiTargetType";
 import type { SevenPhase } from "./shagaiSevenType";
 import { SEVEN_COUNT, SEVEN_PATH_MIN_POINTS } from "./shagaiSevenType";
+import { playButtonClick } from "@/lib/uiSounds";
 
 /** Зөвхөн монгол (document.lang-аас хамаардаггүй — SSR/клиент ижил). */
 const T = {
@@ -92,8 +93,7 @@ export default function ShagaiSevenUI({
     [settledSides],
   );
 
-  const canThrow =
-    phase === "idle" || phase === "won" || phase === "lost";
+  const canThrow = phase === "idle" || phase === "won" || phase === "lost";
 
   return (
     <div
@@ -110,7 +110,8 @@ export default function ShagaiSevenUI({
         margin: 0,
         padding: "14px 14px",
         borderRadius: 14,
-        background: "linear-gradient(145deg, rgba(24,18,12,0.94), rgba(12,10,8,0.97))",
+        background:
+          "linear-gradient(145deg, rgba(24,18,12,0.94), rgba(12,10,8,0.97))",
         border: "1px solid rgba(200,160,48,0.28)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
         color: "#e8e0d4",
@@ -254,7 +255,10 @@ export default function ShagaiSevenUI({
                 </span>
                 <button
                   type="button"
-                  onClick={onClearPath}
+                  onClick={() => {
+                    playButtonClick();
+                    onClearPath();
+                  }}
                   style={{
                     padding: "6px 12px",
                     borderRadius: 8,
@@ -285,60 +289,61 @@ export default function ShagaiSevenUI({
               {pairFeedbackKey === "positions" ? t.positionsWait : t.badPath}
             </div>
           )}
-          {selection[0] !== null &&
-            selection[1] !== null &&
-            !pairAnimating && (
+          {selection[0] !== null && selection[1] !== null && !pairAnimating && (
+            <div
+              style={{
+                marginBottom: 12,
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "rgba(80,140,90,0.12)",
+                border: "1px solid rgba(120,180,130,0.35)",
+              }}
+            >
               <div
                 style={{
-                  marginBottom: 12,
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  background: "rgba(80,140,90,0.12)",
-                  border: "1px solid rgba(120,180,130,0.35)",
+                  fontSize: 12,
+                  color: "#a8c8a8",
+                  marginBottom: 10,
+                  lineHeight: 1.4,
                 }}
               >
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#a8c8a8",
-                    marginBottom: 10,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {t.nysrekhHint}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onNysrekh()}
-                  disabled={
-                    pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    borderRadius: 10,
-                    border: "none",
-                    background:
-                      pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
-                        ? "#444"
-                        : "linear-gradient(180deg, #6ab86a, #3d7a44)",
-                    color: "#0f140f",
-                    fontWeight: 700,
-                    fontSize: 15,
-                    cursor:
-                      pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
-                        ? "not-allowed"
-                        : "pointer",
-                    opacity:
-                      pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
-                        ? 0.55
-                        : 1,
-                  }}
-                >
-                  {t.nysrekh}
-                </button>
+                {t.nysrekhHint}
               </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  playButtonClick();
+                  onNysrekh();
+                }}
+                disabled={
+                  pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
+                }
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 10,
+                  border: "none",
+                  background:
+                    pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
+                      ? "#444"
+                      : "linear-gradient(180deg, #6ab86a, #3d7a44)",
+                  color: "#0f140f",
+                  fontWeight: 700,
+                  fontSize: 15,
+                  cursor:
+                    pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
+                      ? "not-allowed"
+                      : "pointer",
+                  opacity:
+                    pairAnimating || pathPointCount < SEVEN_PATH_MIN_POINTS
+                      ? 0.55
+                      : 1,
+                }}
+              >
+                {t.nysrekh}
+              </button>
+            </div>
+          )}
           {pairAnimating && (
             <div
               style={{
@@ -411,7 +416,10 @@ export default function ShagaiSevenUI({
                   key={idx}
                   type="button"
                   disabled={collectAnimating}
-                  onClick={() => onTakeFromPair(idx)}
+                  onClick={() => {
+                    playButtonClick();
+                    onTakeFromPair(idx);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -453,16 +461,17 @@ export default function ShagaiSevenUI({
           {Array.from({ length: SEVEN_COUNT }, (_, i) => {
             const side = settledSides[i];
             const active = activeIds.includes(i);
-            const sel =
-              selection[0] === i ||
-              selection[1] === i;
+            const sel = selection[0] === i || selection[1] === i;
             const info = side ? SHAGAI_INFO[side] : null;
             return (
               <button
                 key={i}
                 type="button"
                 disabled={!active || pairAnimating}
-                onClick={() => onPickIndex(i)}
+                onClick={() => {
+                  playButtonClick();
+                  onPickIndex(i);
+                }}
                 style={{
                   minWidth: 52,
                   padding: "8px 10px",
@@ -511,7 +520,10 @@ export default function ShagaiSevenUI({
         <button
           type="button"
           disabled={!canThrow}
-          onClick={onThrow}
+          onClick={() => {
+            playButtonClick();
+            onThrow();
+          }}
           style={{
             padding: "10px 18px",
             borderRadius: 10,
@@ -529,7 +541,10 @@ export default function ShagaiSevenUI({
         </button>
         <button
           type="button"
-          onClick={onReset}
+          onClick={() => {
+            playButtonClick();
+            onReset();
+          }}
           style={{
             padding: "10px 18px",
             borderRadius: 10,

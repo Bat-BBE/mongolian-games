@@ -10,6 +10,7 @@ import {
 } from "./shagaiTargetType";
 import { ShagaiSideImage } from "./shagaiUI";
 import { useApp } from "@/components/AppContext";
+import { playButtonClick } from "@/lib/uiSounds";
 
 interface Props {
   state: GameState;
@@ -113,6 +114,7 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       { label: "4 identical (all same)", pts: "+4" },
       { label: "2 horse + 2 sheep", pts: "+2" },
       { label: "2 camel + 2 goat", pts: "+2" },
+      { label: "2 sheep + 2 goat", pts: "+2" },
       { label: "Everything else", pts: "0" },
     ],
     statistic: "STATISTICS",
@@ -136,6 +138,7 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       ijil: "Four of a kind",
       moriHoni: "2 horse + 2 sheep",
       temeeYamaa: "2 camel + 2 goat",
+      honiYamaa: "2 sheep + 2 goat",
     },
   };
   const mn: UiStrings = {
@@ -179,6 +182,7 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       { label: "4 ижил тал", pts: "+4" },
       { label: "2 морь + 2 хонь", pts: "+2" },
       { label: "2 тэмээ + 2 ямаа", pts: "+2" },
+      { label: "2 хонь + 2 ямаа", pts: "+2" },
       { label: "Бусад тохиолдол", pts: "0" },
     ],
     statistic: "СТАТИСТИК",
@@ -202,6 +206,7 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       ijil: "Дөрвөн ижил",
       moriHoni: "2 морь + 2 хонь",
       temeeYamaa: "2 тэмээ + 2 ямаа",
+      honiYamaa: "2 хонь + 2 ямаа",
     },
   };
   return { ...(language === "en" ? en : mn), language };
@@ -787,7 +792,10 @@ export default function ShagaiTargetUI({
         <GoldDivider />
 
         <button
-          onClick={matchOver ? onReset : onThrow}
+          onClick={() => {
+            playButtonClick();
+            (matchOver ? onReset : onThrow)();
+          }}
           disabled={!matchOver && !canThrow}
           style={{
             width: "100%",
@@ -1076,7 +1084,10 @@ export default function ShagaiTargetUI({
 
         {state.totalThrows > 0 && !matchOver && (
           <button
-            onClick={onReset}
+            onClick={() => {
+              playButtonClick();
+              onReset();
+            }}
             style={{
               width: "100%",
               marginTop: 10,

@@ -183,6 +183,8 @@ function rewardFor(gameSlug: string): {
       return { ...base, xp: 20, kp: 7, coins: 12, gems: 0 };
     case "puzzle":
       return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
+    case "modon-onis":
+      return { ...base, xp: 16, kp: 6, coins: 10, gems: 1 };
     default:
       return { ...base };
   }

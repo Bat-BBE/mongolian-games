@@ -19,6 +19,10 @@ import {
 import type { ShagaiSide } from "./shagai";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  getShagaiThrowParams,
+  SHAGAI_HORSE_RACE_THROW_START_POSITIONS,
+} from "./shagaiThrowShared";
 
 export type HorseRaceGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -453,35 +457,6 @@ function WinLightEffect({ active }: { active: boolean }) {
   );
 }
 
-// --------------------------------------------------------------------------
-// The 4 thrown shagai live in a small zone in front of the track.
-// --------------------------------------------------------------------------
-const THROW_START_POSITIONS: [number, number, number][] = [
-  [-1.5, 4.5, 2.2],
-  [-0.5, 5.0, 1.5],
-  [0.5, 5.5, 2.6],
-  [1.5, 4.8, 1.8],
-];
-
-function getThrowParams(): {
-  vel: [number, number, number];
-  angVel: [number, number, number];
-} {
-  const spread = 2.2;
-  return {
-    vel: [
-      (Math.random() - 0.5) * spread * 2,
-      6 + Math.random() * 4,
-      (Math.random() - 0.5) * spread * 2,
-    ],
-    angVel: [
-      (Math.random() - 0.5) * 22,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 22,
-    ],
-  };
-}
-
 interface SceneProps {
   throwParams: {
     vel: [number, number, number];
@@ -540,11 +515,12 @@ function GameScene({
         active={currentTurn === "robot"}
       />
 
+      {/* Оньс дээр дахин шидэхгүй (maxOnkhRetries=0); оньс → хонь/ямаа нь shagai.ts-ийн detect-тэй ижил. */}
       {[0, 1, 2, 3].map((i) => (
         <SingleShagai
           key={i}
           id={i}
-          startPos={THROW_START_POSITIONS[i]}
+          startPos={SHAGAI_HORSE_RACE_THROW_START_POSITIONS[i]}
           throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
           throwAngVel={throwParams[i]?.angVel ?? [5, 5, 5]}
           isThrown={isThrown}
@@ -552,6 +528,7 @@ function GameScene({
           highlight={settledSides[i] === "horse"}
           resultSide={settledSides[i]}
           pieceTemplate={pieceTemplate}
+          maxOnkhRetries={0}
         />
       ))}
     </>
@@ -567,8 +544,8 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
   const [state, setState] = useState<RaceState>(INITIAL_RACE_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
-    ReturnType<typeof getThrowParams>[]
-  >([0, 1, 2, 3].map(() => getThrowParams()));
+    ReturnType<typeof getShagaiThrowParams>[]
+  >([0, 1, 2, 3].map(() => getShagaiThrowParams()));
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
     null,
     null,
@@ -593,7 +570,7 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
 
   const startThrow = useCallback(
     (turn: "player" | "robot") => {
-      const params = [0, 1, 2, 3].map(() => getThrowParams());
+      const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
       setThrowParams(params);
       settledRef.current = [null, null, null, null];
       settledCount.current = 0;

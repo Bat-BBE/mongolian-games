@@ -9,6 +9,7 @@ import {
   TOTAL_SHAGAI,
 } from "./shagaiGuessType";
 import { useApp } from "@/components/AppContext";
+import { playButtonClick } from "@/lib/uiSounds";
 
 interface Props {
   state: GuessState;
@@ -145,7 +146,7 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     commit: "Нуух ба таах",
     confirmReveal: "Нээх",
     nextRound: "Дараагийн үе шат",
-    robotThinking: "Робот бодож байна…",
+    robotThinking: "Робот орхиж байна…",
     youWon: "ТА ХОЖЛОО!",
     youLost: "РОБОТ ХОЖЛОО",
     roundWonBy: (who, total) => {
@@ -448,7 +449,11 @@ function PrimaryButton({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        if (disabled) return;
+        playButtonClick();
+        onClick();
+      }}
       disabled={disabled}
       style={{
         width: "100%",
@@ -556,7 +561,10 @@ function StepButton({
 }) {
   return (
     <button
-      onClick={onClick}
+      onClick={() => {
+        playButtonClick();
+        onClick();
+      }}
       style={{
         width: 32,
         height: 32,
@@ -946,7 +954,10 @@ export default function ShagaiGuessUI({
         <div style={{ flex: 1 }} />
 
         <button
-          onClick={onReset}
+          onClick={() => {
+            playButtonClick();
+            onReset();
+          }}
           style={{
             padding: "8px 10px",
             fontSize: 10,

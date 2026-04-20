@@ -18,6 +18,10 @@ import {
 } from "./fourBonusType";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  getShagaiThrowParams,
+  SHAGAI_THROW_START_POSITIONS,
+} from "./shagaiThrowShared";
 
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
@@ -224,32 +228,6 @@ function GoldParticles({ active }: { active: boolean }) {
   );
 }
 
-const START_POSITIONS: [number, number, number][] = [
-  [-2.0, 4.5, -1.0],
-  [-0.7, 5.0, 0.3],
-  [0.7, 5.5, -0.4],
-  [2.0, 4.8, 0.9],
-];
-
-function getThrowParams(i: number): {
-  vel: [number, number, number];
-  angVel: [number, number, number];
-} {
-  const spread = 2.5;
-  return {
-    vel: [
-      (Math.random() - 0.5) * spread * 2,
-      6 + Math.random() * 4,
-      (Math.random() - 0.5) * spread * 2,
-    ] as [number, number, number],
-    angVel: [
-      (Math.random() - 0.5) * 22,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 22,
-    ] as [number, number, number],
-  };
-}
-
 interface SceneProps {
   state: GameState;
   throwParams: {
@@ -282,7 +260,7 @@ function GameScene({
         <SingleShagai
           key={i}
           id={i}
-          startPos={START_POSITIONS[i]}
+          startPos={SHAGAI_THROW_START_POSITIONS[i]}
           throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
           throwAngVel={throwParams[i]?.angVel ?? [5, 5, 5]}
           isThrown={isThrown}
@@ -290,6 +268,7 @@ function GameScene({
           highlight={isWin && allDone}
           resultSide={settledSides[i]}
           pieceTemplate={pieceTemplate}
+          maxOnkhRetries={0}
         />
       ))}
     </>
@@ -306,8 +285,8 @@ export default function FourBonesGame({
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
-    ReturnType<typeof getThrowParams>[]
-  >([0, 1, 2, 3].map((i) => getThrowParams(i)));
+    ReturnType<typeof getShagaiThrowParams>[]
+  >([0, 1, 2, 3].map(() => getShagaiThrowParams()));
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
     null,
     null,
@@ -334,7 +313,7 @@ export default function FourBonesGame({
   }, [state.phase, state.playerScore, state.robotScore, onComplete, grant]);
 
   const startThrow = useCallback((turn: "player" | "robot") => {
-    const params = [0, 1, 2, 3].map((i) => getThrowParams(i));
+    const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
     setThrowParams(params);
     settledRef.current = [null, null, null, null];
     settledCount.current = 0;

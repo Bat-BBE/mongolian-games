@@ -410,20 +410,16 @@ export class SceneBuilder {
     );
   }
 
-  /** Газар — `TerrainBuilder` + `materialLibrary`: UV, биом өнгө, хөрсний дэлгэрэнгүй. */
+  /** Gazar zurag hursnii ungu*/
   buildTerrain(): void {
     const tb = new TerrainBuilder(this.scene, materialLibrary);
     const mesh = tb.buildTerrainWithUV();
     mesh.name = "terrain";
     mesh.userData.role = "ground";
   }
-
-  /** Гол, нуурын геометр хассан — зөвхөн газрын өндөр үлдэнэ */
   buildRivers(): void {}
-
   buildBridge(): void {}
 
-  /** Гол нуурын эргийн зэгсний багц */
   private makeReedPatchAt(x: number, z: number, count: number): void {
     const reedColors = [0x5f7f36, 0x6d9440, 0x4a7028, 0x7cb342];
     const y = terrainHeight(x, z);
@@ -493,7 +489,6 @@ export class SceneBuilder {
   }
 
   buildTrees(): void {
-    // Хангайн нурууны ой
     for (let i = 0; i < 105; i++) {
       const x = rand(-70, -20),
         z = rand(-30, -5);
@@ -501,7 +496,6 @@ export class SceneBuilder {
       if (h > 1.5 && h < 18)
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.6, 1.3));
     }
-    // Хэнтийн ой
     for (let i = 0; i < 105; i++) {
       const x = rand(14, 52),
         z = rand(-26, -5);
@@ -509,7 +503,6 @@ export class SceneBuilder {
       if (h > 1.0 && h < 14)
         this.makeTree(x + rand(-1.5, 1.5), z + rand(-1.5, 1.5), rand(0.5, 1.1));
     }
-    // Орхон голын хөвөөний ой
     for (let i = 0; i < 105; i++) {
       const z = rand(-28, 14);
       const rx = -32 + Math.sin(z * 0.08) * 6;
@@ -517,7 +510,6 @@ export class SceneBuilder {
       const h = terrainHeight(x, z);
       if (h > -0.5 && h < 5) this.makeTree(x, z, rand(0.4, 0.95));
     }
-    // Хөвсгөлийн эргийн ой
     for (let i = 0; i < 105; i++) {
       const angle = rand(0, Math.PI * 2);
       const r = rand(12, 20);
@@ -525,13 +517,11 @@ export class SceneBuilder {
       const z = -44 + Math.sin(angle) * r * 2.5;
       this.makeTree(x, z, rand(0.6, 1.2));
     }
-    // Тэрэлжийн ой
     for (let i = 0; i < 105; i++) {
       const x = rand(10, 24),
         z = rand(-14, -2);
       this.makeTree(x + rand(-1, 1), z + rand(-1, 1), rand(0.5, 1.0));
-    }
-    // Бэлчээрийн сийрэг бут
+    }   
     for (let i = 0; i < 80; i++) {
       const x = rand(-130, 70),
         z = rand(-45, 20);
@@ -805,7 +795,6 @@ export class SceneBuilder {
         g.add(beam);
       }
 
-      /** Шошгыг том гэр дээрх тэмдгийн цагирны орчимд (хаалганы оронд өндөр биш). */
       this.labelAnchors.set(
         stationId,
         new THREE.Vector3(
@@ -817,8 +806,6 @@ export class SceneBuilder {
     }
 
     g.position.set(x, hy + gerLift, z);
-    // Station gers: keep door consistently facing "forward" (+Z)
-    // so doors/labels/picking feel predictable.
     g.rotation.y = isStation ? 0 : rotY;
     g.castShadow = true;
     g.receiveShadow = true;
@@ -827,7 +814,6 @@ export class SceneBuilder {
       g.updateMatrixWorld(true);
       const wp = new THREE.Vector3();
       door.getWorldPosition(wp);
-      // Slightly lift so label doesn't intersect the door mesh.
       wp.y += 0.25 * s;
       this.doorAnchors.set(stationId, wp);
     }
@@ -931,7 +917,6 @@ export class SceneBuilder {
     this.scene.add(g);
   }
 
-  /** Гадна талд жижиг сүмийн дүрс — хийд/ордны хашааны гадна тойрог */
   private makeMiniSumTemple(
     x: number,
     z: number,
@@ -966,10 +951,6 @@ export class SceneBuilder {
     this.scene.add(g);
   }
 
-  /**
-   * Орд / хийд — тойрог гэр, том хашаа (нэг хаалга), гадна жижиг сүмүүд.
-   * УБ: дотор 12–20 гэр, том хашаа.
-   */
   private layoutSacredSiteCamp(
     x: number,
     z: number,

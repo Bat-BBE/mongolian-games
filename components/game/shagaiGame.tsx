@@ -17,6 +17,10 @@ import {
 } from "./shagaiTargetType";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  getShagaiThrowParams,
+  SHAGAI_THROW_START_POSITIONS,
+} from "./shagaiThrowShared";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -208,32 +212,6 @@ function GoldParticles({ active }: { active: boolean }) {
   );
 }
 
-const START_POSITIONS: [number, number, number][] = [
-  [-2.0, 4.5, -1.0],
-  [-0.7, 5.0, 0.3],
-  [0.7, 5.5, -0.4],
-  [2.0, 4.8, 0.9],
-];
-
-function getThrowParams(): {
-  vel: [number, number, number];
-  angVel: [number, number, number];
-} {
-  const spread = 2.5;
-  return {
-    vel: [
-      (Math.random() - 0.5) * spread * 2,
-      6 + Math.random() * 4,
-      (Math.random() - 0.5) * spread * 2,
-    ],
-    angVel: [
-      (Math.random() - 0.5) * 22,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 22,
-    ],
-  };
-}
-
 interface SceneProps {
   throwParams: {
     vel: [number, number, number];
@@ -265,7 +243,7 @@ function GameScene({
         <SingleShagai
           key={i}
           id={i}
-          startPos={START_POSITIONS[i]}
+          startPos={SHAGAI_THROW_START_POSITIONS[i]}
           throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
           throwAngVel={throwParams[i]?.angVel ?? [5, 5, 5]}
           isThrown={isThrown}
@@ -273,6 +251,7 @@ function GameScene({
           highlight={isWin && allDone}
           resultSide={settledSides[i]}
           pieceTemplate={pieceTemplate}
+          maxOnkhRetries={0}
         />
       ))}
     </>
@@ -285,8 +264,8 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
-    ReturnType<typeof getThrowParams>[]
-  >([0, 1, 2, 3].map(() => getThrowParams()));
+    ReturnType<typeof getShagaiThrowParams>[]
+  >([0, 1, 2, 3].map(() => getShagaiThrowParams()));
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
     null,
     null,
@@ -314,7 +293,7 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
   // the robot's automatic turn. Resetting isThrown forces SingleShagai's
   // throw-effect to re-fire.
   const startThrow = useCallback((turn: "player" | "robot") => {
-    const params = [0, 1, 2, 3].map(() => getThrowParams());
+    const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
     setThrowParams(params);
     settledRef.current = [null, null, null, null];
     settledCount.current = 0;

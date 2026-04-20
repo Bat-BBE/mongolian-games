@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/components/AppContext";
+import { playButtonClick } from "@/lib/uiSounds";
 import { useMemo, type CSSProperties } from "react";
 import {
   LuClock as IconClock,
@@ -164,18 +165,9 @@ export default function MemoryMatchUI({
 
       <aside className="mt-5" style={panel} aria-label="Memory game panel">
         <div style={topAccent} aria-hidden />
-        <h2 style={h2}>
-          <IconSparkles
-            size={18}
-            style={{ opacity: 0.75, verticalAlign: "middle", marginRight: 8 }}
-            aria-hidden
-          />
-          {t.title}
-        </h2>
+        <h2 style={h2}>{t.title}</h2>
         <p style={sub}>{t.subtitle}</p>
-
         {phase === "playing" && <p style={playingHint}>{t.playingHint}</p>}
-
         <div style={statsGrid}>
           <div style={statCard}>
             <div style={statIconWrap}>
@@ -247,7 +239,10 @@ export default function MemoryMatchUI({
             <button
               type="button"
               className="mm-panel-btn"
-              onClick={phase === "idle" ? onStart : onRestart}
+              onClick={() => {
+                playButtonClick();
+                (phase === "idle" ? onStart : onRestart)();
+              }}
             >
               {phase === "idle" ? (
                 <>

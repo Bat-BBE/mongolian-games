@@ -95,6 +95,25 @@ export function pickClip(
  * the skeleton, `AnimationMixer` silently does nothing, so we try a few
  * common prefix variants before giving up.
  */
+/** Скелетон дээр үнэхээр холбогдсон track-ийн тоо (буруу rig-д бага байвал анимаа алгасахад). */
+export function countClipTracksBindingToRig(
+  clip: THREE.AnimationClip,
+  root: THREE.Object3D,
+): number {
+  const names = new Set<string>();
+  root.traverse((o) => {
+    if (o.name) names.add(o.name);
+  });
+  let n = 0;
+  for (const t of clip.tracks) {
+    const dot = t.name.indexOf(".");
+    if (dot < 0) continue;
+    const boneName = t.name.slice(0, dot);
+    if (names.has(boneName)) n++;
+  }
+  return n;
+}
+
 export function retargetClipToSkeleton(
   clip: THREE.AnimationClip,
   root: THREE.Object3D,

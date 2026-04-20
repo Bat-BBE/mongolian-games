@@ -9,6 +9,7 @@ import {
 } from "./fourBonusType";
 import { ShagaiSideImage } from "./shagaiUI";
 import { useApp } from "@/components/AppContext";
+import { playButtonClick } from "@/lib/uiSounds";
 
 interface Props {
   state: GameState;
@@ -126,10 +127,10 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
   };
   const mn: FourI18n = {
     title: "ДӨРВӨН БЭРХ",
-    subtitle: "4 MONGOLIAN SHAGAI · VS ROBOT",
+    subtitle: "4 SHAGAI · VS ROBOT",
     overline: "ᠳᠥᠷᠪᠡᠨ ᠪᠡᠷᠬᠡ",
     rollingHint: "⏳ Шагайнууд бууж байна...",
-    dorvenBerkh: "🎊 ДӨРВӨН БЭРХ ГАРЛАА!",
+    dorvenBerkh: "🎊 ДӨРВӨН БЭРХ БУУЛАА!",
     youLose: "Дахин оролдоорой",
     tryAgain: "Дахин оролдоорой",
     tapHint: "Шагай дээр дарж ч орхиж болно",
@@ -145,7 +146,7 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     robot: "РОБОТ",
     playerGot: (pts) => `+${pts} оноо танд`,
     robotGot: (pts) => `+${pts} оноо роботонд`,
-    robotThinking: "🤖 Робот бодож байна...",
+    robotThinking: "🤖 Робот шидэж байна...",
     youWonMatch: "🏆 ТА ЯЛЛАА!",
     robotWonMatch: "🤖 Робот ялав",
     rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
@@ -721,7 +722,10 @@ export default function FourBonesUI({
         <GoldDivider />
 
         <button
-          onClick={matchOver ? onReset : onThrow}
+          onClick={() => {
+            playButtonClick();
+            (matchOver ? onReset : onThrow)();
+          }}
           disabled={!matchOver && !canThrow}
           style={{
             width: "100%",
@@ -1005,7 +1009,10 @@ export default function FourBonesUI({
 
         {state.totalThrows > 0 && !matchOver && (
           <button
-            onClick={onReset}
+            onClick={() => {
+              playButtonClick();
+              onReset();
+            }}
             style={{
               width: "100%",
               marginTop: 10,

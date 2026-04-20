@@ -11,8 +11,10 @@ import ShagaiGuessGame from "./shagaiGuessGame";
 import ShagaiSevenGame from "./shagaiSevenGame";
 import MemoryMatchGame from "./memoryMatchGame";
 import KhorolGame from "./khorolGame";
+import WoodenPuzzleGame from "./woodenPuzzleGame";
 import { loadPlayer } from "@/components/hero-select/hero-data";
 import { completeGame } from "@/lib/api";
+import { playButtonClick } from "@/lib/uiSounds";
 
 interface GameModalProps {
   isOpen: boolean;
@@ -107,7 +109,10 @@ export default function GameModal({
             }}
           ></div>
           <button
-            onClick={onClose}
+            onClick={() => {
+              playButtonClick();
+              onClose();
+            }}
             style={{
               width: 24,
               height: 24,
@@ -162,6 +167,9 @@ export default function GameModal({
           {gameType === "khorol" && <KhorolGame />}
           {gameType === "puzzle" && (
             <MemoryMatchGame onComplete={(r, pct) => void submit(r, pct)} />
+          )}
+          {gameType === "modon-onis" && (
+            <WoodenPuzzleGame onComplete={(r, pct) => void submit(r, pct)} />
           )}
           {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
         </div>

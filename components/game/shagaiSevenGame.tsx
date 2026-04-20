@@ -198,6 +198,7 @@ function GameScene({
             kinematicTargetRef={kinematicRef}
             knockBurstRef={knockBurstRef}
             presentOnTable={active}
+            maxOnkhRetries={0}
           />
         );
       })}

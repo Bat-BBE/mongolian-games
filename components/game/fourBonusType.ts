@@ -93,8 +93,7 @@ export function sideName(
 import { detectShagaiSide, weightedTraditionalSide } from "./shagai";
 
 // Delegate to the shared quaternion-aware detector so both games share the
-// same realistic probability distribution (sheep/goat ~75%, horse/camel
-// ~24%, onkh <1% with weighted remap).
+// same detector; torque bias targets: sheep 30%, goat 30%, horse 20%, camel 20%.
 export function detectSide(rotX: number, rotZ: number): ShagaiSide {
   return detectShagaiSide(rotX, rotZ);
 }

@@ -92,14 +92,15 @@ export function weightedTraditionalSide(): ShagaiSide {
 
 export function biasSideForThrow(): ShagaiSide {
   const r = Math.random();
-  if (r < 0.4) return "sheep";
-  if (r < 0.78) return "goat";
-  if (r < 0.92) return "horse";
+  if (r < 0.3) return "sheep";
+  if (r < 0.6) return "goat";
+  if (r < 0.8) return "horse";
   return "camel";
 }
 
+/** Нисэх үеийн torque — biasSideForThrow-той ижил (морь/тэмээ гарна). */
 export function biasSideForAirTorque(): ShagaiSide {
-  return Math.random() < 0.52 ? "sheep" : "goat";
+  return biasSideForThrow();
 }
 
 export const SHAGAI_SIDE_UP_AXIS: Record<ShagaiSide, THREE.Vector3> = {
