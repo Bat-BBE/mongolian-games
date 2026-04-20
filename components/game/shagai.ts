@@ -73,14 +73,15 @@ export const SHAgAI_SIDES: Record<ShagaiSide, ShagaiResult> = {
 
 export interface ShagaiDetectOptions {
   remapOnkh?: boolean;
+  /**
+   * Оньс дээр санамсаргүй хонь/ямаа — хуучин.
+   * false (анхдагч) = +z / -z талын аль нь дээшилснийг геометрээр ялгана.
+   */
+  randomOnkh?: boolean;
 }
 
 export type ShagaiDetection = ShagaiSide;
 
-/**
- * Final remap distribution when the shagai lands on its tip (onkh)
- * or when other gameplay logic needs a traditional side.
- */
 export function weightedTraditionalSide(): ShagaiSide {
   const r = Math.random();
   if (r < 0.38) return "sheep"; // 38%
@@ -89,10 +90,6 @@ export function weightedTraditionalSide(): ShagaiSide {
   return "camel"; // 9%
 }
 
-/**
- * Air-time bias only. Does NOT decide the final side directly.
- * Хонь/ямаанд илүү чиглүүлж морь/тэмээг багасгана (~22% нийлбэр).
- */
 export function biasSideForThrow(): ShagaiSide {
   const r = Math.random();
   if (r < 0.4) return "sheep";
@@ -101,18 +98,10 @@ export function biasSideForThrow(): ShagaiSide {
   return "camel";
 }
 
-/**
- * Зөвхөн нислэгийн torque-д: үргэлж ±Z (хонь эсвэл ямаа) руу татна.
- * `biasSideForThrow`-оор морь/тэмээ рүү чиглүүлбэл хайрцаг ±Y дээр хэт тогтдог.
- */
 export function biasSideForAirTorque(): ShagaiSide {
   return Math.random() < 0.52 ? "sheep" : "goat";
 }
 
-/**
- * LOCAL after fitToBox (shortest→Y, longest→Z): хонь/ямаа уртын тал ±Z,
- * морь/тэмээ ивнэгийн тал ±Y, нарийн ирмэг ±X нь онх.
- */
 export const SHAGAI_SIDE_UP_AXIS: Record<ShagaiSide, THREE.Vector3> = {
   sheep: new THREE.Vector3(0, 0, 1),
   goat: new THREE.Vector3(0, 0, -1),
@@ -120,10 +109,6 @@ export const SHAGAI_SIDE_UP_AXIS: Record<ShagaiSide, THREE.Vector3> = {
   camel: new THREE.Vector3(0, 1, 0),
 };
 
-/**
- * Cannon `useBox` half-extents + `pickLastShagai` fit target [x,y,z].
- * Нэг эх — дүрс болон физик хоёул жижигрүүлэхэд энд л тохируул.
- */
 export const SHAGAI_PHYS_BOX: [number, number, number] = [0.74, 0.58, 0.72];
 
 const FACE_VECTORS: Record<FaceName, THREE.Vector3> = {
@@ -135,7 +120,6 @@ const FACE_VECTORS: Record<FaceName, THREE.Vector3> = {
   "-z": new THREE.Vector3(0, 0, -1),
 };
 
-/** Морь, тэмээ — зөвхөн ±Y (±Z = хонь/ямаа, ±X = онх). */
 const FACE_TO_SIDE: Record<"+y" | "-y", ShagaiSide> = {
   "-y": "horse",
   "+y": "camel",
@@ -175,7 +159,6 @@ function detectBestFace(quat: THREE.Quaternion): {
   return { face: bestFace, dot: bestDot };
 }
 
-/** ±X ирмэг дээш «онх» — дахин шидэх логикт ашиглана. */
 export function isShagaiOnkh(
   quat: THREE.Quaternion,
   minTipUpDot = 0.76,
@@ -184,11 +167,25 @@ export function isShagaiOnkh(
   return (face === "+x" || face === "-x") && dot >= minTipUpDot;
 }
 
+/**
+ * Оньс (хажуу тал дээш) — аль урт тал (+z эсвэл -z) илүү дээшилснийг шалгаж хонь/ямаа заана.
+ */
+export function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const sheepTilt = new THREE.Vector3(0, 0, 1)
+    .applyQuaternion(quat)
+    .dot(worldUp);
+  const goatTilt = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(quat)
+    .dot(worldUp);
+  return sheepTilt >= goatTilt ? "sheep" : "goat";
+}
+
 export function detectShagaiFromQuaternion(
   quat: THREE.Quaternion,
   options: ShagaiDetectOptions = {},
 ): ShagaiSide {
-  const { remapOnkh = true } = options;
+  const { remapOnkh = true, randomOnkh = false } = options;
   const { face } = detectBestFace(quat);
 
   if (face === "+z") return "sheep";
@@ -196,7 +193,10 @@ export function detectShagaiFromQuaternion(
 
   if (face === "+x" || face === "-x") {
     if (remapOnkh) {
-      return Math.random() < 0.5 ? "sheep" : "goat";
+      if (randomOnkh) {
+        return Math.random() < 0.5 ? "sheep" : "goat";
+      }
+      return resolveSheepGoatFromOnkh(quat);
     }
     return weightedTraditionalSide();
   }

@@ -14,8 +14,8 @@ import {
   buildMessage,
   WIN_SCORE,
 } from "./stoneType";
-import { useAuth } from "@/components/AuthContext";
-import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
 
 export type StoneGameProps = {
   onComplete?: (result: "win" | "lose") => void;
@@ -224,72 +224,11 @@ function GameScene({
 }
 
 export default function StoneGame({ onComplete }: StoneGameProps) {
-  const { user } = useAuth();
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [burstActive, setBurstActive] = useState(false);
   const sentRef = useRef(false);
-  const rewardQueuedRef = useRef({ coins: 0, gems: 0 });
-  const [rewardEvents, setRewardEvents] = useState<
-    { id: string; text: string; kind: "coins" | "gems" }[]
-  >([]);
-  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 });
-
-  const applyReward = useCallback(
-    async (delta: { coins?: number; gems?: number }) => {
-      const email = user?.email?.trim();
-      if (!email) return;
-      const dCoins = delta.coins ?? 0;
-      const dGems = delta.gems ?? 0;
-      if (!dCoins && !dGems) return;
-      rewardQueuedRef.current.coins += dCoins;
-      rewardQueuedRef.current.gems += dGems;
-      setSessionGain((p) => ({
-        coins: p.coins + dCoins,
-        gems: p.gems + dGems,
-      }));
-
-      const now = Date.now();
-      const addEvt = (kind: "coins" | "gems", text: string) => {
-        const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`;
-        setRewardEvents((prev) => [...prev, { id, kind, text }]);
-        setTimeout(() => {
-          setRewardEvents((prev) => prev.filter((e) => e.id !== id));
-        }, 1350);
-      };
-      if (dCoins) addEvt("coins", `+${dCoins} 🪙`);
-      if (dGems) addEvt("gems", `+${dGems} 💎`);
-
-      try {
-        const profileRes = await getGameProfileByEmail(email);
-        const current =
-          profileRes?.user?.profile &&
-          typeof profileRes.user.profile === "object"
-            ? (profileRes.user.profile as Record<string, unknown>)
-            : {};
-        const invRaw = (current as any).inventory;
-        const inv =
-          invRaw && typeof invRaw === "object"
-            ? (invRaw as Record<string, unknown>)
-            : {};
-        const coins =
-          typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0);
-        const gems =
-          typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0);
-
-        const nextProfile = {
-          ...current,
-          inventory: {
-            ...inv,
-            coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
-            gems: (Number.isFinite(gems) ? gems : 0) + dGems,
-          },
-        } as Record<string, unknown>;
-
-        await syncAppUserSimple({ email, profile: nextProfile });
-      } catch {}
-    },
-    [user?.email],
-  );
 
   const handlePick = useCallback(
     (n: number) => {
@@ -352,13 +291,13 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
       setBurstActive(true);
       setTimeout(() => setBurstActive(false), 1500);
       if (outcome === "player") {
-        void applyReward({ coins: 3 });
+        grant({ coins: STONE_ROUND_COINS });
         if (newScore.player >= WIN_SCORE) {
-          void applyReward({ gems: 1 });
+          grant({ gems: STONE_MATCH_GEMS });
         }
       }
     },
-    [applyReward, state],
+    [grant, state],
   );
   const handleNext = useCallback(() => {
     setState((prev) => ({
@@ -377,9 +316,8 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
   const handleRestart = useCallback(() => {
     setState(INITIAL_STATE);
     sentRef.current = false;
-    setRewardEvents([]);
-    setSessionGain({ coins: 0, gems: 0 });
-  }, []);
+    resetGrants();
+  }, [resetGrants]);
 
   useEffect(() => {
     if (sentRef.current) return;

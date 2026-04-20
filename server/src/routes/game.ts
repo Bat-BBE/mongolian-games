@@ -22,6 +22,14 @@ const homeBuyBody = z.object({
   qty: z.number().int().min(1).max(10),
 });
 
+const homeExchangeGemsBody = z.object({
+  email: z.string().min(3),
+  gems: z.number().int().min(1).max(500),
+});
+
+/** lib/homeEconomy.ts WEALTH_COINS_PER_GEM-тэй ижил байх ёстой */
+const GEMS_TO_COINS_EXCHANGE_RATE = 25;
+
 function emailUid(email: string): string {
   return `local:${email.trim().toLowerCase()}`;
 }
@@ -39,7 +47,9 @@ type StationProgress = {
   completedGameSlugs: string[];
 };
 
-function readStationSteps(progress: Record<string, unknown>): Record<string, StationProgress> {
+function readStationSteps(
+  progress: Record<string, unknown>,
+): Record<string, StationProgress> {
   const raw = progress.stationSteps;
   if (!isPlainRecord(raw)) return {};
   const out: Record<string, StationProgress> = {};
@@ -53,35 +63,46 @@ function readStationSteps(progress: Record<string, unknown>): Record<string, Sta
   return out;
 }
 
-function readStationVisits(progress: Record<string, unknown>): Record<string, number[]> {
-  const raw = progress.stationVisits;
+function readStationGameVisits(
+  progress: Record<string, unknown>,
+): Record<string, Record<string, number[]>> {
+  const raw = progress.stationGameVisits;
   if (!isPlainRecord(raw)) return {};
-  const out: Record<string, number[]> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (!Array.isArray(v)) continue;
-    out[k] = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+  const out: Record<string, Record<string, number[]>> = {};
+  for (const [stationKey, stationVal] of Object.entries(raw)) {
+    if (!isPlainRecord(stationVal)) continue;
+    const inner: Record<string, number[]> = {};
+    for (const [gameKey, arr] of Object.entries(stationVal)) {
+      if (!Array.isArray(arr)) continue;
+      inner[gameKey] = arr
+        .map((x) => Number(x))
+        .filter((n) => Number.isFinite(n));
+    }
+    out[stationKey] = inner;
   }
   return out;
 }
 
 function computeWealthScore(profile: Record<string, unknown>): number {
   const kp = num(profile.kp, 0);
-  const inv = isPlainRecord(profile.inventory) ? (profile.inventory as Record<string, unknown>) : {};
+  const inv = isPlainRecord(profile.inventory)
+    ? (profile.inventory as Record<string, unknown>)
+    : {};
   const coins = num(inv.coins, 0);
   const gems = num(inv.gems, 0);
-  const ger = isPlainRecord(profile.ger) ? (profile.ger as Record<string, unknown>) : {};
+  const ger = isPlainRecord(profile.ger)
+    ? (profile.ger as Record<string, unknown>)
+    : {};
   const gerLevel = Math.max(0, Math.floor(num(ger.level, 1)));
-  const ls = isPlainRecord(profile.livestock) ? (profile.livestock as Record<string, unknown>) : {};
+  const ls = isPlainRecord(profile.livestock)
+    ? (profile.livestock as Record<string, unknown>)
+    : {};
   const sheep = Math.max(0, Math.floor(num(ls.sheep, 0)));
   const goat = Math.max(0, Math.floor(num(ls.goat, 0)));
   const cow = Math.max(0, Math.floor(num(ls.cow, 0)));
   const horse = Math.max(0, Math.floor(num(ls.horse, 0)));
   const camel = Math.max(0, Math.floor(num(ls.camel, 0)));
 
-  // Simple, tunable formula (server authoritative).
-  // - gems are rarer than coins
-  // - livestock has large impact (game fantasy value)
-  // - ger level acts as multiplier baseline
   const base =
     kp +
     coins * 1 +
@@ -92,7 +113,6 @@ function computeWealthScore(profile: Record<string, unknown>): number {
     horse * 160 +
     camel * 220 +
     gerLevel * 500;
-
   return Math.max(0, Math.floor(base));
 }
 
@@ -101,7 +121,10 @@ function upgradeCost(gerLevel: number): { coins: number; kp: number } {
   return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
 }
 
-function livestockCost(kind: "sheep" | "goat" | "cow" | "horse" | "camel", qty: number): { coins: number } {
+function livestockCost(
+  kind: "sheep" | "goat" | "cow" | "horse" | "camel",
+  qty: number,
+): { coins: number } {
   const q = Math.max(1, Math.floor(qty));
   const unit =
     kind === "sheep"
@@ -121,22 +144,43 @@ function rewardFor(gameSlug: string): {
   kp: number;
   coins: number;
   gems: number;
-  livestock?: Partial<{ sheep: number; goat: number; cow: number; horse: number; camel: number }>;
+  livestock?: Partial<{
+    sheep: number;
+    goat: number;
+    cow: number;
+    horse: number;
+    camel: number;
+  }>;
   gerLevelDelta?: number;
 } {
-  // Defaults: slow progression (avoid inflating leaderboard too fast).
   const base = { xp: 12, kp: 4, coins: 8, gems: 0 } as const;
   switch (gameSlug) {
     case "shagai":
-      return { ...base, xp: 16, kp: 6, coins: 10, gems: 0, livestock: { sheep: 1 } };
+      return {
+        ...base,
+        xp: 16,
+        kp: 6,
+        coins: 10,
+        gems: 0,
+        livestock: { sheep: 1 },
+      };
     case "stone-guess":
       return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
     case "four-bones":
       return { ...base, xp: 20, kp: 7, coins: 12, gems: 1 };
     case "horse-race":
-      return { ...base, xp: 22, kp: 8, coins: 14, gems: 1, livestock: { horse: 1 } };
+      return {
+        ...base,
+        xp: 22,
+        kp: 8,
+        coins: 14,
+        gems: 1,
+        livestock: { horse: 1 },
+      };
     case "shagai-guess":
       return { ...base, xp: 18, kp: 6, coins: 11, gems: 1 };
+    case "seven-shagai":
+      return { ...base, xp: 20, kp: 7, coins: 12, gems: 0 };
     case "puzzle":
       return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
     default:
@@ -144,11 +188,6 @@ function rewardFor(gameSlug: string): {
   }
 }
 
-/**
- * Complete a station game step. Server enforces:
- * - step ordering (station_games.sort_order)
- * - per-station weekly visits limit (2 in last 7 days)
- */
 gameRouter.post("/complete", async (req, res) => {
   const parsed = completeBody.safeParse(req.body);
   if (!parsed.success) {
@@ -179,24 +218,17 @@ gameRouter.post("/complete", async (req, res) => {
       progress: unknown;
     };
 
-    const profile = isPlainRecord(row.profile) ? { ...(row.profile as Record<string, unknown>) } : {};
-    const progress = isPlainRecord(row.progress) ? { ...(row.progress as Record<string, unknown>) } : {};
+    const profile = isPlainRecord(row.profile)
+      ? { ...(row.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row.progress)
+      ? { ...(row.progress as Record<string, unknown>) }
+      : {};
 
-    // Weekly station limit.
-    const visitsByStation = readStationVisits(progress);
     const now = Date.now();
     const windowMs = 7 * 24 * 60 * 60 * 1000;
     const cutoff = now - windowMs;
-    const prevVisits = (visitsByStation[stationSlug] ?? []).filter((t) => t >= cutoff);
-    if (prevVisits.length >= 2) {
-      res.status(429).json({
-        error: "Weekly limit reached for this station (2 plays / 7 days)",
-        remainingMs: Math.max(0, Math.min(...prevVisits) + windowMs - now),
-      });
-      return;
-    }
 
-    // Games available at this station (any order — client chooses).
     const sg = await pool.query(
       `SELECT g.slug
        FROM station_games sg
@@ -216,45 +248,71 @@ gameRouter.post("/complete", async (req, res) => {
       return;
     }
 
+    const visitsByGame = readStationGameVisits(progress);
+    const prevForGame = (visitsByGame[stationSlug]?.[gameSlug] ?? []).filter(
+      (t) => t >= cutoff,
+    );
+    if (prevForGame.length >= 2) {
+      res.status(429).json({
+        error: "Weekly limit reached for this game (2 plays / 7 days)",
+        remainingMs: Math.max(0, Math.min(...prevForGame) + windowMs - now),
+      });
+      return;
+    }
+
     const stationSteps = readStationSteps(progress);
 
-    // Record visit attempt regardless of win/lose (counts as a play).
-    visitsByStation[stationSlug] = [...prevVisits, now];
-    progress.stationVisits = visitsByStation;
+    const nextForStation = {
+      ...(visitsByGame[stationSlug] ?? {}),
+      [gameSlug]: [...prevForGame, now],
+    };
+    progress.stationGameVisits = {
+      ...visitsByGame,
+      [stationSlug]: nextForStation,
+    };
 
     if (result === "win") {
-      // Mark step done.
       const prev = stationSteps[stationSlug]?.completedGameSlugs ?? [];
       stationSteps[stationSlug] = {
         completedGameSlugs: [...new Set([...prev, gameSlug])],
       };
       progress.stationSteps = stationSteps;
 
-      // If all games done, add to doneStationIds.
-      const doneNow = ordered.every((s) => stationSteps[stationSlug].completedGameSlugs.includes(s));
+      const doneNow = ordered.every((s) =>
+        stationSteps[stationSlug].completedGameSlugs.includes(s),
+      );
       const doneIdsRaw = progress.doneStationIds;
-      const doneIds = Array.isArray(doneIdsRaw) ? doneIdsRaw.map((x) => String(x)) : [];
+      const doneIds = Array.isArray(doneIdsRaw)
+        ? doneIdsRaw.map((x) => String(x))
+        : [];
       if (doneNow && !doneIds.includes(stationSlug)) {
         doneIds.push(stationSlug);
       }
       progress.doneStationIds = doneIds;
-
-      // Rewards.
       const rwd = rewardFor(gameSlug);
       progress.xp = num(progress.xp, 0) + rwd.xp;
       progress.xpMax = num(progress.xpMax, 100);
       profile.kp = num(profile.kp, 0) + rwd.kp;
 
-      const inv = isPlainRecord(profile.inventory) ? { ...(profile.inventory as Record<string, unknown>) } : {};
+      const inv = isPlainRecord(profile.inventory)
+        ? { ...(profile.inventory as Record<string, unknown>) }
+        : {};
       inv.coins = num(inv.coins, 0) + rwd.coins;
       inv.gems = num(inv.gems, 0) + rwd.gems;
       profile.inventory = inv;
 
-      const ger = isPlainRecord(profile.ger) ? { ...(profile.ger as Record<string, unknown>) } : {};
-      ger.level = Math.max(1, Math.floor(num(ger.level, 1) + (rwd.gerLevelDelta ?? 0)));
+      const ger = isPlainRecord(profile.ger)
+        ? { ...(profile.ger as Record<string, unknown>) }
+        : {};
+      ger.level = Math.max(
+        1,
+        Math.floor(num(ger.level, 1) + (rwd.gerLevelDelta ?? 0)),
+      );
       profile.ger = ger;
 
-      const ls = isPlainRecord(profile.livestock) ? { ...(profile.livestock as Record<string, unknown>) } : {};
+      const ls = isPlainRecord(profile.livestock)
+        ? { ...(profile.livestock as Record<string, unknown>) }
+        : {};
       const add = rwd.livestock ?? {};
       ls.sheep = Math.max(0, Math.floor(num(ls.sheep, 0) + (add.sheep ?? 0)));
       ls.goat = Math.max(0, Math.floor(num(ls.goat, 0) + (add.goat ?? 0)));
@@ -265,7 +323,6 @@ gameRouter.post("/complete", async (req, res) => {
 
       profile.wealthScore = computeWealthScore(profile);
     } else {
-      // Small consolation: still track attempts, tiny XP.
       progress.xp = num(progress.xp, 0) + 1;
     }
 
@@ -303,11 +360,19 @@ gameRouter.post("/home/upgrade", async (req, res) => {
       return;
     }
     const row = userRes.rows[0] as { profile: unknown; progress: unknown };
-    const profile = isPlainRecord(row.profile) ? { ...(row.profile as Record<string, unknown>) } : {};
-    const progress = isPlainRecord(row.progress) ? { ...(row.progress as Record<string, unknown>) } : {};
+    const profile = isPlainRecord(row.profile)
+      ? { ...(row.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row.progress)
+      ? { ...(row.progress as Record<string, unknown>) }
+      : {};
 
-    const inv = isPlainRecord(profile.inventory) ? { ...(profile.inventory as Record<string, unknown>) } : {};
-    const ger = isPlainRecord(profile.ger) ? { ...(profile.ger as Record<string, unknown>) } : {};
+    const inv = isPlainRecord(profile.inventory)
+      ? { ...(profile.inventory as Record<string, unknown>) }
+      : {};
+    const ger = isPlainRecord(profile.ger)
+      ? { ...(profile.ger as Record<string, unknown>) }
+      : {};
     const curLevel = Math.max(1, Math.floor(num(ger.level, 1)));
     const cost = upgradeCost(curLevel);
 
@@ -360,10 +425,16 @@ gameRouter.post("/home/buy", async (req, res) => {
       return;
     }
     const row = userRes.rows[0] as { profile: unknown; progress: unknown };
-    const profile = isPlainRecord(row.profile) ? { ...(row.profile as Record<string, unknown>) } : {};
-    const progress = isPlainRecord(row.progress) ? { ...(row.progress as Record<string, unknown>) } : {};
+    const profile = isPlainRecord(row.profile)
+      ? { ...(row.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row.progress)
+      ? { ...(row.progress as Record<string, unknown>) }
+      : {};
 
-    const inv = isPlainRecord(profile.inventory) ? { ...(profile.inventory as Record<string, unknown>) } : {};
+    const inv = isPlainRecord(profile.inventory)
+      ? { ...(profile.inventory as Record<string, unknown>) }
+      : {};
     const coins = num(inv.coins, 0);
     const cost = livestockCost(kind, qty);
     if (coins < cost.coins) {
@@ -373,7 +444,9 @@ gameRouter.post("/home/buy", async (req, res) => {
     inv.coins = coins - cost.coins;
     profile.inventory = inv;
 
-    const ls = isPlainRecord(profile.livestock) ? { ...(profile.livestock as Record<string, unknown>) } : {};
+    const ls = isPlainRecord(profile.livestock)
+      ? { ...(profile.livestock as Record<string, unknown>) }
+      : {};
     ls[kind] = Math.max(0, Math.floor(num(ls[kind], 0) + qty));
     profile.livestock = ls;
     profile.wealthScore = computeWealthScore(profile);
@@ -392,3 +465,61 @@ gameRouter.post("/home/buy", async (req, res) => {
   }
 });
 
+gameRouter.post("/home/exchange-gems", async (req, res) => {
+  const parsed = homeExchangeGemsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  const uid = emailUid(email);
+  const wantGems = parsed.data.gems;
+
+  try {
+    const userRes = await pool.query(
+      `SELECT profile, progress FROM app_users WHERE firebase_uid = $1`,
+      [uid],
+    );
+    if (userRes.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const row = userRes.rows[0] as { profile: unknown; progress: unknown };
+    const profile = isPlainRecord(row.profile)
+      ? { ...(row.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row.progress)
+      ? { ...(row.progress as Record<string, unknown>) }
+      : {};
+
+    const inv = isPlainRecord(profile.inventory)
+      ? { ...(profile.inventory as Record<string, unknown>) }
+      : {};
+    const curGems = Math.max(0, Math.floor(num(inv.gems, 0)));
+    if (curGems < wantGems) {
+      res.status(409).json({ error: "Not enough gems" });
+      return;
+    }
+
+    const coinsOut = wantGems * GEMS_TO_COINS_EXCHANGE_RATE;
+    inv.gems = curGems - wantGems;
+    inv.coins = num(inv.coins, 0) + coinsOut;
+    profile.inventory = inv;
+    profile.wealthScore = computeWealthScore(profile);
+
+    const upd = await pool.query(
+      `UPDATE app_users
+       SET profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE firebase_uid = $1
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [uid, JSON.stringify(profile), JSON.stringify(progress)],
+    );
+    res.json({
+      user: upd.rows[0],
+      exchange: { gemsSpent: wantGems, coinsReceived: coinsOut },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Exchange failed";
+    res.status(500).json({ error: msg });
+  }
+});

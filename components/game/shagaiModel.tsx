@@ -375,8 +375,6 @@ export default function ShagaiModel({
   const reportedRef = useRef(false);
   const biasTargetRef = useRef<ShagaiSide>("sheep");
   const onkhRetryRef = useRef(0);
-  // Rest heights measured from the actual visual mesh (not the collider)
-  // so the bone sits flush on the floor no matter which face lands up.
   const restHeightsRef = useRef<Record<ShagaiSide, number>>({
     sheep: PHYS_BOX[2] / 2,
     goat: PHYS_BOX[2] / 2,

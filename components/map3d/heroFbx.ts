@@ -35,7 +35,7 @@ function extOf(path: string): string {
  * boxes (the actual character geometry) over props / environment helpers
  * that otherwise inflate the box and shrink the character.
  */
-function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
+export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3();
   let foundSkin = false;

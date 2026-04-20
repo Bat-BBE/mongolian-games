@@ -156,7 +156,7 @@ export function DashNav({
             title={t.leaderboard}
             aria-label={t.leaderboard}
           >
-            <Trophy className="size-[clamp(18px,1.5vw,22px)]" />
+            <Trophy className="size-[clamp(20px,1.5vw,26px)]" />
           </button>
         ) : null}
 

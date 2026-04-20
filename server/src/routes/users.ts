@@ -50,11 +50,13 @@ usersRouter.post("/simple-sync", async (req, res) => {
        display_name = COALESCE(EXCLUDED.display_name, app_users.display_name),
        hero_id = COALESCE(EXCLUDED.hero_id, app_users.hero_id),
        profile = CASE
-         WHEN EXCLUDED.profile IS DISTINCT FROM '{}'::jsonb THEN EXCLUDED.profile
+         WHEN EXCLUDED.profile IS DISTINCT FROM '{}'::jsonb THEN
+           COALESCE(app_users.profile, '{}'::jsonb) || EXCLUDED.profile
          ELSE app_users.profile
        END,
        progress = CASE
-         WHEN EXCLUDED.progress IS DISTINCT FROM '{}'::jsonb THEN EXCLUDED.progress
+         WHEN EXCLUDED.progress IS DISTINCT FROM '{}'::jsonb THEN
+           COALESCE(app_users.progress, '{}'::jsonb) || EXCLUDED.progress
          ELSE app_users.progress
        END,
        updated_at = now()

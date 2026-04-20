@@ -5,7 +5,7 @@ export const leaderboardRouter = Router();
 
 function displayNameOrMasked(
   displayName: string | null,
-  email: string
+  email: string,
 ): string {
   const d = displayName?.trim();
   if (d) return d;
@@ -17,12 +17,6 @@ function displayNameOrMasked(
   return `${prefix}•••@${domain}`;
 }
 
-/**
- * Wealth score-оор эрэмбэлсэн жагсаалт.
- * - profile.wealthScore (шинэ)
- * - fallback: profile.kp
- * - fallback: progress.xp
- */
 leaderboardRouter.get("/", async (_req, res) => {
   try {
     const result = await pool.query(
@@ -34,13 +28,13 @@ leaderboardRouter.get("/", async (_req, res) => {
               profile->'ger' AS ger
        FROM app_users
        ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
-       LIMIT 50`
+       LIMIT 50`,
     );
     const entries = result.rows.map((r, i) => ({
       rank: i + 1,
       name: displayNameOrMasked(
         r.display_name as string | null,
-        String(r.email ?? "")
+        String(r.email ?? ""),
       ),
       xp: Number(r.score) || 0,
       hero_id: r.hero_id as string | null,

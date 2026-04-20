@@ -11,6 +11,10 @@ import {
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
+import {
+  gameWeeklyPlaysRemaining,
+  stationAllGamesWeeklyLocked,
+} from "./mapConstants";
 
 interface LeftPanelProps {
   t: DashStrings;
@@ -21,7 +25,7 @@ interface LeftPanelProps {
   avatarUrl: string;
   bonusMultiplier: string;
   bonusTitle: string;
-  /** Аяллын өдөр, одоогийн уртуу — backend `dashboard-bundle`-аас */
+  /** odoogiin urtuunii medeelel */
   journeyDay?: number;
   stationIndex?: number;
   totalStations?: number;
@@ -29,11 +33,10 @@ interface LeftPanelProps {
   heroTier?: string;
   stationGames?: StationGameBundleRow[];
   currentStationId?: string;
-  /** Газрын 3D дээр баатар одоо байгаа өртөө (хаалганы дотор) — байхгүй бол `currentStationId` */
   heroStationId?: string | null;
   mapStations?: MapStationApiRow[];
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
-  stationVisits?: Record<string, number[]>;
+  stationGameVisits?: Record<string, Record<string, number[]>>;
   treasury?: {
     kp: number;
     coins: number;
@@ -47,7 +50,7 @@ interface LeftPanelProps {
       camel: number;
     };
   };
-  /** Газрын зураг дээр гэр рүү камер шилжүүлэх */
+  /** gerluu camer shiljuuleh */
   onGoToGer?: () => void;
   onOpenLeaderboard?: () => void;
 }
@@ -96,7 +99,7 @@ export function LeftPanel({
   heroStationId = null,
   mapStations = [],
   stationSteps,
-  stationVisits,
+  stationGameVisits,
   treasury,
   onGoToGer,
   onOpenLeaderboard,
@@ -105,8 +108,6 @@ export function LeftPanel({
   const xpPct = Math.round((xp / xpMax) * 100);
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-
-  /** Хаалганд биш үед зөвхөн гэр/төвийн агуулга — өртөө руу очоогүй үед прогрессийн станц самбарт харагдахгүй */
   const activeStationId = heroStationId ?? "home";
 
   const stationInfo = useMemo(
@@ -174,7 +175,6 @@ export function LeftPanel({
 
     return (
       <div className="flex flex-col gap-5">
-        {/* Quest Section */}
         <div className="space-y-2 w-full">
           <SectionTitle>{t.currentExpedition}</SectionTitle>
           <div className="relative group">
@@ -247,8 +247,8 @@ export function LeftPanel({
                           </li>
                           <li>
                             {lang === "mn"
-                              ? "3) Нэг өртөөнд 7 хоногт 2 л удаа тоглоно."
-                              : "3) Each station allows 2 plays per 7 days."}
+                              ? "3) Нэг өртөөний тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа тоглоно; бүх тоглоомын лимит дуусвал өртөө түгжигдэнэ."
+                              : "3) Each minigame at a station allows up to 2 plays per 7 days; when all are exhausted, the station locks for the week."}
                           </li>
                           <li>
                             {lang === "mn"
@@ -299,20 +299,25 @@ export function LeftPanel({
                   </p>
                   <p className="text-[10px] text-foreground/60 mb-1.5">
                     {(() => {
-                      const now = Date.now();
-                      const windowMs = 7 * 24 * 60 * 60 * 1000;
-                      const visits = (stationVisits?.[activeStationId] ?? [])
-                        .map((x) => Number(x))
-                        .filter(
-                          (n) => Number.isFinite(n) && n >= now - windowMs,
+                      const slugs = displayGames.map((x) => x.slug);
+                      const allLocked =
+                        activeStationId &&
+                        stationAllGamesWeeklyLocked(
+                          activeStationId,
+                          slugs,
+                          stationGameVisits,
                         );
-                      const rem = Math.max(0, 2 - visits.length);
+                      if (allLocked) {
+                        return lang === "mn"
+                          ? "Энэ өртөөний бүх тоглоомын 7 хоногийн лимит дууссан — өртөө түгжигдсэн."
+                          : "Weekly limits for all minigames here are used — station locked for now.";
+                      }
                       return lang === "mn"
-                        ? `7 хоногт үлдсэн боломж: ${rem}/2`
-                        : `Weekly plays remaining: ${rem}/2`;
+                        ? "Тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа."
+                        : "Up to 2 plays per 7 days for each minigame.";
                     })()}
                   </p>
-                  <ul className="space-y-1 max-h-[min(40vh,220px)] overflow-y-auto pr-0.5">
+                  <ul className="dashboard-left-scroll space-y-1 max-h-[min(40vh,220px)] overflow-y-auto pr-0.5">
                     {displayGames.map((g) => {
                       const completed = new Set(
                         (activeStationId
@@ -333,6 +338,22 @@ export function LeftPanel({
                           : lang === "mn"
                             ? "Түгжээтэй"
                             : "Locked";
+                      const wkRem =
+                        activeStationId && g.slug
+                          ? gameWeeklyPlaysRemaining(
+                              activeStationId,
+                              g.slug,
+                              stationGameVisits,
+                            )
+                          : 2;
+                      const wkLabel =
+                        wkRem <= 0
+                          ? lang === "mn"
+                            ? "7х дууссан"
+                            : "Week cap"
+                          : lang === "mn"
+                            ? `7х ${wkRem}/2`
+                            : `wk ${wkRem}/2`;
 
                       return (
                         <li
@@ -343,6 +364,15 @@ export function LeftPanel({
                             {lang === "mn" ? g.name_mn : g.name_en}
                           </span>
                           <span className="shrink-0 flex items-center gap-2">
+                            <span
+                              className={
+                                wkRem <= 0
+                                  ? "text-[9px] uppercase tracking-wider text-amber-700/90 dark:text-amber-400/90"
+                                  : "text-[9px] uppercase tracking-wider text-muted-foreground"
+                              }
+                            >
+                              {wkLabel}
+                            </span>
                             <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
                               {status}
                             </span>
@@ -386,13 +416,12 @@ export function LeftPanel({
           </div>
         </div>
 
-        {/* Treasury Section */}
         <div className="w-full">
           <SectionTitle>{t.treasury}</SectionTitle>
           <div className="space-y-2 mt-1.5">
             <div className="grid grid-cols-2 gap-2">
               <TreasuryRow
-                label={lang === "mn" ? "Гэр" : "Ger"}
+                label={lang === "mn" ? "Гэр" : "Home"}
                 value={`Lv ${treasury?.gerLevel ?? 1}`}
               />
               <TreasuryRow
@@ -461,34 +490,39 @@ export function LeftPanel({
           <button
             type="button"
             onClick={() => onOpenLeaderboard?.()}
-            className="w-full text-left flex items-center justify-between gap-3 mt-1.5 rounded-xl border border-transparent hover:border-primary/25 hover:bg-primary/5 transition-colors px-3 py-1 m-1"
+            className="group w-full text-left mt-1.5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-background/40 to-background/80 hover:border-primary/35 hover:from-primary/[0.12] transition-all duration-200 shadow-sm hover:shadow-md px-3 py-1"
           >
-            <div className="flex flex-col">
-              <span className="text-[8px] text-primary uppercase tracking-[0.2em] font-bold mb-1.5">
-                {t.topPlayersLabel}
-              </span>
-              <div className="flex items-center -space-x-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-7 h-7 rounded-full border-2 overflow-hidden bg-background/80"
-                    style={{
-                      zIndex: 30 - i * 10,
-                      borderColor:
-                        i === 0
-                          ? "var(--gold-main, var(--gold-bright))"
-                          : "color-mix(in oklch, var(--primary) 30%, var(--border))",
-                    }}
-                  >
-                    {i === 0 && (
-                      <img
-                        src={avatarUrl}
-                        alt="top player"
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                ))}
+            <div className="flex items-center gap-1">
+              <div className="flex flex-col min-w-0 flex-1 gap-1">
+                <span className="text-[9px] text-primary uppercase tracking-[0.18em] font-bold">
+                  {t.topPlayersLabel}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug line-clamp-2">
+                  {t.leaderboard}
+                </span>
+                <div className="flex items-center -space-x-1.5 pt-0.5">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="w-7 h-7 rounded-full border-2 overflow-hidden bg-background/90 ring-1 ring-background/50"
+                      style={{
+                        zIndex: 30 - i * 10,
+                        borderColor:
+                          i === 0
+                            ? "var(--gold-main, var(--gold-bright))"
+                            : "color-mix(in oklch, var(--primary) 28%, var(--border))",
+                      }}
+                    >
+                      {i === 0 && (
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </button>
@@ -540,7 +574,7 @@ export function LeftPanel({
         </button>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
+      <div className="dashboard-left-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
         {renderContent()}
       </div>
     </aside>

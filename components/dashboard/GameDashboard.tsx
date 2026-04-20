@@ -54,15 +54,20 @@ function readStationSteps(
   return out;
 }
 
-function readStationVisits(
+function readStationGameVisits(
   progress: Record<string, unknown>,
-): Record<string, number[]> {
-  const raw = progress.stationVisits;
+): Record<string, Record<string, number[]>> {
+  const raw = progress.stationGameVisits;
   if (!isPlainRecord(raw)) return {};
-  const out: Record<string, number[]> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (!Array.isArray(v)) continue;
-    out[k] = v.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+  const out: Record<string, Record<string, number[]>> = {};
+  for (const [sk, sv] of Object.entries(raw)) {
+    if (!isPlainRecord(sv)) continue;
+    const inner: Record<string, number[]> = {};
+    for (const [gk, arr] of Object.entries(sv)) {
+      if (!Array.isArray(arr)) continue;
+      inner[gk] = arr.map((x) => Number(x)).filter((n) => Number.isFinite(n));
+    }
+    out[sk] = inner;
   }
   return out;
 }
@@ -94,15 +99,27 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     heroTier?: string;
     heroModelPath?: string | null;
     stationSteps?: Record<string, { completedGameSlugs: string[] }>;
-    stationVisits?: Record<string, number[]>;
+    stationGameVisits?: Record<string, Record<string, number[]>>;
     homeGerLevel?: number;
-    homeLivestock?: { sheep: number; goat: number; cow: number; horse: number; camel: number };
+    homeLivestock?: {
+      sheep: number;
+      goat: number;
+      cow: number;
+      horse: number;
+      camel: number;
+    };
     treasury?: {
       kp: number;
       coins: number;
       gems: number;
       gerLevel: number;
-      livestock: { sheep: number; goat: number; cow: number; horse: number; camel: number };
+      livestock: {
+        sheep: number;
+        goat: number;
+        cow: number;
+        horse: number;
+        camel: number;
+      };
     };
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,22 +251,29 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           //      assets shipped with the current build; protects against
           //      stale paths saved to Firebase/PG before heroes were swapped).
           //   3. Whatever the user's saved profile says, as a last resort.
+          let raw: string | null = null;
           if (typeof hero?.model_path === "string" && hero.model_path.trim()) {
-            return hero.model_path;
+            raw = hero.model_path;
+          } else {
+            const heroIdFromProfile =
+              typeof prof.heroId === "string" ? prof.heroId : null;
+            const localHero = heroIdFromProfile
+              ? HEROES.find((h) => h.id === heroIdFromProfile)
+              : null;
+            if (localHero?.modelPath) raw = localHero.modelPath;
+            else if (
+              typeof prof.heroModelPath === "string" &&
+              prof.heroModelPath.trim()
+            ) {
+              raw = String(prof.heroModelPath);
+            } else {
+              raw = HEROES[0]?.modelPath ?? "/models/hero-22.fbx";
+            }
           }
-          const heroIdFromProfile =
-            typeof prof.heroId === "string" ? prof.heroId : null;
-          const localHero = heroIdFromProfile
-            ? HEROES.find((h) => h.id === heroIdFromProfile)
-            : null;
-          if (localHero?.modelPath) return localHero.modelPath;
-          if (typeof prof.heroModelPath === "string") {
-            return String(prof.heroModelPath);
-          }
-          return null;
+          return raw;
         })(),
         stationSteps: readStationSteps(prog),
-        stationVisits: readStationVisits(prog),
+        stationGameVisits: readStationGameVisits(prog),
         homeGerLevel: num(gerRec.level, 1),
         homeLivestock: {
           sheep: num(lsRec.sheep, 0),
@@ -359,7 +383,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           heroStationId={heroMapStationId}
           mapStations={mapStations}
           stationSteps={player.stationSteps}
-          stationVisits={player.stationVisits}
+          stationGameVisits={player.stationGameVisits}
           treasury={player.treasury}
           onGoToGer={() => flyHomeRef.current?.()}
           onOpenLeaderboard={openLb}
@@ -377,7 +401,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           stations={mapStations}
           heroModelPath={player.heroModelPath ?? null}
           stationSteps={player.stationSteps}
-          stationVisits={player.stationVisits}
+          stationGameVisits={player.stationGameVisits}
           onGameCompleted={() => setGameReloadTick((n) => n + 1)}
           onOpenHome={() => setHomeOpen(true)}
           onRegisterFlyHome={(fn) => {

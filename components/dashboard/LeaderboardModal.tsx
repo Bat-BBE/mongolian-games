@@ -68,6 +68,40 @@ function breakdownFrom(entry: LeaderboardEntry): {
   return { kp, gerLevel, sheep, goat, cow, horse, camel };
 }
 
+function livestockTotal(b: ReturnType<typeof breakdownFrom>): number | null {
+  const nums = [b.sheep, b.goat, b.cow, b.horse, b.camel].filter(
+    (n): n is number => typeof n === "number",
+  );
+  if (nums.length === 0) return null;
+  return nums.reduce((a, c) => a + c, 0);
+}
+
+function entryMetaSummary(
+  b: ReturnType<typeof breakdownFrom>,
+  lang: DashLang,
+): string {
+  const mal = livestockTotal(b);
+  const metaParts: string[] = [];
+  if (b.gerLevel != null) {
+    metaParts.push(lang === "mn" ? `Гэр ${b.gerLevel}` : `Ger ${b.gerLevel}`);
+  }
+  if (b.kp != null) {
+    metaParts.push(
+      lang === "mn"
+        ? `${b.kp.toLocaleString()} КП`
+        : `${b.kp.toLocaleString()} KP`,
+    );
+  }
+  if (mal != null && mal > 0) {
+    metaParts.push(
+      lang === "mn"
+        ? `${mal.toLocaleString()} мал`
+        : `${mal.toLocaleString()} livestock`,
+    );
+  }
+  return metaParts.join(" · ");
+}
+
 function heroDisplayName(heroId: string | null): string {
   if (!heroId) return "—";
   try {
@@ -97,25 +131,32 @@ function PodiumCard({
 }) {
   const ring =
     place === 1
-      ? "border-amber-400/70 shadow-[0_0_32px_-4px_rgba(251,191,36,0.45)]"
+      ? "border-amber-400/70 shadow-[0_0_40px_-6px_rgba(251,191,36,0.5)]"
       : place === 2
-        ? "border-slate-300/50 shadow-[0_0_24px_-6px_rgba(148,163,184,0.35)]"
-        : "border-amber-700/50 shadow-[0_0_20px_-6px_rgba(180,83,9,0.35)]";
+        ? "border-slate-300/50 shadow-[0_0_28px_-8px_rgba(148,163,184,0.4)]"
+        : "border-amber-700/50 shadow-[0_0_24px_-8px_rgba(180,83,9,0.4)]";
 
-  const scale = place === 1 ? "sm:scale-105 z-10" : "opacity-95";
+  const scale =
+    place === 1
+      ? "sm:scale-[1.04] z-10 min-h-[280px] sm:min-h-[300px]"
+      : "opacity-[0.97] min-h-[248px] sm:min-h-[268px]";
 
   const label = place === 1 ? "🥇" : place === 2 ? "🥈" : "🥉";
+  const avatarSize =
+    place === 1
+      ? "size-[4.5rem] sm:size-20"
+      : "size-[3.75rem] sm:size-[4.25rem]";
 
   if (!entry) {
     return (
       <div
         className={cn(
-          "flex-1 min-w-0 rounded-2xl border border-dashed border-primary/20 bg-muted/20 p-4 text-center",
+          "flex-1 min-w-0 max-w-[min(100%,280px)] mx-auto rounded-2xl border border-dashed border-primary/25 bg-muted/15 px-4 py-6 text-center flex flex-col justify-center",
           scale,
         )}
       >
-        <p className="text-2xl mb-1">{label}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-3xl mb-2">{label}</p>
+        <p className="text-sm text-muted-foreground">
           {lang === "mn" ? "Хоосон" : "Empty"}
         </p>
       </div>
@@ -123,22 +164,26 @@ function PodiumCard({
   }
 
   const b = breakdownFrom(entry);
+  const metaLine = entryMetaSummary(b, lang);
 
   return (
     <div
       className={cn(
-        "flex-1 min-w-0 rounded-2xl border-2 bg-gradient-to-b from-card to-background/90 p-4 flex flex-col items-center text-center gap-2",
+        "flex-1 min-w-0 max-w-[min(100%,280px)] mx-auto rounded-2xl border-2 bg-gradient-to-b from-card via-card/95 to-background/80 px-4 py-5 sm:px-5 sm:py-6 flex flex-col items-center text-center gap-3",
         ring,
         scale,
       )}
     >
-      <span className="text-2xl leading-none">{label}</span>
+      <span className="text-3xl sm:text-4xl leading-none drop-shadow-sm">
+        {label}
+      </span>
       <div
         className={cn(
-          "size-14 rounded-full overflow-hidden bg-muted/30 ring-1 ring-primary/20",
+          "rounded-full overflow-hidden bg-muted/30 ring-2 ring-primary/20",
+          avatarSize,
           place === 1
-            ? "shadow-[0_0_18px_rgba(212,175,55,0.35)]"
-            : "shadow-[0_0_14px_rgba(212,175,55,0.22)]",
+            ? "shadow-[0_0_22px_rgba(212,175,55,0.45)]"
+            : "shadow-[0_0_16px_rgba(212,175,55,0.25)]",
         )}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -148,48 +193,23 @@ function PodiumCard({
           className="w-full h-full object-cover"
         />
       </div>
-      <p className="font-display text-sm font-semibold truncate w-full px-1">
-        {entry.name}
-      </p>
-      <p className="text-[10px] text-muted-foreground truncate w-full">
-        {heroDisplayName(entry.hero_id)}
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
-        {b.gerLevel != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            {lang === "mn" ? `Гэр Lv ${b.gerLevel}` : `Ger Lv ${b.gerLevel}`}
-          </span>
-        ) : null}
-        {b.sheep != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            🐑 {b.sheep}
-          </span>
-        ) : null}
-        {b.goat != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            🐐 {b.goat}
-          </span>
-        ) : null}
-        {b.cow != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            🐄 {b.cow}
-          </span>
-        ) : null}
-        {b.horse != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            🐎 {b.horse}
-          </span>
-        ) : null}
-        {b.camel != null ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-            🐫 {b.camel}
-          </span>
+      <div className="w-full space-y-1 min-h-0">
+        <p className="font-display text-base sm:text-lg font-semibold leading-tight line-clamp-2 px-0.5">
+          {entry.name}
+        </p>
+        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">
+          {heroDisplayName(entry.hero_id)}
+        </p>
+        {metaLine ? (
+          <p className="text-[11px] sm:text-xs text-muted-foreground/90 leading-snug line-clamp-2 px-1">
+            {metaLine}
+          </p>
         ) : null}
       </div>
-      <p className="text-lg font-bold tabular-nums text-primary mt-auto">
+      <p className="text-xl sm:text-2xl font-bold tabular-nums text-primary mt-auto pt-1">
         {entry.xp.toLocaleString()}
-        <span className="text-[10px] font-normal text-muted-foreground ml-1">
-          {lang === "mn" ? "үнэлгээ" : "score"}
+        <span className="block text-[11px] sm:text-xs font-normal text-muted-foreground mt-1 tracking-wide">
+          {lang === "mn" ? "нийт үнэлгээ" : "total score"}
         </span>
       </p>
     </div>
@@ -268,32 +288,54 @@ export function LeaderboardModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[min(100vw-1.5rem,440px)] sm:max-w-lg md:max-w-xl",
-          "max-h-[min(88vh,640px)] overflow-hidden flex flex-col p-0 gap-0",
+          "w-[min(100vw-1.25rem,56rem)] max-w-none sm:max-w-5xl lg:max-w-6xl",
+          "max-h-[min(92vh,760px)] overflow-hidden flex flex-col p-0 gap-0",
           "border border-primary/30 bg-card/95 backdrop-blur-xl",
           "shadow-[0_24px_80px_-24px_color-mix(in_oklch,var(--primary)_35%,#0a0c18)]",
           "ring-1 ring-primary/10",
         )}
       >
-        <DialogHeader className="px-5 pt-5 pb-3 shrink-0 border-b border-primary/20 bg-gradient-to-br from-primary/[0.12] via-transparent to-[color-mix(in_oklch,oklch(35%_0.08_155)_12%,transparent)]">
-          <DialogTitle className="font-display flex items-center gap-2.5 text-lg md:text-xl w-full justify-center">
-            <span className="flex flex-col items-center gap-0.5 text-center">
-              <span>{title}</span>
-              <span className="text-[11px] font-normal text-muted-foreground font-sans tracking-normal">
+        <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 shrink-0 border-b border-primary/20 bg-gradient-to-br from-primary/[0.12] via-transparent to-[color-mix(in_oklch,oklch(35%_0.08_155)_12%,transparent)]">
+          <DialogTitle className="font-display flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xl sm:text-2xl w-full text-center">
+            <span className="flex flex-col items-center gap-1 min-w-0 max-w-xl">
+              <span className="leading-tight">{title}</span>
+              <span className="text-xs sm:text-sm font-normal text-muted-foreground font-sans tracking-normal">
                 {subtitle}
               </span>
             </span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5 min-h-0">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-5 sm:py-6 space-y-6 sm:space-y-8 min-h-0 [scrollbar-gutter:stable]">
           {err && (
             <p className="text-sm text-destructive text-center py-4">{err}</p>
           )}
           {loading && !err && (
-            <p className="text-sm text-muted-foreground py-12 text-center">
-              {lang === "mn" ? "Ачаалж байна…" : "Loading…"}
-            </p>
+            <div
+              className="py-8 space-y-4 max-w-3xl mx-auto"
+              aria-busy
+              aria-label={lang === "mn" ? "Ачаалж байна" : "Loading"}
+            >
+              <div className="grid grid-cols-3 gap-3 sm:gap-5 items-end">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "rounded-2xl border border-primary/10 bg-muted/20 animate-pulse",
+                      i === 1 ? "h-48 sm:h-56" : "h-40 sm:h-48",
+                    )}
+                  />
+                ))}
+              </div>
+              <div className="space-y-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl border border-primary/10 bg-muted/15 animate-pulse"
+                  />
+                ))}
+              </div>
+            </div>
           )}
           {!loading && !err && entries.length === 0 && (
             <p className="text-sm text-muted-foreground py-10 text-center">
@@ -302,46 +344,50 @@ export function LeaderboardModal({
           )}
           {!loading && !err && entries.length > 0 && (
             <>
-              <div className="flex flex-row items-end justify-center gap-2 sm:gap-3 px-1">
-                <PodiumCard
-                  entry={second}
-                  place={2}
-                  lang={lang}
-                  heroImg={imgFor(second?.hero_id ?? null)}
+              <div className="relative w-full max-w-5xl mx-auto">
+                <div
+                  className="pointer-events-none absolute inset-x-0 bottom-0 h-24 sm:h-28 rounded-[2rem] bg-gradient-to-t from-primary/[0.07] to-transparent"
+                  aria-hidden
                 />
-                <PodiumCard
-                  entry={first}
-                  place={1}
-                  lang={lang}
-                  heroImg={imgFor(first?.hero_id ?? null)}
-                />
-                <PodiumCard
-                  entry={third}
-                  place={3}
-                  lang={lang}
-                  heroImg={imgFor(third?.hero_id ?? null)}
-                />
+                <div className="relative grid grid-cols-3 gap-2 sm:gap-5 lg:gap-8 items-end px-0 sm:px-2">
+                  <PodiumCard
+                    entry={second}
+                    place={2}
+                    lang={lang}
+                    heroImg={imgFor(second?.hero_id ?? null)}
+                  />
+                  <PodiumCard
+                    entry={first}
+                    place={1}
+                    lang={lang}
+                    heroImg={imgFor(first?.hero_id ?? null)}
+                  />
+                  <PodiumCard
+                    entry={third}
+                    place={3}
+                    lang={lang}
+                    heroImg={imgFor(third?.hero_id ?? null)}
+                  />
+                </div>
               </div>
 
               {rest.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                    <Medal className="size-3.5 opacity-70" />
+                <div className="space-y-3 max-w-4xl mx-auto w-full">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground flex items-center gap-2 font-medium">
+                    <Medal className="size-4 opacity-80 shrink-0" />
                     {lang === "mn" ? "Бусад тоглогчид" : "Other players"}
                   </p>
-                  <ul className="space-y-1.5 pr-1">
-                    {rest.map((e) =>
-                      (() => {
-                        const b = breakdownFrom(e);
-                        return (
-                          <li
-                            key={`${e.rank}-${e.name}`}
-                            className="flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] px-3 py-2.5 text-sm hover:bg-primary/[0.08] transition-colors"
-                          >
-                            <span className="tabular-nums font-mono text-xs text-muted-foreground w-7 shrink-0">
+                  <ul className="space-y-2">
+                    {rest.map((e) => {
+                      const b = breakdownFrom(e);
+                      const meta = entryMetaSummary(b, lang);
+                      return (
+                        <li key={`${e.rank}-${e.name}`}>
+                          <div className="group grid grid-cols-[2.75rem_2.75rem_1fr_auto] sm:grid-cols-[3rem_3rem_1fr_auto] gap-3 sm:gap-4 items-center rounded-2xl border border-primary/12 bg-gradient-to-r from-primary/[0.05] to-transparent px-3 py-3 sm:px-4 sm:py-3.5 text-sm hover:border-primary/25 hover:from-primary/[0.09] transition-all duration-200">
+                            <span className="flex size-9 sm:size-10 items-center justify-center rounded-xl bg-background/80 border border-primary/15 tabular-nums text-xs sm:text-sm font-semibold text-muted-foreground group-hover:text-foreground shrink-0">
                               {e.rank}
                             </span>
-                            <div className="size-10 rounded-full overflow-hidden bg-muted/30 ring-1 ring-primary/15 shrink-0">
+                            <div className="size-11 sm:size-12 rounded-full overflow-hidden bg-muted/30 ring-2 ring-primary/15 shrink-0 shadow-sm">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={
@@ -352,53 +398,31 @@ export function LeaderboardModal({
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium truncate">{e.name}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-sm sm:text-base leading-snug truncate">
+                                {e.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">
                                 {heroDisplayName(e.hero_id)}
                               </p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {b.gerLevel != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    {lang === "mn"
-                                      ? `Гэр Lv ${b.gerLevel}`
-                                      : `Ger Lv ${b.gerLevel}`}
-                                  </span>
-                                ) : null}
-                                {b.sheep != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    🐑 {b.sheep}
-                                  </span>
-                                ) : null}
-                                {b.goat != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    🐐 {b.goat}
-                                  </span>
-                                ) : null}
-                                {b.cow != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    🐄 {b.cow}
-                                  </span>
-                                ) : null}
-                                {b.horse != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    🐎 {b.horse}
-                                  </span>
-                                ) : null}
-                                {b.camel != null ? (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-primary/15 bg-primary/5 text-muted-foreground">
-                                    🐫 {b.camel}
-                                  </span>
-                                ) : null}
-                              </div>
+                              {meta ? (
+                                <p className="text-[11px] sm:text-xs text-muted-foreground/85 truncate mt-1">
+                                  {meta}
+                                </p>
+                              ) : null}
                             </div>
-                            <span className="tabular-nums font-semibold text-primary shrink-0 text-sm">
-                              {e.xp.toLocaleString()}
-                            </span>
-                          </li>
-                        );
-                      })(),
-                    )}
+                            <div className="text-right shrink-0 min-w-[4.5rem] sm:min-w-[5.5rem]">
+                              <span className="tabular-nums font-bold text-primary text-base sm:text-lg block leading-none">
+                                {e.xp.toLocaleString()}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground mt-1 hidden sm:block">
+                                {lang === "mn" ? "үнэлгээ" : "score"}
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}

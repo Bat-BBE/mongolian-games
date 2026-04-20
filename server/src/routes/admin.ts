@@ -14,7 +14,11 @@ const loginBody = z.object({
 });
 
 const gameBody = z.object({
-  slug: z.string().min(1).max(80).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(1)
+    .max(80)
+    .regex(/^[a-z0-9-]+$/),
   name_mn: z.string().min(1).max(500),
   name_en: z.string().min(1).max(500),
   description_mn: z.string().max(10000).optional().default(""),
@@ -110,7 +114,10 @@ const upload = multer({
     filename: (_req, file, cb) => {
       const safeExt = extname(file.originalname || "").toLowerCase() || ".jpg";
       const ext =
-        safeExt === ".png" || safeExt === ".jpg" || safeExt === ".jpeg" || safeExt === ".webp"
+        safeExt === ".png" ||
+        safeExt === ".jpg" ||
+        safeExt === ".jpeg" ||
+        safeExt === ".webp"
           ? safeExt
           : ".jpg";
       const name = `game_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
@@ -119,7 +126,9 @@ const upload = multer({
   }),
   limits: { fileSize: 6 * 1024 * 1024 },
   fileFilter: ((req, file, cb) => {
-    const ok = ["image/png", "image/jpeg", "image/webp"].includes(file.mimetype);
+    const ok = ["image/png", "image/jpeg", "image/webp"].includes(
+      file.mimetype,
+    );
     if (!ok) {
       (req as unknown as { fileValidationError?: string }).fileValidationError =
         "Invalid file type";
@@ -150,11 +159,10 @@ const heroImageUpload = multer({
       cb(null, name);
     },
   }),
-  // Allow a bit larger images (PNG can be big)
   limits: { fileSize: 12 * 1024 * 1024 },
   fileFilter: ((req, file, cb) => {
-    // Be lenient: accept any image/* to avoid PNG edge-cases.
-    const ok = typeof file.mimetype === "string" && file.mimetype.startsWith("image/");
+    const ok =
+      typeof file.mimetype === "string" && file.mimetype.startsWith("image/");
     if (!ok) {
       (req as unknown as { fileValidationError?: string }).fileValidationError =
         "Invalid file type";
@@ -223,7 +231,6 @@ adminRouter.get("/treasury", async (_req, res) => {
        ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
        LIMIT 250`,
     );
-
     res.json({
       summary: result.rows[0],
       top: top.rows,
@@ -245,9 +252,8 @@ adminRouter.get("/users", async (_req, res) => {
       `SELECT id, firebase_uid, email, display_name, hero_id, created_at, updated_at
        FROM app_users
        WHERE ($1::boolean = true) OR (firebase_uid NOT LIKE 'local:%')
-       ORDER BY created_at DESC`
-      ,
-      [includeLocal.success && !!includeLocal.data]
+       ORDER BY created_at DESC`,
+      [includeLocal.success && !!includeLocal.data],
     );
     res.json({ users: result.rows });
   } catch (e) {
@@ -261,7 +267,7 @@ adminRouter.get("/games", async (_req, res) => {
     `SELECT id, slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order,
             created_at, updated_at
      FROM games
-     ORDER BY sort_order ASC, name_en ASC`
+     ORDER BY sort_order ASC, name_en ASC`,
   );
   res.json({ games: result.rows });
 });
@@ -269,7 +275,9 @@ adminRouter.get("/games", async (_req, res) => {
 adminRouter.post("/games", async (req, res) => {
   const parsed = gameBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const b = parsed.data;
@@ -288,7 +296,7 @@ adminRouter.post("/games", async (req, res) => {
         b.is_available,
         b.show_on_home ?? true,
         b.sort_order,
-      ]
+      ],
     );
     res.status(201).json({ game: result.rows[0] });
   } catch (e: unknown) {
@@ -309,7 +317,9 @@ adminRouter.put("/games/:id", async (req, res) => {
   }
   const parsed = gamePatch.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const p = parsed.data;
@@ -362,7 +372,7 @@ adminRouter.put("/games/:id", async (req, res) => {
   const result = await pool.query(
     `UPDATE games SET ${fields.join(", ")} WHERE id = $${n}
      RETURNING id, slug, name_mn, name_en, description_mn, description_en, image_url, is_available, show_on_home, sort_order, created_at, updated_at`,
-    values
+    values,
   );
   if (result.rowCount === 0) {
     res.status(404).json({ error: "Not found" });
@@ -377,7 +387,10 @@ adminRouter.delete("/games/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const result = await pool.query(`DELETE FROM games WHERE id = $1 RETURNING id`, [id.data]);
+  const result = await pool.query(
+    `DELETE FROM games WHERE id = $1 RETURNING id`,
+    [id.data],
+  );
   if (result.rowCount === 0) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -385,40 +398,45 @@ adminRouter.delete("/games/:id", async (req, res) => {
   res.status(204).send();
 });
 
-adminRouter.post("/games/:id/image", upload.single("file"), async (req, res) => {
-  const id = z.string().uuid().safeParse(req.params.id);
-  if (!id.success) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
-  const fv = (req as unknown as { fileValidationError?: string }).fileValidationError;
-  if (fv) {
-    res.status(415).json({ error: fv });
-    return;
-  }
-  const f = req.file;
-  if (!f) {
-    res.status(400).json({ error: "Missing file" });
-    return;
-  }
-  const imageUrl = `/uploads/games/${f.filename}`;
-  try {
-    const result = await pool.query(
-      `UPDATE games SET image_url = $1, updated_at = now()
-       WHERE id = $2
-       RETURNING id, image_url`,
-      [imageUrl, id.data],
-    );
-    if (result.rowCount === 0) {
-      res.status(404).json({ error: "Not found" });
+adminRouter.post(
+  "/games/:id/image",
+  upload.single("file"),
+  async (req, res) => {
+    const id = z.string().uuid().safeParse(req.params.id);
+    if (!id.success) {
+      res.status(400).json({ error: "Invalid id" });
       return;
     }
-    res.json({ game: result.rows[0] });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Upload failed";
-    res.status(500).json({ error: msg });
-  }
-});
+    const fv = (req as unknown as { fileValidationError?: string })
+      .fileValidationError;
+    if (fv) {
+      res.status(415).json({ error: fv });
+      return;
+    }
+    const f = req.file;
+    if (!f) {
+      res.status(400).json({ error: "Missing file" });
+      return;
+    }
+    const imageUrl = `/uploads/games/${f.filename}`;
+    try {
+      const result = await pool.query(
+        `UPDATE games SET image_url = $1, updated_at = now()
+       WHERE id = $2
+       RETURNING id, image_url`,
+        [imageUrl, id.data],
+      );
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+      res.json({ game: result.rows[0] });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      res.status(500).json({ error: msg });
+    }
+  },
+);
 
 adminRouter.post(
   "/heroes/:slug/image",
@@ -466,7 +484,7 @@ adminRouter.get("/heroes", async (_req, res) => {
       `SELECT id, slug, name_mn, name_en, title_mn, title_en, bio_mn, bio_en, stats, color, emissive, image_url, model_path,
               sort_order, is_available, created_at, updated_at
        FROM heroes
-       ORDER BY sort_order ASC, name_en ASC`
+       ORDER BY sort_order ASC, name_en ASC`,
     );
     res.json({ heroes: result.rows });
   } catch (e) {
@@ -483,7 +501,9 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
   }
   const parsed = heroAdminPatch.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const p = parsed.data;
@@ -521,7 +541,7 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
       `UPDATE heroes SET ${fields.join(", ")} WHERE slug = $${n}
        RETURNING id, slug, name_mn, name_en, title_mn, title_en, bio_mn, bio_en, stats, color, emissive, image_url, model_path,
                  sort_order, is_available, created_at, updated_at`,
-      values
+      values,
     );
     if (result.rowCount === 0) {
       res.status(404).json({ error: "Hero not found" });
@@ -540,7 +560,7 @@ adminRouter.get("/stations", async (_req, res) => {
       `SELECT slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
               quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at
        FROM map_stations
-       ORDER BY journey_index ASC`
+       ORDER BY journey_index ASC`,
     );
     res.json({ stations: result.rows });
   } catch (e) {
@@ -557,7 +577,9 @@ adminRouter.put("/stations/:slug", async (req, res) => {
   }
   const parsed = stationAdminPatch.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const p = parsed.data;
@@ -619,7 +641,7 @@ adminRouter.put("/stations/:slug", async (req, res) => {
       `UPDATE map_stations SET ${fields.join(", ")} WHERE slug = $${n}
        RETURNING slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
                  quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at`,
-      values
+      values,
     );
     if (result.rowCount === 0) {
       res.status(404).json({ error: "Station not found" });
@@ -639,7 +661,10 @@ adminRouter.delete("/users/:id", async (req, res) => {
     return;
   }
   try {
-    const result = await pool.query(`DELETE FROM app_users WHERE id = $1 RETURNING id`, [id.data]);
+    const result = await pool.query(
+      `DELETE FROM app_users WHERE id = $1 RETURNING id`,
+      [id.data],
+    );
     if (result.rowCount === 0) {
       res.status(404).json({ error: "User not found" });
       return;
@@ -661,12 +686,14 @@ adminRouter.get("/ui-strings", async (req, res) => {
     if (loc.data) {
       const result = await pool.query(
         `SELECT id, key, locale, value FROM ui_strings WHERE locale = $1 ORDER BY key ASC`,
-        [loc.data]
+        [loc.data],
       );
       res.json({ strings: result.rows });
       return;
     }
-    const result = await pool.query(`SELECT id, key, locale, value FROM ui_strings ORDER BY locale, key`);
+    const result = await pool.query(
+      `SELECT id, key, locale, value FROM ui_strings ORDER BY locale, key`,
+    );
     res.json({ strings: result.rows });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Query failed";
@@ -677,7 +704,9 @@ adminRouter.get("/ui-strings", async (req, res) => {
 adminRouter.put("/ui-strings", async (req, res) => {
   const parsed = uiStringPut.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const { key, locale, value } = parsed.data;
@@ -686,7 +715,7 @@ adminRouter.put("/ui-strings", async (req, res) => {
       `INSERT INTO ui_strings (key, locale, value) VALUES ($1, $2, $3)
        ON CONFLICT (key, locale) DO UPDATE SET value = EXCLUDED.value
        RETURNING id, key, locale, value`,
-      [key, locale, value]
+      [key, locale, value],
     );
     res.json({ string: result.rows[0] });
   } catch (e) {
@@ -710,7 +739,7 @@ adminRouter.patch("/users/:id", async (req, res) => {
     const result = await pool.query(
       `UPDATE app_users SET display_name = $1, updated_at = now() WHERE id = $2
        RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
-      [parsed.data.displayName.trim(), id.data]
+      [parsed.data.displayName.trim(), id.data],
     );
     if (result.rowCount === 0) {
       res.status(404).json({ error: "User not found" });
@@ -737,7 +766,7 @@ adminRouter.get("/stations/:slug/games", async (req, res) => {
        INNER JOIN games g ON g.id = sg.game_id
        WHERE sg.station_slug = $1
        ORDER BY sg.sort_order ASC, g.name_en ASC`,
-      [slug.data]
+      [slug.data],
     );
     res.json({ games: result.rows });
   } catch (e) {
@@ -754,24 +783,31 @@ adminRouter.put("/stations/:slug/games", async (req, res) => {
   }
   const parsed = stationGamesPutBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body", details: parsed.error.flatten() });
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
     return;
   }
   const { gameIds } = parsed.data;
   const client = await pool.connect();
   try {
-    const ex = await client.query(`SELECT 1 FROM map_stations WHERE slug = $1`, [slug.data]);
+    const ex = await client.query(
+      `SELECT 1 FROM map_stations WHERE slug = $1`,
+      [slug.data],
+    );
     if (ex.rowCount === 0) {
       res.status(404).json({ error: "Station not found" });
       return;
     }
     await client.query("BEGIN");
-    await client.query(`DELETE FROM station_games WHERE station_slug = $1`, [slug.data]);
+    await client.query(`DELETE FROM station_games WHERE station_slug = $1`, [
+      slug.data,
+    ]);
     for (let i = 0; i < gameIds.length; i++) {
       await client.query(
         `INSERT INTO station_games (station_slug, game_id, sort_order)
          VALUES ($1, $2, $3)`,
-        [slug.data, gameIds[i], i]
+        [slug.data, gameIds[i], i],
       );
     }
     await client.query("COMMIT");
@@ -781,7 +817,7 @@ adminRouter.put("/stations/:slug/games", async (req, res) => {
        INNER JOIN games g ON g.id = sg.game_id
        WHERE sg.station_slug = $1
        ORDER BY sg.sort_order ASC`,
-      [slug.data]
+      [slug.data],
     );
     res.json({ ok: true, games: list.rows });
   } catch (e: unknown) {

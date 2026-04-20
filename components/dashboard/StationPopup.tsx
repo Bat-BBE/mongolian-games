@@ -3,6 +3,10 @@
 import { LuX as X, LuStar as Star, LuGamepad2 as Gamepad2, LuBookOpen as BookOpen } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 import type { UrtuuStation } from "./UrtuuNode";
+import {
+  gameWeeklyPlaysRemaining,
+  stationAllGamesWeeklyLocked,
+} from "./mapConstants";
 
 interface StationPopupProps {
   station: UrtuuStation | null;
@@ -28,7 +32,7 @@ interface StationPopupProps {
   /** Одоогийн өртөө эсэх — энд л тоглоом эхлүүлэх */
   canPlay?: boolean;
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
-  stationVisits?: Record<string, number[]>;
+  stationGameVisits?: Record<string, Record<string, number[]>>;
 }
 
 export function StationPopup({
@@ -50,7 +54,7 @@ export function StationPopup({
   doneHint,
   canPlay = true,
   stationSteps,
-  stationVisits,
+  stationGameVisits,
 }: StationPopupProps) {
   if (!station) return null;
 
@@ -69,12 +73,16 @@ export function StationPopup({
   const completed = new Set(
     stationSteps?.[station.id]?.completedGameSlugs?.map(String) ?? [],
   );
-  const windowMs = 7 * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  const visits = (stationVisits?.[station.id] ?? [])
-    .map((x) => Number(x))
-    .filter((n) => Number.isFinite(n) && n >= now - windowMs);
-  const weeklyRemaining = Math.max(0, 2 - visits.length);
+  const gameSlugs = list
+    .map((g) => g.slug)
+    .filter((s): s is string => Boolean(s && String(s).trim()));
+  const stationWeeklyExhausted = stationAllGamesWeeklyLocked(
+    station.id,
+    gameSlugs,
+    stationGameVisits,
+  );
+  const nextRequired =
+    list.map((g) => g.slug).find((slug) => slug && !completed.has(slug)) ?? null;
 
   return (
     <>
@@ -170,21 +178,37 @@ export function StationPopup({
             </p>
 
             <p className="text-[10px] text-muted-foreground mb-3">
-              {weeklyRemaining > 0
-                ? `7 хоногт үлдсэн боломж: ${weeklyRemaining}/2`
-                : "Энэ өртөөнд 7 хоногийн лимит дууссан"}
+              {stationWeeklyExhausted
+                ? "Энэ өртөөний бүх тоглоомын 7 хоногийн лимит дууссан — өртөө түгжигдсэн."
+                : "Тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа тоглож болно."}
             </p>
 
             <ul className="space-y-3">
               {list.map((g) => (
                 (() => {
-                  const isDone = g.slug ? completed.has(g.slug) : false;
+                  const slug = g.slug?.trim() || "";
+                  const isDone = slug ? completed.has(slug) : false;
+                  const gameRem = slug
+                    ? gameWeeklyPlaysRemaining(
+                        station.id,
+                        slug,
+                        stationGameVisits,
+                      )
+                    : 0;
+                  const progressionLocked =
+                    Boolean(slug) &&
+                    !completed.has(slug) &&
+                    slug !== nextRequired;
                   const canStart =
-                    canPlay && Boolean(g.slug) && weeklyRemaining > 0;
+                    canPlay &&
+                    Boolean(slug) &&
+                    gameRem > 0 &&
+                    !progressionLocked;
 
-                  const statusText =
-                    weeklyRemaining <= 0
-                      ? "7 хоногийн лимит дууссан"
+                  const statusText = progressionLocked
+                    ? lockedHint
+                    : gameRem <= 0
+                      ? "Энэ тоглоомын 7 хоногийн лимит дууссан"
                       : isDone
                         ? doneHint
                         : lockedHint;

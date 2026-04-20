@@ -132,7 +132,8 @@ export async function registerEmail(email: string, heroId: HeroId) {
 }
 
 /**
- * Баатар солих — түвшин / аялал / эрдэнэсийн оноог хадгална.
+ * Баатар солих — PostgreSQL дээрх зоос/эрдэнэс/мал/гэр зэргийг хадгална.
+ * Өмнө нь Firebase-ээс ирсэн хуучин профайл бүхэлд нь PG руу бичигдэж эдийн засаг устдаг байсан.
  */
 export async function updateHeroForEmail(email: string, heroId: HeroId) {
   const trimmed = email.trim();
@@ -146,26 +147,30 @@ export async function updateHeroForEmail(email: string, heroId: HeroId) {
   let progress: Record<string, unknown>;
   let meta: { createdAt?: number };
 
-  if (snapshot.exists()) {
-    const data = snapshot.val() as {
-      profile?: unknown;
-      progress?: unknown;
-      meta?: unknown;
-    };
-    profile = { ...(isPlainRecord(data.profile) ? data.profile : {}) };
-    progress = mergeProgress(data.progress);
-    meta = isPlainRecord(data.meta) ? (data.meta as { createdAt?: number }) : { createdAt: Date.now() };
-  } else {
-    try {
-      const gp = await getGameProfileByEmail(trimmed);
-      if (gp?.user) {
-        profile = isPlainRecord(gp.user.profile) ? { ...gp.user.profile } : {};
-        progress = mergeProgress(gp.user.progress);
-        meta = { createdAt: new Date(gp.user.created_at).getTime() };
-      } else {
-        throw new Error("User not found");
-      }
-    } catch {
+  try {
+    const gp = await getGameProfileByEmail(trimmed);
+    if (gp?.user) {
+      profile = isPlainRecord(gp.user.profile)
+        ? { ...(gp.user.profile as Record<string, unknown>) }
+        : {};
+      progress = mergeProgress(gp.user.progress);
+      meta = { createdAt: new Date(gp.user.created_at).getTime() };
+    } else {
+      throw new Error("no pg");
+    }
+  } catch {
+    if (snapshot.exists()) {
+      const data = snapshot.val() as {
+        profile?: unknown;
+        progress?: unknown;
+        meta?: unknown;
+      };
+      profile = { ...(isPlainRecord(data.profile) ? data.profile : {}) };
+      progress = mergeProgress(data.progress);
+      meta = isPlainRecord(data.meta)
+        ? (data.meta as { createdAt?: number })
+        : { createdAt: Date.now() };
+    } else {
       throw new Error("User not found");
     }
   }

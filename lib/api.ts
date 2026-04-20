@@ -310,6 +310,30 @@ export async function homeBuyLivestock(body: {
   return { user: data.user };
 }
 
+export async function homeExchangeGemsForCoins(body: {
+  email: string;
+  gems: number;
+}): Promise<{
+  user: AppUserRow;
+  exchange: { gemsSpent: number; coinsReceived: number };
+}> {
+  const res = await apiFetch("/api/game/home/exchange-gems", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+    exchange?: { gemsSpent: number; coinsReceived: number };
+  };
+  if (!res.ok)
+    throw new Error(data.error ?? `gem exchange failed (${res.status})`);
+  if (!data.user) throw new Error("gem exchange: missing user");
+  if (!data.exchange) throw new Error("gem exchange: missing exchange");
+  return { user: data.user, exchange: data.exchange };
+}
+
 export type LinkedStationGameRow = {
   id: string;
   slug: string;

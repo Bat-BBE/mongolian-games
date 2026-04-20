@@ -3,7 +3,8 @@ import type { LabelPos } from "./AnimationController";
 import {
   STATION_CONFIGS,
   isStationUnlockedInJourney,
-  stationWeeklyPlaysRemaining,
+  stationAllGamesWeeklyLocked,
+  type StationGameVisits,
 } from "./mapConstants";
 import type { UrtuuStation } from "./UrtuuNode";
 
@@ -15,7 +16,7 @@ interface StationLabelsProps {
   /** Баатар аль өртөөний хаалганы дотор байгаа — зөвхөн энэ өртөө «идэвхтэй» харагдана */
   heroAtStationId?: string | null;
   doneStationIds: string[];
-  stationVisits?: Record<string, number[]>;
+  stationGameVisits?: StationGameVisits;
   selectedId: string | null;
   /** Which station label to show (outer proximity ring). */
   visibleStationId: string | null;
@@ -37,7 +38,7 @@ export function StationLabels({
   currentStationId,
   heroAtStationId = null,
   doneStationIds,
-  stationVisits,
+  stationGameVisits,
   selectedId,
   visibleStationId,
   labelApproachAlpha = 1,
@@ -68,11 +69,16 @@ export function StationLabels({
           station.id,
           currentStationId,
         );
-        const weeklyRem = stationWeeklyPlaysRemaining(
+        const gameSlugs =
+          station.games
+            ?.map((g) => g.slug)
+            .filter((s): s is string => Boolean(s?.trim())) ??
+          (station.gameSlug?.trim() ? [station.gameSlug.trim()] : []);
+        const isWeeklyLocked = stationAllGamesWeeklyLocked(
           station.id,
-          stationVisits,
+          gameSlugs,
+          stationGameVisits,
         );
-        const isWeeklyLocked = weeklyRem <= 0;
         const isLocked = !isUnlocked || isWeeklyLocked;
         const isUpcoming = !isCurrent && !isDone && !isLocked;
         const isSelected = station.id === selectedId;

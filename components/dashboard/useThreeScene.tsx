@@ -430,7 +430,7 @@ export function useThreeScene({
     builder.buildGrassTufts();
     builder.buildRocks();
     builder.buildPlayerHomeGer(homeGerLevel);
-    builder.buildPlayerLivestockNearHome(homeLivestock);
+    builder.buildPlayerLivestockNearHome();
     builder.buildRoads(stations);
     builder.buildStationGers(stations);
     builder.buildGerCamps();
@@ -622,7 +622,9 @@ export function useThreeScene({
 
     const onKeyDown = (e: KeyboardEvent) => {
       const st = manualKeysRef.current;
-      st.run = e.shiftKey;
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+        st.run = true;
+      }
       if (
         e.code === "KeyW" ||
         e.key === "w" ||
@@ -654,7 +656,9 @@ export function useThreeScene({
     };
     const onKeyUp = (e: KeyboardEvent) => {
       const st = manualKeysRef.current;
-      st.run = e.shiftKey;
+      if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+        st.run = false;
+      }
       if (
         e.code === "KeyW" ||
         e.key === "w" ||
@@ -708,6 +712,8 @@ export function useThreeScene({
 
     // When the player manually drives the hero, keep camera centered on hero for a bit.
     const followHeroUntilRef = { current: 0 };
+    /** Камерын lookAt: XZ баатарт наалдана, Y-г газраас тооцоод зөөлөн дагана (гүйхэд цочирдол багасна). */
+    const heroCamPivotSmoothedRef = { current: null as THREE.Vector3 | null };
     /** Газрын өндрийн лимитийг зөөлөн дагаж, эргүүлэхэд камер гэнэт үсрэхгүй. */
     const cameraFloorSmoothedRef = { current: null as number | null };
 
@@ -737,6 +743,7 @@ export function useThreeScene({
         cameraState.phiVel = 0;
         cameraState.distVel = 0;
         cameraFloorSmoothedRef.current = null;
+        heroCamPivotSmoothedRef.current = null;
         cancelIntro();
       } else if (!cameraState.userInteracted) {
         cameraState.targetTheta = t.theta;
@@ -746,7 +753,7 @@ export function useThreeScene({
 
     function goToHomeGer() {
       flyToStation("home", true);
-      followHeroUntilRef.current = performance.now() + 3200;
+      followHeroUntilRef.current = performance.now() + 200;
       heroManualVelRef.current.set(0, 0, 0);
       manualKeysRef.current.up =
         manualKeysRef.current.down =
@@ -924,28 +931,103 @@ export function useThreeScene({
       },
       onBeforeRender: (elapsed: number, delta: number) => {
         const dt = Math.min(delta, 0.06);
+        const stKeys = manualKeysRef.current;
+        const mvxKeys = (stKeys.right ? 1 : 0) - (stKeys.left ? 1 : 0);
+        const mvzKeys = (stKeys.up ? 1 : 0) - (stKeys.down ? 1 : 0);
+        const klenKeys = Math.sqrt(mvxKeys * mvxKeys + mvzKeys * mvzKeys);
+
+        // --- Hero movement first (өмнөх кадрын camera чиглэлээр); дараа нь камер pivot —
+        // эсрэг дараалал нь «араас сүүлтэй» хоцролт үүсгэдэг (React state биш).
+        const rootMove = heroRootRef.current;
+        const playMove = heroPlayRef.current;
+        if (rootMove && playMove) {
+          const hv = heroManualVelRef.current;
+          if (klenKeys <= 0.01) {
+            hv.multiplyScalar(Math.exp(-20 * delta));
+            if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
+          }
+          if (klenKeys > 0.01) {
+            const baseSpeed = stKeys.run ? 22 : 12;
+            const localDir = new THREE.Vector3(
+              mvxKeys / klenKeys,
+              0,
+              mvzKeys / klenKeys,
+            );
+            const camForward = new THREE.Vector3();
+            camera.getWorldDirection(camForward);
+            camForward.y = 0;
+            if (camForward.lengthSq() < 1e-8) camForward.set(0, 0, 1);
+            camForward.normalize();
+            const camRight = new THREE.Vector3()
+              .crossVectors(camForward, new THREE.Vector3(0, 1, 0))
+              .normalize();
+            const worldDir = new THREE.Vector3()
+              .addScaledVector(camRight, localDir.x)
+              .addScaledVector(camForward, localDir.z)
+              .normalize();
+
+            const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
+            const velBlend = 1 - Math.exp(-(stKeys.run ? 22 : 16) * delta);
+            hv.lerp(desiredVel, velBlend);
+            rootMove.position.addScaledVector(hv, delta);
+            rootMove.position.x = clamp(rootMove.position.x, -5600, 5600);
+            rootMove.position.z = clamp(rootMove.position.z, -4700, 4700);
+            rootMove.position.y =
+              terrainHeight(rootMove.position.x, rootMove.position.z) + 0.02;
+
+            const targetYaw = Math.atan2(worldDir.x, worldDir.z);
+            let dy = targetYaw - rootMove.rotation.y;
+            while (dy > Math.PI) dy -= Math.PI * 2;
+            while (dy < -Math.PI) dy += Math.PI * 2;
+            rootMove.rotation.y += dy * (1 - Math.exp(-14 * delta));
+
+            playMove(stKeys.run ? "run" : "walk", 0.12);
+          } else {
+            playMove("idle", 0.18);
+          }
+
+          heroKinematicRef.current.pos.copy(rootMove.position);
+          heroKinematicRef.current.ry = rootMove.rotation.y;
+          heroKinematicRef.current.has = true;
+        } else {
+          heroKinematicRef.current.has = false;
+        }
+
         let followSmooth = cameraState.isDragging ? 18 : 9;
         const rootCam = heroRootRef.current;
         if (rootCam && heroPlayRef.current) {
-          const st = manualKeysRef.current;
-          const mvx = (st.right ? 1 : 0) - (st.left ? 1 : 0);
-          const mvz = (st.up ? 1 : 0) - (st.down ? 1 : 0);
-          const klen = Math.sqrt(mvx * mvx + mvz * mvz);
-          if (klen > 0.01) {
-            followHeroUntilRef.current = performance.now() + 1800;
-            cameraState.targetLook.set(
-              rootCam.position.x,
-              rootCam.position.y + 2.2,
-              rootCam.position.z,
-            );
-            followSmooth = cameraState.isDragging ? 24 : 28;
-          } else if (followHeroUntilRef.current > performance.now()) {
-            cameraState.targetLook.set(
-              rootCam.position.x,
-              rootCam.position.y + 2.2,
-              rootCam.position.z,
-            );
-            followSmooth = cameraState.isDragging ? 20 : 17;
+          const st = stKeys;
+          const followingHeroWindow =
+            followHeroUntilRef.current > performance.now();
+          if (klenKeys > 0.01) {
+            followHeroUntilRef.current = performance.now() + 120;
+          }
+          if (klenKeys > 0.01 || followingHeroWindow) {
+            const tx = rootCam.position.x;
+            const tz = rootCam.position.z;
+            const eyeY = terrainHeight(tx, tz) + 2.35;
+            let p = heroCamPivotSmoothedRef.current;
+            if (!p) {
+              p = new THREE.Vector3(tx, eyeY, tz);
+              heroCamPivotSmoothedRef.current = p;
+            } else {
+              const pivotRate = klenKeys > 0.01 ? (st.run ? 60 : 50) : 40;
+              const a = 1 - Math.exp(-pivotRate * dt);
+              p.x += (tx - p.x) * a;
+              p.y += (eyeY - p.y) * a;
+              p.z += (tz - p.z) * a;
+            }
+            cameraState.targetLook.copy(p);
+
+            if (klenKeys > 0.01) {
+              cameraState.currentLook.copy(p);
+            }
+            followSmooth = cameraState.isDragging ? 24 : st.run ? 55 : 45;
+            // if (klenKeys > 0.01) {
+            //   followSmooth = cameraState.isDragging ? 24 : st.run ? 55 : 45;
+            // } else {
+            //   followSmooth = cameraState.isDragging ? 16 : 11;
+            // }
           }
         }
         const smoothPos = 1 - Math.exp(-followSmooth * dt);
@@ -1039,10 +1121,11 @@ export function useThreeScene({
         // Keep camera above terrain — зөөлөн дагах (хурц уул/газар дээр гэнэт өсөхгүй).
         const floorRaw = terrainHeight(finalCamPos.x, finalCamPos.z) + 2.55;
         const prevF = cameraFloorSmoothedRef.current;
+        const floorBlend = klenKeys > 0.01 ? 6.5 : 9;
         const floorY =
           prevF == null
             ? floorRaw
-            : prevF + (floorRaw - prevF) * (1 - Math.exp(-9 * dt));
+            : prevF + (floorRaw - prevF) * (1 - Math.exp(-floorBlend * dt));
         cameraFloorSmoothedRef.current = floorY;
         if (finalCamPos.y < floorY) finalCamPos.y = floorY;
         if (cameraState.introActive) {
@@ -1072,65 +1155,11 @@ export function useThreeScene({
         camera.updateMatrixWorld();
         orbitCameraDistRef.current = cameraState.currentDist;
 
-        // --- Hero movement (manual); door proximity runs every frame after move ---
         const root = heroRootRef.current;
         const play = heroPlayRef.current;
         if (!root || !play) {
-          heroKinematicRef.current.has = false;
           return;
         }
-
-        const st = manualKeysRef.current;
-        const mvx = (st.right ? 1 : 0) - (st.left ? 1 : 0);
-        const mvz = (st.up ? 1 : 0) - (st.down ? 1 : 0);
-        const len = Math.sqrt(mvx * mvx + mvz * mvz);
-        const hv = heroManualVelRef.current;
-        if (len <= 0.01) {
-          hv.multiplyScalar(Math.exp(-20 * delta));
-          if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
-        }
-        if (len > 0.01) {
-          const baseSpeed = st.run ? 22 : 12;
-          const localDir = new THREE.Vector3(mvx / len, 0, mvz / len);
-          const camForward = new THREE.Vector3();
-          camera.getWorldDirection(camForward);
-          camForward.y = 0;
-          if (camForward.lengthSq() < 1e-8) camForward.set(0, 0, 1);
-          camForward.normalize();
-          const camRight = new THREE.Vector3()
-            .crossVectors(camForward, new THREE.Vector3(0, 1, 0))
-            .normalize();
-          const worldDir = new THREE.Vector3()
-            .addScaledVector(camRight, localDir.x)
-            .addScaledVector(camForward, localDir.z)
-            .normalize();
-
-          const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
-          if (st.run) {
-            hv.copy(desiredVel);
-          } else {
-            hv.lerp(desiredVel, 1 - Math.exp(-16 * delta));
-          }
-          root.position.addScaledVector(hv, delta);
-          root.position.x = clamp(root.position.x, -5600, 5600);
-          root.position.z = clamp(root.position.z, -4700, 4700);
-          root.position.y =
-            terrainHeight(root.position.x, root.position.z) + 0.02;
-
-          const targetYaw = Math.atan2(worldDir.x, worldDir.z);
-          let dy = targetYaw - root.rotation.y;
-          while (dy > Math.PI) dy -= Math.PI * 2;
-          while (dy < -Math.PI) dy += Math.PI * 2;
-          root.rotation.y += dy * (1 - Math.exp(-14 * delta));
-
-          play(st.run ? "run" : "walk", 0.12);
-        } else {
-          play("idle", 0.18);
-        }
-
-        heroKinematicRef.current.pos.copy(root.position);
-        heroKinematicRef.current.ry = root.rotation.y;
-        heroKinematicRef.current.has = true;
 
         const INNER_R = 58;
         const OUTER_R = 228;

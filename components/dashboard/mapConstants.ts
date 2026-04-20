@@ -144,7 +144,42 @@ export function isStationUnlockedInJourney(
   return Boolean(STATION_CONFIGS[stationId]);
 }
 
-/** Өртөө тутмын 7 хоногт үлдсэн тоглолтын тоо (хамгийн ихдээ 2). */
+/** Өртөө → тоглоом → тухайн тоглоомыг дуусгасан цагийн жагсаалт (7 хоногийн цонхонд 2 хүртэл). */
+export type StationGameVisits = Record<string, Record<string, number[]>>;
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Нэг тоглоомond 7 хоногт үлдсэн тоглолтын тоо (хамгийн ихдээ 2). */
+export function gameWeeklyPlaysRemaining(
+  stationId: string,
+  gameSlug: string,
+  stationGameVisits: StationGameVisits | undefined,
+): number {
+  const now = Date.now();
+  const visits = (stationGameVisits?.[stationId]?.[gameSlug] ?? [])
+    .map((x) => Number(x))
+    .filter((n) => Number.isFinite(n) && n >= now - WEEK_MS);
+  return Math.max(0, 2 - visits.length);
+}
+
+/**
+ * Тухайн өртөөний бүх тоглоом 7 хоногийн хязгаараа дуусгасан эсэх.
+ * `gameSlugs` хоосон бол false (түгжээ үүсгэхгүй).
+ */
+export function stationAllGamesWeeklyLocked(
+  stationId: string,
+  gameSlugs: string[],
+  stationGameVisits: StationGameVisits | undefined,
+): boolean {
+  const slugs = gameSlugs.filter((s) => s.trim().length > 0);
+  if (slugs.length === 0) return false;
+  return slugs.every(
+    (slug) =>
+      gameWeeklyPlaysRemaining(stationId, slug, stationGameVisits) <= 0,
+  );
+}
+
+/** @deprecated Нэг тоглоом тутамд лимит рүү шилжсэн; зөвхөн хуучин өгөгдөлд зориулсан. */
 export function stationWeeklyPlaysRemaining(
   stationId: string,
   stationVisits: Record<string, number[]> | undefined,

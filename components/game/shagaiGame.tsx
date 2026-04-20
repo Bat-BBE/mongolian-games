@@ -15,8 +15,8 @@ import {
   scoreTarget,
   TARGET_SCORE,
 } from "./shagaiTargetType";
-import { useAuth } from "@/components/AuthContext";
-import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -280,7 +280,8 @@ function GameScene({
 }
 
 export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
-  const { user } = useAuth();
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -299,75 +300,15 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
   const resultSentRef = useRef(false);
   const matchSentRef = useRef(false);
 
-  // Coin/gem toasts
-  const [rewardEvents, setRewardEvents] = useState<
-    { id: string; text: string; kind: "coins" | "gems" }[]
-  >([]);
-  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 });
-
-  const pushReward = useCallback(
-    (delta: { coins?: number; gems?: number }) => {
-      const dCoins = delta.coins ?? 0;
-      const dGems = delta.gems ?? 0;
-      if (!dCoins && !dGems) return;
-      setSessionGain((p) => ({
-        coins: p.coins + dCoins,
-        gems: p.gems + dGems,
-      }));
-      const now = Date.now();
-      const add = (kind: "coins" | "gems", text: string) => {
-        const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`;
-        setRewardEvents((prev) => [...prev, { id, kind, text }]);
-        setTimeout(() => {
-          setRewardEvents((prev) => prev.filter((e) => e.id !== id));
-        }, 1350);
-      };
-      if (dCoins) add("coins", `+${dCoins} 🪙`);
-      if (dGems) add("gems", `+${dGems} 💎`);
-
-      const email = user?.email?.trim();
-      if (!email) return;
-      (async () => {
-        try {
-          const profileRes = await getGameProfileByEmail(email);
-          const current =
-            profileRes?.user?.profile &&
-            typeof profileRes.user.profile === "object"
-              ? (profileRes.user.profile as Record<string, unknown>)
-              : {};
-          const invRaw = (current as any).inventory;
-          const inv =
-            invRaw && typeof invRaw === "object"
-              ? (invRaw as Record<string, unknown>)
-              : {};
-          const coins =
-            typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0);
-          const gems =
-            typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0);
-          const nextProfile = {
-            ...current,
-            inventory: {
-              ...inv,
-              coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
-              gems: (Number.isFinite(gems) ? gems : 0) + dGems,
-            },
-          } as Record<string, unknown>;
-          await syncAppUserSimple({ email, profile: nextProfile });
-        } catch {}
-      })();
-    },
-    [user?.email],
-  );
-
   // Match-over rewards + onComplete callback.
   useEffect(() => {
     if (state.phase !== "matchOver") return;
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.winner === "player";
-    if (won) pushReward({ coins: 8, gems: 1 });
+    if (won) grant({ gems: STONE_MATCH_GEMS });
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
-  }, [state.phase, state.winner, onComplete, pushReward]);
+  }, [state.phase, state.winner, onComplete, grant]);
 
   // Shared throw trigger used by both the player's manual "Throw" button and
   // the robot's automatic turn. Resetting isThrown forces SingleShagai's
@@ -425,8 +366,7 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
           const turn = currentTurnRef.current;
 
           if (turn === "player") {
-            // Small coin reward per non-zero scoring round (player only).
-            if (points > 0) pushReward({ coins: points });
+            if (points > 0) grant({ coins: STONE_ROUND_COINS });
 
             setState((prev) => {
               const tentative = prev.playerScore + points;
@@ -505,7 +445,7 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
         }, 500);
       }
     },
-    [pushReward],
+    [grant],
   );
 
   // After playerResult → robot takes a turn (unless the match already ended).
@@ -534,9 +474,8 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
     setIsThrown(false);
     resultSentRef.current = false;
     matchSentRef.current = false;
-    setRewardEvents([]);
-    setSessionGain({ coins: 0, gems: 0 });
-  }, []);
+    resetGrants();
+  }, [resetGrants]);
 
   const isWin = state.phase === "matchOver" && state.winner === "player";
 

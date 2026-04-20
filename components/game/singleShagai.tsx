@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import React, { useRef, useEffect, useMemo } from "react";
 import { useBox } from "@react-three/cannon";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { ShagaiSide, SHAGAI_INFO } from "./fourBonusType";
 import {
   biasSideForAirTorque,
+  biasSideForThrow,
   detectShagaiSideFromQuaternion,
   isShagaiOnkh,
   SHAGAI_PHYS_BOX,
@@ -14,6 +15,7 @@ import {
 } from "./shagai";
 import { useGLTF } from "@react-three/drei";
 import { pickLastShagai } from "./shagaiModel";
+import type { KnockBurst } from "./shagaiSevenKnock";
 
 const PHYS_BOX = SHAGAI_PHYS_BOX;
 const MAX_ONKH_RETRIES = 14;
@@ -47,9 +49,22 @@ interface SingleShagaiProps {
   isThrown: boolean;
   onSettle: (id: number, side: ShagaiSide) => void;
   highlight: boolean;
+  /** Хос болсон шагай — бүдгэрүүлж тоглоомын талбарт үлдээх. */
+  muted?: boolean;
   resultSide: ShagaiSide | null;
   /** @see useShagaiThrowPieceTemplate — нэг удаа үүсгэсэн загварыг дамжуулбал анхны ачаалал хөнгөрнө. */
   pieceTemplate?: THREE.Object3D | null;
+  /** Физик тогтсоноос хойш байрлалыг тогтмол илгээнэ (жишээ нь долоон шагайн зам шалгах). */
+  onPositionUpdate?: (id: number, pos: [number, number, number]) => void;
+  /** Нэг кадр тутамд энэ id-д заасан байрлалд тулгах (ньсрэх анимац). */
+  kinematicTargetRef?: React.MutableRefObject<
+    Record<number, [number, number, number] | null>
+  >;
+  knockBurstRef?: React.MutableRefObject<
+    Record<number, KnockBurst | undefined>
+  >;
+  /** false: тоглоомоос авсан — талбараас нуух, физик унтраах. */
+  presentOnTable?: boolean;
 }
 
 function buildShagaiGeo(): THREE.BufferGeometry {
@@ -115,10 +130,16 @@ export default function SingleShagai({
   isThrown,
   onSettle,
   highlight,
+  muted = false,
   resultSide,
   pieceTemplate,
+  onPositionUpdate,
+  kinematicTargetRef,
+  knockBurstRef,
+  presentOnTable = true,
 }: SingleShagaiProps) {
   const groupRef = useRef<THREE.Group>(null);
+  const lastPosEmitRef = useRef(0);
   const velRef = useRef<[number, number, number]>([0, 0, 0]);
   const posRef = useRef<[number, number, number]>(startPos);
   const airtimeRef = useRef(0);
@@ -280,6 +301,16 @@ export default function SingleShagai({
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
+    if (!presentOnTable) {
+      groupRef.current.visible = false;
+      api.sleep();
+      api.velocity.set(0, 0, 0);
+      api.angularVelocity.set(0, 0, 0);
+      api.position.set(0, -45, 0);
+      return;
+    }
+    groupRef.current.visible = true;
+
     if (!hasThrownRef.current) return;
 
     airtimeRef.current += delta;
@@ -295,6 +326,44 @@ export default function SingleShagai({
     }
 
     if (reportedRef.current) {
+      const kb = knockBurstRef?.current[id];
+      if (kb) {
+        delete knockBurstRef.current[id];
+        api.wakeUp();
+        reportedRef.current = false;
+        airtimeRef.current = 0;
+        /** Мөргөлдөөний дараах өнхрөлт: шинэ bias (дөрвөн тал) — анхны тал руу «наалдахгүй». */
+        biasTargetRef.current = biasSideForThrow();
+        onkhRetryRef.current = 0;
+        const v = velRef.current;
+        api.velocity.set(
+          v[0] + kb.lin[0],
+          v[1] + kb.lin[1],
+          v[2] + kb.lin[2],
+        );
+        const w = angVelRef.current;
+        api.angularVelocity.set(
+          w[0] + kb.ang[0],
+          w[1] + kb.ang[1],
+          w[2] + kb.ang[2],
+        );
+        return;
+      }
+      const kt = kinematicTargetRef?.current[id];
+      if (kt) {
+        api.wakeUp();
+        api.velocity.set(0, 0, 0);
+        api.angularVelocity.set(0, 0, 0);
+        api.position.set(kt[0], kt[1], kt[2]);
+        posRef.current = [kt[0], kt[1], kt[2]];
+      } else if (onPositionUpdate) {
+        const now = performance.now();
+        if (now - lastPosEmitRef.current > 90) {
+          lastPosEmitRef.current = now;
+          const p = posRef.current;
+          onPositionUpdate(id, [p[0], p[1], p[2]]);
+        }
+      }
       if (glowRef.current && highlight) {
         glowRef.current.intensity = 0.6 + Math.sin(Date.now() * 0.004) * 0.4;
       }
@@ -387,15 +456,24 @@ export default function SingleShagai({
       const mats = Array.isArray(mat) ? mat : [mat];
       for (const m of mats) {
         if (!m) continue;
-        m.emissive = highlight ? col : new THREE.Color(0x000000);
-        m.emissiveIntensity = highlight ? 0.12 : 0;
+        if (muted) {
+          m.emissive = new THREE.Color(0x000000);
+          m.emissiveIntensity = 0;
+          m.transparent = true;
+          m.opacity = 0.42;
+        } else {
+          m.transparent = false;
+          m.opacity = 1;
+          m.emissive = highlight ? col : new THREE.Color(0x000000);
+          m.emissiveIntensity = highlight ? 0.12 : 0;
+        }
         m.roughness = Math.min(0.9, Math.max(0.35, m.roughness ?? 0.55));
         m.metalness = Math.min(0.25, Math.max(0.0, m.metalness ?? 0.05));
         (m as any).envMapIntensity = (m as any).envMapIntensity ?? 0.45;
         m.needsUpdate = true;
       }
     });
-  }, [model, highlight, sideColor]);
+  }, [model, highlight, muted, sideColor]);
 
   return (
     <group
@@ -419,6 +497,8 @@ export default function SingleShagai({
             metalness={highlight ? 0.12 : 0.04}
             emissive={highlight ? sideColor : "#000000"}
             emissiveIntensity={highlight ? 0.15 : 0}
+            transparent={muted}
+            opacity={muted ? 0.42 : 1}
           />
         </mesh>
       )}

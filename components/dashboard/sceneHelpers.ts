@@ -123,7 +123,10 @@ export function terrainHeight(x: number, z: number): number {
     h *= 0.36 + 0.64 * edgeBlend;
   }
 
-  return h;
+  // Алс баруун хойд зэрэгт синусын нийлбэр сөрөг гарч болно; тоглогчийн гэр
+  // болон 3D объект бүгд ижил `terrainHeight`-ийг ашигладаг тул доод тал нэмэх нь
+  // зөвхөн "далайн түвшнээс доош" хавтгай тогтворгүй байдлыг арилгана.
+  return Math.max(h, 0.12);
 }
 
 export function terrainBiome(

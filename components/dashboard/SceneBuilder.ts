@@ -375,7 +375,6 @@ export class SceneBuilder {
     geo.scale(-1, 1, -1);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
-    // Хуучин: цайвар цэнхэр тэнгэр (өдрийн цэлмэг)
     const zenith = { r: 0.22, g: 0.48, b: 0.9 };
     const horizon = { r: 0.78, g: 0.82, b: 0.93 };
     for (let i = 0; i < pos.count; i++) {
@@ -479,7 +478,11 @@ export class SceneBuilder {
         mkMat(0x3a2810, 0.9),
       );
       const ang = (b / 5) * Math.PI * 2 + rand(0, 0.5);
-      br.position.set(Math.cos(ang) * 0.55 * s, 1.15 * s, Math.sin(ang) * 0.55 * s);
+      br.position.set(
+        Math.cos(ang) * 0.55 * s,
+        1.15 * s,
+        Math.sin(ang) * 0.55 * s,
+      );
       br.rotation.z = Math.cos(ang) * 0.85;
       br.rotation.x = Math.sin(ang) * 0.35;
       br.castShadow = true;
@@ -537,7 +540,7 @@ export class SceneBuilder {
     }
   }
 
-  // Гэр
+  //ger
   private makeGer(
     x: number,
     z: number,
@@ -606,9 +609,7 @@ export class SceneBuilder {
       for (let x = 0; x < 256; x++) {
         const i = (y * 256 + x) * 4;
         const v =
-          112 +
-          (Math.random() - 0.5) * 42 +
-          Math.sin(x * 0.12 + y * 0.08) * 18;
+          112 + (Math.random() - 0.5) * 42 + Math.sin(x * 0.12 + y * 0.08) * 18;
         bd.data[i] = v;
         bd.data[i + 1] = v;
         bd.data[i + 2] = v;
@@ -906,7 +907,7 @@ export class SceneBuilder {
         const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.09, 0.07), fm);
         rail.position.set(mx, py, mz);
         rail.rotation.y = ry;
-        g.add(rail);
+        // g.add(rail);
       });
       const n = Math.max(2, Math.floor(len / 2.8));
       for (let i = 0; i <= n; i++) {
@@ -1044,20 +1045,26 @@ export class SceneBuilder {
     }
   }
 
-  /** Player home base — Lv1 маш жижиг; түвшин өсөхөд томорч, нэмэлт жижиг гэрүүд гарна */
+  /**
+   * Player home — Lv1–5 baga bagaar tomorno;
+   * hashaand mal oirhon baina aa.
+   */
   buildPlayerHomeGer(gerLevel = 1): void {
     const x = PLAYER_HOME_X;
     const z = PLAYER_HOME_Z;
     const lv = Math.max(1, Math.min(gerLevel, 30));
-    const levelBoost = 1 + Math.max(0, lv - 1) * 0.048;
-    const starterMul =
-      lv <= 1 ? 0.58 : lv <= 2 ? 0.72 : lv <= 4 ? 0.88 : lv <= 8 ? 1.0 : 1.08;
-    const s = levelBoost * 1.72 * starterMul;
+    const step = Math.min(lv, 5);
+    const earlyScale = 0.5 + (step - 1) * 0.07;
+    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.036 : 1;
+    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.022 : 1;
+    const s = earlyScale * midBoost * highBoost * 1.78;
     this.makeGer(x, z, 0, s, true, "home");
 
     const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+    let ringSpan = 12.5;
     if (extraGers > 0) {
-      const ringR = 13.5 + Math.min(lv * 0.45, 10);
+      const ringR = 13.2 + Math.min(lv * 0.45, 10);
+      ringSpan = ringR + 7;
       for (let i = 0; i < extraGers; i++) {
         const ang = (i / extraGers) * Math.PI * 2 + rand(-0.06, 0.06);
         this.makeGer(
@@ -1069,59 +1076,61 @@ export class SceneBuilder {
         );
       }
     }
+    const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
+    const yardD = yardW * 0.86;
+    // Хаалгын завсар талын голоор хуваагдсан шугам мэт харагдана — тасралтгүй хашаа.
+    this.makeFence(x, z, yardW, yardD, 0, false);
   }
 
-  /** Spawn player's livestock near the home ger (visual only). */
   buildPlayerLivestockNearHome(livestock?: {
     sheep: number;
+    goat: number;
+    cow: number;
     horse: number;
     camel: number;
   }): void {
     if (!livestock) return;
     const x = PLAYER_HOME_X;
     const z = PLAYER_HOME_Z;
-    const sheepN = Math.max(0, Math.min(12, Math.floor(livestock.sheep)));
-    const horseN = Math.max(0, Math.min(4, Math.floor(livestock.horse)));
-    const camelN = Math.max(0, Math.min(3, Math.floor(livestock.camel)));
-    if (sheepN + horseN + camelN === 0) return;
+    const sheepN = Math.max(0, Math.min(14, Math.floor(livestock.sheep)));
+    const goatN = Math.max(0, Math.min(12, Math.floor(livestock.goat)));
+    const cowN = Math.max(0, Math.min(8, Math.floor(livestock.cow)));
+    const horseN = Math.max(0, Math.min(5, Math.floor(livestock.horse)));
+    const camelN = Math.max(0, Math.min(4, Math.floor(livestock.camel)));
+    if (sheepN + goatN + cowN + horseN + camelN === 0) return;
 
     const sheepMat = mkMat(0xf1e7d5, 0.92);
     const goatMat = mkMat(0xe8dcc8, 0.9);
-    const yakMat = mkMat(0x4a3a32, 0.88);
+    const cowMat = mkMat(0x5c4030, 0.9);
     const hoofMat = mkMat(0x2a1508, 0.9);
-    for (let i = 0; i < sheepN; i++) {
-      const ox = rand(-5.2, 5.2);
-      const oz = rand(3.2, 9.2);
+
+    const yardOx = () => rand(-9, 9);
+    const yardOz = () => rand(4, 11);
+
+    const addRuminant = (
+      ox: number,
+      oz: number,
+      sc: number,
+      bodyMat: THREE.MeshStandardMaterial,
+      withHorns: boolean,
+      withFluffyEars: boolean,
+    ) => {
       const y = terrainHeight(x + ox, z + oz);
       const g = new THREE.Group();
-      const r = Math.random();
-      const kind = r < 0.52 ? "sheep" : r < 0.82 ? "goat" : "yak";
-      const sc = kind === "yak" ? 1.35 : kind === "goat" ? 0.92 : 1.12;
-      const bodyMat =
-        kind === "yak" ? yakMat : kind === "goat" ? goatMat : sheepMat;
       const body = new THREE.Mesh(
         new THREE.SphereGeometry(0.38 * sc, 12, 10),
         bodyMat,
       );
-      body.scale.set(kind === "yak" ? 1.35 : 1.22, 1.05, 1.15);
+      body.scale.set(1.22, 1.05, 1.15);
       body.position.y = 0.48 * sc;
       g.add(body);
-      if (kind === "yak") {
-        const hump = new THREE.Mesh(
-          new THREE.SphereGeometry(0.16 * sc, 8, 8),
-          mkMat(0x5c4a40, 0.85),
-        );
-        hump.position.set(-0.1, 0.72 * sc, 0);
-        hump.scale.set(1.1, 0.75, 0.9);
-        g.add(hump);
-      }
       const head = new THREE.Mesh(
-        new THREE.SphereGeometry((kind === "goat" ? 0.17 : 0.19) * sc, 10, 10),
-        kind === "yak" ? yakMat : mkMat(0x6a3a10, 0.9),
+        new THREE.SphereGeometry(0.19 * sc, 10, 10),
+        mkMat(0x6a3a10, 0.9),
       );
       head.position.set(0.42 * sc, 0.58 * sc, 0);
       g.add(head);
-      if (kind === "sheep" || kind === "yak") {
+      if (withFluffyEars) {
         const earL = new THREE.Mesh(
           new THREE.ConeGeometry(0.06 * sc, 0.14 * sc, 6),
           bodyMat,
@@ -1134,7 +1143,7 @@ export class SceneBuilder {
         earR.rotation.z = -0.5;
         g.add(earR);
       }
-      if (kind === "goat") {
+      if (withHorns) {
         [-1, 1].forEach((sg) => {
           const horn = new THREE.Mesh(
             new THREE.ConeGeometry(0.035 * sc, 0.22 * sc, 6),
@@ -1146,7 +1155,7 @@ export class SceneBuilder {
           g.add(horn);
         });
       }
-      const legW = kind === "yak" ? 0.26 : 0.22;
+      const legW = 0.22;
       [-legW, legW].forEach((lx) => {
         [-0.14, 0.14].forEach((lz) => {
           const leg = new THREE.Mesh(
@@ -1160,12 +1169,51 @@ export class SceneBuilder {
       g.position.set(x + ox, y + 0.04, z + oz);
       g.rotation.y = rand(0, Math.PI * 2);
       this.scene.add(g);
+    };
+
+    for (let i = 0; i < sheepN; i++) {
+      addRuminant(yardOx(), yardOz(), 1.12, sheepMat, false, true);
+    }
+    for (let i = 0; i < goatN; i++) {
+      addRuminant(yardOx(), yardOz(), 0.94, goatMat, true, false);
+    }
+    for (let i = 0; i < cowN; i++) {
+      const ox = yardOx();
+      const oz = yardOz();
+      const sc = 1.38;
+      const y = terrainHeight(x + ox, z + oz);
+      const g = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.95 * sc, 0.62 * sc, 1.15 * sc),
+        cowMat,
+      );
+      body.position.y = 0.55 * sc;
+      g.add(body);
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.42 * sc, 0.38 * sc, 0.52 * sc),
+        mkMat(0x4a3228, 0.88),
+      );
+      head.position.set(0.62 * sc, 0.62 * sc, 0);
+      g.add(head);
+      [-0.32, 0.32].forEach((lx) => {
+        [-0.22, 0.22].forEach((lz) => {
+          const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.055 * sc, 0.06 * sc, 0.38 * sc, 6),
+            hoofMat,
+          );
+          leg.position.set(lx * sc, 0.2 * sc, lz);
+          g.add(leg);
+        });
+      });
+      g.position.set(x + ox, y + 0.04, z + oz);
+      g.rotation.y = rand(0, Math.PI * 2);
+      this.scene.add(g);
     }
 
     for (let i = 0; i < horseN; i++) {
       this.makeHorse(
-        x + rand(-7, 7),
-        z + rand(-6, 6),
+        x + rand(-8, 8),
+        z + rand(3.5, 10),
         rand(0, Math.PI * 2),
         [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
         false,
@@ -1173,7 +1221,7 @@ export class SceneBuilder {
     }
 
     for (let i = 0; i < camelN; i++) {
-      this.makeCamel(x + rand(-8, 8), z + rand(-8, 8), rand(0, Math.PI * 2));
+      this.makeCamel(x + rand(-9, 9), z + rand(4, 11), rand(0, Math.PI * 2));
     }
   }
 
@@ -2365,10 +2413,7 @@ export class SceneBuilder {
     const g = new THREE.Group();
     const hm = materialLibrary.getHideMaterial(color);
     const dk = mkFurMat(0x2a1508, 0.86);
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(1.05, 0.52, 0.44),
-      hm,
-    );
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.52, 0.44), hm);
     body.position.y = 0.9;
     body.rotation.z = 0.04;
     body.castShadow = true;
@@ -2396,10 +2441,7 @@ export class SceneBuilder {
     const eye2 = eye.clone();
     eye2.position.z = -0.12;
     g.add(eye2);
-    const earL = new THREE.Mesh(
-      new THREE.ConeGeometry(0.07, 0.16, 8),
-      hm,
-    );
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 8), hm);
     earL.position.set(0.62, 1.52, 0.1);
     earL.rotation.set(0.35, 0, -0.45);
     g.add(earL);
@@ -2437,8 +2479,7 @@ export class SceneBuilder {
       g.add(lg);
       legGroups.push(lg);
     });
-    (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups =
-      legGroups;
+    (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups = legGroups;
     const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.82, 10), dk);
     tail.position.set(-0.56, 0.95, 0);
     tail.rotation.z = 1.35;

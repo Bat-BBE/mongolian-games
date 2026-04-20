@@ -17,8 +17,8 @@ import {
   countHorses,
 } from "./horseRaceType";
 import type { ShagaiSide } from "./shagai";
-import { useAuth } from "@/components/AuthContext";
-import { getGameProfileByEmail, syncAppUserSimple } from "@/lib/api";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
 
 export type HorseRaceGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -562,7 +562,8 @@ function GameScene({
 // Root component.
 // --------------------------------------------------------------------------
 export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
-  const { user } = useAuth();
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
   const [state, setState] = useState<RaceState>(INITIAL_RACE_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -581,73 +582,14 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
   const resultSentRef = useRef(false);
   const matchSentRef = useRef(false);
 
-  const [rewardEvents, setRewardEvents] = useState<
-    { id: string; text: string; kind: "coins" | "gems" }[]
-  >([]);
-  const [sessionGain, setSessionGain] = useState({ coins: 0, gems: 0 });
-
-  const pushReward = useCallback(
-    (delta: { coins?: number; gems?: number }) => {
-      const dCoins = delta.coins ?? 0;
-      const dGems = delta.gems ?? 0;
-      if (!dCoins && !dGems) return;
-      setSessionGain((p) => ({
-        coins: p.coins + dCoins,
-        gems: p.gems + dGems,
-      }));
-      const now = Date.now();
-      const add = (kind: "coins" | "gems", text: string) => {
-        const id = `${kind}_${now}_${Math.random().toString(16).slice(2)}`;
-        setRewardEvents((prev) => [...prev, { id, kind, text }]);
-        setTimeout(() => {
-          setRewardEvents((prev) => prev.filter((e) => e.id !== id));
-        }, 1350);
-      };
-      if (dCoins) add("coins", `+${dCoins} 🪙`);
-      if (dGems) add("gems", `+${dGems} 💎`);
-
-      const email = user?.email?.trim();
-      if (!email) return;
-      (async () => {
-        try {
-          const profileRes = await getGameProfileByEmail(email);
-          const current =
-            profileRes?.user?.profile &&
-            typeof profileRes.user.profile === "object"
-              ? (profileRes.user.profile as Record<string, unknown>)
-              : {};
-          const invRaw = (current as any).inventory;
-          const inv =
-            invRaw && typeof invRaw === "object"
-              ? (invRaw as Record<string, unknown>)
-              : {};
-          const coins =
-            typeof inv.coins === "number" ? inv.coins : Number(inv.coins ?? 0);
-          const gems =
-            typeof inv.gems === "number" ? inv.gems : Number(inv.gems ?? 0);
-          const nextProfile = {
-            ...current,
-            inventory: {
-              ...inv,
-              coins: (Number.isFinite(coins) ? coins : 0) + dCoins,
-              gems: (Number.isFinite(gems) ? gems : 0) + dGems,
-            },
-          } as Record<string, unknown>;
-          await syncAppUserSimple({ email, profile: nextProfile });
-        } catch {}
-      })();
-    },
-    [user?.email],
-  );
-
   useEffect(() => {
     if (state.phase !== "matchOver") return;
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.winner === "player";
-    if (won) pushReward({ coins: 10, gems: 1 });
+    if (won) grant({ gems: STONE_MATCH_GEMS });
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
-  }, [state.phase, state.winner, onComplete, pushReward]);
+  }, [state.phase, state.winner, onComplete, grant]);
 
   const startThrow = useCallback(
     (turn: "player" | "robot") => {
@@ -704,7 +646,7 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
           const turn = currentTurnRef.current;
 
           if (turn === "player") {
-            if (horses > 0) pushReward({ coins: horses });
+            if (horses > 0) grant({ coins: STONE_ROUND_COINS });
 
             setState((prev) => {
               const from = prev.playerPosition;
@@ -758,7 +700,7 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
         }, 500);
       }
     },
-    [pushReward],
+    [grant],
   );
 
   // playerResult → robot takes a turn.
@@ -788,9 +730,8 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
     setIsThrown(false);
     resultSentRef.current = false;
     matchSentRef.current = false;
-    setRewardEvents([]);
-    setSessionGain({ coins: 0, gems: 0 });
-  }, []);
+    resetGrants();
+  }, [resetGrants]);
 
   const isWin = state.phase === "matchOver" && state.winner === "player";
 

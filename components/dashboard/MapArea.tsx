@@ -18,7 +18,7 @@ interface MapAreaProps {
   currentStationId: string;
   doneStationIds: string[];
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
-  stationVisits?: Record<string, number[]>;
+  stationGameVisits?: Record<string, Record<string, number[]>>;
   stations: {
     id: string;
     name: string;
@@ -46,7 +46,7 @@ export function MapArea({
   currentStationId,
   doneStationIds,
   stationSteps,
-  stationVisits,
+  stationGameVisits,
   stations: apiStations,
   heroModelPath,
   onGameCompleted,
@@ -181,7 +181,7 @@ export function MapArea({
         currentStationId={currentStationId}
         heroAtStationId={heroAtStationId}
         doneStationIds={doneStationIds}
-        stationVisits={stationVisits}
+        stationGameVisits={stationGameVisits}
         selectedId={selectedId}
         visibleStationId={labelUi.stationId}
         labelApproachAlpha={labelUi.alpha}
@@ -215,7 +215,7 @@ export function MapArea({
           doneHint={t.gameStatusDone}
           canPlay
           stationSteps={stationSteps}
-          stationVisits={stationVisits}
+          stationGameVisits={stationGameVisits}
         />
       )}
 

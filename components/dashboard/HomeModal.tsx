@@ -12,8 +12,14 @@ import { loadPlayer } from "@/components/hero-select/hero-data";
 import {
   getDashboardBundle,
   homeBuyLivestock,
+  homeExchangeGemsForCoins,
   homeUpgradeGer,
 } from "@/lib/api";
+import {
+  gerUpgradeCost,
+  LIVESTOCK_COIN_PRICES,
+  WEALTH_COINS_PER_GEM,
+} from "@/lib/homeEconomy";
 import type { DashLang, DashStrings } from "./dashboard-strings";
 import { cn } from "@/lib/utils";
 
@@ -83,12 +89,12 @@ export function HomeModal({
       .finally(() => setLoading(false));
   }, [open, lang]);
 
-  const title = useMemo(() => (lang === "mn" ? "Миний гэр" : "My ger"), [lang]);
-
-  const upgradeCost = useMemo(
-    () => ({ coins: 200 + gerLevel * 80, kp: 60 + gerLevel * 15 }),
-    [gerLevel],
+  const title = useMemo(
+    () => (lang === "mn" ? "Миний гэр" : "My home"),
+    [lang],
   );
+
+  const upgradeCost = useMemo(() => gerUpgradeCost(gerLevel), [gerLevel]);
 
   async function doUpgrade() {
     if (!email) return;
@@ -120,18 +126,52 @@ export function HomeModal({
     }
   }
 
+  function applyProfileFromUser(prof: Record<string, unknown>) {
+    setKp(num(prof.kp, 0));
+    const inv = isPlainRecord(prof.inventory) ? prof.inventory : {};
+    setCoins(num(inv.coins, 0));
+    setGems(num(inv.gems, 0));
+    const ger = isPlainRecord(prof.ger) ? prof.ger : {};
+    setGerLevel(Math.max(1, Math.floor(num(ger.level, 1))));
+    const ls = isPlainRecord(prof.livestock) ? prof.livestock : {};
+    setSheep(Math.max(0, Math.floor(num(ls.sheep, 0))));
+    setGoat(Math.max(0, Math.floor(num(ls.goat, 0))));
+    setCow(Math.max(0, Math.floor(num(ls.cow, 0))));
+    setHorse(Math.max(0, Math.floor(num(ls.horse, 0))));
+    setCamel(Math.max(0, Math.floor(num(ls.camel, 0))));
+  }
+
+  async function exchangeGems(qty: number) {
+    if (!email || qty < 1) return;
+    setLoading(true);
+    setErr(null);
+    try {
+      const { user } = await homeExchangeGemsForCoins({ email, gems: qty });
+      const prof = user.profile as Record<string, unknown>;
+      applyProfileFromUser(prof);
+      onChanged?.();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Алдаа");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(100vw-1.5rem,560px)] max-h-[min(90vh,760px)] overflow-y-auto border border-primary/25 bg-background/98 backdrop-blur-xl">
+      <DialogContent className="w-[min(100vw-1.5rem,560px)] max-h-[min(90vh,760px)] overflow-y-auto border border-primary/25 bg-background/98 backdrop-blur-xl flex flex-col gap-2">
         <DialogHeader>
-          <DialogTitle className="font-display tracking-wide">
+          <DialogTitle
+            className="font-display tracking-wide flex items-center justify-center gap-2 text-center"
+            style={{ color: "var(--primary)" }}
+          >
             {title}
           </DialogTitle>
         </DialogHeader>
 
         {err ? <p className="text-sm text-destructive">{err}</p> : null}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
           <Stat
             label={lang === "mn" ? "Гэрийн түвшин" : "Ger level"}
             value={`Lv ${gerLevel}`}
@@ -150,9 +190,71 @@ export function HomeModal({
           />
         </div>
 
-        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-2 space-y-1">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            {lang === "mn" ? "Чулуу → зоос" : "Gems → coins"}
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            {lang === "mn" ? (
+              <>
+                1 эрдэнийн чулууг <strong>{WEALTH_COINS_PER_GEM} зоос</strong>{" "}
+                болгон солино.
+              </>
+            ) : (
+              <>
+                Trade <strong>1 gem</strong> for{" "}
+                <strong>{WEALTH_COINS_PER_GEM} coins</strong> (same ratio as
+                wealth score).
+              </>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {([1, 5, 10] as const).map((n) => (
+              <Button
+                key={n}
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={loading || gems < n}
+                onClick={() => void exchangeGems(n)}
+              >
+                {n === 1
+                  ? lang === "mn"
+                    ? `1 чулуу → ${WEALTH_COINS_PER_GEM} зоос`
+                    : `1 gem → ${WEALTH_COINS_PER_GEM}`
+                  : lang === "mn"
+                    ? `${n} чулуу`
+                    : `${n} gems`}
+              </Button>
+            ))}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={loading || gems < 1}
+              onClick={() => void exchangeGems(gems)}
+            >
+              {lang === "mn" ? "Бүгдийг солих" : "Exchange all"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-2 space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             {lang === "mn" ? "Мал сүрэг" : "Livestock"}
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            {lang === "mn" ? (
+              <>
+                Малыг зөвхөн <strong>зоосоор</strong> авна. Дутуу бол дээрхээр
+                чулуугаа зоос болгоорой.
+              </>
+            ) : (
+              <>
+                Livestock costs <strong>coins only</strong> — convert gems above
+                if you need more coins.
+              </>
+            )}
           </p>
           <div className="flex flex-wrap gap-2 text-sm">
             <Chip>🐑 {sheep}</Chip>
@@ -161,51 +263,51 @@ export function HomeModal({
             <Chip>🐎 {horse}</Chip>
             <Chip>🐫 {camel}</Chip>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
+            <LivestockBuyBtn
+              loading={loading}
               onClick={() => void buy("sheep")}
-            >
-              {lang === "mn" ? "Хонь авах" : "Buy sheep"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
+              labelMn="Хонь авах"
+              labelEn="Buy sheep"
+              price={LIVESTOCK_COIN_PRICES.sheep}
+              lang={lang}
+            />
+            <LivestockBuyBtn
+              loading={loading}
               onClick={() => void buy("goat")}
-            >
-              {lang === "mn" ? "Ямаа авах" : "Buy goat"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
+              labelMn="Ямаа авах"
+              labelEn="Buy goat"
+              price={LIVESTOCK_COIN_PRICES.goat}
+              lang={lang}
+            />
+            <LivestockBuyBtn
+              loading={loading}
               onClick={() => void buy("cow")}
-            >
-              {lang === "mn" ? "Үхэр авах" : "Buy cow"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
+              labelMn="Үхэр авах"
+              labelEn="Buy cow"
+              price={LIVESTOCK_COIN_PRICES.cow}
+              lang={lang}
+            />
+            <LivestockBuyBtn
+              loading={loading}
               onClick={() => void buy("horse")}
-            >
-              {lang === "mn" ? "Морь авах" : "Buy horse"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading}
+              labelMn="Морь авах"
+              labelEn="Buy horse"
+              price={LIVESTOCK_COIN_PRICES.horse}
+              lang={lang}
+            />
+            <LivestockBuyBtn
+              loading={loading}
               onClick={() => void buy("camel")}
-            >
-              {lang === "mn" ? "Тэмээ авах" : "Buy camel"}
-            </Button>
+              labelMn="Тэмээ авах"
+              labelEn="Buy camel"
+              price={LIVESTOCK_COIN_PRICES.camel}
+              lang={lang}
+            />
           </div>
         </div>
 
-        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-3 space-y-2">
+        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-2 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             {lang === "mn" ? "Гэр сайжруулах" : "Upgrade ger"}
           </p>
@@ -230,7 +332,7 @@ export function HomeModal({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="admin-panel rounded-xl p-3 text-center">
+    <div className="admin-panel rounded-xl p-2 text-center">
       <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
@@ -248,5 +350,38 @@ function Chip({ children }: { children: React.ReactNode }) {
     >
       {children}
     </span>
+  );
+}
+
+function LivestockBuyBtn({
+  loading,
+  onClick,
+  labelMn,
+  labelEn,
+  price,
+  lang,
+}: {
+  loading: boolean;
+  onClick: () => void;
+  labelMn: string;
+  labelEn: string;
+  price: number;
+  lang: DashLang;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      disabled={loading}
+      onClick={onClick}
+      className="h-auto min-h-10 flex flex-col items-stretch gap-0.5 py-2"
+    >
+      <span className="text-xs font-medium">
+        {lang === "mn" ? labelMn : labelEn}
+      </span>
+      <span className="text-[11px] tabular-nums text-muted-foreground">
+        🪙 {price.toLocaleString()}
+      </span>
+    </Button>
   );
 }

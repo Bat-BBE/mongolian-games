@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SHAGAI_INFO, type ShagaiSide } from "./fourBonusType";
+import { SHAGAI_INFO } from "./fourBonusType";
 import MemoryMatchUI from "./memoryMatchUI";
 import {
   MATCH_TIME_LIMIT_SEC,
@@ -9,6 +9,9 @@ import {
   shuffleDeck,
   type MemoryCard,
 } from "./memoryMatchType";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import InventoryRewardOverlay from "./InventoryRewardOverlay";
 
 export type MemoryMatchGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -21,6 +24,8 @@ function samePair(a: MemoryCard, b: MemoryCard): boolean {
 }
 
 export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
   const [phase, setPhase] = useState<Phase>("idle");
   const [cards, setCards] = useState<MemoryCard[]>([]);
   const [faceUpIds, setFaceUpIds] = useState<number[]>([]);
@@ -48,6 +53,7 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     matchEndedRef.current = false;
     submittedRef.current = false;
     lockRef.current = false;
+    resetGrants();
     const deck = shuffleDeck(buildDeck());
     setCards(deck);
     setFaceUpIds([]);
@@ -55,7 +61,7 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     setMoves(0);
     setTimeLeft(MATCH_TIME_LIMIT_SEC);
     setPhase("playing");
-  }, []);
+  }, [resetGrants]);
 
   const endWin = useCallback(() => {
     if (matchEndedRef.current) return;
@@ -68,9 +74,10 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     );
     if (!submittedRef.current) {
       submittedRef.current = true;
+      grant({ gems: STONE_MATCH_GEMS });
       void onComplete?.("win", pct);
     }
-  }, [clearTimer, moves, onComplete]);
+  }, [clearTimer, grant, moves, onComplete]);
 
   const endLose = useCallback(() => {
     if (matchEndedRef.current) return;
@@ -121,6 +128,7 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
       const c2 = cards.find((c) => c.id === id2)!;
 
       if (samePair(c1, c2)) {
+        grant({ coins: STONE_ROUND_COINS });
         setMatchedIds((prev) => new Set([...prev, id1, id2]));
         setFaceUpIds([]);
         return;
@@ -132,7 +140,7 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
         lockRef.current = false;
       }, 750);
     },
-    [phase, matchedIds, faceUpIds, cards],
+    [phase, matchedIds, faceUpIds, cards, grant],
   );
 
   const resetAll = useCallback(() => {
@@ -145,7 +153,8 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     setMoves(0);
     setTimeLeft(MATCH_TIME_LIMIT_SEC);
     submittedRef.current = false;
-  }, [clearTimer]);
+    resetGrants();
+  }, [clearTimer, resetGrants]);
 
   return (
     <div
@@ -158,6 +167,10 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
           "radial-gradient(ellipse 70% 60% at 50% 40%, #1a2820 0%, #0a0c0a 100%)",
       }}
     >
+      <InventoryRewardOverlay
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
+      />
       <div
         style={{
           position: "absolute",

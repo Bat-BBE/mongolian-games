@@ -8,6 +8,7 @@ import StoneGame from "./stoneGame";
 import FourBonesGame from "./fourBonusGame";
 import HorseRaceGame from "./horseRaceGame";
 import ShagaiGuessGame from "./shagaiGuessGame";
+import ShagaiSevenGame from "./shagaiSevenGame";
 import MemoryMatchGame from "./memoryMatchGame";
 import KhorolGame from "./khorolGame";
 import { loadPlayer } from "@/components/hero-select/hero-data";
@@ -53,6 +54,7 @@ export default function GameModal({
       "four-bones",
       "horse-race",
       "shagai-guess",
+      "seven-shagai",
     ]);
     if (!usesShagaiModel.has(gameType)) return;
     void useGLTF.preload("/models/shagai_model.glb");
@@ -152,6 +154,9 @@ export default function GameModal({
           )}
           {gameType === "shagai-guess" && (
             <ShagaiGuessGame onComplete={(r, pct) => void submit(r, pct)} />
+          )}
+          {gameType === "seven-shagai" && (
+            <ShagaiSevenGame onComplete={(r, pct) => void submit(r, pct)} />
           )}
           {gameType === "uichuur" && <ComingSoon name="Үйчүүр" />}
           {gameType === "khorol" && <KhorolGame />}
