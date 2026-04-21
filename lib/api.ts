@@ -22,16 +22,6 @@ export function getApiBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
-/**
- * Resolve an asset URL that was returned by the backend (hero.image_url,
- * game.image_url, etc.) into something the browser can load.
- *
- * - Absolute URLs (http/https/data/blob) are returned as-is.
- * - `/uploads/**` paths come from the admin upload endpoint and are served
- *   by the backend API server, so we prepend the API base.
- * - Any other relative path (e.g. `/images/shihihutag.png`) is served from
- *   the Next.js `public/` folder so it must stay relative to the frontend.
- */
 export function resolveAssetUrl(raw: unknown): string {
   const s = typeof raw === "string" ? raw.trim() : "";
   if (!s) return "";
@@ -84,7 +74,6 @@ export async function syncAppUserSimple(body: {
   return { user: data.user };
 }
 
-/** Full game row for dashboard — PostgreSQL is source of truth when populated. */
 export async function getGameProfileByEmail(
   email: string,
 ): Promise<{ user: AppUserRow } | null> {
@@ -119,7 +108,6 @@ export type GameRow = {
   updated_at: string;
 };
 
-/** Public list — no auth. */
 export async function getGames(): Promise<{ games: GameRow[] }> {
   const res = await apiFetch("/api/games");
   const data = (await res.json().catch(() => ({}))) as {
@@ -147,6 +135,12 @@ export type MapStationApiRow = {
   name: string;
   region?: string;
   icon?: string;
+  /** Absolute or /uploads/... URL from API — use resolveAssetUrl for display */
+  image_url?: string | null;
+  /** Localized from map_stations.quest_hint_* */
+  quest_hint?: string | null;
+  /** Localized from map_stations.quest_desc_* — «Өртөөний түүх» урт тайлбар */
+  quest_desc?: string | null;
   pos?: { left?: string; top?: string };
   available?: boolean;
   games?: MapStationGamePreview[];
@@ -271,6 +265,31 @@ export async function completeGame(body: {
   }
   if (!data.user) throw new Error("game complete: missing user");
   return { user: data.user };
+}
+
+export type RankChestReward =
+  | { kind: "gem"; amount: number }
+  | { kind: "kp"; amount: number }
+  | { kind: "coins"; amount: number };
+
+export async function claimRankChest(body: {
+  email: string;
+}): Promise<{ user: AppUserRow; reward: RankChestReward }> {
+  const res = await apiFetch("/api/game/claim-rank-chest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+    reward?: RankChestReward;
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `claim chest failed (${res.status})`);
+  }
+  if (!data.user || !data.reward) throw new Error("claim chest: incomplete");
+  return { user: data.user, reward: data.reward };
 }
 
 export async function homeUpgradeGer(body: {
@@ -413,6 +432,7 @@ export type MapStationRow = {
   region_mn: string;
   region_en: string;
   icon: string;
+  image_url: string | null;
   pos: Record<string, unknown>;
   journey_index: number;
   quest_hint_mn: string | null;
@@ -530,11 +550,15 @@ export async function adminGetTreasury(token: string): Promise<{
     email: string;
     hero_id: string | null;
     score: number;
+    wealth_score: number;
+    xp: number;
     ger_level: number;
     kp: number;
     coins: number;
     gems: number;
     sheep: number;
+    goat: number;
+    cow: number;
     horse: number;
     camel: number;
     visited_stations: number;
@@ -545,11 +569,15 @@ export async function adminGetTreasury(token: string): Promise<{
     email: string;
     hero_id: string | null;
     score: number;
+    wealth_score: number;
+    xp: number;
     ger_level: number;
     kp: number;
     coins: number;
     gems: number;
     sheep: number;
+    goat: number;
+    cow: number;
     horse: number;
     camel: number;
     visited_stations: number;
@@ -571,6 +599,10 @@ export async function adminGetTreasury(token: string): Promise<{
   }
   return data as any;
 }
+
+export type AdminTreasuryUserRow = Awaited<
+  ReturnType<typeof adminGetTreasury>
+>["users"][number];
 
 export async function adminCreateGame(
   token: string,
@@ -763,6 +795,7 @@ export async function adminUpdateStation(
       | "region_mn"
       | "region_en"
       | "icon"
+      | "image_url"
       | "pos"
       | "journey_index"
       | "quest_hint_mn"
@@ -786,6 +819,31 @@ export async function adminUpdateStation(
   };
   if (!res.ok)
     throw new Error(data.error ?? `station update failed (${res.status})`);
+  if (!data.station) throw new Error("missing station");
+  return { station: data.station };
+}
+
+export async function adminUploadStationImage(
+  token: string,
+  slug: string,
+  file: File,
+): Promise<{ station: Pick<MapStationRow, "slug" | "image_url"> }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await apiFetch(
+    `/api/admin/stations/${encodeURIComponent(slug)}/image`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    station?: { slug: string; image_url: string | null };
+  };
+  if (!res.ok)
+    throw new Error(data.error ?? `station image upload failed (${res.status})`);
   if (!data.station) throw new Error("missing station");
   return { station: data.station };
 }
@@ -896,15 +954,31 @@ export async function adminPutUiString(
   return { string: data.string };
 }
 
-export async function adminPatchUserDisplayName(
+/** Админ: хэрэглэгчийн профайл/прогресс (оноо, зоос, мал г.м.) */
+export type AdminUserPatchBody = {
+  displayName?: string;
+  kp?: number;
+  wealthScore?: number;
+  coins?: number;
+  gems?: number;
+  xp?: number;
+  gerLevel?: number;
+  sheep?: number;
+  goat?: number;
+  cow?: number;
+  horse?: number;
+  camel?: number;
+};
+
+export async function adminPatchUser(
   token: string,
   userId: string,
-  displayName: string,
+  body: AdminUserPatchBody,
 ): Promise<{ user: AppUserRow }> {
   const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     headers: adminBearerHeaders(token),
-    body: JSON.stringify({ displayName }),
+    body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
@@ -914,6 +988,14 @@ export async function adminPatchUserDisplayName(
     throw new Error(data.error ?? `user patch failed (${res.status})`);
   if (!data.user) throw new Error("missing user");
   return { user: data.user };
+}
+
+export async function adminPatchUserDisplayName(
+  token: string,
+  userId: string,
+  displayName: string,
+): Promise<{ user: AppUserRow }> {
+  return adminPatchUser(token, userId, { displayName });
 }
 
 export async function getAppUserByEmail(

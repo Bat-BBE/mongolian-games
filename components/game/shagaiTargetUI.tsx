@@ -37,7 +37,9 @@ type UiStrings = {
   robotBusted: string;
   robotThinking: string;
   youWon: string;
+  youWonFourHorses: string;
   robotWon: string;
+  robotWonFourHorses: string;
   score: string;
   target: string;
   you: string;
@@ -90,7 +92,9 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     robotBusted: "💥 Robot overshot — robot back to 0",
     robotThinking: "🤖 Robot is thinking...",
     youWon: "🏆 YOU HIT 32!",
+    youWonFourHorses: "🏆 FOUR HORSES — INSTANT WIN!",
     robotWon: "🤖 ROBOT HIT 32",
+    robotWonFourHorses: "🤖 ROBOT: FOUR HORSES — INSTANT WIN",
     score: "Score",
     target: `Land exactly on ${TARGET_SCORE} to win`,
     you: "YOU",
@@ -110,11 +114,10 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     ],
     scoringTitle: "SCORING",
     scoring: [
+      { label: "4 horse (all sides)", pts: "Win" },
       { label: "4 different sides (Dörvön berkh)", pts: "+8" },
-      { label: "4 identical (all same)", pts: "+4" },
-      { label: "2 horse + 2 sheep", pts: "+2" },
-      { label: "2 camel + 2 goat", pts: "+2" },
-      { label: "2 sheep + 2 goat", pts: "+2" },
+      { label: "4 identical (not 4 horse)", pts: "+4" },
+      { label: "Any two pairs (2+2 of two sides)", pts: "+2" },
       { label: "Everything else", pts: "0" },
     ],
     statistic: "STATISTICS",
@@ -136,9 +139,8 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       "": "",
       berkh: "Dörvön berkh (4 unique)",
       ijil: "Four of a kind",
-      moriHoni: "2 horse + 2 sheep",
-      temeeYamaa: "2 camel + 2 goat",
-      honiYamaa: "2 sheep + 2 goat",
+      hoyorHoyor: "Two pairs (2+2)",
+      durvenMori: "Four horses — instant win",
     },
   };
   const mn: UiStrings = {
@@ -158,7 +160,9 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     robotBusted: "💥 Робот хэтэрлээ — роботын оноо 0 боллоо",
     robotThinking: "🤖 Робот орхиж байна...",
     youWon: "ТА 32 ОНОО ЯГ АВЛАА!",
+    youWonFourHorses: "🏆 ДӨРВӨН МОРЬ — ШУУД ЯЛАЛТ!",
     robotWon: "Робот 32 оноо авлаа",
+    robotWonFourHorses: "🤖 РОБОТ: ДӨРВӨН МОРЬ — ШУУД ЯЛАЛТ",
     score: "Оноо",
     target: `Яг ${TARGET_SCORE} оноонд хүрвэл ялна`,
     you: "ТА",
@@ -178,11 +182,10 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     ],
     scoringTitle: "ОНООНЫ ХҮСНЭГТ",
     scoring: [
+      { label: "4 морь (бүгд морины тал)", pts: "Ялна" },
       { label: "4 өөр тал (Дөрвөн бэрх)", pts: "+8" },
-      { label: "4 ижил тал", pts: "+4" },
-      { label: "2 морь + 2 хонь", pts: "+2" },
-      { label: "2 тэмээ + 2 ямаа", pts: "+2" },
-      { label: "2 хонь + 2 ямаа", pts: "+2" },
+      { label: "4 ижил (4 морь биш)", pts: "+4" },
+      { label: "Ямар ч 2+2 хос (хоёр төрөл тус бүр 2)", pts: "+2" },
       { label: "Бусад тохиолдол", pts: "0" },
     ],
     statistic: "СТАТИСТИК",
@@ -204,9 +207,8 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       "": "",
       berkh: "Дөрвөн бэрх (4 өөр)",
       ijil: "Дөрвөн ижил",
-      moriHoni: "2 морь + 2 хонь",
-      temeeYamaa: "2 тэмээ + 2 ямаа",
-      honiYamaa: "2 хонь + 2 ямаа",
+      hoyorHoyor: "Хоёр хос (2+2)",
+      durvenMori: "Дөрвөн морь — шууд ялалт",
     },
   };
   return { ...(language === "en" ? en : mn), language };
@@ -447,19 +449,22 @@ function HistoryList({
             justifyContent: "space-between",
             alignItems: "center",
             padding: "5px 8px",
-            background: r.exactWin
-              ? "rgba(200,160,48,0.18)"
-              : r.bust
-                ? "rgba(224,96,80,0.18)"
-                : r.turn === "robot"
-                  ? "rgba(224,96,80,0.06)"
-                  : "rgba(96,192,96,0.05)",
+            background: r.instantMatchWin
+              ? "rgba(200,160,48,0.22)"
+              : r.exactWin
+                ? "rgba(200,160,48,0.18)"
+                : r.bust
+                  ? "rgba(224,96,80,0.18)"
+                  : r.turn === "robot"
+                    ? "rgba(224,96,80,0.06)"
+                    : "rgba(96,192,96,0.05)",
             borderRadius: 8,
-            border: r.exactWin
-              ? "1px solid rgba(200,160,48,0.45)"
-              : r.bust
-                ? "1px solid rgba(224,96,80,0.45)"
-                : "1px solid rgba(255,255,255,0.05)",
+            border:
+              r.instantMatchWin || r.exactWin
+                ? "1px solid rgba(200,160,48,0.45)"
+                : r.bust
+                  ? "1px solid rgba(224,96,80,0.45)"
+                  : "1px solid rgba(255,255,255,0.05)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -492,7 +497,7 @@ function HistoryList({
               fontWeight: "bold",
             }}
           >
-            {r.bust ? "💥" : `+${r.points}`}
+            {r.bust ? "💥" : r.instantMatchWin ? "🏆" : `+${r.points}`}
           </span>
         </div>
       ))}
@@ -521,7 +526,14 @@ export default function ShagaiTargetUI({
 
   const statusLine = (() => {
     if (matchOver) {
-      return playerWon ? t.youWon : robotWon ? t.robotWon : "";
+      const last = state.history[state.history.length - 1];
+      if (playerWon) {
+        return last?.instantMatchWin ? t.youWonFourHorses : t.youWon;
+      }
+      if (robotWon) {
+        return last?.instantMatchWin ? t.robotWonFourHorses : t.robotWon;
+      }
+      return "";
     }
     if (state.phase === "throwing" || state.phase === "settling") {
       return currentTurn === "robot" ? t.robotRolling : t.rollingHint;

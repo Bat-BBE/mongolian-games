@@ -9,6 +9,7 @@ import { useThreeScene } from "./useThreeScene";
 import { StationLabels } from "./StationLabels";
 import { STATION_CONFIGS } from "./mapConstants";
 import GameModal from "@/components/game/gameModal";
+import { resolveAssetUrl } from "@/lib/api";
 
 interface MapAreaProps {
   t: DashStrings;
@@ -25,6 +26,7 @@ interface MapAreaProps {
     region?: string;
     pos?: { left?: string; top?: string };
     icon?: string;
+    image_url?: string | null;
     available?: boolean;
     games?: MapStationGamePreview[];
     game?: { slug?: string; name: string; desc: string; reward: string };
@@ -64,9 +66,22 @@ export function MapArea({
     gameSlug: string;
   } | null>(null);
 
-  const stationMap = new Map(apiStations.map((s) => [s.id, s]));
-  const stations: UrtuuStation[] = Object.entries(STATION_CONFIGS).map(
-    ([id, cfg]) => {
+  const mapStationsRevision = useMemo(
+    () =>
+      apiStations
+        .map((s) =>
+          [s.id, s.icon ?? "", s.image_url != null ? String(s.image_url) : ""].join(
+            ":",
+          ),
+        )
+        .sort()
+        .join("|"),
+    [apiStations],
+  );
+
+  const stations: UrtuuStation[] = useMemo(() => {
+    const stationMap = new Map(apiStations.map((s) => [s.id, s]));
+    return Object.entries(STATION_CONFIGS).map(([id, cfg]) => {
       const fromApi = stationMap.get(id);
       const games: MapStationGamePreview[] =
         fromApi?.games?.length && fromApi.games.length > 0
@@ -82,6 +97,11 @@ export function MapArea({
               ]
             : [];
       const firstGame = games[0];
+      const rawImg = fromApi?.image_url;
+      const imageUrl =
+        typeof rawImg === "string" && rawImg.trim()
+          ? resolveAssetUrl(rawImg.trim())
+          : undefined;
       return {
         id,
         name: fromApi?.name ?? id,
@@ -97,11 +117,12 @@ export function MapArea({
           top: fromApi?.pos?.top ?? cfg.top,
         },
         icon: fromApi?.icon ?? cfg.icon,
+        imageUrl,
         isCurrent: currentStationId !== "home" && id === currentStationId,
         isDone: doneStationIds?.includes(id) ?? false,
       };
-    },
-  );
+    });
+  }, [apiStations, currentStationId, doneStationIds]);
 
   const homeStationForLabel: UrtuuStation = useMemo(
     () => ({
@@ -144,6 +165,7 @@ export function MapArea({
   } = useThreeScene({
     containerRef: canvasRef,
     stations,
+    mapStationsRevision,
     currentStationId,
     doneStationIds,
     onSelectStation: handleStationFocus,

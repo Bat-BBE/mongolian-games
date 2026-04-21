@@ -16,11 +16,10 @@ app.use(
   cors({
     origin: env.CORS_ORIGIN.split(",").map((s) => s.trim()),
     credentials: true,
-  })
+  }),
 );
 app.use(express.json());
 
-// Local uploads (admin game images, etc.)
 const uploadsDir = join(process.cwd(), "uploads");
 mkdirSync(uploadsDir, { recursive: true });
 app.use("/uploads", express.static(uploadsDir));
@@ -38,6 +37,5 @@ app.use((_req, res) => {
 });
 
 app.listen(env.PORT, () => {
-  // eslint-disable-next-line no-console
   console.log(`API listening on http://localhost:${env.PORT}`);
 });

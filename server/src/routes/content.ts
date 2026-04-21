@@ -234,7 +234,8 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
 
     // Map stations for 3D map labels (dynamic names + positions + all linked games).
     const allStationsRes = await pool.query(
-      `SELECT slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index
+      `SELECT slug, name_mn, name_en, region_mn, region_en, icon, image_url, pos, journey_index,
+              quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en
        FROM map_stations
        ORDER BY journey_index ASC`,
     );
@@ -294,11 +295,26 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
           journey_index: number;
         }[]
       ).map((s) => {
+        const row = s as {
+          slug: string;
+          name_mn: string;
+          name_en: string;
+          region_mn: string;
+          region_en: string;
+          icon: string;
+          image_url?: string | null;
+          pos: unknown;
+          journey_index: number;
+          quest_hint_mn: string | null;
+          quest_hint_en: string | null;
+          quest_desc_mn: string | null;
+          quest_desc_en: string | null;
+        };
         const p =
-          typeof s.pos === "object" && s.pos
-            ? (s.pos as Record<string, unknown>)
+          typeof row.pos === "object" && row.pos
+            ? (row.pos as Record<string, unknown>)
             : {};
-        const rawList = gamesByStation.get(s.slug) ?? [];
+        const rawList = gamesByStation.get(row.slug) ?? [];
         const games = rawList.map((g) => ({
           slug: g.slug,
           name: lang === "mn" ? g.name_mn : g.name_en,
@@ -307,11 +323,22 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
             (lang === "mn" ? g.reward_hint_mn : g.reward_hint_en) ?? "",
         }));
         const prev = games[0];
+        const img =
+          typeof row.image_url === "string"
+            ? String(row.image_url).trim()
+            : null;
+        const qh =
+          lang === "mn" ? row.quest_hint_mn : row.quest_hint_en;
+        const qd =
+          lang === "mn" ? row.quest_desc_mn : row.quest_desc_en;
         return {
-          id: s.slug,
-          name: lang === "mn" ? s.name_mn : s.name_en,
-          region: lang === "mn" ? s.region_mn : s.region_en,
-          icon: s.icon,
+          id: row.slug,
+          name: lang === "mn" ? row.name_mn : row.name_en,
+          region: lang === "mn" ? row.region_mn : row.region_en,
+          icon: row.icon,
+          image_url: img && img.length > 0 ? img : null,
+          quest_hint: typeof qh === "string" && qh.trim() ? qh.trim() : null,
+          quest_desc: typeof qd === "string" && qd.trim() ? qd.trim() : null,
           pos: { left: String(p.left ?? ""), top: String(p.top ?? "") },
           available: true,
           games,

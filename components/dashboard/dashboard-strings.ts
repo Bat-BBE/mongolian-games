@@ -19,6 +19,17 @@ export interface DashStrings {
   questDesc: string;
   continueJourney: string;
   treasury: string;
+  /** Эрдэнэсийн сан доторх мөрүүд — КП нь «МО», чулуу нь эрдэнэ, зоос тусдаа */
+  treasuryKpLabel: string;
+  treasuryCoinsLabel: string;
+  treasuryGemsLabel: string;
+  treasuryHint: string;
+  /** Урамшууллын хувь 100% — авдар нээх */
+  rankChestOpen: string;
+  rankChestClaim: string;
+  rankChestResultGem: string;
+  rankChestResultKp: string;
+  rankChestResultCoins: string;
 
   urtuuChain: string;
   discovered: string;
@@ -127,6 +138,16 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Орхоны хөндийг гатлан Их Хааны тамгыг хүргэх. Өөрчлөгдөх салхинаас болгоомжил.",
     continueJourney: "Аяллыг Үргэлжлүүлэх",
     treasury: "Эрдэнэс",
+    treasuryKpLabel: "МО (КП)",
+    treasuryCoinsLabel: "Зоос",
+    treasuryGemsLabel: "Эрдэнийн чулуу",
+    treasuryHint:
+      "МО (КП) = тоглоомоос цуглуулах эрдэнэсийн оноо. Зоос = дэлгүүр/гэрт зарцуулах мөнгө. Эрдэнийн чулуу = ховор эрдэнэ (зарим шагнал, солилцоо).",
+    rankChestOpen: "Хувь дүүрсэн — авдар нээгээрэй",
+    rankChestClaim: "Авдар нээх",
+    rankChestResultGem: "Танд 1 эрдэнийн чулуу олдлоо!",
+    rankChestResultKp: "Танд +{n} МО олдлоо!",
+    rankChestResultCoins: "Танд +{n} зоос олдлоо!",
 
     urtuuChain: "Өртөө Гинж",
     discovered: "Нээгдсэн",
@@ -592,6 +613,16 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Crossing the Orkhon Valley to deliver the seal of the Great Khan. Beware of the changing winds.",
     continueJourney: "Continue Journey",
     treasury: "Treasury",
+    treasuryKpLabel: "KP",
+    treasuryCoinsLabel: "Coins",
+    treasuryGemsLabel: "Gems",
+    treasuryHint:
+      "KP = merit points from games. Coins = currency for home upgrades and shop. Gems = rare currency (some rewards & exchange).",
+    rankChestOpen: "Reward bar full — open your chest",
+    rankChestClaim: "Open chest",
+    rankChestResultGem: "You received 1 gem!",
+    rankChestResultKp: "You received +{n} KP!",
+    rankChestResultCoins: "You received +{n} coins!",
 
     urtuuChain: "Urtuu Chain",
     discovered: "Discovered",

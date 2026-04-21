@@ -1,5 +1,3 @@
--- Solo “seven shagai” pairing game (digital ньсрэх).
-
 INSERT INTO games (slug, name_mn, name_en, description_mn, description_en, is_available, sort_order)
 VALUES (
   'seven-shagai',

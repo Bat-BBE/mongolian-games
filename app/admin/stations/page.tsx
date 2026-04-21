@@ -14,6 +14,8 @@ import {
   adminListStations,
   adminPutStationGames,
   adminUpdateStation,
+  adminUploadStationImage,
+  resolveAssetUrl,
   type GameRow,
   type MapStationRow,
 } from "@/lib/api";
@@ -267,6 +269,8 @@ export default function AdminStationsPage() {
             <StationDetailEditor
               station={selectedStation}
               saving={stationBusy}
+              token={token ?? ""}
+              onReload={() => void load()}
               onSave={(patch) => void saveStation(selectedStation.slug, patch)}
             />
           )}
@@ -382,10 +386,14 @@ export default function AdminStationsPage() {
 function StationDetailEditor({
   station,
   saving,
+  token,
+  onReload,
   onSave,
 }: {
   station: MapStationRow;
   saving: boolean;
+  token: string;
+  onReload: () => void;
   onSave: (patch: Partial<MapStationRow>) => void;
 }) {
   const [nameMn, setNameMn] = useState(station.name_mn);
@@ -393,6 +401,8 @@ function StationDetailEditor({
   const [regionMn, setRegionMn] = useState(station.region_mn);
   const [regionEn, setRegionEn] = useState(station.region_en);
   const [icon, setIcon] = useState(station.icon ?? "📍");
+  const [imageUrl, setImageUrl] = useState(station.image_url ?? "");
+  const [imageBusy, setImageBusy] = useState(false);
   const [journeyIndex, setJourneyIndex] = useState<number>(
     station.journey_index ?? 0,
   );
@@ -408,6 +418,7 @@ function StationDetailEditor({
     setRegionMn(station.region_mn);
     setRegionEn(station.region_en);
     setIcon(station.icon ?? "📍");
+    setImageUrl(station.image_url ?? "");
     setJourneyIndex(station.journey_index ?? 0);
   }, [station]);
 
@@ -425,6 +436,7 @@ function StationDetailEditor({
       region_mn: regionMn,
       region_en: regionEn,
       icon,
+      image_url: imageUrl.trim() ? imageUrl.trim() : null,
       journey_index: Number.isFinite(journeyIndex)
         ? journeyIndex
         : station.journey_index,
@@ -436,6 +448,22 @@ function StationDetailEditor({
       quest_desc_mn: questDescMn,
       quest_desc_en: questDescEn,
     });
+  };
+
+  const onPickStationImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    const t = token?.trim();
+    if (!f || !t) return;
+    setImageBusy(true);
+    try {
+      await adminUploadStationImage(t, station.slug, f);
+      onReload();
+    } catch {
+      /* toast optional */
+    } finally {
+      setImageBusy(false);
+    }
   };
 
   return (
@@ -481,9 +509,54 @@ function StationDetailEditor({
             onChange={(e) => setRegionEn(e.target.value)}
           />
         </div>
+        <div className="col-span-2 space-y-2">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
+            Зураг (газрын зурагны шошго)
+          </p>
+          <p className="text-[10px] text-[var(--admin-muted)] mb-1">
+            Оруулсан тохиолдолд emoji-г орлож харуулна. Файл эсвэл доорх зам.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="cursor-pointer text-xs px-2 py-1.5 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] hover:bg-white/5 text-[var(--admin-text)]">
+              {imageBusy ? "…" : "Файл оруулах"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                disabled={imageBusy || saving}
+                onChange={(e) => void onPickStationImage(e)}
+              />
+            </label>
+            {imageUrl.trim() ? (
+              <button
+                type="button"
+                className="text-xs px-2 py-1 rounded border border-[var(--admin-border)] text-[var(--admin-muted)] hover:bg-white/5"
+                onClick={() => setImageUrl("")}
+              >
+                Зургийг авах
+              </button>
+            ) : null}
+          </div>
+          <input
+            className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)] font-mono"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="/uploads/stations/… эсвэл бүрэн URL"
+          />
+          {imageUrl.trim() ? (
+            <div className="flex items-center gap-2 mt-1">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveAssetUrl(imageUrl.trim())}
+                alt=""
+                className="h-14 w-14 rounded-lg object-cover border border-[var(--admin-border)]"
+              />
+            </div>
+          ) : null}
+        </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
-            Икон
+            Икон (fallback)
           </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"

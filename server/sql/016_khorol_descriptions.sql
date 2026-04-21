@@ -1,4 +1,3 @@
--- Richer copy for Khorol / Zendmene rules screen (see components/game/khorolGame.tsx)
 UPDATE games
 SET
   description_mn = 'Зэндмэнэ: 60 мод (гар 12, газар 48), ахалтын дараалал, жин, тэгш тоотойд гэр, сондгойд цай хураах. Тоглоом дотор дүрмийн дэлгэц.',

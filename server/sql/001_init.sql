@@ -1,5 +1,3 @@
--- Core app data in PostgreSQL. Link rows to Firebase Auth via firebase_uid.
-
 CREATE TABLE IF NOT EXISTS app_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   firebase_uid TEXT NOT NULL UNIQUE,

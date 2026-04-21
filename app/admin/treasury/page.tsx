@@ -5,6 +5,10 @@ import { LuRefreshCw as RefreshCw } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
+import {
+  UserEconomyDialog,
+  type TreasuryUserRow,
+} from "@/components/admin/UserEconomyDialog";
 import { adminGetTreasury } from "@/lib/api";
 
 export default function AdminTreasuryPage() {
@@ -37,6 +41,7 @@ export default function AdminTreasuryPage() {
 
   const s = data?.summary;
   const [q, setQ] = useState("");
+  const [economyUser, setEconomyUser] = useState<TreasuryUserRow | null>(null);
 
   const filteredUsers = useMemo(() => {
     const rows = data?.users ?? [];
@@ -124,7 +129,7 @@ export default function AdminTreasuryPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[1060px]">
+          <table className="w-full text-sm text-left min-w-[1160px]">
             <thead>
               <tr className="border-b border-[var(--admin-border)] text-[10px] uppercase tracking-wider text-[var(--admin-subtle,#737373)]">
                 <th className="p-3">#</th>
@@ -139,6 +144,7 @@ export default function AdminTreasuryPage() {
                 <th className="p-3">🐎</th>
                 <th className="p-3">🐫</th>
                 <th className="p-3">Очсон өртөө</th>
+                <th className="p-3 w-[100px]">Засах</th>
               </tr>
             </thead>
             <tbody>
@@ -175,13 +181,26 @@ export default function AdminTreasuryPage() {
                   <td className="p-3 tabular-nums">
                     {Number(u.visited_stations)}
                   </td>
+                  <td className="p-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-[var(--admin-border)]"
+                      onClick={() =>
+                        setEconomyUser(u)
+                      }
+                    >
+                      Засах
+                    </Button>
+                  </td>
                 </tr>
               ))}
               {filteredUsers.length === 0 && (
                 <tr>
                   <td
                     className="p-8 text-center text-[var(--admin-muted)]"
-                    colSpan={12}
+                    colSpan={13}
                   >
                     Мэдээлэл байхгүй.
                   </td>
@@ -191,6 +210,16 @@ export default function AdminTreasuryPage() {
           </table>
         </div>
       </section>
+
+      <UserEconomyDialog
+        open={economyUser !== null}
+        onOpenChange={(o) => {
+          if (!o) setEconomyUser(null);
+        }}
+        token={token ?? null}
+        user={economyUser}
+        onSaved={() => void load()}
+      />
     </div>
   );
 }

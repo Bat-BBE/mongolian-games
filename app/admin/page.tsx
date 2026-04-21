@@ -198,11 +198,11 @@ export default function AdminDashboardPage() {
                 : "Шалгаж байна…"}
             </span>
           </div>
-          <p className="text-xs text-[var(--admin-muted)]">
+          {/* <p className="text-xs text-[var(--admin-muted)]">
             {health
               ? `Firebase Admin: ${health.firebaseAdmin ? "тохируулсан" : "үйлдэлгүй"}`
               : ""}
-          </p>
+          </p> */}
         </div>
       </div>
       {/* <section className="admin-panel p-6 space-y-3">

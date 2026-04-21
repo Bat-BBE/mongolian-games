@@ -1,6 +1,3 @@
--- Slug `puzzle`: memory pairs (logic) game metadata + station wiring.
--- expose it on stations (idempotent for station_games).
-
 UPDATE games
 SET
   name_mn = 'Хос ол',

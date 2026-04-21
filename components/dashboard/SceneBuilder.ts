@@ -521,7 +521,7 @@ export class SceneBuilder {
       const x = rand(10, 24),
         z = rand(-14, -2);
       this.makeTree(x + rand(-1, 1), z + rand(-1, 1), rand(0.5, 1.0));
-    }   
+    }
     for (let i = 0; i < 80; i++) {
       const x = rand(-130, 70),
         z = rand(-45, 20);
@@ -538,6 +538,7 @@ export class SceneBuilder {
     s = 1,
     isStation = false,
     stationId = "",
+    attachParent?: THREE.Object3D,
   ): void {
     const hy = terrainHeight(x, z);
     const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
@@ -817,7 +818,7 @@ export class SceneBuilder {
       wp.y += 0.25 * s;
       this.doorAnchors.set(stationId, wp);
     }
-    this.scene.add(g);
+    (attachParent ?? this.scene).add(g);
   }
 
   private makeFence(
@@ -827,6 +828,7 @@ export class SceneBuilder {
     d: number,
     rotY = 0,
     withGate = true,
+    attachParent?: THREE.Object3D,
   ): void {
     const g = new THREE.Group(),
       fm = mkMat(0x9a7840, 0.95);
@@ -914,7 +916,7 @@ export class SceneBuilder {
     }
     g.position.set(cx, terrainHeight(cx, cz), cz);
     g.rotation.y = rotY;
-    this.scene.add(g);
+    (attachParent ?? this.scene).add(g);
   }
 
   private makeMiniSumTemple(
@@ -1026,41 +1028,50 @@ export class SceneBuilder {
     }
   }
 
-  /**
-   * Player home — Lv1–5 baga bagaar tomorno;
-   * hashaand mal oirhon baina aa.
-   */
   buildPlayerHomeGer(gerLevel = 1): void {
+    const prev = this.scene.getObjectByName("playerHomeGer");
+    if (prev) this.scene.remove(prev);
+
     const x = PLAYER_HOME_X;
     const z = PLAYER_HOME_Z;
     const lv = Math.max(1, Math.min(gerLevel, 30));
     const step = Math.min(lv, 5);
-    const earlyScale = 0.5 + (step - 1) * 0.07;
-    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.036 : 1;
-    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.022 : 1;
-    const s = earlyScale * midBoost * highBoost * 1.78;
-    this.makeGer(x, z, 0, s, true, "home");
+    // Түвшин бүрт томролт (1→5 хооронд ялгаа мэдрэгдэнэ).
+    const earlyScale = 0.5 + (step - 1) * 0.095;
+    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
+    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
+    const s = earlyScale * midBoost * highBoost * 1.86;
+    const root = new THREE.Group();
+    root.name = "playerHomeGer";
+    this.scene.add(root);
+
+    this.makeGer(x, z, 0, s, true, "home", root);
 
     const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
     let ringSpan = 12.5;
+    // Нэмэлт гэр: гол гэрийн хэмжээтэй илүү ойролцоо (өмнө ~38% → одоо ~64–82%).
+    const satelliteFrac =
+      0.64 + Math.min(lv, 22) * 0.0075 + (extraGers >= 4 ? 0.03 : 0);
     if (extraGers > 0) {
       const ringR = 13.2 + Math.min(lv * 0.45, 10);
       ringSpan = ringR + 7;
       for (let i = 0; i < extraGers; i++) {
         const ang = (i / extraGers) * Math.PI * 2 + rand(-0.06, 0.06);
+        const extraS = s * satelliteFrac + rand(0, 0.07);
         this.makeGer(
           x + Math.cos(ang) * ringR,
           z + Math.sin(ang) * ringR,
           rand(0, Math.PI * 2),
-          s * 0.38 + rand(0, 0.06),
+          extraS,
           false,
+          "",
+          root,
         );
       }
     }
     const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
     const yardD = yardW * 0.86;
-    // Хаалгын завсар талын голоор хуваагдсан шугам мэт харагдана — тасралтгүй хашаа.
-    this.makeFence(x, z, yardW, yardD, 0, false);
+    this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
   buildPlayerLivestockNearHome(livestock?: {
@@ -1070,6 +1081,9 @@ export class SceneBuilder {
     horse: number;
     camel: number;
   }): void {
+    const prev = this.scene.getObjectByName("playerHomeLivestock");
+    if (prev) this.scene.remove(prev);
+
     if (!livestock) return;
     const x = PLAYER_HOME_X;
     const z = PLAYER_HOME_Z;
@@ -1079,6 +1093,10 @@ export class SceneBuilder {
     const horseN = Math.max(0, Math.min(5, Math.floor(livestock.horse)));
     const camelN = Math.max(0, Math.min(4, Math.floor(livestock.camel)));
     if (sheepN + goatN + cowN + horseN + camelN === 0) return;
+
+    const root = new THREE.Group();
+    root.name = "playerHomeLivestock";
+    this.scene.add(root);
 
     const sheepMat = mkMat(0xf1e7d5, 0.92);
     const goatMat = mkMat(0xe8dcc8, 0.9);
@@ -1149,7 +1167,7 @@ export class SceneBuilder {
       });
       g.position.set(x + ox, y + 0.04, z + oz);
       g.rotation.y = rand(0, Math.PI * 2);
-      this.scene.add(g);
+      root.add(g);
     };
 
     for (let i = 0; i < sheepN; i++) {
@@ -1188,7 +1206,7 @@ export class SceneBuilder {
       });
       g.position.set(x + ox, y + 0.04, z + oz);
       g.rotation.y = rand(0, Math.PI * 2);
-      this.scene.add(g);
+      root.add(g);
     }
 
     for (let i = 0; i < horseN; i++) {
@@ -1198,11 +1216,21 @@ export class SceneBuilder {
         rand(0, Math.PI * 2),
         [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
         false,
+        0,
+        0,
+        5,
+        0,
+        root,
       );
     }
 
     for (let i = 0; i < camelN; i++) {
-      this.makeCamel(x + rand(-9, 9), z + rand(4, 11), rand(0, Math.PI * 2));
+      this.makeCamel(
+        x + rand(-9, 9),
+        z + rand(4, 11),
+        rand(0, Math.PI * 2),
+        root,
+      );
     }
   }
 
@@ -2390,6 +2418,7 @@ export class SceneBuilder {
     orbitCz = 0,
     orbitR = 5,
     phase = 0,
+    attachParent?: THREE.Object3D,
   ): THREE.Group {
     const g = new THREE.Group();
     const hm = materialLibrary.getHideMaterial(color);
@@ -2485,7 +2514,7 @@ export class SceneBuilder {
     g.rotation.y = rotY;
     g.scale.setScalar(rand(1.12, 1.42) * 1.48);
     g.castShadow = true;
-    this.scene.add(g);
+    (attachParent ?? this.scene).add(g);
     if (animate)
       this.horses.push({
         group: g,
@@ -2569,7 +2598,12 @@ export class SceneBuilder {
     }
   }
 
-  makeCamel(x: number, z: number, rotY = 0): void {
+  makeCamel(
+    x: number,
+    z: number,
+    rotY = 0,
+    attachParent?: THREE.Object3D,
+  ): void {
     const g = new THREE.Group();
     const furC = [0xc8a060, 0xb89050, 0xd0a070, 0xbea068][randInt(0, 3)];
     const cm = materialLibrary.getHideMaterial(furC);
@@ -2640,7 +2674,7 @@ export class SceneBuilder {
     g.rotation.y = rotY;
     g.scale.setScalar(rand(1.08, 1.28) * 1.42);
     g.castShadow = true;
-    this.scene.add(g);
+    (attachParent ?? this.scene).add(g);
   }
 
   buildCamels(): void {

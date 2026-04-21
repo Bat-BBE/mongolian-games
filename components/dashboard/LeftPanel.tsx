@@ -7,7 +7,16 @@ import {
   LuGem as Gem,
   LuTrendingUp as TrendingUp,
   LuTrophy as Trophy,
+  LuPackage as PackageIcon,
 } from "react-icons/lu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { claimRankChest } from "@/lib/api";
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
@@ -50,6 +59,8 @@ interface LeftPanelProps {
       camel: number;
     };
   };
+  userEmail?: string;
+  onChestClaimed?: () => void;
   /** gerluu camer shiljuuleh */
   onGoToGer?: () => void;
   onOpenLeaderboard?: () => void;
@@ -101,11 +112,18 @@ export function LeftPanel({
   stationSteps,
   stationGameVisits,
   treasury,
+  userEmail,
+  onChestClaimed,
   onGoToGer,
   onOpenLeaderboard,
   lang,
 }: LeftPanelProps) {
-  const xpPct = Math.round((xp / xpMax) * 100);
+  const safeMax = Math.max(1, xpMax);
+  const xpPct = Math.min(100, Math.round((xp / safeMax) * 100));
+  const chestReady = xp >= safeMax;
+  const [chestBusy, setChestBusy] = useState(false);
+  const [chestDialogOpen, setChestDialogOpen] = useState(false);
+  const [chestMessage, setChestMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const activeStationId = heroStationId ?? "home";
@@ -114,6 +132,23 @@ export function LeftPanel({
     () => mapStations.find((s) => s.id === activeStationId),
     [mapStations, activeStationId],
   );
+
+  /** Тухайн өртөөний quest_hint / quest_desc (API), байхгүй бол нэгдсэн aяллын t.quest* */
+  const stationStoryText = useMemo(() => {
+    if (activeStationId === "home") return { title: "", desc: "" };
+    const row = mapStations.find((s) => s.id === activeStationId);
+    const title = (
+      row?.quest_hint?.trim() ||
+      t.questTitle?.trim() ||
+      ""
+    ).trim();
+    const desc = (
+      row?.quest_desc?.trim() ||
+      t.questDesc?.trim() ||
+      ""
+    ).trim();
+    return { title, desc };
+  }, [activeStationId, mapStations, t.questTitle, t.questDesc]);
 
   const displayGames: StationGameBundleRow[] = useMemo(() => {
     if (activeStationId === "home") return [];
@@ -395,19 +430,21 @@ export function LeftPanel({
               )}
 
               {activeStationId !== "home" &&
-              (t.questTitle?.trim() || t.questDesc?.trim()) ? (
+              (stationStoryText.title || stationStoryText.desc) ? (
                 <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
                   <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
                     {lang === "mn" ? "Өртөөний түүх" : "Station story"}
                   </p>
-                  {t.questTitle?.trim() ? (
+                  {stationStoryText.title ? (
                     <p className="text-[11px] text-foreground/80 font-semibold leading-snug">
-                      {t.questTitle}
+                      {stationStoryText.title}
                     </p>
                   ) : null}
-                  {t.questDesc?.trim() ? (
-                    <p className="text-[11px] text-foreground/70 leading-relaxed mt-1">
-                      {t.questDesc}
+                  {stationStoryText.desc ? (
+                    <p
+                      className={`text-[11px] text-foreground/70 leading-relaxed ${stationStoryText.title ? "mt-1" : ""}`}
+                    >
+                      {stationStoryText.desc}
                     </p>
                   ) : null}
                 </div>
@@ -425,37 +462,40 @@ export function LeftPanel({
                 value={`Lv ${treasury?.gerLevel ?? 1}`}
               />
               <TreasuryRow
-                label={lang === "mn" ? "Эрдэнэс" : "KP"}
+                label={t.treasuryKpLabel}
                 value={(treasury?.kp ?? 0).toLocaleString()}
               />
               <TreasuryRow
-                label={lang === "mn" ? "Зоос" : "Coins"}
+                label={t.treasuryCoinsLabel}
                 value={(treasury?.coins ?? 0).toLocaleString()}
               />
               <TreasuryRow
-                label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
+                label={t.treasuryGemsLabel}
                 value={(treasury?.gems ?? 0).toLocaleString()}
               />
             </div>
+            <p className="text-[10px] text-muted-foreground leading-snug px-0.5">
+              {t.treasuryHint}
+            </p>
             <div className="rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
                 {lang === "mn" ? "Мал сүрэг" : "Livestock"}
               </p>
               <div className="flex flex-wrap gap-1 text-xs text-foreground/85 tabular-nums">
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐑 {(treasury?.livestock.sheep ?? 0).toLocaleString()}
+                  🐑 {(treasury?.livestock?.sheep ?? 0).toLocaleString()}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐐 {(treasury?.livestock.goat ?? 0).toLocaleString()}
+                  🐐 {(treasury?.livestock?.goat ?? 0).toLocaleString()}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐄 {(treasury?.livestock.cow ?? 0).toLocaleString()}
+                  🐄 {(treasury?.livestock?.cow ?? 0).toLocaleString()}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐎 {(treasury?.livestock.horse ?? 0).toLocaleString()}
+                  🐎 {(treasury?.livestock?.horse ?? 0).toLocaleString()}
                 </span>
                 <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐫 {(treasury?.livestock.camel ?? 0).toLocaleString()}
+                  🐫 {(treasury?.livestock?.camel ?? 0).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -482,8 +522,64 @@ export function LeftPanel({
                 }}
               />
             </div>
+            {chestReady ? (
+              <div className="mt-2 rounded-lg border border-amber-500/35 bg-gradient-to-br from-amber-950/40 to-background/80 px-3 py-2 space-y-2">
+                <p className="text-[11px] text-amber-100/95 leading-snug flex items-start gap-2">
+                  <PackageIcon className="size-4 shrink-0 mt-0.5 text-amber-400" />
+                  <span>{t.rankChestOpen}</span>
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full gap-2 bg-amber-600/90 hover:bg-amber-600 text-white"
+                  disabled={chestBusy || !userEmail?.trim()}
+                  onClick={async () => {
+                    const em = userEmail?.trim();
+                    if (!em) return;
+                    setChestBusy(true);
+                    try {
+                      const { reward } = await claimRankChest({ email: em });
+                      const msg =
+                        reward.kind === "gem"
+                          ? t.rankChestResultGem
+                          : reward.kind === "kp"
+                            ? t.rankChestResultKp.replace(
+                                "{n}",
+                                String(reward.amount),
+                              )
+                            : t.rankChestResultCoins.replace(
+                                "{n}",
+                                String(reward.amount),
+                              );
+                      setChestMessage(msg);
+                      setChestDialogOpen(true);
+                      window.setTimeout(() => onChestClaimed?.(), 500);
+                    } catch {
+                      /* ignore */
+                    } finally {
+                      setChestBusy(false);
+                    }
+                  }}
+                >
+                  {chestBusy ? "…" : t.rankChestClaim}
+                </Button>
+              </div>
+            ) : null}
           </div>
         </div>
+
+        <Dialog open={chestDialogOpen} onOpenChange={setChestDialogOpen}>
+          <DialogContent className="sm:max-w-sm border-primary/20">
+            <DialogHeader>
+              <DialogTitle className="font-display text-base">
+                {lang === "mn" ? "Шагнал" : "Reward"}
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-foreground/90 leading-relaxed">
+              {chestMessage}
+            </p>
+          </DialogContent>
+        </Dialog>
 
         <div className="w-full">
           <SectionTitle>{t.leaderboard}</SectionTitle>

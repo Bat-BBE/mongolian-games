@@ -1,9 +1,3 @@
--- Rewrite each user's `profile.heroModelPath` to match the current GLB
--- paths so sessions that were registered before the hero asset swap no
--- longer load the stale X Bot / FBX models.
--- `profile` is a JSONB column on `app_users`. We only touch rows whose
--- heroId maps to a known hero.
-
 UPDATE app_users
 SET profile = jsonb_set(
       COALESCE(profile, '{}'::jsonb),

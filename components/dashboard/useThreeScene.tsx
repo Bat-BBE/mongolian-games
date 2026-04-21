@@ -27,10 +27,18 @@ import {
 interface UseThreeSceneOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
   stations: UrtuuStation[];
+  /** Icons/images from API өөрчлөгдөхөд 3D шошгыг дахин зурах */
+  mapStationsRevision?: string;
   currentStationId: string;
   doneStationIds: string[];
   homeGerLevel?: number;
-  homeLivestock?: { sheep: number; horse: number; camel: number };
+  homeLivestock?: {
+    sheep: number;
+    goat: number;
+    cow: number;
+    horse: number;
+    camel: number;
+  };
   onSelectStation?: (stationId: string) => void;
   heroModelPath?: string | null;
   onHeroAtStationChange?: (stationId: string | null) => void;
@@ -115,166 +123,6 @@ function buildHomeCameraTarget(lookAt: THREE.Vector3): CameraTarget {
   };
 }
 
-type HomeWayMarker = THREE.Group & {
-  userData: {
-    baseY: number;
-    phase: number;
-    pulseMats: THREE.MeshStandardMaterial[];
-    stationId: string;
-    sprite?: THREE.Sprite;
-    homeWayMarker?: boolean;
-  };
-};
-
-function findHomeWayMarkerGroup(
-  obj: THREE.Object3D | null,
-): HomeWayMarker | null {
-  let cur: THREE.Object3D | null = obj;
-  while (cur) {
-    const u = cur.userData as { homeWayMarker?: boolean };
-    if (u.homeWayMarker) return cur as HomeWayMarker;
-    cur = cur.parent;
-  }
-  return null;
-}
-
-/** Газрын дээрх сум + станцын нэр/дүрс — анимацыг onBeforeRender-д ажиллуулна. */
-function addNearestUrtuuGroundWayMarkers(
-  scene: THREE.Scene,
-  homeX: number,
-  homeZ: number,
-  outMarkers: HomeWayMarker[],
-  count = 4,
-): void {
-  const stationIds = Object.keys(STATION_CONFIGS);
-  const scored = stationIds
-    .map((id) => {
-      const { x: sx, z: sz } = stationWorldXZ(
-        STATION_CONFIGS[id].wx,
-        STATION_CONFIGS[id].wz,
-      );
-      const d = Math.hypot(sx - homeX, sz - homeZ);
-      return { id, d, sx, sz };
-    })
-    .sort((a, b) => a.d - b.d)
-    .slice(0, count);
-
-  scored.forEach((s, i) => {
-    const cfg = STATION_CONFIGS[s.id];
-    const ang = (i / Math.max(1, count)) * Math.PI * 2 + 0.42;
-    const ox = homeX + Math.cos(ang) * 5.2;
-    const oz = homeZ + Math.sin(ang) * 5.2;
-    const baseY = terrainHeight(ox, oz) + 0.08;
-    const dx = s.sx - ox;
-    const dz = s.sz - oz;
-    const yaw = Math.atan2(dx, dz);
-    const hue = 0.06 + (count > 1 ? (i / (count - 1)) * 0.11 : 0);
-    const col = new THREE.Color().setHSL(hue, 0.72, 0.52);
-    const pulseMats: THREE.MeshStandardMaterial[] = [];
-
-    const g = new THREE.Group() as HomeWayMarker;
-    g.position.set(ox, baseY, oz);
-    g.rotation.y = yaw;
-    g.userData = {
-      baseY,
-      phase: i * 1.7,
-      pulseMats,
-      stationId: s.id,
-      homeWayMarker: true,
-    };
-
-    const pad = new THREE.Mesh(
-      new THREE.RingGeometry(1.1, 1.55, 28),
-      new THREE.MeshStandardMaterial({
-        color: col,
-        roughness: 0.65,
-        metalness: 0.12,
-        emissive: col,
-        emissiveIntensity: 0.12,
-        side: THREE.DoubleSide,
-      }),
-    );
-    pad.rotation.x = -Math.PI / 2;
-    pad.position.y = 0.02;
-    pulseMats.push(pad.material as THREE.MeshStandardMaterial);
-    g.add(pad);
-
-    const shaftLen = 4.2;
-    const shaft = new THREE.Mesh(
-      new THREE.BoxGeometry(0.42, 0.1, shaftLen),
-      new THREE.MeshStandardMaterial({
-        color: col,
-        roughness: 0.55,
-        metalness: 0.08,
-        emissive: col,
-        emissiveIntensity: 0.1,
-      }),
-    );
-    shaft.position.set(0, 0.06, shaftLen * 0.5 + 0.35);
-    pulseMats.push(shaft.material as THREE.MeshStandardMaterial);
-    g.add(shaft);
-
-    const head = new THREE.Mesh(
-      new THREE.ConeGeometry(0.55, 1.05, 10),
-      new THREE.MeshStandardMaterial({
-        color: col,
-        roughness: 0.45,
-        metalness: 0.1,
-        emissive: col,
-        emissiveIntensity: 0.18,
-      }),
-    );
-    head.rotation.x = Math.PI / 2;
-    head.position.set(0, 0.08, shaftLen + 1.15);
-    pulseMats.push(head.material as THREE.MeshStandardMaterial);
-    g.add(head);
-
-    const canvas = document.createElement("canvas");
-    const cw = 300;
-    const ch = 88;
-    canvas.width = cw;
-    canvas.height = ch;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      const pad = 8;
-      ctx.fillStyle = "rgba(6,10,18,0.92)";
-      ctx.fillRect(pad, pad, cw - pad * 2, ch - pad * 2);
-      ctx.strokeStyle = `rgba(${Math.floor(col.r * 255)},${Math.floor(col.g * 255)},${Math.floor(col.b * 255)},0.85)`;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(pad + 0.5, pad + 0.5, cw - pad * 2 - 1, ch - pad * 2 - 1);
-      ctx.font = "bold 26px system-ui,Segoe UI,sans-serif";
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillText(cfg.icon, 14, 38);
-      ctx.font = "600 15px system-ui,Segoe UI,sans-serif";
-      const name =
-        cfg.region.length > 16 ? cfg.region.slice(0, 15) + "…" : cfg.region;
-      ctx.fillText(name, 46, 34);
-      ctx.font = "400 12px system-ui,Segoe UI,sans-serif";
-      ctx.fillStyle = "rgba(203,213,225,0.9)";
-      const slug = s.id.replace(/_/g, " ");
-      const slugDraw = slug.length > 22 ? slug.slice(0, 20) + "…" : slug;
-      ctx.fillText(slugDraw, 46, 54);
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: tex,
-        transparent: true,
-        depthTest: false,
-      }),
-    );
-    sprite.scale.set(7.2, 2.1, 1);
-    sprite.position.set(0, 2.85, shaftLen * 0.45);
-    sprite.visible = false;
-    g.add(sprite);
-    g.userData.sprite = sprite;
-
-    scene.add(g);
-    outMarkers.push(g);
-  });
-}
-
 function getSunPositionForStation(stationId: string): { angle: number } {
   const id = resolveStationId(stationId);
   const idx = JOURNEY_ORDER.indexOf(id);
@@ -287,6 +135,7 @@ function getSunPositionForStation(stationId: string): { angle: number } {
 export function useThreeScene({
   containerRef,
   stations,
+  mapStationsRevision = "",
   currentStationId,
   doneStationIds,
   homeGerLevel = 1,
@@ -313,6 +162,7 @@ export function useThreeScene({
   }>({ stationId: null, alpha: -1 });
 
   const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
+  const builderRef = useRef<SceneBuilder | null>(null);
   useEffect(() => {
     onSelectRef.current = onSelectStation ?? null;
   }, [onSelectStation]);
@@ -423,6 +273,7 @@ export function useThreeScene({
     scene.add(new THREE.HemisphereLight(0x8ec0e8, 0x6a9a45, 0.52));
 
     const builder = new SceneBuilder(scene, highlightStationId, doneStationIds);
+    builderRef.current = builder;
 
     builder.buildSky();
     builder.buildTerrain();
@@ -433,8 +284,6 @@ export function useThreeScene({
     builder.buildMountains();
     builder.buildGrassTufts();
     builder.buildRocks();
-    builder.buildPlayerHomeGer(homeGerLevel);
-    builder.buildPlayerLivestockNearHome();
     builder.buildRoads(stations);
     builder.buildStationGers(stations);
     builder.buildGerCamps();
@@ -455,15 +304,6 @@ export function useThreeScene({
       const hz = doorHome.z;
       homeLookAt.set(hx, terrainHeight(hx, hz) + 2.7, hz + 2.9);
     }
-    const homeWayMarkers: HomeWayMarker[] = [];
-    addNearestUrtuuGroundWayMarkers(
-      scene,
-      PLAYER_HOME_X,
-      PLAYER_HOME_Z,
-      homeWayMarkers,
-      0,
-    );
-
     const initTarget = buildHomeCameraTarget(homeLookAt);
     camera.position.set(
       initTarget.lookAt.x +
@@ -631,25 +471,6 @@ export function useThreeScene({
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
       raycaster.setFromCamera(mouse, camera);
-
-      if (homeWayMarkers.length) {
-        const hitsHome = raycaster.intersectObjects(homeWayMarkers, true);
-        if (hitsHome.length) {
-          const grp = findHomeWayMarkerGroup(hitsHome[0].object);
-          if (grp?.userData.sprite) {
-            const sp = grp.userData.sprite;
-            const was = sp.visible;
-            for (const m of homeWayMarkers) {
-              m.userData.sprite && (m.userData.sprite.visible = false);
-            }
-            if (!was) sp.visible = true;
-            return;
-          }
-        }
-        for (const m of homeWayMarkers) {
-          if (m.userData.sprite) m.userData.sprite.visible = false;
-        }
-      }
 
       const cb = onSelectRef.current;
       if (!cb) return;
@@ -1137,15 +958,6 @@ export function useThreeScene({
         fog.density = 0.00105 + (1 - dayFrac) * 0.00012;
         renderer.toneMappingExposure = 0.86 + dayFrac * 0.24;
 
-        for (const m of homeWayMarkers) {
-          const { baseY, phase, pulseMats } = m.userData;
-          m.position.y = baseY + Math.sin(elapsed * 2.6 + phase) * 0.16;
-          const pulse = 0.08 + Math.sin(elapsed * 3.4 + phase) * 0.07;
-          for (const mat of pulseMats) {
-            mat.emissiveIntensity = pulse;
-          }
-        }
-
         const finalCamPos = new THREE.Vector3(
           cameraState.currentLook.x +
             Math.sin(cameraState.currentTheta) *
@@ -1258,6 +1070,7 @@ export function useThreeScene({
 
     return () => {
       resizeObserver.disconnect();
+      builderRef.current = null;
       disposed = true;
       if (heroRootRef.current) {
         scene.remove(heroRootRef.current);
@@ -1283,7 +1096,24 @@ export function useThreeScene({
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
     };
-  }, []);
+    // mapStationsRevision: API-аас icon/image өөрчлөгдөхөд шошгыг шинэ зурагтайгаар дахин бүтээнэ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapStationsRevision]);
+
+  const homeLivestockKey = homeLivestock
+    ? `${homeLivestock.sheep},${homeLivestock.goat},${homeLivestock.cow},${homeLivestock.horse},${homeLivestock.camel}`
+    : "";
+  useEffect(() => {
+    builderRef.current?.buildPlayerLivestockNearHome(homeLivestock);
+    // Intentionally keyed by homeLivestockKey only (stable counts fingerprint).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeLivestockKey]);
+
+  const homeGerLevelKey = String(homeGerLevel);
+  useEffect(() => {
+    builderRef.current?.buildPlayerHomeGer(homeGerLevel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeGerLevelKey]);
 
   const flyToStation = useCallback((id: string, snap?: boolean) => {
     flyToStationRef.current?.(id, snap);

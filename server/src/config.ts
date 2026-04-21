@@ -6,11 +6,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().url(),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
-  /** JSON string of Firebase service account (same as GCP key file contents) */
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
-  /** Realtime Database URL (optional; for Admin RTDB access later) */
   FIREBASE_DATABASE_URL: z.string().url().optional(),
-  /** Admin panel login (POST /api/admin/login) + JWT for protected routes */
   ADMIN_USERNAME: z.string().min(1).optional(),
   ADMIN_PASSWORD: z.string().min(1).optional(),
   JWT_SECRET: z.string().min(32).optional(),

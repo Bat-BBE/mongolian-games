@@ -21,7 +21,9 @@ export interface UrtuuStation {
   isCurrent?: boolean;
   /** already completed? */
   isDone?: boolean;
-  icon?: string; // material icon name
+  icon?: string;
+  /** API/admin map marker image (resolved absolute URL) */
+  imageUrl?: string;
   distance?: string;
 }
 

@@ -171,8 +171,24 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         return;
       }
 
-      const prof = data.profile as Record<string, unknown>;
-      const prog = data.progress as Record<string, unknown>;
+      const fbProf = isPlainRecord(data.profile)
+        ? { ...(data.profile as Record<string, unknown>) }
+        : {};
+      const fbProg = isPlainRecord(data.progress)
+        ? { ...(data.progress as Record<string, unknown>) }
+        : {};
+      const prof = {
+        ...fbProf,
+        ...(bundle?.user?.profile && isPlainRecord(bundle.user.profile)
+          ? (bundle.user.profile as Record<string, unknown>)
+          : {}),
+      };
+      const prog = {
+        ...fbProg,
+        ...(bundle?.user?.progress && isPlainRecord(bundle.user.progress)
+          ? (bundle.user.progress as Record<string, unknown>)
+          : {}),
+      };
       const inv = isPlainRecord(prof.inventory)
         ? (prof.inventory as Record<string, unknown>)
         : {};
@@ -385,6 +401,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           stationSteps={player.stationSteps}
           stationGameVisits={player.stationGameVisits}
           treasury={player.treasury}
+          userEmail={userEmail}
+          onChestClaimed={() => setGameReloadTick((n) => n + 1)}
           onGoToGer={() => flyHomeRef.current?.()}
           onOpenLeaderboard={openLb}
         />

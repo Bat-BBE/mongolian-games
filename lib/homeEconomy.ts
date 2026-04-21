@@ -16,7 +16,11 @@ export function gerUpgradeCost(gerLevel: number): {
   return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
 }
 
-/**
- * Leaderboard `wealthScore` tootsoolol: gems * 25, coins * 1 — 1 erdeniin chuluu
- */
+/** Чулуу → зоос солих ханш (тоглоомын API-тай ижил) */
 export const WEALTH_COINS_PER_GEM = 25;
+
+/**
+ * Leaderboard `wealthScore`-д эрдэнэ оруулах жин (чулуу→зоосын 25-тай адил биш —
+ * нийт үнэлгээг бага тоонд барина).
+ */
+export const WEALTH_SCORE_GEM_WEIGHT = 10;

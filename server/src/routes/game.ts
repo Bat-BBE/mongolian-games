@@ -27,6 +27,10 @@ const homeExchangeGemsBody = z.object({
   gems: z.number().int().min(1).max(500),
 });
 
+const claimRankChestBody = z.object({
+  email: z.string().min(3),
+});
+
 /** lib/homeEconomy.ts WEALTH_COINS_PER_GEM-тэй ижил байх ёстой */
 const GEMS_TO_COINS_EXCHANGE_RATE = 25;
 
@@ -83,12 +87,16 @@ function readStationGameVisits(
   return out;
 }
 
+/**
+ * Нийт үнэлгээ (leaderboard `wealthScore`) — хэт том тоо гарч ирэхгүй байхын тулд
+ * KP/зоос/гэрийн хувь нэмэгдлийг хязгаарлаж, жингүүдийг дундаж хэмжээнд тааруулсан.
+ */
 function computeWealthScore(profile: Record<string, unknown>): number {
-  const kp = num(profile.kp, 0);
+  const kpRaw = num(profile.kp, 0);
   const inv = isPlainRecord(profile.inventory)
     ? (profile.inventory as Record<string, unknown>)
     : {};
-  const coins = num(inv.coins, 0);
+  const coinsRaw = num(inv.coins, 0);
   const gems = num(inv.gems, 0);
   const ger = isPlainRecord(profile.ger)
     ? (profile.ger as Record<string, unknown>)
@@ -103,16 +111,20 @@ function computeWealthScore(profile: Record<string, unknown>): number {
   const horse = Math.max(0, Math.floor(num(ls.horse, 0)));
   const camel = Math.max(0, Math.floor(num(ls.camel, 0)));
 
+  const kpPart = Math.floor(Math.min(kpRaw, 12_000) / 8);
+  const coinsPart = Math.floor(Math.min(coinsRaw, 80_000) / 2);
+
   const base =
-    kp +
-    coins * 1 +
-    gems * 25 +
-    sheep * 30 +
-    goat * 26 +
-    cow * 95 +
-    horse * 160 +
-    camel * 220 +
-    gerLevel * 500;
+    kpPart +
+    coinsPart +
+    gems * 10 +
+    sheep * 18 +
+    goat * 16 +
+    cow * 58 +
+    horse * 95 +
+    camel * 130 +
+    Math.min(gerLevel, 50) * 36;
+
   return Math.max(0, Math.floor(base));
 }
 
@@ -339,6 +351,83 @@ gameRouter.post("/complete", async (req, res) => {
     res.json({ user: upd.rows[0] });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Complete failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+/** Урамшууллын хувь (xp / xpMax) 100% хүрмэгц авдар — 1 эрдэнэ эсвэл КП эсвэл зоос */
+gameRouter.post("/claim-rank-chest", async (req, res) => {
+  const parsed = claimRankChestBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  const uid = emailUid(email);
+
+  try {
+    const userRes = await pool.query(
+      `SELECT profile, progress FROM app_users WHERE firebase_uid = $1`,
+      [uid],
+    );
+    if (userRes.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+    const row = userRes.rows[0] as { profile: unknown; progress: unknown };
+    const profile = isPlainRecord(row.profile)
+      ? { ...(row.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row.progress)
+      ? { ...(row.progress as Record<string, unknown>) }
+      : {};
+
+    const xpMax = Math.max(1, Math.floor(num(progress.xpMax, 100)));
+    let xp = num(progress.xp, 0);
+    if (xp < xpMax) {
+      res.status(409).json({ error: "Progress bar not full yet" });
+      return;
+    }
+
+    const roll = Math.random();
+    let reward: { kind: "gem" | "kp" | "coins"; amount: number };
+
+    if (roll < 0.28) {
+      reward = { kind: "gem", amount: 1 };
+      const inv = isPlainRecord(profile.inventory)
+        ? { ...(profile.inventory as Record<string, unknown>) }
+        : {};
+      inv.gems = num(inv.gems, 0) + 1;
+      profile.inventory = inv;
+    } else if (roll < 0.62) {
+      const kpAmt = 20 + Math.floor(Math.random() * 36);
+      reward = { kind: "kp", amount: kpAmt };
+      profile.kp = num(profile.kp, 0) + kpAmt;
+    } else {
+      const cAmt = 120 + Math.floor(Math.random() * 281);
+      reward = { kind: "coins", amount: cAmt };
+      const inv = isPlainRecord(profile.inventory)
+        ? { ...(profile.inventory as Record<string, unknown>) }
+        : {};
+      inv.coins = num(inv.coins, 0) + cAmt;
+      profile.inventory = inv;
+    }
+
+    xp -= xpMax;
+    progress.xp = Math.max(0, xp);
+    profile.wealthScore = computeWealthScore(profile);
+
+    const upd = await pool.query(
+      `UPDATE app_users
+       SET profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE firebase_uid = $1
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [uid, JSON.stringify(profile), JSON.stringify(progress)],
+    );
+
+    res.json({ user: upd.rows[0], reward });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Claim failed";
     res.status(500).json({ error: msg });
   }
 });

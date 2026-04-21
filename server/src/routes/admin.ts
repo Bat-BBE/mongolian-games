@@ -53,6 +53,7 @@ const stationAdminPatch = z.object({
   region_mn: z.string().min(1).optional(),
   region_en: z.string().min(1).optional(),
   icon: z.string().optional(),
+  image_url: z.string().nullable().optional(),
   pos: z.record(z.string(), z.unknown()).optional(),
   journey_index: z.number().int().optional(),
   quest_hint_mn: z.string().optional(),
@@ -67,9 +68,71 @@ const uiStringPut = z.object({
   value: z.string(),
 });
 
-const userDisplayPatch = z.object({
-  displayName: z.string().min(1).max(500),
+const userAdminPatch = z.object({
+  displayName: z.string().min(1).max(500).optional(),
+  kp: z.number().int().min(0).max(999999999).optional(),
+  wealthScore: z.number().int().min(0).max(999999999).optional(),
+  coins: z.number().int().min(0).max(999999999).optional(),
+  gems: z.number().int().min(0).max(999999999).optional(),
+  xp: z.number().int().min(0).max(999999999).optional(),
+  gerLevel: z.number().int().min(1).max(9999).optional(),
+  sheep: z.number().int().min(0).max(999999).optional(),
+  goat: z.number().int().min(0).max(999999).optional(),
+  cow: z.number().int().min(0).max(999999).optional(),
+  horse: z.number().int().min(0).max(999999).optional(),
+  camel: z.number().int().min(0).max(999999).optional(),
 });
+
+function asJsonObject(v: unknown): Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v)
+    ? { ...(v as Record<string, unknown>) }
+    : {};
+}
+
+function mergeUserEconomy(
+  prevProfile: unknown,
+  prevProgress: unknown,
+  patch: z.infer<typeof userAdminPatch>,
+): { profile: Record<string, unknown>; progress: Record<string, unknown> } {
+  const profile = asJsonObject(prevProfile);
+  const progress = asJsonObject(prevProgress);
+
+  if (patch.kp !== undefined) profile.kp = patch.kp;
+  if (patch.wealthScore !== undefined) profile.wealthScore = patch.wealthScore;
+
+  if (patch.coins !== undefined || patch.gems !== undefined) {
+    const inv = asJsonObject(profile.inventory);
+    if (patch.coins !== undefined) inv.coins = patch.coins;
+    if (patch.gems !== undefined) inv.gems = patch.gems;
+    profile.inventory = inv;
+  }
+
+  if (
+    patch.sheep !== undefined ||
+    patch.goat !== undefined ||
+    patch.cow !== undefined ||
+    patch.horse !== undefined ||
+    patch.camel !== undefined
+  ) {
+    const ls = asJsonObject(profile.livestock);
+    if (patch.sheep !== undefined) ls.sheep = patch.sheep;
+    if (patch.goat !== undefined) ls.goat = patch.goat;
+    if (patch.cow !== undefined) ls.cow = patch.cow;
+    if (patch.horse !== undefined) ls.horse = patch.horse;
+    if (patch.camel !== undefined) ls.camel = patch.camel;
+    profile.livestock = ls;
+  }
+
+  if (patch.gerLevel !== undefined) {
+    const ger = asJsonObject(profile.ger);
+    ger.level = patch.gerLevel;
+    profile.ger = ger;
+  }
+
+  if (patch.xp !== undefined) progress.xp = patch.xp;
+
+  return { profile, progress };
+}
 
 const stationGamesPutBody = z.object({
   gameIds: z.array(z.string().uuid()),
@@ -173,6 +236,40 @@ const heroImageUpload = multer({
   }) as multer.Options["fileFilter"],
 });
 
+const stationImageUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      const dir = join(process.cwd(), "uploads", "stations");
+      mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const safeExt = extname(file.originalname || "").toLowerCase() || ".jpg";
+      const ext =
+        safeExt === ".png" ||
+        safeExt === ".jpg" ||
+        safeExt === ".jpeg" ||
+        safeExt === ".webp"
+          ? safeExt
+          : ".jpg";
+      const name = `station_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
+      cb(null, name);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: ((req, file, cb) => {
+    const ok =
+      typeof file.mimetype === "string" && file.mimetype.startsWith("image/");
+    if (!ok) {
+      (req as unknown as { fileValidationError?: string }).fileValidationError =
+        "Invalid file type";
+      cb(null, false);
+      return;
+    }
+    cb(null, true);
+  }) as multer.Options["fileFilter"],
+});
+
 adminRouter.get("/treasury", async (_req, res) => {
   try {
     const result = await pool.query(
@@ -193,6 +290,8 @@ adminRouter.get("/treasury", async (_req, res) => {
     const top = await pool.query(
       `SELECT id, display_name, email, hero_id,
               COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
+              COALESCE((profile->>'wealthScore')::int, 0) AS wealth_score,
+              COALESCE((progress->>'xp')::int, 0) AS xp,
               COALESCE((profile->'ger'->>'level')::int, 1) AS ger_level,
               COALESCE((profile->>'kp')::int, 0) AS kp,
               COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
@@ -214,6 +313,8 @@ adminRouter.get("/treasury", async (_req, res) => {
     const users = await pool.query(
       `SELECT id, display_name, email, hero_id,
               COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
+              COALESCE((profile->>'wealthScore')::int, 0) AS wealth_score,
+              COALESCE((progress->>'xp')::int, 0) AS xp,
               COALESCE((profile->'ger'->>'level')::int, 1) AS ger_level,
               COALESCE((profile->>'kp')::int, 0) AS kp,
               COALESCE((profile->'inventory'->>'coins')::int, 0) AS coins,
@@ -557,7 +658,7 @@ adminRouter.put("/heroes/:slug", async (req, res) => {
 adminRouter.get("/stations", async (_req, res) => {
   try {
     const result = await pool.query(
-      `SELECT slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
+      `SELECT slug, name_mn, name_en, region_mn, region_en, icon, image_url, pos, journey_index,
               quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at
        FROM map_stations
        ORDER BY journey_index ASC`,
@@ -606,6 +707,10 @@ adminRouter.put("/stations/:slug", async (req, res) => {
     fields.push(`icon = $${n++}`);
     values.push(p.icon);
   }
+  if (p.image_url !== undefined) {
+    fields.push(`image_url = $${n++}`);
+    values.push(p.image_url);
+  }
   if (p.pos !== undefined) {
     fields.push(`pos = $${n++}::jsonb`);
     values.push(JSON.stringify(p.pos));
@@ -639,7 +744,7 @@ adminRouter.put("/stations/:slug", async (req, res) => {
   try {
     const result = await pool.query(
       `UPDATE map_stations SET ${fields.join(", ")} WHERE slug = $${n}
-       RETURNING slug, name_mn, name_en, region_mn, region_en, icon, pos, journey_index,
+       RETURNING slug, name_mn, name_en, region_mn, region_en, icon, image_url, pos, journey_index,
                  quest_hint_mn, quest_hint_en, quest_desc_mn, quest_desc_en, created_at, updated_at`,
       values,
     );
@@ -653,6 +758,46 @@ adminRouter.put("/stations/:slug", async (req, res) => {
     res.status(500).json({ error: msg });
   }
 });
+
+adminRouter.post(
+  "/stations/:slug/image",
+  stationImageUpload.single("file"),
+  async (req, res) => {
+    const slug = z.string().min(1).safeParse(req.params.slug);
+    if (!slug.success) {
+      res.status(400).json({ error: "Invalid slug" });
+      return;
+    }
+    const fv = (req as unknown as { fileValidationError?: string })
+      .fileValidationError;
+    if (fv) {
+      res.status(415).json({ error: fv });
+      return;
+    }
+    const f = req.file;
+    if (!f) {
+      res.status(400).json({ error: "Missing file" });
+      return;
+    }
+    const imageUrl = `/uploads/stations/${f.filename}`;
+    try {
+      const result = await pool.query(
+        `UPDATE map_stations SET image_url = $1, updated_at = now()
+         WHERE slug = $2
+         RETURNING slug, image_url`,
+        [imageUrl, slug.data],
+      );
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: "Station not found" });
+        return;
+      }
+      res.json({ station: result.rows[0] });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      res.status(500).json({ error: msg });
+    }
+  },
+);
 
 adminRouter.delete("/users/:id", async (req, res) => {
   const id = z.string().uuid().safeParse(req.params.id);
@@ -730,21 +875,61 @@ adminRouter.patch("/users/:id", async (req, res) => {
     res.status(400).json({ error: "Invalid id" });
     return;
   }
-  const parsed = userDisplayPatch.safeParse(req.body);
+  const parsed = userAdminPatch.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid body" });
+    res.status(400).json({
+      error: "Invalid body",
+      details: parsed.error.flatten(),
+    });
+    return;
+  }
+  const p = parsed.data;
+  const hasUpdate =
+    p.displayName !== undefined ||
+    p.kp !== undefined ||
+    p.wealthScore !== undefined ||
+    p.coins !== undefined ||
+    p.gems !== undefined ||
+    p.xp !== undefined ||
+    p.gerLevel !== undefined ||
+    p.sheep !== undefined ||
+    p.goat !== undefined ||
+    p.cow !== undefined ||
+    p.horse !== undefined ||
+    p.camel !== undefined;
+  if (!hasUpdate) {
+    res.status(400).json({ error: "No fields to update" });
     return;
   }
   try {
-    const result = await pool.query(
-      `UPDATE app_users SET display_name = $1, updated_at = now() WHERE id = $2
-       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
-      [parsed.data.displayName.trim(), id.data],
+    const cur = await pool.query(
+      `SELECT display_name, profile, progress FROM app_users WHERE id = $1`,
+      [id.data],
     );
-    if (result.rowCount === 0) {
+    if (cur.rowCount === 0) {
       res.status(404).json({ error: "User not found" });
       return;
     }
+    const row = cur.rows[0] as {
+      display_name: string | null;
+      profile: unknown;
+      progress: unknown;
+    };
+    const merged = mergeUserEconomy(row.profile, row.progress, p);
+    const newDisplay =
+      p.displayName !== undefined ? p.displayName.trim() : row.display_name;
+
+    const result = await pool.query(
+      `UPDATE app_users SET display_name = $1, profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE id = $4
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [
+        newDisplay,
+        JSON.stringify(merged.profile),
+        JSON.stringify(merged.progress),
+        id.data,
+      ],
+    );
     res.json({ user: result.rows[0] });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Update failed";

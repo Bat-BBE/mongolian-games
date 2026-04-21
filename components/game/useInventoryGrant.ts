@@ -10,9 +10,6 @@ export type InventoryRewardEvent = {
   kind: "coins" | "gems";
 };
 
-/**
- * StoneGame-той ижил: зөвхөн нэвтэрсэн бол toast + session + profile.inventory.
- */
 export function useInventoryGrant() {
   const { user } = useAuth();
   const [rewardEvents, setRewardEvents] = useState<InventoryRewardEvent[]>(

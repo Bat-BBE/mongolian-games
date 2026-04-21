@@ -3,7 +3,6 @@ import * as THREE from "three";
 export const SNAP_DISTANCE = 0.42;
 export const SNAP_ANGLE_RAD = THREE.MathUtils.degToRad(10);
 
-/** Нэг хэсгийг олон жижиг хайрцгаар (L, Т гэх мэт) дүрслэнэ. */
 export type MeshPart = {
   size: [number, number, number];
   offset: [number, number, number];
@@ -16,14 +15,9 @@ export type PieceDef = {
   requires: string[];
   target: [number, number, number];
   targetRotY: number;
-  /** meshParts байхгүй бол нэг энгийн хайрцаг (size). */
   size: [number, number, number];
   color: string;
   meshParts?: MeshPart[];
-  /**
-   * true: зорилт нь агаарт (давхар) — чирэхэд ширээн дээр байхад зөвхөн XZ зай + өнцөг шалгана,
-   * түгжихэд target.y руу «суулгана».
-   */
   snapXZOnly?: boolean;
 };
 
@@ -31,21 +25,16 @@ export type PuzzleLevel = {
   id: string;
   titleMn: string;
   titleEn: string;
-  /** Түвшин бүрт snap хатуу байлгах (жижиг = хэцүү). */
   snapDistance?: number;
   snapAngleRad?: number;
   pieces: PieceDef[];
 };
 
-/**
- * Нэг л олон хэсэгтэй даавуу: L + хажуу + давхар + дараалсан хайрцгууд — нэгдсэн бүтэц.
- */
 export const LEVEL_ONE: PuzzleLevel = {
   id: "lvl1",
   titleMn: "Модон оньс",
   titleEn: "Wooden interlock",
   snapDistance: 0.34,
-  /** B гэх мэт зорилтот эргэлттэй хэсэгт эхлэх + snap-ийн зөрүү тааруулахад хангалттай. */
   snapAngleRad: THREE.MathUtils.degToRad(10),
   pieces: [
     {
@@ -157,7 +146,6 @@ export function getMeshParts(def: PieceDef): MeshPart[] {
   return def.meshParts ?? [{ size: def.size, offset: [0, 0, 0] }];
 }
 
-/** Хэвийн хуримтлалын зай (scatter) — хэсгүүдийн хэв мэдээлэл. */
 export function getDefFootprintRadius(def: PieceDef): number {
   const parts = getMeshParts(def);
   let maxR = 0.2;

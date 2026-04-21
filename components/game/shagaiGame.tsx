@@ -341,13 +341,39 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
 
         setTimeout(() => {
           const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
-          const { points, labelKey } = scoreTarget(sides);
+          const { points, labelKey, instantMatchWin } = scoreTarget(sides);
           const turn = currentTurnRef.current;
 
           if (turn === "player") {
-            if (points > 0) grant({ coins: STONE_ROUND_COINS });
+            if (points > 0 || instantMatchWin) grant({ coins: STONE_ROUND_COINS });
 
             setState((prev) => {
+              if (instantMatchWin) {
+                const nextStreak = prev.streak + 1;
+                return {
+                  ...prev,
+                  phase: "matchOver" as const,
+                  history: [
+                    ...prev.history,
+                    {
+                      turn: "player",
+                      sides,
+                      points: 0,
+                      label: labelKey,
+                      throwNumber: prev.totalThrows,
+                      bust: false,
+                      exactWin: false,
+                      instantMatchWin: true,
+                    },
+                  ],
+                  streak: nextStreak,
+                  bestStreak: Math.max(prev.bestStreak, nextStreak),
+                  lastPlayerPoints: 0,
+                  lastPlayerLabel: labelKey,
+                  winner: "player" as const,
+                };
+              }
+
               const tentative = prev.playerScore + points;
               const exactWin = tentative === TARGET_SCORE;
               const bust = tentative > TARGET_SCORE;
@@ -386,6 +412,30 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
             });
           } else {
             setState((prev) => {
+              if (instantMatchWin) {
+                return {
+                  ...prev,
+                  phase: "matchOver" as const,
+                  robotSides: sides,
+                  robotPoints: 0,
+                  robotLabel: labelKey,
+                  history: [
+                    ...prev.history,
+                    {
+                      turn: "robot",
+                      sides,
+                      points: 0,
+                      label: labelKey,
+                      throwNumber: prev.totalThrows,
+                      bust: false,
+                      exactWin: false,
+                      instantMatchWin: true,
+                    },
+                  ],
+                  winner: "robot" as const,
+                };
+              }
+
               const tentative = prev.robotScore + points;
               const exactWin = tentative === TARGET_SCORE;
               const bust = tentative > TARGET_SCORE;

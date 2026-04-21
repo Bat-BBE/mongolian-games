@@ -20,10 +20,6 @@ const simpleSyncBody = z.object({
   progress: jsonRecord.optional(),
 });
 
-/**
- * Имэйл + сонголттой профайл/прогрессыг PostgreSQL-д хадгална (үндсэн сан).
- * Firebase-д зөвхөн нөөц / бусад зүйл үлдэж болно.
- */
 usersRouter.post("/simple-sync", async (req, res) => {
   const parsed = simpleSyncBody.safeParse(req.body);
   if (!parsed.success) {
@@ -61,12 +57,18 @@ usersRouter.post("/simple-sync", async (req, res) => {
        END,
        updated_at = now()
      RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
-    [uid, email, displayName, heroId, JSON.stringify(profile), JSON.stringify(progress)]
+    [
+      uid,
+      email,
+      displayName,
+      heroId,
+      JSON.stringify(profile),
+      JSON.stringify(progress),
+    ],
   );
   res.json({ user: result.rows[0] });
 });
 
-/** Нүүр / dashboard — имэйлээр бүтэн мөр */
 usersRouter.get("/game-profile", async (req, res) => {
   const raw = req.query.email;
   if (typeof raw !== "string") {
@@ -84,7 +86,7 @@ usersRouter.get("/game-profile", async (req, res) => {
   const result = await pool.query(
     `SELECT id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at
      FROM app_users WHERE firebase_uid = $1`,
-    [uid]
+    [uid],
   );
   if (result.rowCount === 0) {
     res.status(404).json({ error: "User not found" });
@@ -98,8 +100,12 @@ usersRouter.get("/game-profile", async (req, res) => {
   res.json({
     user: {
       ...row,
-      profile: typeof row.profile === "string" ? JSON.parse(row.profile) : row.profile,
-      progress: typeof row.progress === "string" ? JSON.parse(row.progress) : row.progress,
+      profile:
+        typeof row.profile === "string" ? JSON.parse(row.profile) : row.profile,
+      progress:
+        typeof row.progress === "string"
+          ? JSON.parse(row.progress)
+          : row.progress,
     },
   });
 });
@@ -121,10 +127,12 @@ usersRouter.get("/simple-me", async (req, res) => {
   const result = await pool.query(
     `SELECT id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at
      FROM app_users WHERE firebase_uid = $1`,
-    [uid]
+    [uid],
   );
   if (result.rowCount === 0) {
-    res.status(404).json({ error: "User not found; POST /api/users/simple-sync first" });
+    res
+      .status(404)
+      .json({ error: "User not found; POST /api/users/simple-sync first" });
     return;
   }
   res.json({ user: result.rows[0] });

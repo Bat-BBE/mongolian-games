@@ -11,22 +11,15 @@ import type { UrtuuStation } from "./UrtuuNode";
 interface StationLabelsProps {
   stations: UrtuuStation[];
   labelPositions: Record<string, LabelPos>;
-  /** Аяллын прогрессийн одоогийн өртөө (түгжээ гэх мэтэд) */
   currentStationId: string;
-  /** Баатар аль өртөөний хаалганы дотор байгаа — зөвхөн энэ өртөө «идэвхтэй» харагдана */
   heroAtStationId?: string | null;
   doneStationIds: string[];
   stationGameVisits?: StationGameVisits;
   selectedId: string | null;
-  /** Which station label to show (outer proximity ring). */
   visibleStationId: string | null;
-  /** 0–1: fades in as the hero approaches the door (between outer and inner radius). */
   labelApproachAlpha?: number;
-  /** Камер холдох тутам шошгыг жижигрүүлж давхцаалыг багасгана (0.45–1.1 орчим). */
   labelZoomScale?: number;
-  /** Камер ойрхон: дэлгэцэнд орж ирсэн бүх өртөөний нэрийг харуулна */
   showAllVisibleLabels?: boolean;
-  /** Тоглогчийн гэрийн шошгонд — өртөөнийхөөс ялгах */
   homeLabelTitle?: string;
   homeLabelSubtitle?: string;
   onSelect: (id: string) => void;
@@ -82,7 +75,8 @@ export function StationLabels({
         const isLocked = !isUnlocked || isWeeklyLocked;
         const isUpcoming = !isCurrent && !isDone && !isLocked;
         const isSelected = station.id === selectedId;
-        const icon = STATION_CONFIGS[station.id]?.icon ?? "📍";
+        const fallbackIcon =
+          station.icon?.trim() || STATION_CONFIGS[station.id]?.icon || "📍";
         const firstGameName =
           station.games?.[0]?.name?.trim() || station.gameName?.trim() || "";
         const gameCount = station.games?.length ?? (firstGameName ? 1 : 0);
@@ -191,8 +185,18 @@ export function StationLabels({
                   </span>
                 )}
 
-                <span className="text-xs leading-none">
-                  {isPlayerHome ? "🛖" : icon}
+                <span className="text-xs leading-none flex items-center justify-center shrink-0">
+                  {isPlayerHome ? (
+                    "🛖"
+                  ) : station.imageUrl ? (
+                    <img
+                      src={station.imageUrl}
+                      alt=""
+                      className="h-[1.1em] w-[1.1em] rounded-sm object-cover ring-1 ring-white/15"
+                    />
+                  ) : (
+                    fallbackIcon
+                  )}
                 </span>
 
                 <span className="flex flex-col items-start gap-0 leading-tight">

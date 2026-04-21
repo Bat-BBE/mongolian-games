@@ -19,6 +19,7 @@ import {
   gerUpgradeCost,
   LIVESTOCK_COIN_PRICES,
   WEALTH_COINS_PER_GEM,
+  WEALTH_SCORE_GEM_WEIGHT,
 } from "@/lib/homeEconomy";
 import type { DashLang, DashStrings } from "./dashboard-strings";
 import { cn } from "@/lib/utils";
@@ -173,7 +174,7 @@ export function HomeModal({
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
           <Stat
-            label={lang === "mn" ? "Гэрийн түвшин" : "Ger level"}
+            label={lang === "mn" ? "Г/түвшин" : "H/level"}
             value={`Lv ${gerLevel}`}
           />
           <Stat
@@ -185,7 +186,7 @@ export function HomeModal({
             value={coins.toLocaleString()}
           />
           <Stat
-            label={lang === "mn" ? "Эрдэнийн чулуу" : "Gems"}
+            label={lang === "mn" ? "Э/чулуу" : "Gems"}
             value={gems.toLocaleString()}
           />
         </div>
@@ -198,13 +199,16 @@ export function HomeModal({
             {lang === "mn" ? (
               <>
                 1 эрдэнийн чулууг <strong>{WEALTH_COINS_PER_GEM} зоос</strong>{" "}
-                болгон солино.
+                болгон солино. Жагсаалтын үнэлгээнд чулуу тус бүр{" "}
+                <strong>×{WEALTH_SCORE_GEM_WEIGHT}</strong> оноо (энэ
+                солилцооноос өөр).
               </>
             ) : (
               <>
                 Trade <strong>1 gem</strong> for{" "}
-                <strong>{WEALTH_COINS_PER_GEM} coins</strong> (same ratio as
-                wealth score).
+                <strong>{WEALTH_COINS_PER_GEM} coins</strong>. (Leaderboard
+                score uses gems × {WEALTH_SCORE_GEM_WEIGHT} — not the same as
+                this exchange rate.)
               </>
             )}
           </p>

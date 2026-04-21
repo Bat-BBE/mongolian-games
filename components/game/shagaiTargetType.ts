@@ -15,6 +15,8 @@ export interface RoundResult {
   bust: boolean;
   /** The cumulative score landed exactly on TARGET_SCORE. */
   exactWin: boolean;
+  /** 4 морь — тоглоом шууд дуусч энэ ээлжийн тоглогч ялна. */
+  instantMatchWin?: boolean;
 }
 
 export type MatchPhase =
@@ -96,30 +98,28 @@ export function detectSide(rotX: number, rotZ: number): ShagaiSide {
 }
 
 /**
- * Scoring table for the "Target 32" mode.
+ * Scoring table for the "Target 32" (Homboroi) mode.
  *
- * - Four distinct sides (morь + хонь + ямаа + тэмээ)  → 8 pts ("Дөрвөн бэрх")
- * - Four identical sides (all horse / all sheep / ...)→ 4 pts
- * - Exactly 2 horse + 2 sheep                         → 2 pts
- * - Exactly 2 camel + 2 goat                          → 2 pts
- * - Exactly 2 sheep + 2 goat                          → 2 pts
- * - Everything else                                    → 0 pts
- *
- * Returns a `labelKey` so the UI layer can localize the label.
+ * - 4 морь → шууд ялалт (`instantMatchWin`, оноо нэмэхгүй)
+ * - Four distinct sides → 8 pts ("Дөрвөн бэрх")
+ * - Four identical (4 хонь / 4 тэмээ / 4 ямаа) → 4 pts
+ * - Ямар ч 2+2 хос (хоёр төрөл тус бүр 2) → 2 pts
+ * - Everything else → 0 pts
  */
 export type ScoreLabelKey =
   | ""
   | "berkh"
   | "ijil"
-  | "moriHoni"
-  | "temeeYamaa"
-  | "honiYamaa";
+  | "hoyorHoyor"
+  | "durvenMori";
 
 export function scoreTarget(sides: ShagaiSide[]): {
   points: number;
   labelKey: ScoreLabelKey;
+  instantMatchWin: boolean;
 } {
-  if (sides.length !== 4) return { points: 0, labelKey: "" };
+  if (sides.length !== 4)
+    return { points: 0, labelKey: "", instantMatchWin: false };
   const counts: Record<ShagaiSide, number> = {
     horse: 0,
     sheep: 0,
@@ -129,15 +129,20 @@ export function scoreTarget(sides: ShagaiSide[]): {
   for (const s of sides) counts[s]++;
   const unique = (Object.values(counts) as number[]).filter((c) => c > 0).length;
 
-  if (unique === 4) return { points: 8, labelKey: "berkh" };
-  if (unique === 1) return { points: 4, labelKey: "ijil" };
-  if (counts.horse === 2 && counts.sheep === 2)
-    return { points: 2, labelKey: "moriHoni" };
-  if (counts.camel === 2 && counts.goat === 2)
-    return { points: 2, labelKey: "temeeYamaa" };
-  if (counts.sheep === 2 && counts.goat === 2)
-    return { points: 2, labelKey: "honiYamaa" };
-  return { points: 0, labelKey: "" };
+  if (counts.horse === 4) {
+    return { points: 0, labelKey: "durvenMori", instantMatchWin: true };
+  }
+  if (unique === 4) return { points: 8, labelKey: "berkh", instantMatchWin: false };
+  if (unique === 1) return { points: 4, labelKey: "ijil", instantMatchWin: false };
+
+  const nonZero = (Object.values(counts) as number[]).filter((c) => c > 0);
+  const isTwoPairs =
+    nonZero.length === 2 && nonZero.every((c) => c === 2);
+  if (isTwoPairs) {
+    return { points: 2, labelKey: "hoyorHoyor", instantMatchWin: false };
+  }
+
+  return { points: 0, labelKey: "", instantMatchWin: false };
 }
 
 /** Generate a 4-shagai roll for the robot using the shared weighted
