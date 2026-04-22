@@ -1,8 +1,17 @@
 "use client";
 
 import { ShagaiResult, SHAgAI_SIDES, ShagaiSide } from "./shagai";
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { playButtonClick } from "@/lib/uiSounds";
+import {
+  gamePanelLeftDesktop,
+  gamePanelPlayNarrowBottom,
+  gamePanelRightDesktop,
+} from "./gamePanelLayout";
+import { useGameUiNarrow } from "./useGameUiNarrow";
+import GameRulesSheet from "./GameRulesSheet";
+import GameRulesFab from "./GameRulesFab";
+import { useApp } from "@/components/AppContext";
 
 const SIDE_SPRITE_X: Record<ShagaiSide, string> = {
   camel: "5%",
@@ -342,16 +351,24 @@ export default function ShagaiUI({
   onThrow,
   onReset,
 }: ShagaiUIProps) {
+  const { language } = useApp();
   const total = Object.values(score).reduce((a, b) => a + b, 0);
+  const narrowUi = useGameUiNarrow();
+  const [statsOpen, setStatsOpen] = useState(false);
+  const statsFabLabel = language === "mn" ? "Мэдээлэл" : "Stats";
+  const mainChrome = narrowUi
+    ? gamePanelPlayNarrowBottom()
+    : gamePanelLeftDesktop(270);
+  const mainPad: CSSProperties = narrowUi
+    ? { padding: "12px 12px 14px" }
+    : {};
 
   return (
     <>
       <div
         style={{
-          position: "absolute",
-          top: 20,
-          left: 20,
-          width: 270,
+          ...mainChrome,
+          ...mainPad,
           background: "rgba(8,6,3,0.88)",
           border: "1px solid rgba(200,160,48,0.35)",
           borderRadius: 16,
@@ -413,101 +430,199 @@ export default function ShagaiUI({
         </div>
       </div>
 
-      <div
-        style={{
-          position: "absolute",
-          top: 20,
-          right: 20,
-          width: 220,
-          background: "rgba(8,6,3,0.88)",
-          border: "1px solid rgba(200,160,48,0.25)",
-          borderRadius: 16,
-          padding: "16px 16px 12px",
-          backdropFilter: "blur(14px)",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-          color: "white",
-          zIndex: 10,
-        }}
-      >
+      {!narrowUi ? (
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 4,
+            ...gamePanelRightDesktop(220),
+            background: "rgba(8,6,3,0.88)",
+            border: "1px solid rgba(200,160,48,0.25)",
+            borderRadius: 16,
+            padding: "16px 16px 12px",
+            backdropFilter: "blur(14px)",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
+            fontFamily:
+              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+            color: "white",
+            zIndex: 10,
           }}
         >
-          <div style={{ color: "#c8a030", fontSize: 12, letterSpacing: 3 }}>
-            СТАТИСТИК
-          </div>
           <div
             style={{
-              color: "#c8a030",
-              fontSize: 12,
-              background: "rgba(200,160,48,0.1)",
-              borderRadius: 10,
-              padding: "2px 10px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 4,
             }}
           >
-            {total} удаа
+            <div style={{ color: "#c8a030", fontSize: 12, letterSpacing: 3 }}>
+              СТАТИСТИК
+            </div>
+            <div
+              style={{
+                color: "#c8a030",
+                fontSize: 12,
+                background: "rgba(200,160,48,0.1)",
+                borderRadius: 10,
+                padding: "2px 10px",
+              }}
+            >
+              {total} удаа
+            </div>
           </div>
+
+          <GoldDivider />
+
+          {SIDE_ORDER.map((side) => (
+            <ScoreRow
+              key={side}
+              side={side}
+              count={score[side]}
+              total={total}
+              isActive={result?.side === side}
+            />
+          ))}
+
+          {total > 0 && (
+            <>
+              <GoldDivider />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 12,
+                }}
+              >
+                <span style={{ color: "#888" }}>Морийн хувь</span>
+                <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+                  {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%
+                </span>
+              </div>
+            </>
+          )}
+
+          {total > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                playButtonClick();
+                onReset();
+              }}
+              style={{
+                width: "100%",
+                marginTop: 12,
+                padding: "8px 0",
+                fontSize: 12,
+                letterSpacing: 1,
+                background: "rgba(255,255,255,0.05)",
+                color: "#888",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontFamily:
+                  "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              }}
+            >
+              Шинээр эхлэх
+            </button>
+          )}
         </div>
-
-        <GoldDivider />
-
-        {SIDE_ORDER.map((side) => (
-          <ScoreRow
-            key={side}
-            side={side}
-            count={score[side]}
-            total={total}
-            isActive={result?.side === side}
+      ) : (
+        <>
+          <GameRulesFab
+            onClick={() => {
+              playButtonClick();
+              setStatsOpen(true);
+            }}
+            label={statsFabLabel}
           />
-        ))}
-
-        {total > 0 && (
-          <>
-            <GoldDivider />
+          <GameRulesSheet
+            open={statsOpen}
+            onClose={() => setStatsOpen(false)}
+            title={language === "mn" ? "Статистик" : "Statistics"}
+          >
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                fontSize: 12,
+                alignItems: "center",
+                marginBottom: 4,
               }}
             >
-              <span style={{ color: "#888" }}>Морийн хувь</span>
-              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%
-              </span>
+              <div style={{ color: "#c8a030", fontSize: 12, letterSpacing: 3 }}>
+                {language === "mn" ? "Нийт шидэлт" : "Throws"}
+              </div>
+              <div
+                style={{
+                  color: "#c8a030",
+                  fontSize: 12,
+                  background: "rgba(200,160,48,0.1)",
+                  borderRadius: 10,
+                  padding: "2px 10px",
+                }}
+              >
+                {total} {language === "mn" ? "удаа" : "total"}
+              </div>
             </div>
-          </>
-        )}
 
-        {total > 0 && (
-          <button
-            onClick={() => {
-              playButtonClick();
-              onReset();
-            }}
-            style={{
-              width: "100%",
-              marginTop: 12,
-              padding: "8px 0",
-              fontSize: 12,
-              letterSpacing: 1,
-              background: "rgba(255,255,255,0.05)",
-              color: "#888",
-              border: "1px solid rgba(255,255,255,0.1)",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-            }}
-          >
-            Шинээр эхлэх
-          </button>
-        )}
-      </div>
+            <GoldDivider />
+
+            {SIDE_ORDER.map((side) => (
+              <ScoreRow
+                key={side}
+                side={side}
+                count={score[side]}
+                total={total}
+                isActive={result?.side === side}
+              />
+            ))}
+
+            {total > 0 && (
+              <>
+                <GoldDivider />
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                  }}
+                >
+                  <span style={{ color: "#888" }}>Морийн хувь</span>
+                  <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+                    {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%
+                  </span>
+                </div>
+              </>
+            )}
+
+            {total > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  playButtonClick();
+                  onReset();
+                  setStatsOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  marginTop: 12,
+                  padding: "8px 0",
+                  fontSize: 12,
+                  letterSpacing: 1,
+                  background: "rgba(255,255,255,0.05)",
+                  color: "#888",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontFamily:
+                    "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+                }}
+              >
+                Шинээр эхлэх
+              </button>
+            )}
+          </GameRulesSheet>
+        </>
+      )}
 
       <style>{`
         @keyframes bounce {

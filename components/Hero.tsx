@@ -110,8 +110,7 @@ export default function Hero() {
 
   return (
     <section
-      className="hero-section relative flex items-start justify-center overflow-hidden pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-10"
-      style={{ minHeight: "100svh" }}
+      className="hero-section relative flex items-start justify-center overflow-hidden pt-16 sm:pt-20 md:pt-24 pb-8 sm:pb-10 md:min-h-[100svh]"
     >
       <div className="absolute inset-0" style={{ background: overlayColor }} />
 

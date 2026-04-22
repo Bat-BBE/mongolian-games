@@ -38,6 +38,8 @@ interface AnimationControllerOptions {
 export class AnimationController {
   private opts: AnimationControllerOptions;
   private animId = 0;
+  /** When true, the RAF loop keeps scheduling but skips work (e.g. minigame modal open). */
+  private paused = false;
   private clock = new THREE.Clock();
   private _tmp = new THREE.Vector3();
   private _tmpGround = new THREE.Vector3();
@@ -162,6 +164,13 @@ export class AnimationController {
     this.opts.currentStationId = id;
   }
 
+  setPaused(value: boolean): void {
+    if (!value && this.paused) {
+      this.clock.getDelta();
+    }
+    this.paused = value;
+  }
+
   start(): void {
     const {
       renderer,
@@ -183,6 +192,7 @@ export class AnimationController {
 
     const loop = (): void => {
       this.animId = requestAnimationFrame(loop);
+      if (this.paused) return;
       const delta = this.clock.getDelta();
       const t = this.clock.elapsedTime;
       const L = 0.05;

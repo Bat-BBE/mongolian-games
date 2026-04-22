@@ -14,6 +14,7 @@ import {
   LuTrophy as Trophy,
   LuChevronDown as ChevronDown,
   LuUser as User,
+  LuCircleHelp as CircleHelp,
   LuLogOut as LogOut,
 } from "react-icons/lu";
 
@@ -29,6 +30,7 @@ interface DashNavProps {
   onOpenProfile: () => void;
   onLogout: () => void;
   onOpenLeaderboard?: () => void;
+  onShowIntroTour?: () => void;
 }
 
 export function DashNav({
@@ -43,6 +45,7 @@ export function DashNav({
   onOpenProfile,
   onLogout,
   onOpenLeaderboard,
+  onShowIntroTour,
 }: DashNavProps) {
   const navRef = useRef<HTMLElement>(null);
 
@@ -144,7 +147,10 @@ export function DashNav({
         </div>
       </div>
 
-      <div className="flex items-center gap-[clamp(8px,1.2vw,16px)]">
+      <div
+        data-tour-anchor="nav-actions"
+        className="flex items-center gap-[clamp(8px,1.2vw,16px)]"
+      >
         {onOpenLeaderboard ? (
           <button
             type="button"
@@ -236,6 +242,15 @@ export function DashNav({
               <User className="size-4" />
               {t.accountMenuProfile}
             </DropdownMenuItem>
+            {onShowIntroTour ? (
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={onShowIntroTour}
+              >
+                <CircleHelp className="size-4" />
+                {t.accountMenuTour}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="gap-2 cursor-pointer text-red-300 focus:text-red-100 focus:bg-red-950/50"

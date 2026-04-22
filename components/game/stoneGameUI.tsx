@@ -8,6 +8,15 @@ import {
 } from "./stoneType";
 import { useApp } from "@/components/AppContext";
 import { playButtonClick, playHandPush } from "@/lib/uiSounds";
+import {
+  gamePanelLeftDesktop,
+  gamePanelPlayNarrowBottom,
+  gamePanelRightDesktop,
+} from "./gamePanelLayout";
+import { useGameUiNarrow } from "./useGameUiNarrow";
+import GameRulesSheet from "./GameRulesSheet";
+import GameRulesFab from "./GameRulesFab";
+import { useState } from "react";
 
 interface Props {
   state: GameState;
@@ -529,6 +538,63 @@ function HistoryDots({
   );
 }
 
+function StoneRulesAsideBody({
+  showHeading,
+  t,
+}: {
+  showHeading: boolean;
+  t: StoneI18n;
+}) {
+  return (
+    <>
+      {showHeading ? (
+        <div
+          style={{
+            color: "#c8a030",
+            fontSize: 11,
+            letterSpacing: 3,
+            marginBottom: 8,
+          }}
+        >
+          {t.rulesTitle}
+        </div>
+      ) : null}
+      <Divider />
+      {t.rules.map((r) => (
+        <div
+          key={r.n}
+          style={{
+            display: "flex",
+            gap: 10,
+            marginBottom: 10,
+            alignItems: "flex-start",
+          }}
+        >
+          <span style={{ color: "#c8a030", fontSize: 14, minWidth: 18 }}>
+            {r.n}
+          </span>
+          <div>
+            <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
+            <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
+          </div>
+        </div>
+      ))}
+
+      <Divider />
+      <div
+        style={{
+          color: "#666",
+          fontSize: 11,
+          textAlign: "center",
+          lineHeight: 1.5,
+        }}
+      >
+        {t.hideNote}
+      </div>
+    </>
+  );
+}
+
 export default function StoneGameUI({
   state,
   onPick,
@@ -538,7 +604,17 @@ export default function StoneGameUI({
   rewardEvents = [],
   sessionGain,
 }: Props) {
+  const { language } = useApp();
   const t = useStoneI18n();
+  const narrowUi = useGameUiNarrow();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesFabLabel = language === "mn" ? "Дүрэм" : "Rules";
+  const mainPanelChrome = narrowUi
+    ? gamePanelPlayNarrowBottom()
+    : gamePanelLeftDesktop(290);
+  const mainPanelPad: React.CSSProperties = narrowUi
+    ? { padding: "12px 12px 14px" }
+    : {};
   const panel: React.CSSProperties = {
     position: "absolute",
     background: "rgba(6,4,2,0.90)",
@@ -656,22 +732,24 @@ export default function StoneGameUI({
 
       <div
         className="stone-game-panel"
-        style={{ ...panel, top: 20, left: 20, width: 290 }}
+        style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
         <div style={{ textAlign: "center", marginBottom: 6 }}>
           <div
             style={{
               color: "#c8a030",
-              fontSize: 18,
+              fontSize: narrowUi ? 15 : 18,
               fontWeight: "bold",
-              letterSpacing: 3,
+              letterSpacing: narrowUi ? 2 : 3,
             }}
           >
             {t.title}
           </div>
-          <div style={{ color: "#666", fontSize: 10, letterSpacing: 4 }}>
-            {t.subtitle}
-          </div>
+          {!narrowUi ? (
+            <div style={{ color: "#666", fontSize: 10, letterSpacing: 4 }}>
+              {t.subtitle}
+            </div>
+          ) : null}
         </div>
 
         <Divider />
@@ -733,53 +811,31 @@ export default function StoneGameUI({
         )}
       </div>
 
-      <div
-        className="stone-game-panel"
-        style={{ ...panel, top: 20, right: 20, width: 200 }}
-      >
+      {!narrowUi ? (
         <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 8,
-          }}
+          className="stone-game-panel"
+          style={{ ...panel, ...gamePanelRightDesktop(200) }}
         >
-          {t.rulesTitle}
+          <StoneRulesAsideBody showHeading t={t} />
         </div>
-        <Divider />
-        {t.rules.map((r) => (
-          <div
-            key={r.n}
-            style={{
-              display: "flex",
-              gap: 10,
-              marginBottom: 10,
-              alignItems: "flex-start",
+      ) : (
+        <>
+          <GameRulesFab
+            onClick={() => {
+              playButtonClick();
+              setRulesOpen(true);
             }}
+            label={rulesFabLabel}
+          />
+          <GameRulesSheet
+            open={rulesOpen}
+            onClose={() => setRulesOpen(false)}
+            title={t.rulesTitle}
           >
-            <span style={{ color: "#c8a030", fontSize: 14, minWidth: 18 }}>
-              {r.n}
-            </span>
-            <div>
-              <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
-              <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
-            </div>
-          </div>
-        ))}
-
-        <Divider />
-        <div
-          style={{
-            color: "#666",
-            fontSize: 11,
-            textAlign: "center",
-            lineHeight: 1.5,
-          }}
-        >
-          {t.hideNote}
-        </div>
-      </div>
+            <StoneRulesAsideBody showHeading={false} t={t} />
+          </GameRulesSheet>
+        </>
+      )}
 
       <style>{`
         @keyframes pulse {

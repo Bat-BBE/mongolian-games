@@ -83,6 +83,8 @@ export interface DashStrings {
   };
 
   accountMenuProfile: string;
+  /** Account dropdown: replay dashboard spotlight tour */
+  accountMenuTour: string;
   accountMenuLogout: string;
   profileEmailLabel: string;
   profileLevelLabel: string;
@@ -112,6 +114,37 @@ export interface DashStrings {
   mapHomePinLabel: string;
   /** Sidebar: jump camera to home ger on the 3D map */
   mapGoToGer: string;
+  /** Left panel: section title when hero is at ger (not «Одоогийн өртөө») */
+  sidebarAtHomeSectionTitle: string;
+  /** Left panel: status line when at ger */
+  sidebarAtHomeBadge: string;
+  /** Left panel: short hint when at ger (no Go home button) */
+  sidebarAtHomeHint: string;
+  /** Map overlay: how-to title (keep short) */
+  mapGuideTitle: string;
+  mapGuideStep1: string;
+  mapGuideStep2: string;
+  mapGuideStep3: string;
+  mapGuideHide: string;
+  /** Map: help button label (short) */
+  mapGuideShow: string;
+  /** Left panel: section title matching map guide */
+  mapHowToSectionTitle: string;
+  /** First-visit spotlight tour (dashboard) */
+  introWelcomeTitle: string;
+  introWelcomeBody: string;
+  /** First-visit tour: what gameplay actions are possible */
+  introGameplayTitle: string;
+  introGameplayBody: string;
+  introStepMapTitle: string;
+  introStepMapBody: string;
+  introStepSidebarTitle: string;
+  introStepSidebarBody: string;
+  introStepNavTitle: string;
+  introStepNavBody: string;
+  introNext: string;
+  introSkip: string;
+  introDone: string;
   gamesAtStation: string;
   gameStatusLocked: string;
   gameStatusDone: string;
@@ -140,7 +173,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     treasury: "Эрдэнэс",
     treasuryKpLabel: "МО (КП)",
     treasuryCoinsLabel: "Зоос",
-    treasuryGemsLabel: "Эрдэнийн чулуу",
+    treasuryGemsLabel: "Э/чулуу",
     treasuryHint:
       "МО (КП) = тоглоомоос цуглуулах эрдэнэсийн оноо. Зоос = дэлгүүр/гэрт зарцуулах мөнгө. Эрдэнийн чулуу = ховор эрдэнэ (зарим шагнал, солилцоо).",
     rankChestOpen: "Хувь дүүрсэн — авдар нээгээрэй",
@@ -563,6 +596,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     },
 
     accountMenuProfile: "Профайл",
+    accountMenuTour: "Заавар харах",
     accountMenuLogout: "Гарах",
     profileEmailLabel: "И-мэйл",
     profileLevelLabel: "Түвшин",
@@ -588,6 +622,37 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapYourGerSubtitle: "Тоглогчийн суурь · газрын зураг дээрх гэр",
     mapHomePinLabel: "Гэр",
     mapGoToGer: "Гэрт очих",
+    sidebarAtHomeSectionTitle: "Таны суурь",
+    sidebarAtHomeBadge: "Гэр дээр байна",
+    sidebarAtHomeHint:
+      "Газрын зурагнаас өртөө сонгоод «Очих» — баатар тийш очно. Хаалганд ойртуулж тоглоомыг нээнэ.",
+    mapGuideTitle: "Юу хийх вэ?",
+    mapGuideStep1:
+      "Өртөө дарна → «Очих» — баатар тийш алхана.",
+    mapGuideStep2:
+      "Хаалганд ойртоно — тоглоом эндээс. (7 хоногт тоглоом бүрт 2 удаа.)",
+    mapGuideStep3: "Дэлгэрэнгүй: зүүн самбар.",
+    mapGuideHide: "Хаах",
+    mapGuideShow: "Заавар",
+    mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
+    introWelcomeTitle: "Тавтай морил",
+    introWelcomeBody:
+      "Дараагийн алхмууд эхлээд юу хийж болохыг, дараа нь дэлгэцийн гол хэсгүүдийг заана.",
+    introGameplayTitle: "Юу хийж болох вэ?",
+    introGameplayBody:
+      "• Өртөө сонгоод «Очих» — баатар тэр өртөө рүү очно.\n• Хаалганд ойртвол тоглоом нээгдэнэ.\n• Нэг тоглоомд 7 хоногт хамгийн ихдээ 2 удаа.\n• МО, зоос, урамшуулал цуглуулж, гэрээ сайжруулна.\n• Зүүн самбар болон газрын зургийн «?» дээр нэмэлт заавар байна.",
+    introStepMapTitle: "Газрын зураг",
+    introStepMapBody:
+      "Өртөөг сонгоод «Очих» — баатар тийш очно. «?» дээр дарж товч заавар харна.",
+    introStepSidebarTitle: "Зүүн самбар",
+    introStepSidebarBody:
+      "Одоогийн аялал, эрдэнэс, оноо, удирдлагын самбар — энд.",
+    introStepNavTitle: "Дээд самбар",
+    introStepNavBody:
+      "Баруун дээр: удирдлагын самбар, профайл, хэл (МН/EN), өнгөний горим.",
+    introNext: "Дараагийн",
+    introSkip: "Алгасах",
+    introDone: "Ойлголоо",
     gamesAtStation: "Тоглоомууд",
     gameStatusLocked: "Хүлээгдэж буй",
     gameStatusDone: "Дууссан",
@@ -1038,6 +1103,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     },
 
     accountMenuProfile: "Profile",
+    accountMenuTour: "Show tour",
     accountMenuLogout: "Sign out",
     profileEmailLabel: "Email",
     profileLevelLabel: "Level",
@@ -1063,6 +1129,36 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapYourGerSubtitle: "Your home base on the journey map",
     mapHomePinLabel: "Home",
     mapGoToGer: "Home",
+    sidebarAtHomeSectionTitle: "Your base",
+    sidebarAtHomeBadge: "At your ger",
+    sidebarAtHomeHint:
+      "Pick a station on the map and use Go there. Stand by the door to open games.",
+    mapGuideTitle: "What to do",
+    mapGuideStep1: "Tap a station → Go there — the hero walks there.",
+    mapGuideStep2:
+      "Stand by the door — open the panel to play (2 plays per game / 7 days).",
+    mapGuideStep3: "More info in the left sidebar.",
+    mapGuideHide: "Close",
+    mapGuideShow: "Help",
+    mapHowToSectionTitle: "How to play",
+    introWelcomeTitle: "Welcome",
+    introWelcomeBody:
+      "Next steps cover what you can do here, then where things are on screen.",
+    introGameplayTitle: "What you can do",
+    introGameplayBody:
+      "• Pick a station and Go there — your hero walks to it.\n• Stand by the door to open games.\n• Up to 2 plays per game every 7 days.\n• Earn KP, coins, and rewards; upgrade your ger.\n• More detail in the left sidebar and the map ? button.",
+    introStepMapTitle: "The map",
+    introStepMapBody:
+      "Pick a station and use Go there — your hero walks. Tap ? for quick tips.",
+    introStepSidebarTitle: "Left sidebar",
+    introStepSidebarBody:
+      "Expedition, treasury, XP progress, leaderboard — details here.",
+    introStepNavTitle: "Top bar",
+    introStepNavBody:
+      "Leaderboard, profile & language (MN/EN), and theme toggle.",
+    introNext: "Next",
+    introSkip: "Skip",
+    introDone: "Got it",
     gamesAtStation: "Games",
     gameStatusLocked: "Locked",
     gameStatusDone: "Completed",

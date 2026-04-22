@@ -201,31 +201,22 @@ const STATION_CONFIGS = {
   },
 };
 
+/** 15 stations — mirror components/dashboard/mapConstants.ts */
 const JOURNEY_ORDER = [
   "choibalsan",
   "kherlenbayan",
-  "baruun_urt",
   "ondorhaan",
   "terelj",
   "nalaikh",
   "ulaanbaatar",
   "zuunmod",
   "mandalgovi",
-  "sainshand",
-  "zamiin_uud",
-  "sukhbaatar",
   "darkhan",
   "erdenet",
   "kharakhorum",
-  "orkhon_river",
-  "arvaikheer",
   "moron",
   "khatgal",
-  "bayankhongor",
-  "uliastai",
-  "dalanzadgad",
   "altai",
-  "ulaangom",
   "khovd",
 ];
 

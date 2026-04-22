@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMapPresence } from "@/hooks/useMapPresence";
+import { cn } from "@/lib/utils";
 import type { DashStrings } from "./dashboard-strings";
 import type { MapStationGamePreview } from "@/lib/api";
 import type { UrtuuStation } from "./UrtuuNode";
@@ -10,10 +12,13 @@ import { StationLabels } from "./StationLabels";
 import { STATION_CONFIGS } from "./mapConstants";
 import GameModal from "@/components/game/gameModal";
 import { resolveAssetUrl } from "@/lib/api";
+import { LuCircleHelp as HelpCircle } from "react-icons/lu";
 
 interface MapAreaProps {
   t: DashStrings;
   userEmail: string;
+  /** Газрын presence дээр харагдах нэр */
+  playerDisplayName: string;
   homeGerLevel?: number;
   homeLivestock?: { sheep: number; goat: number; cow: number; horse: number; camel: number };
   currentStationId: string;
@@ -43,6 +48,7 @@ interface MapAreaProps {
 export function MapArea({
   t,
   userEmail,
+  playerDisplayName,
   homeGerLevel = 1,
   homeLivestock,
   currentStationId,
@@ -57,6 +63,10 @@ export function MapArea({
   onHeroAtStationChange,
 }: MapAreaProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
+  const presencePublishRef = useRef<
+    ((x: number, z: number, ry: number) => void) | null
+  >(null);
+  const [mapGuideOpen, setMapGuideOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const dismissedStationRef = useRef<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<{
@@ -147,6 +157,13 @@ export function MapArea({
 
   const selectedStation = stations.find((s) => s.id === selectedId) ?? null;
 
+  const { publishPose, remotePeersRef } = useMapPresence({
+    displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
+    enabled: !selectedGame,
+    heroModelPath: heroModelPath ?? null,
+  });
+  presencePublishRef.current = publishPose;
+
   function handleStationFocus(id: string) {
     if (id === "home") {
       onOpenHome?.();
@@ -162,6 +179,7 @@ export function MapArea({
     labelZoomScale,
     showAllMapLabels,
     goToHomeGer,
+    travelToStation,
   } = useThreeScene({
     containerRef: canvasRef,
     stations,
@@ -172,7 +190,11 @@ export function MapArea({
     heroModelPath,
     homeGerLevel,
     homeLivestock,
+    userEmail,
     onHeroAtStationChange,
+    paused: !!selectedGame,
+    presencePublishRef,
+    remotePeersRef,
   });
 
   useEffect(() => {
@@ -194,8 +216,50 @@ export function MapArea({
   }, [heroAtStationId]);
 
   return (
-    <main className="flex-1 min-w-0 relative overflow-hidden bg-background">
+    <main
+      data-tour-anchor="map-area"
+      className="flex-1 min-w-0 relative overflow-hidden bg-background"
+    >
       <div ref={canvasRef} className="absolute inset-0 min-w-0" />
+
+      {mapGuideOpen ? (
+        <aside
+          className={cn(
+            "pointer-events-auto absolute left-3 top-3 z-[60] max-h-[min(46vh,320px)] w-[min(calc(100%-1.5rem),15rem)] overflow-y-auto",
+            "rounded-xl border border-sky-400/20 bg-gradient-to-b from-slate-950/96 to-slate-900/94 p-2.5 shadow-2xl backdrop-blur-md",
+            "ring-1 ring-white/10",
+          )}
+          aria-label={t.mapGuideTitle}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="min-w-0 text-[11px] font-semibold leading-tight text-sky-200/95">
+              {t.mapGuideTitle}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMapGuideOpen(false)}
+              className="shrink-0 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300 hover:bg-white/10"
+            >
+              {t.mapGuideHide}
+            </button>
+          </div>
+          <ol className="mt-2 list-decimal space-y-1 pl-3.5 text-[10px] leading-snug text-slate-100/90 marker:font-semibold marker:text-sky-300/85">
+            <li>{t.mapGuideStep1}</li>
+            <li>{t.mapGuideStep2}</li>
+            <li>{t.mapGuideStep3}</li>
+          </ol>
+        </aside>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setMapGuideOpen(true)}
+          title={t.mapGuideShow}
+          aria-label={t.mapGuideShow}
+          className="pointer-events-auto absolute left-3 top-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full border border-sky-500/35 bg-slate-950/92 text-sky-200 shadow-lg backdrop-blur-md hover:bg-slate-900 hover:border-sky-400/50"
+        >
+          <HelpCircle className="size-[1.125rem]" aria-hidden />
+        </button>
+      )}
 
       <StationLabels
         stations={stationsForLabels}
@@ -238,6 +302,16 @@ export function MapArea({
           canPlay
           stationSteps={stationSteps}
           stationGameVisits={stationGameVisits}
+          onTravel={() => {
+            travelToStation(selectedStation.id);
+            setSelectedId(null);
+          }}
+          onReturnHome={() => {
+            goToHomeGer();
+            setSelectedId(null);
+          }}
+          travelLabel={t.mapTravelToStation}
+          returnHomeLabel={t.mapReturnHome}
         />
       )}
 

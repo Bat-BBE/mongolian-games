@@ -37,7 +37,7 @@ export default function WhatIsSection() {
 
   return (
     <section
-      className="py-20 px-6 lg:px-10 bg-background relative overflow-hidden"
+      className="relative isolate overflow-hidden border-t border-border/45 bg-background py-20 px-6 lg:px-10"
       id="what-is"
     >
       <div

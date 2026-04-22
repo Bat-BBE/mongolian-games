@@ -70,8 +70,8 @@ interface SingleShagaiProps {
 }
 
 function buildShagaiGeo(): THREE.BufferGeometry {
-  const RADIAL = 24;
-  const ZSEGS = 32;
+  const RADIAL = 20;
+  const ZSEGS = 26;
   const LENGTH = 1.5;
 
   const profileAt = (t: number) => {

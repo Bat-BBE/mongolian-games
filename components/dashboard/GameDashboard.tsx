@@ -24,6 +24,10 @@ import { LeaderboardModal } from "./LeaderboardModal";
 import { ProfileModal } from "./ProfileModal";
 import { HomeModal } from "./HomeModal";
 import { clearPlayer } from "@/components/hero-select/hero-data";
+import {
+  DashboardIntroTour,
+  readDashboardIntroDone,
+} from "./DashboardIntroTour";
 
 interface GameDashboardProps {
   defaultLang?: DashLang;
@@ -133,6 +137,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
   const [heroMapStationId, setHeroMapStationId] = useState<string | null>(null);
   const flyHomeRef = useRef<(() => void) | null>(null);
+  const [introTourOpen, setIntroTourOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -320,6 +325,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     };
   }, [lang, profileReloadTick, gameReloadTick]);
 
+  useEffect(() => {
+    if (loading || !player) return;
+    if (readDashboardIntroDone()) return;
+    setIntroTourOpen(true);
+  }, [loading, player]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -355,6 +366,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           router.push("/");
         }}
         onOpenLeaderboard={openLb}
+        onShowIntroTour={() => setIntroTourOpen(true)}
       />
 
       <LeaderboardModal
@@ -379,6 +391,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         onChanged={() => setGameReloadTick((n) => n + 1)}
       />
 
+      <DashboardIntroTour
+        t={t}
+        open={introTourOpen}
+        onDismiss={() => setIntroTourOpen(false)}
+      />
+
       <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden relative">
         <LeftPanel
           t={t}
@@ -387,29 +405,24 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           xp={player.xp}
           xpMax={player.xpMax}
           avatarUrl={player.image}
-          bonusMultiplier={player.bonusMultiplier}
-          bonusTitle={player.bonusTitle}
           journeyDay={player.journeyDay}
           stationIndex={player.stationIndex}
           totalStations={player.totalStations}
           currentStationLabel={player.currentStationLabel}
-          heroTier={player.heroTier}
           stationGames={stationGames}
-          currentStationId={player.currentStationId}
           heroStationId={heroMapStationId}
           mapStations={mapStations}
-          stationSteps={player.stationSteps}
           stationGameVisits={player.stationGameVisits}
           treasury={player.treasury}
           userEmail={userEmail}
           onChestClaimed={() => setGameReloadTick((n) => n + 1)}
-          onGoToGer={() => flyHomeRef.current?.()}
           onOpenLeaderboard={openLb}
         />
 
         <MapArea
           t={t}
           userEmail={userEmail}
+          playerDisplayName={player.name}
           homeGerLevel={player.homeGerLevel ?? 1}
           homeLivestock={player.homeLivestock}
           currentStationId={player.currentStationId?.trim() || "home"}

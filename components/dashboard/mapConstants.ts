@@ -66,48 +66,49 @@ export const PLAYER_HOME_WZ = -330;
 export const PLAYER_HOME_X = PLAYER_HOME_WX * WORLD_SCALE * STATION_SPREAD;
 export const PLAYER_HOME_Z = PLAYER_HOME_WZ * WORLD_SCALE * STATION_SPREAD;
 
-// ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ ЯВАХ ДАРААЛАЛ ──────────
-// Нар мандах зүүн бүс → Төв → Баруун бүс → Нар жаргах
-// wx утгаар зүүнээс (өндөр wx) баруун тийш (бага wx) буурах дарааллаар
+/**
+ * Тоглогч бүрт тогтмол (hash) гэрийн төв — нэг world дээр олон тоглогчийн base гэр
+ * нэг coordinates дээр давхцахгүй, хооронд нь ажилтай зайтай.
+ */
+export function playerHomeWorldAnchor(userKey: string): { x: number; z: number } {
+  const key = userKey.trim().toLowerCase() || "local";
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const u = (h >>> 0) / 4294967296;
+  const h2 = (h * 1009) ^ (h >>> 16);
+  const v = (h2 >>> 0) / 4294967296;
+  const ringR = 62 + u * 58;
+  const arcStart = -Math.PI * 0.32;
+  const arcEnd = Math.PI * 0.48;
+  const ang = arcStart + v * (arcEnd - arcStart);
+  return {
+    x: PLAYER_HOME_X + Math.cos(ang) * ringR,
+    z: PLAYER_HOME_Z + Math.sin(ang) * ringR,
+  };
+}
+
+// ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ — 15 өртөө (гүйцэтгэл / аяллын тоолуур) ──
+// Бүх өртөө газрын зураг дээр хэвээр; энд зөвхөн “албан” аяллын дараалал.
+// `server/src/journeyOrder.ts` → ижил дараалал.
 export const JOURNEY_ORDER: string[] = [
-  // 🌅 НАР МАНДАХ ЗҮҮ Н — Хэрлэн голын бүс (wx ~538..362)
-  "choibalsan",    // wx: 538 — хамгийн зүүн
-  "kherlenbayan",  // wx: 362
-  "baruun_urt",    // wx: 388
-
-  // ⛅ ЗҮҮН-ТӨВИЙН БҮС — Хэнтийн нуруу (wx ~238..100)
-  "ondorhaan",     // wx: 238
-  "terelj",        // wx: 130
-  "nalaikh",       // wx: 100
-
-  // 🌞 ДУНДЫН ЦЭГ — Улаанбаатар (wx: 0)
-  "ulaanbaatar",   // wx:   0
-
-  // ☀️ ӨМНӨД ЧИГЛЭЛ — Говийн зам (wx ~20..312)
-  "zuunmod",       // wx:   0, wz:  80
-  "mandalgovi",    // wx:  20, wz: 230
-  "sainshand",     // wx: 238, wz: 263
-  "zamiin_uud",    // wx: 312, wz: 388
-
-  // 🌤 ХОЙД ЧИГЛЭЛ — Хангайн бүс (wx ~-45..-375)
-  "sukhbaatar",    // wx:  -45, wz: -250
-  "darkhan",       // wx:  -62, wz: -175
-  "erdenet",       // wx: -150, wz: -150
-  "kharakhorum",   // wx: -200, wz:   12
-  "orkhon_river",  // wx: -238, wz:  -90
-  "arvaikheer",    // wx: -188, wz:  130
-  "moron",         // wx: -350, wz: -238
-  "khatgal",       // wx: -375, wz: -325
-  "bayankhongor",  // wx: -350, wz:  138
-
-  // 🌇 БАРУУН БҮС — Алтайн нуруу (wx ~-525..-750)
-  "uliastai",      // wx: -525
-  "dalanzadgad",   // wx: -112, wz: 350 (говийн баруун)
-  "altai",         // wx: -600
-  "ulaangom",      // wx: -712, wz: -263
-
-  // 🌆 НАР ЖАРГАХ — Хамгийн баруун (wx: -750)
-  "khovd",         // wx: -750 — хамгийн барууsн
+  "choibalsan",
+  "kherlenbayan",
+  "ondorhaan",
+  "terelj",
+  "nalaikh",
+  "ulaanbaatar",
+  "zuunmod",
+  "mandalgovi",
+  "darkhan",
+  "erdenet",
+  "kharakhorum",
+  "moron",
+  "khatgal",
+  "altai",
+  "khovd",
 ];
 
 export const HORSE_COLORS = [
@@ -118,7 +119,9 @@ export const HORSE_COLORS = [
 /** Газрын хэмжээ — өргөн тал (хязгаар багатай мэт харагдахуйц). */
 export const TERRAIN_W   = 12000;
 export const TERRAIN_D   = 10000;
-export const TERRAIN_SEG = 448;
+/** Давхцсан тэгш өнцөгтүүдийн тоо — багасгахад RAM/CPU хэмнэнэ. */
+/** Газрын нарийвчлал (хэт багасгавал «зураг шиг» хоосон харагдана). */
+export const TERRAIN_SEG = 256;
 
 /** Firebase/хуучин өгөгдөлд `orkhon` гэж ирвэл зураг дээрх slug руу. */
 export function normalizeStationId(raw: string | undefined): string {

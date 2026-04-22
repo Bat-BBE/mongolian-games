@@ -53,11 +53,15 @@ export default function GamesSection() {
 
   return (
     <>
-      <section className="relative py-24 px-6 lg:px-10 overflow-hidden bg-background" id="games">
+      <section
+        className="relative isolate overflow-hidden border-t border-border/45 bg-background py-14 sm:py-20 md:py-24 px-4 sm:px-6 lg:px-10"
+        id="games"
+      >
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
           style={{
             width: 900,
+            maxWidth: "min(900px, 100vw)",
             height: 500,
             background:
               "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 16%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 12%, transparent) 35%, transparent 72%)",
@@ -65,9 +69,9 @@ export default function GamesSection() {
         />
 
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-10 animate-fade-up">
+          <div className="text-center mb-8 sm:mb-10 animate-fade-up px-1">
             <p
-              className="font-display text-[0.62rem] tracking-[0.45em] uppercase mb-3 opacity-55"
+              className="font-display text-[0.55rem] sm:text-[0.62rem] tracking-[0.28em] sm:tracking-[0.45em] uppercase mb-3 opacity-55"
               style={{ color: "var(--gold-bright)" }}
             >
               ❖ &nbsp; Gameplay &nbsp; ❖
@@ -97,7 +101,7 @@ export default function GamesSection() {
             </p>
           )}
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
             {visible.map((game, i) => {
               const Icon = ICONS[i % ICONS.length];
               const title = language === "mn" ? game.name_mn : game.name_en;
@@ -133,8 +137,8 @@ export default function GamesSection() {
                     </>
                   )}
 
-                  <div className="p-5 relative z-10 flex flex-col h-full">
-                    <div className="flex justify-between items-start mb-4">
+                  <div className="p-4 sm:p-5 relative z-10 flex flex-col h-full min-w-0">
+                    <div className="flex justify-between items-start gap-3 mb-4 min-w-0">
                       <span
                         className="font-display font-black text-xs tracking-[0.35em]"
                         style={{ color: "var(--gold-bright)" }}
@@ -162,10 +166,10 @@ export default function GamesSection() {
                       </div>
                     </div>
 
-                    <h3 className="font-display font-semibold text-lg mb-2 leading-snug text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-display font-semibold text-base sm:text-lg mb-2 leading-snug text-foreground group-hover:text-primary transition-colors break-words">
                       {title}
                     </h3>
-                    <p className="font-body text-sm leading-relaxed text-muted-foreground mb-5 flex-1">{desc}</p>
+                    <p className="font-body text-xs sm:text-sm leading-relaxed text-muted-foreground mb-5 flex-1 break-words">{desc}</p>
 
                     {isAvailable ? (
                       <button type="button" onClick={() => handlePlayClick(game)} className={btnActive}>

@@ -46,6 +46,18 @@ function distPointSegment2D(
   return Math.hypot(px - qx, pz - qz);
 }
 
+/** Алсын тоглогчийн баатар → түүний гэр: хол зай + талын шилжилт (давхцал багасгах). */
+const REMOTE_VISITOR_CAMP_BACK_OFFSET = 32;
+const REMOTE_VISITOR_CAMP_LATERAL_SPREAD = 16;
+
+function remoteCampLateralUnit(peerId: string): number {
+  let h = 0;
+  for (let i = 0; i < peerId.length; i++) {
+    h = (h * 31 + peerId.charCodeAt(i)) >>> 0;
+  }
+  return (h % 2001) / 1000 - 1;
+}
+
 /** urtuunuudiin ger busad urtuunuudees tom baina shuu */
 const STATION_MAIN_GER_SCALE = 3.2;
 const STATION_SATELLITE_GER_SCALE_MIN = 1.68;
@@ -350,6 +362,9 @@ export class SceneBuilder {
   private scene: THREE.Scene;
   private currentStationId: string;
   private doneStationIds: string[];
+  /** Тоглогчийн сууцны төв (realtime world дээр тоглогч бүрт өөр) */
+  public readonly playerHomeX: number;
+  public readonly playerHomeZ: number;
 
   public horses: HorseEntry[] = [];
   public clouds: CloudEntry[] = [];
@@ -363,10 +378,13 @@ export class SceneBuilder {
     scene: THREE.Scene,
     currentStationId: string,
     doneStationIds: string[],
+    playerHomeOverride?: { x: number; z: number } | null,
   ) {
     this.scene = scene;
     this.currentStationId = currentStationId;
     this.doneStationIds = doneStationIds;
+    this.playerHomeX = playerHomeOverride?.x ?? PLAYER_HOME_X;
+    this.playerHomeZ = playerHomeOverride?.z ?? PLAYER_HOME_Z;
   }
 
   buildSky(): void {
@@ -539,10 +557,12 @@ export class SceneBuilder {
     isStation = false,
     stationId = "",
     attachParent?: THREE.Object3D,
+    objectName?: string,
   ): void {
     const hy = terrainHeight(x, z);
     const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
     const g = new THREE.Group();
+    if (objectName) g.name = objectName;
     const base = new THREE.Mesh(
       new THREE.CylinderGeometry(2.8 * s, 2.9 * s, 0.3 * s, 24),
       mkMat(0x9a8860, 0.95),
@@ -821,6 +841,44 @@ export class SceneBuilder {
     (attachParent ?? this.scene).add(g);
   }
 
+  /**
+   * Бусад тоглогчийн дэргэд (тэдний чиглэлийн «хойно») жижиг гэр — таны PLAYER_HOME гэрт нөлөөлөхгүй.
+   */
+  syncRemoteVisitorCamp(
+    container: THREE.Group,
+    peerId: string,
+    heroX: number,
+    heroZ: number,
+    heroRy: number,
+    campByPeer: Map<string, THREE.Object3D>,
+  ): void {
+    const safeName = `remote_visit_camp_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
+    const lat = REMOTE_VISITOR_CAMP_LATERAL_SPREAD * remoteCampLateralUnit(peerId);
+    const backX = -Math.sin(heroRy) * REMOTE_VISITOR_CAMP_BACK_OFFSET;
+    const backZ = -Math.cos(heroRy) * REMOTE_VISITOR_CAMP_BACK_OFFSET;
+    const sideX = Math.cos(heroRy) * lat;
+    const sideZ = -Math.sin(heroRy) * lat;
+    const gx = heroX + backX + sideX;
+    const gz = heroZ + backZ + sideZ;
+    const hy = terrainHeight(gx, gz);
+    const s = 0.9;
+    const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
+    const y = hy + gerLift;
+    const existing = campByPeer.get(peerId);
+    if (existing && existing.parent === container) {
+      existing.position.set(gx, y, gz);
+      existing.rotation.y = heroRy;
+      return;
+    }
+    if (existing) {
+      existing.removeFromParent();
+      campByPeer.delete(peerId);
+    }
+    this.makeGer(gx, gz, heroRy, s, false, "", container, safeName);
+    const created = container.getObjectByName(safeName);
+    if (created) campByPeer.set(peerId, created);
+  }
+
   private makeFence(
     cx: number,
     cz: number,
@@ -1032,8 +1090,8 @@ export class SceneBuilder {
     const prev = this.scene.getObjectByName("playerHomeGer");
     if (prev) this.scene.remove(prev);
 
-    const x = PLAYER_HOME_X;
-    const z = PLAYER_HOME_Z;
+    const x = this.playerHomeX;
+    const z = this.playerHomeZ;
     const lv = Math.max(1, Math.min(gerLevel, 30));
     const step = Math.min(lv, 5);
     // Түвшин бүрт томролт (1→5 хооронд ялгаа мэдрэгдэнэ).
@@ -1085,8 +1143,8 @@ export class SceneBuilder {
     if (prev) this.scene.remove(prev);
 
     if (!livestock) return;
-    const x = PLAYER_HOME_X;
-    const z = PLAYER_HOME_Z;
+    const x = this.playerHomeX;
+    const z = this.playerHomeZ;
     const sheepN = Math.max(0, Math.min(14, Math.floor(livestock.sheep)));
     const goatN = Math.max(0, Math.min(12, Math.floor(livestock.goat)));
     const cowN = Math.max(0, Math.min(8, Math.floor(livestock.cow)));
@@ -2813,7 +2871,7 @@ export class SceneBuilder {
     });
 
     // Grass tufts dominate draw calls; reduce count for smooth map.
-    for (let i = 0; i < 900; i++) {
+    for (let i = 0; i < 780; i++) {
       const x = rand(-200, 115),
         z = rand(-65, 68);
       const h = terrainHeight(x, z);
@@ -2885,7 +2943,7 @@ export class SceneBuilder {
   }
 
   buildRocks(): void {
-    for (let i = 0; i < 130; i++) {
+    for (let i = 0; i < 115; i++) {
       const x = rand(-160, 90),
         z = rand(-55, 60);
       const h = terrainHeight(x, z);
@@ -2942,20 +3000,18 @@ export class SceneBuilder {
       polygonOffsetFactor: -2,
     });
 
+    // Гол замууд л үлдээж, салаа/урт сегментийг цөөлнө (mesh + roadPaths хөнгөн).
     const ROUTES: string[][] = [
       [
         "khovd",
-        "ulaangom",
-        "uliastai",
         "altai",
-        "bayankhongor",
-        "orkhon_river",
+        "khatgal",
+        "moron",
         "kharakhorum",
-        "arvaikheer",
-        "zuunmod",
+        "erdenet",
+        "darkhan",
         "ulaanbaatar",
       ],
-      ["ulaanbaatar", "darkhan", "erdenet", "sukhbaatar", "moron", "khatgal"],
       [
         "ulaanbaatar",
         "nalaikh",
@@ -2963,9 +3019,8 @@ export class SceneBuilder {
         "ondorhaan",
         "kherlenbayan",
         "choibalsan",
-        "baruun_urt",
       ],
-      ["ulaanbaatar", "mandalgovi", "dalanzadgad", "sainshand", "zamiin_uud"],
+      ["ulaanbaatar", "zuunmod", "mandalgovi"],
     ];
 
     const makeRibbon = (
@@ -3039,7 +3094,7 @@ export class SceneBuilder {
         const fromId = route[i];
         const toId = route[i + 1];
 
-        const STEPS = 30;
+        const STEPS = 16;
         const center: THREE.Vector3[] = [];
         const dx = b.wx - a.wx,
           dz = b.wz - a.wz;
@@ -3077,7 +3132,7 @@ export class SceneBuilder {
           makeRibbon(trackCenter, 0.45, trackMat);
         });
 
-        if (Math.random() > 0.6) {
+        if (Math.random() > 0.82) {
           const mid = center[Math.floor(STEPS / 2)];
           this.makeOvoo(mid.x + rand(-6, 6), mid.z + rand(-6, 6));
         }

@@ -7,7 +7,7 @@ export default function HowItWorks() {
 
   return (
     <section
-      className="py-28 px-6 lg:px-10 bg-background relative overflow-hidden"
+      className="relative isolate overflow-hidden border-t border-border/45 bg-background py-28 px-6 lg:px-10"
       id="how-it-works"
     >
       <div

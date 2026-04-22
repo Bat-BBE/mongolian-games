@@ -31,6 +31,7 @@ type I18n = {
   progressLabel: string;
   phasePlaying: string;
   phaseReady: string;
+  mpWaitHint: string;
 };
 
 function useI18n(): I18n {
@@ -58,6 +59,8 @@ function useI18n(): I18n {
         progressLabel: "Явц",
         phasePlaying: "Тоглож байна",
         phaseReady: "Бэлэн",
+        mpWaitHint:
+          "Өрөөнд хүлээнэ — найз чинь ирэхэд хамт эхэлнэ. Ганцаараа бол ~10 секундын дараа самбар өөрөө нээгдэнэ.",
       };
     }
     return {
@@ -81,6 +84,8 @@ function useI18n(): I18n {
       progressLabel: "Progress",
       phasePlaying: "Playing",
       phaseReady: "Ready",
+      mpWaitHint:
+        "Waiting for the room — a friend can join to start together. If you're alone, the board opens in ~10s.",
     };
   }, [language]);
 }
@@ -92,6 +97,8 @@ interface Props {
   pairsFound: number;
   onStart: () => void;
   onRestart: () => void;
+  /** Online: серверээс эхлэх дохио хүлээнэ. */
+  multiplayerAwaiting?: boolean;
 }
 
 const GOLD = "#c9a227";
@@ -104,6 +111,7 @@ export default function MemoryMatchUI({
   pairsFound,
   onStart,
   onRestart,
+  multiplayerAwaiting = false,
 }: Props) {
   const t = useI18n();
   const mm = Math.floor(Math.max(0, timeLeft) / 60);
@@ -112,7 +120,10 @@ export default function MemoryMatchUI({
   const progressPct = Math.min(100, (pairsFound / 8) * 100);
   const urgent = phase === "playing" && timeLeft <= 15 && timeLeft > 0;
 
-  const showAction = phase === "idle" || phase === "won" || phase === "lost";
+  const showAction =
+    (phase === "idle" && !multiplayerAwaiting) ||
+    phase === "won" ||
+    phase === "lost";
 
   return (
     <>
@@ -235,6 +246,22 @@ export default function MemoryMatchUI({
         {phase === "lost" && <div style={bannerBad}>{t.lose}</div>}
 
         <div style={{ marginTop: "auto", paddingTop: 20 }}>
+          {phase === "idle" && multiplayerAwaiting && (
+            <p
+              style={{
+                margin: 0,
+                padding: "12px 14px",
+                borderRadius: 12,
+                border: "1px solid rgba(201, 162, 39, 0.35)",
+                background: "rgba(30, 26, 18, 0.85)",
+                color: "rgba(240, 230, 216, 0.92)",
+                fontSize: 12,
+                lineHeight: 1.45,
+              }}
+            >
+              {t.mpWaitHint}
+            </p>
+          )}
           {showAction && (
             <button
               type="button"
@@ -322,7 +349,7 @@ const panel: CSSProperties = {
   top: 0,
   right: 0,
   bottom: 0,
-  width: "min(400px, 36vw)",
+  width: "min(400px, calc(100vw - 16px))",
   zIndex: 20,
   display: "flex",
   flexDirection: "column",

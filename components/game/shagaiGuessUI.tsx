@@ -10,6 +10,7 @@ import {
 } from "./shagaiGuessType";
 import { useApp } from "@/components/AppContext";
 import { playButtonClick } from "@/lib/uiSounds";
+import { useGameUiNarrow } from "./useGameUiNarrow";
 
 interface Props {
   state: GuessState;
@@ -756,16 +757,16 @@ export default function ShagaiGuessUI({
   sessionGain,
 }: Props) {
   const t = useI18n();
+  const narrowUi = useGameUiNarrow();
 
   return (
     <>
       <div
         style={{
           position: "absolute",
-          top: 16,
-          right: 16,
-          bottom: 16,
-          width: 340,
+          ...(narrowUi
+            ? { top: 8, left: 8, right: 8, bottom: 8, width: "auto" as const }
+            : { top: 16, right: 16, bottom: 16, width: 340 }),
           display: "flex",
           flexDirection: "column",
           gap: 10,

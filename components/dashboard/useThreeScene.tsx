@@ -7,11 +7,10 @@ import { AnimationController } from "./AnimationController";
 import type { LabelPos } from "./AnimationController";
 import type { UrtuuStation } from "./UrtuuNode";
 import {
-  PLAYER_HOME_X,
-  PLAYER_HOME_Z,
   STATION_CONFIGS,
   JOURNEY_ORDER,
   stationWorldXZ,
+  playerHomeWorldAnchor,
 } from "./mapConstants";
 import { terrainBiome, terrainHeight } from "./sceneHelpers";
 import {
@@ -23,6 +22,7 @@ import {
   retargetClipToSkeleton,
   type HeroClips,
 } from "../map3d/heroFbx";
+import type { MapPresencePeer } from "@/hooks/useMapPresence";
 
 interface UseThreeSceneOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -42,6 +42,16 @@ interface UseThreeSceneOptions {
   onSelectStation?: (stationId: string) => void;
   heroModelPath?: string | null;
   onHeroAtStationChange?: (stationId: string | null) => void;
+  /** Имэйл/ID — 3D дээр тоглогч бүрт өөр «танай гэр»-ийн world төв. */
+  userEmail?: string;
+  /** True while a fullscreen minigame is open — map animation/render skips work to save GPU. */
+  paused?: boolean;
+  /** Газрын зураг дээр бусад тоглогчдад байрлал илгээх (WebSocket). */
+  presencePublishRef?: React.MutableRefObject<
+    ((x: number, z: number, ry: number) => void) | null
+  >;
+  /** Бусад тоглогчдын capsule — ref.current шинэчлэгдэнэ. */
+  remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
 }
 
 interface CameraTarget {
@@ -143,6 +153,10 @@ export function useThreeScene({
   onSelectStation,
   heroModelPath,
   onHeroAtStationChange,
+  userEmail = "",
+  paused = false,
+  presencePublishRef,
+  remotePeersRef,
 }: UseThreeSceneOptions) {
   const [labelPositions, setLabelPositions] = useState<
     Record<string, LabelPos>
@@ -174,10 +188,15 @@ export function useThreeScene({
     null,
   );
   const goToHomeGerRef = useRef<(() => void) | null>(null);
+  const travelToStationRef = useRef<((stationId: string) => void) | null>(null);
   const currentIdRef = useRef(resolveStationId(currentStationId));
   const animRef = useRef<
     import("./AnimationController").AnimationController | null
   >(null);
+
+  useEffect(() => {
+    animRef.current?.setPaused(!!paused);
+  }, [paused]);
 
   useEffect(() => {
     const hub = !currentStationId?.trim() || currentStationId.trim() === "home";
@@ -193,10 +212,12 @@ export function useThreeScene({
     const container = containerRef.current;
     if (!container) return;
 
+    const { x: playerHomeX, z: playerHomeZ } = playerHomeWorldAnchor(userEmail);
+
     const scene = new THREE.Scene();
     // Хуучин: цайвар цэнхэр тэнгэр + манан
     scene.background = new THREE.Color(0x92c4e8);
-    scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00105);
+    scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00088);
 
     const W = container.clientWidth,
       H = container.clientHeight;
@@ -211,14 +232,15 @@ export function useThreeScene({
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: "high-performance",
+      stencil: false,
+      depth: true,
     });
     renderer.setSize(W, H);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.03;
-    // Cap DPR to keep map smooth on mid-range GPUs.
+    renderer.toneMappingExposure = 1.06;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     container.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
@@ -247,9 +269,8 @@ export function useThreeScene({
       -60,
     );
     sun.castShadow = true;
-    // 4096 shadows are expensive; 2048 is a good quality/perf tradeoff.
     sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.radius = 3.2;
+    sun.shadow.radius = 2.8;
     sun.shadow.bias = -0.00028;
     sun.shadow.normalBias = 0.025;
     sun.shadow.camera.near = 1;
@@ -272,7 +293,10 @@ export function useThreeScene({
 
     scene.add(new THREE.HemisphereLight(0x8ec0e8, 0x6a9a45, 0.52));
 
-    const builder = new SceneBuilder(scene, highlightStationId, doneStationIds);
+    const builder = new SceneBuilder(scene, highlightStationId, doneStationIds, {
+      x: playerHomeX,
+      z: playerHomeZ,
+    });
     builderRef.current = builder;
 
     builder.buildSky();
@@ -292,11 +316,119 @@ export function useThreeScene({
     builder.buildCamels();
     builder.buildClouds();
     builder.buildBirds();
+    builder.buildPlayerHomeGer(homeGerLevel);
+    builder.buildPlayerLivestockNearHome(homeLivestock);
+
+    const remotePeerGroup = new THREE.Group();
+    remotePeerGroup.name = "remote_peers";
+    scene.add(remotePeerGroup);
+    const remoteAvatarById = new Map<string, THREE.Group>();
+    /** Алсын тоглогч бүрийн ойролцоох зочилсон гэр (таны playerHomeGer-ээс тусдаа). */
+    const remoteCampById = new Map<string, THREE.Object3D>();
+    const remoteHeroMixers = new Set<THREE.AnimationMixer>();
+    const hashPeerId = (id: string): number => {
+      let h = 0;
+      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+      return h;
+    };
+
+    function disposeMeshSubtree(obj: THREE.Object3D): void {
+      obj.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry?.dispose();
+          const mat = o.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
+        }
+      });
+    }
+
+    function clearRemoteHeroSlot(slot: THREE.Group): void {
+      const mx = slot.userData.remoteHeroMixer as
+        | THREE.AnimationMixer
+        | undefined;
+      if (mx) {
+        remoteHeroMixers.delete(mx);
+        mx.stopAllAction();
+      }
+      slot.userData.remoteHeroMixer = undefined;
+      while (slot.children.length > 0) {
+        const c = slot.children[0]!;
+        slot.remove(c);
+        disposeMeshSubtree(c);
+      }
+    }
+
+    function disposeRemoteAvatar(g: THREE.Group): void {
+      const slot = g.getObjectByName("remote_hero_slot") as
+        | THREE.Group
+        | undefined;
+      if (slot) clearRemoteHeroSlot(slot);
+      g.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry?.dispose();
+          const mat = o.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
+        }
+      });
+    }
+
+    /**
+     * Алсын тоглогч: ачаалал хүртэл placeholder, дараа нь presence-ийн heroModelPath (тоглогчийн сонгосон загвар).
+     * Гадаад idle FBX татахгүй — зөвхөн загварт суусан clip эсвэл статик.
+     */
+    function buildRemotePlayerAvatar(id: string): THREE.Group {
+      const hue = (hashPeerId(id) % 360) / 360;
+      const col = new THREE.Color().setHSL(hue, 0.55, 0.5);
+      const g = new THREE.Group();
+      g.name = `remote_peer_${id.slice(0, 8)}`;
+      const fallback = new THREE.Group();
+      fallback.name = "remote_fallback";
+      const beacon = new THREE.Mesh(
+        new THREE.SphereGeometry(3.5, 12, 10),
+        new THREE.MeshStandardMaterial({
+          color: col,
+          emissive: col,
+          emissiveIntensity: 0.62,
+          roughness: 0.35,
+          metalness: 0.1,
+          transparent: true,
+          opacity: 0.9,
+          depthWrite: false,
+        }),
+      );
+      beacon.position.y = 7;
+      beacon.castShadow = false;
+      fallback.add(beacon);
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(4.2, 0.2, 8, 22),
+        new THREE.MeshBasicMaterial({
+          color: col,
+          transparent: true,
+          opacity: 0.36,
+          depthWrite: false,
+        }),
+      );
+      ring.rotation.x = Math.PI / 2;
+      ring.position.y = 0.35;
+      fallback.add(ring);
+      g.add(fallback);
+      const heroSlot = new THREE.Group();
+      heroSlot.name = "remote_hero_slot";
+      g.add(heroSlot);
+      return g;
+    }
+
+    function normalizeRemoteHeroPath(raw: string | undefined | null): string {
+      const d = raw?.trim() ? raw.trim() : "/models/hero-22.fbx";
+      return d.endsWith(".fbx.fbx") ? d.slice(0, -4) : d;
+    }
 
     let homeLookAt = new THREE.Vector3(
-      PLAYER_HOME_X,
-      terrainHeight(PLAYER_HOME_X, PLAYER_HOME_Z) + 2.5,
-      PLAYER_HOME_Z,
+      playerHomeX,
+      terrainHeight(playerHomeX, playerHomeZ) + 2.5,
+      playerHomeZ,
     );
     const doorHome = builder.doorAnchors.get("home");
     if (doorHome) {
@@ -408,8 +540,8 @@ export function useThreeScene({
             heroRootRef.current = root;
             heroPlayRef.current = play;
             const dh = builder.doorAnchors.get("home");
-            let sx = PLAYER_HOME_X;
-            let sz = PLAYER_HOME_Z + 4;
+            let sx = playerHomeX;
+            let sz = playerHomeZ + 4;
             if (dh) {
               sx = dh.x;
               sz = dh.z + 3.4;
@@ -625,15 +757,15 @@ export function useThreeScene({
       const root = heroRootRef.current;
       if (root) {
         const dh = builder.doorAnchors.get("home");
-        let sx = PLAYER_HOME_X;
-        let sz = PLAYER_HOME_Z + 4;
+        let sx = playerHomeX;
+        let sz = playerHomeZ + 4;
         if (dh) {
           sx = dh.x;
           sz = dh.z + 3.4;
         }
         const sy = terrainHeight(sx, sz) + 0.02;
         root.position.set(sx, sy, sz);
-        root.rotation.y = Math.atan2(PLAYER_HOME_X - sx, PLAYER_HOME_Z - sz);
+        root.rotation.y = Math.atan2(playerHomeX - sx, playerHomeZ - sz);
         heroPlayRef.current?.("idle", 0.12);
         heroKinematicRef.current.pos.copy(root.position);
         heroKinematicRef.current.ry = root.rotation.y;
@@ -641,6 +773,41 @@ export function useThreeScene({
       }
     }
     goToHomeGerRef.current = goToHomeGer;
+
+    function travelHeroToStation(stationId: string) {
+      const raw = typeof stationId === "string" ? stationId.trim() : "";
+      if (!raw || raw === "home") {
+        goToHomeGer();
+        return;
+      }
+      const sid = resolveStationId(raw);
+      flyToStation(sid, false);
+      followHeroUntilRef.current = performance.now() + 500;
+      heroManualVelRef.current.set(0, 0, 0);
+      manualKeysRef.current.up =
+        manualKeysRef.current.down =
+        manualKeysRef.current.left =
+        manualKeysRef.current.right =
+          false;
+      manualKeysRef.current.run = false;
+      const root = heroRootRef.current;
+      if (!root) return;
+      const door = builder.doorAnchors.get(sid);
+      if (!door) return;
+      const sx = door.x;
+      const sz = door.z + 3.4;
+      const sy = terrainHeight(sx, sz) + 0.02;
+      root.position.set(sx, sy, sz);
+      const camT = buildCameraTarget(sid);
+      const dx = camT.lookAt.x - sx;
+      const dz = camT.lookAt.z - sz;
+      root.rotation.y = Math.atan2(dx, dz);
+      heroPlayRef.current?.("idle", 0.12);
+      heroKinematicRef.current.pos.copy(root.position);
+      heroKinematicRef.current.ry = root.rotation.y;
+      heroKinematicRef.current.has = true;
+    }
+    travelToStationRef.current = travelHeroToStation;
 
     const onMouseDown = (e: MouseEvent) => {
       cancelIntro();
@@ -792,6 +959,7 @@ export function useThreeScene({
       },
       onBeforeRender: (elapsed: number, delta: number) => {
         const dt = Math.min(delta, 0.06);
+        for (const mx of remoteHeroMixers) mx.update(dt);
         const stKeys = manualKeysRef.current;
         const mvxKeys = (stKeys.right ? 1 : 0) - (stKeys.left ? 1 : 0);
         const mvzKeys = (stKeys.up ? 1 : 0) - (stKeys.down ? 1 : 0);
@@ -1007,8 +1175,131 @@ export function useThreeScene({
         camera.updateMatrixWorld();
         orbitCameraDistRef.current = cameraState.currentDist;
 
+        if (remotePeersRef) {
+          const list = remotePeersRef.current;
+          const seen = new Set<string>();
+          for (const p of list) {
+            seen.add(p.id);
+            let av = remoteAvatarById.get(p.id);
+            if (!av) {
+              av = buildRemotePlayerAvatar(p.id);
+              remoteAvatarById.set(p.id, av);
+              remotePeerGroup.add(av);
+            }
+            const wantPath = normalizeRemoteHeroPath(p.heroModelPath);
+            const ud = av.userData as {
+              remoteHeroPath?: string;
+              remoteLoadGen?: number;
+            };
+            const slot = av.getObjectByName("remote_hero_slot") as THREE.Group;
+            const fallback = av.getObjectByName("remote_fallback") as THREE.Group;
+            if (ud.remoteHeroPath !== wantPath) {
+              ud.remoteHeroPath = wantPath;
+              ud.remoteLoadGen = (ud.remoteLoadGen ?? 0) + 1;
+              const gen = ud.remoteLoadGen;
+              clearRemoteHeroSlot(slot);
+              fallback.visible = true;
+              void (async () => {
+                try {
+                  const { root, clips: embeddedClips } =
+                    await loadHeroModel(wantPath);
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  root.scale.setScalar(0.015);
+                  root.traverse((c) => {
+                    if (c instanceof THREE.Mesh) {
+                      c.castShadow = true;
+                      c.receiveShadow = true;
+                    }
+                  });
+                  const embeddedIdle = pickClip(embeddedClips, [
+                    "idle",
+                    "stand",
+                    "breathing",
+                    "rest",
+                  ]);
+                  let idleClip: THREE.AnimationClip | undefined;
+                  if (embeddedIdle) {
+                    const r = retargetClipToSkeleton(embeddedIdle, root);
+                    if (countClipTracksBindingToRig(r, root) >= 3) {
+                      idleClip = r;
+                    }
+                  }
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  if (idleClip) {
+                    const retargeted: HeroClips = { idle: idleClip };
+                    const { mixer, play } = createHeroAnimator(root, retargeted);
+                    if (disposed || ud.remoteLoadGen !== gen) {
+                      mixer.stopAllAction();
+                      disposeMeshSubtree(root);
+                      return;
+                    }
+                    remoteHeroMixers.add(mixer);
+                    slot.userData.remoteHeroMixer = mixer;
+                    play("idle", 0);
+                  }
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    const mx = slot.userData.remoteHeroMixer as
+                      | THREE.AnimationMixer
+                      | undefined;
+                    if (mx) {
+                      remoteHeroMixers.delete(mx);
+                      mx.stopAllAction();
+                      slot.userData.remoteHeroMixer = undefined;
+                    }
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  fallback.visible = false;
+                  slot.add(root);
+                } catch {
+                  if (!disposed && ud.remoteLoadGen === gen) {
+                    fallback.visible = true;
+                  }
+                }
+              })();
+            }
+            const ground = terrainHeight(p.x, p.z);
+            av.position.set(p.x, ground + 0.02, p.z);
+            av.rotation.y = p.ry;
+            builderRef.current?.syncRemoteVisitorCamp(
+              remotePeerGroup,
+              p.id,
+              p.x,
+              p.z,
+              p.ry,
+              remoteCampById,
+            );
+          }
+          for (const [pid, grp] of remoteAvatarById) {
+            if (!seen.has(pid)) {
+              remotePeerGroup.remove(grp);
+              disposeRemoteAvatar(grp);
+              remoteAvatarById.delete(pid);
+              const camp = remoteCampById.get(pid);
+              if (camp) {
+                remotePeerGroup.remove(camp);
+                disposeMeshSubtree(camp);
+                remoteCampById.delete(pid);
+              }
+            }
+          }
+        }
+
         const root = heroRootRef.current;
         const play = heroPlayRef.current;
+        if (root && play) {
+          presencePublishRef?.current?.(
+            root.position.x,
+            root.position.z,
+            root.rotation.y,
+          );
+        }
         if (!root || !play) {
           return;
         }
@@ -1072,11 +1363,23 @@ export function useThreeScene({
       resizeObserver.disconnect();
       builderRef.current = null;
       disposed = true;
+      for (const [, camp] of remoteCampById) {
+        remotePeerGroup.remove(camp);
+        disposeMeshSubtree(camp);
+      }
+      remoteCampById.clear();
+      for (const [, grp] of remoteAvatarById) {
+        remotePeerGroup.remove(grp);
+        disposeRemoteAvatar(grp);
+      }
+      remoteAvatarById.clear();
+      scene.remove(remotePeerGroup);
       if (heroRootRef.current) {
         scene.remove(heroRootRef.current);
         heroRootRef.current = null;
       }
       flyToStationRef.current = null;
+      travelToStationRef.current = null;
       animRef.current = null;
       anim.stop();
       renderer.domElement.removeEventListener("mousedown", onMouseDown);
@@ -1096,9 +1399,9 @@ export function useThreeScene({
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
     };
-    // mapStationsRevision: API-аас icon/image өөрчлөгдөхөд шошгыг шинэ зурагтайгаар дахин бүтээнэ.
+    // mapStationsRevision, userEmail: 3D шинэчлэл / тоглогчийн тусдаа гэрийн байр.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapStationsRevision]);
+  }, [mapStationsRevision, userEmail]);
 
   const homeLivestockKey = homeLivestock
     ? `${homeLivestock.sheep},${homeLivestock.goat},${homeLivestock.cow},${homeLivestock.horse},${homeLivestock.camel}`
@@ -1123,6 +1426,10 @@ export function useThreeScene({
     goToHomeGerRef.current?.();
   }, []);
 
+  const travelToStation = useCallback((stationId: string) => {
+    travelToStationRef.current?.(stationId);
+  }, []);
+
   useEffect(() => {
     onHeroAtStationChange?.(heroAtStationId);
   }, [heroAtStationId, onHeroAtStationChange]);
@@ -1131,6 +1438,7 @@ export function useThreeScene({
     labelPositions,
     flyToStation,
     goToHomeGer,
+    travelToStation,
     heroAtStationId,
     labelUi,
     labelZoomScale,

@@ -22,6 +22,36 @@ export function getApiBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
+/** WebSocket URL for realtime match rooms (`/ws/match`). */
+export function getMatchWsUrl(): string {
+  try {
+    const u = new URL(getApiBaseUrl());
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    u.pathname = "/ws/match";
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  } catch {
+    const base = getApiBaseUrl().replace(/^http/i, "ws");
+    return `${base}/ws/match`;
+  }
+}
+
+/** Газрын зураг дээр бусад тоглогчдын байрлал (`/ws/map-presence`). */
+export function getMapPresenceWsUrl(): string {
+  try {
+    const u = new URL(getApiBaseUrl());
+    u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+    u.pathname = "/ws/map-presence";
+    u.search = "";
+    u.hash = "";
+    return u.toString();
+  } catch {
+    const base = getApiBaseUrl().replace(/^http/i, "ws");
+    return `${base}/ws/map-presence`;
+  }
+}
+
 export function resolveAssetUrl(raw: unknown): string {
   const s = typeof raw === "string" ? raw.trim() : "";
   if (!s) return "";

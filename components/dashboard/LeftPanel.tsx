@@ -20,10 +20,7 @@ import { claimRankChest } from "@/lib/api";
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
-import {
-  gameWeeklyPlaysRemaining,
-  stationAllGamesWeeklyLocked,
-} from "./mapConstants";
+import { gameWeeklyPlaysRemaining } from "./mapConstants";
 
 interface LeftPanelProps {
   t: DashStrings;
@@ -32,19 +29,14 @@ interface LeftPanelProps {
   xp: number;
   xpMax: number;
   avatarUrl: string;
-  bonusMultiplier: string;
-  bonusTitle: string;
   /** odoogiin urtuunii medeelel */
   journeyDay?: number;
   stationIndex?: number;
   totalStations?: number;
   currentStationLabel?: string;
-  heroTier?: string;
   stationGames?: StationGameBundleRow[];
-  currentStationId?: string;
   heroStationId?: string | null;
   mapStations?: MapStationApiRow[];
-  stationSteps?: Record<string, { completedGameSlugs: string[] }>;
   stationGameVisits?: Record<string, Record<string, number[]>>;
   treasury?: {
     kp: number;
@@ -61,8 +53,6 @@ interface LeftPanelProps {
   };
   userEmail?: string;
   onChestClaimed?: () => void;
-  /** gerluu camer shiljuuleh */
-  onGoToGer?: () => void;
   onOpenLeaderboard?: () => void;
 }
 
@@ -76,14 +66,12 @@ function TreasuryRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
-      <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
-      </span>
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5">
+      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold tabular-nums text-foreground">
         {value}
         {hint ? (
-          <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+          <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">
             {hint}
           </span>
         ) : null}
@@ -98,23 +86,17 @@ export function LeftPanel({
   xp,
   xpMax,
   avatarUrl,
-  bonusMultiplier,
-  bonusTitle,
   journeyDay,
   stationIndex,
   totalStations,
   currentStationLabel,
-  heroTier,
   stationGames = [],
-  currentStationId,
   heroStationId = null,
   mapStations = [],
-  stationSteps,
   stationGameVisits,
   treasury,
   userEmail,
   onChestClaimed,
-  onGoToGer,
   onOpenLeaderboard,
   lang,
 }: LeftPanelProps) {
@@ -209,35 +191,42 @@ export function LeftPanel({
     }
 
     return (
-      <div className="flex flex-col gap-5">
-        <div className="space-y-2 w-full">
-          <SectionTitle>{t.currentExpedition}</SectionTitle>
-          <div className="relative group">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div className="flex shrink-0 flex-col gap-2">
+          <SectionTitle>
+            {activeStationId === "home"
+              ? t.sidebarAtHomeSectionTitle
+              : t.currentExpedition}
+          </SectionTitle>
+          <div
+            className="relative shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-background/80 shadow-sm ring-1 ring-black/[0.04] dark:bg-background/60 dark:ring-white/[0.06]"
+            style={{
+              boxShadow: `0 0 0 1px color-mix(in oklch, ${accentColor} 12%, transparent), 0 8px 24px -12px color-mix(in oklch, ${accentColor} 25%, transparent)`,
+            }}
+          >
             <div
-              className="absolute -inset-1 rounded-2xl blur opacity-20 group-hover:opacity-40 transition"
-              style={{ background: accentColor }}
-            />
-            <div className="relative glass p-4 rounded-2xl border border-primary/30 bg-background/80">
-              <div className="flex items-center justify-between mb-2">
-                <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded uppercase font-bold">
-                  {activeStationId !== "home"
-                    ? lang === "mn"
-                      ? "Одоогийн өртөө"
-                      : "Current station"
-                    : t.mainQuest}
+              className={`flex flex-col gap-2 p-3 ${
+                activeStationId !== "home"
+                  ? "max-h-[min(44vh,300px)] overflow-y-auto"
+                  : ""
+              }`}
+            >
+              {activeStationId !== "home" ? (
+                <span className="inline-flex w-fit rounded-full bg-primary/12 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                  {lang === "mn" ? "Өртөө" : "Station"}
                 </span>
-              </div>
+              ) : null}
               {activeStationId !== "home" && stationInfo ? (
                 <>
-                  <h4 className="font-display text-base text-foreground mb-1 font-semibold leading-snug">
+                  <h4 className="font-display text-[15px] font-semibold leading-snug tracking-tight text-foreground">
                     {stationInfo.name}
                   </h4>
                   {stationInfo.region ? (
-                    <p className="text-[11px] text-primary/85 mb-2 font-medium">
+                    <p className="text-[11px] font-medium text-primary/90">
                       {stationInfo.region}
                     </p>
                   ) : null}
-                  <p className="text-xs text-foreground/75 mb-2 leading-relaxed">
+                  <p className="line-clamp-3 text-[11px] leading-relaxed text-muted-foreground">
                     {displayGames[0]
                       ? lang === "mn"
                         ? displayGames[0].description_mn
@@ -247,132 +236,59 @@ export function LeftPanel({
                 </>
               ) : activeStationId !== "home" ? (
                 <>
-                  <h4 className="font-display text-base text-foreground mb-1.5 font-semibold leading-snug">
+                  <h4 className="font-display text-[15px] font-semibold leading-snug tracking-tight text-foreground">
                     {currentStationLabel?.trim() || activeStationId}
                   </h4>
-                  <p className="text-xs text-foreground/70 mb-2 leading-relaxed">
+                  <p className="line-clamp-3 text-[11px] leading-relaxed text-muted-foreground">
                     {t.questDesc}
                   </p>
                 </>
               ) : (
-                <>
-                  {onGoToGer ? (
-                    <div className="mt-1 space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => onGoToGer()}
-                        className="w-full rounded-lg border border-amber-700/45 bg-amber-500/18 px-3 py-2.5 text-sm font-semibold text-amber-950 dark:text-amber-50 hover:bg-amber-500/28 transition-colors"
-                      >
-                        {t.mapGoToGer}
-                      </button>
-                      <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
-                        <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
-                          {lang === "mn" ? "Хэрхэн тоглох вэ?" : "How to play"}
-                        </p>
-                        <ul className="text-[11px] text-foreground/70 leading-relaxed space-y-1">
-                          <li>
-                            {lang === "mn"
-                              ? "1) Газрын зураг дээр өртөө сонгоод хаалган дээр нь очно."
-                              : "1) Pick a station on the map and reach its gate."}
-                          </li>
-                          <li>
-                            {lang === "mn"
-                              ? "2) Өртөө бүр дээр мини-тоглоом тоглоод шагнал авна."
-                              : "2) Play the station minigames to earn rewards."}
-                          </li>
-                          <li>
-                            {lang === "mn"
-                              ? "3) Нэг өртөөний тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа тоглоно; бүх тоглоомын лимит дуусвал өртөө түгжигдэнэ."
-                              : "3) Each minigame at a station allows up to 2 plays per 7 days; when all are exhausted, the station locks for the week."}
-                          </li>
-                          <li>
-                            {lang === "mn"
-                              ? "4) Гэр дээр дарж гэрээ сайжруулж, мал худалдаж авна."
-                              : "4) Use to upgrade your ger and buy livestock."}
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  ) : null}
-                </>
+                <div className="space-y-2">
+                  <p className="font-display text-sm font-semibold text-foreground">
+                    {t.sidebarAtHomeBadge}
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    {t.sidebarAtHomeHint}
+                  </p>
+                </div>
               )}
               {activeStationId !== "home" &&
                 journeyDay != null &&
                 totalStations != null &&
                 totalStations > 0 && (
-                  <p className="text-[10px] text-foreground/65 mb-3 leading-snug">
-                    <span className="text-primary/90 font-semibold">
+                  <p className="line-clamp-2 border-t border-border/50 pt-2 text-[10px] leading-snug text-muted-foreground">
+                    <span className="font-semibold text-primary">
                       {t.journeyDayLabel} {journeyDay}
                     </span>
                     {stationIndex != null && currentStationLabel ? (
                       <>
-                        <span className="text-foreground/50"> · </span>
+                        <span className="text-muted-foreground/60"> · </span>
                         <span>
-                          {t.urtuuCounter} {stationIndex}/{totalStations}
+                          {stationIndex}/{totalStations}
                         </span>
-                        <span className="text-foreground/50"> — </span>
-                        <span>{currentStationLabel}</span>
+                        <span className="text-muted-foreground/60"> · </span>
+                        <span className="text-foreground/85">
+                          {currentStationLabel}
+                        </span>
                       </>
                     ) : (
                       <>
-                        <span className="text-foreground/50"> · </span>
+                        <span className="text-muted-foreground/60"> · </span>
                         <span>
-                          {lang === "mn"
-                            ? "Бүх өртөө нээлттэй — газрын зураг дээр сонгоно"
-                            : "All stations open — select on the map"}
+                          {lang === "mn" ? "Зураг дээр сонгоно" : "Pick on map"}
                         </span>
                       </>
                     )}
                   </p>
                 )}
               {activeStationId !== "home" && displayGames.length > 0 && (
-                <div className="mb-3 rounded-lg border border-primary/15 bg-background/40 px-2.5 py-2">
-                  <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1.5">
-                    {lang === "mn"
-                      ? "Энэ өртөөний тоглоомууд"
-                      : "Games at this station"}
+                <div className="min-h-0 shrink rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
+                  <p className="mb-2 text-[11px] font-semibold text-foreground/90">
+                    {lang === "mn" ? "Тоглоом" : "Games"}
                   </p>
-                  <p className="text-[10px] text-foreground/60 mb-1.5">
-                    {(() => {
-                      const slugs = displayGames.map((x) => x.slug);
-                      const allLocked =
-                        activeStationId &&
-                        stationAllGamesWeeklyLocked(
-                          activeStationId,
-                          slugs,
-                          stationGameVisits,
-                        );
-                      if (allLocked) {
-                        return lang === "mn"
-                          ? "Энэ өртөөний бүх тоглоомын 7 хоногийн лимит дууссан — өртөө түгжигдсэн."
-                          : "Weekly limits for all minigames here are used — station locked for now.";
-                      }
-                      return lang === "mn"
-                        ? "Тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа."
-                        : "Up to 2 plays per 7 days for each minigame.";
-                    })()}
-                  </p>
-                  <ul className="dashboard-left-scroll space-y-1 max-h-[min(40vh,220px)] overflow-y-auto pr-0.5">
-                    {displayGames.map((g) => {
-                      const completed = new Set(
-                        (activeStationId
-                          ? stationSteps?.[activeStationId]?.completedGameSlugs
-                          : []) ?? [],
-                      );
-                      const nextRequired =
-                        displayGames.find((x) => !completed.has(x.slug))
-                          ?.slug ?? null;
-                      const status = completed.has(g.slug)
-                        ? lang === "mn"
-                          ? "Дууссан"
-                          : "Done"
-                        : g.slug === nextRequired
-                          ? lang === "mn"
-                            ? "Дараагийн"
-                            : "Next"
-                          : lang === "mn"
-                            ? "Түгжээтэй"
-                            : "Locked";
+                  <ul className="space-y-1.5">
+                    {displayGames.slice(0, 5).map((g) => {
                       const wkRem =
                         activeStationId && g.slug
                           ? gameWeeklyPlaysRemaining(
@@ -393,56 +309,42 @@ export function LeftPanel({
                       return (
                         <li
                           key={g.id}
-                          className="text-[11px] text-foreground/80 leading-snug flex justify-between gap-2"
+                          className="flex items-center justify-between gap-2 text-[12px] leading-snug text-foreground"
                         >
-                          <span className="truncate">
+                          <span className="min-w-0 truncate">
                             {lang === "mn" ? g.name_mn : g.name_en}
                           </span>
-                          <span className="shrink-0 flex items-center gap-2">
-                            <span
-                              className={
-                                wkRem <= 0
-                                  ? "text-[9px] uppercase tracking-wider text-amber-700/90 dark:text-amber-400/90"
-                                  : "text-[9px] uppercase tracking-wider text-muted-foreground"
-                              }
-                            >
-                              {wkLabel}
-                            </span>
-                            <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                              {status}
-                            </span>
-                            {(lang === "mn"
-                              ? g.reward_hint_mn
-                              : g.reward_hint_en
-                            )?.trim() ? (
-                              <span className="text-primary/80 text-[10px]">
-                                {lang === "mn"
-                                  ? g.reward_hint_mn
-                                  : g.reward_hint_en}
-                              </span>
-                            ) : null}
+                          <span className="shrink-0 tabular-nums text-[10px] text-muted-foreground">
+                            {wkLabel}
                           </span>
                         </li>
                       );
                     })}
+                    {displayGames.length > 5 ? (
+                      <li className="text-[10px] text-muted-foreground">
+                        {lang === "mn"
+                          ? `+${displayGames.length - 5} бусад`
+                          : `+${displayGames.length - 5} more`}
+                      </li>
+                    ) : null}
                   </ul>
                 </div>
               )}
 
               {activeStationId !== "home" &&
               (stationStoryText.title || stationStoryText.desc) ? (
-                <div className="rounded-lg border border-primary/15 bg-background/40 px-3 py-2">
-                  <p className="text-[9px] uppercase tracking-wider text-primary/90 font-bold mb-1">
-                    {lang === "mn" ? "Өртөөний түүх" : "Station story"}
+                <div className="shrink-0 rounded-xl border border-border/60 bg-muted/15 px-2.5 py-2">
+                  <p className="mb-1 text-[10px] font-semibold text-foreground/90">
+                    {lang === "mn" ? "Түүх" : "Lore"}
                   </p>
                   {stationStoryText.title ? (
-                    <p className="text-[11px] text-foreground/80 font-semibold leading-snug">
+                    <p className="line-clamp-2 text-[11px] font-medium leading-snug text-foreground">
                       {stationStoryText.title}
                     </p>
                   ) : null}
                   {stationStoryText.desc ? (
                     <p
-                      className={`text-[11px] text-foreground/70 leading-relaxed ${stationStoryText.title ? "mt-1" : ""}`}
+                      className={`line-clamp-3 text-[11px] leading-relaxed text-muted-foreground ${stationStoryText.title ? "mt-1" : ""}`}
                     >
                       {stationStoryText.desc}
                     </p>
@@ -453,10 +355,10 @@ export function LeftPanel({
           </div>
         </div>
 
-        <div className="w-full">
+        <div className="w-full shrink-0">
           <SectionTitle>{t.treasury}</SectionTitle>
-          <div className="space-y-2 mt-1.5">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="mt-2 rounded-2xl border border-border/60 bg-muted/15 p-2 shadow-sm">
+            <div className="grid grid-cols-2 gap-1.5">
               <TreasuryRow
                 label={lang === "mn" ? "Гэр" : "Home"}
                 value={`Lv ${treasury?.gerLevel ?? 1}`}
@@ -474,46 +376,19 @@ export function LeftPanel({
                 value={(treasury?.gems ?? 0).toLocaleString()}
               />
             </div>
-            <p className="text-[10px] text-muted-foreground leading-snug px-0.5">
-              {t.treasuryHint}
-            </p>
-            <div className="rounded-lg border border-primary/15 bg-background/60 px-3 py-2">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                {lang === "mn" ? "Мал сүрэг" : "Livestock"}
-              </p>
-              <div className="flex flex-wrap gap-1 text-xs text-foreground/85 tabular-nums">
-                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐑 {(treasury?.livestock?.sheep ?? 0).toLocaleString()}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐐 {(treasury?.livestock?.goat ?? 0).toLocaleString()}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐄 {(treasury?.livestock?.cow ?? 0).toLocaleString()}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐎 {(treasury?.livestock?.horse ?? 0).toLocaleString()}
-                </span>
-                <span className="px-2 py-1 rounded-full border border-primary/15 bg-primary/5">
-                  🐫 {(treasury?.livestock?.camel ?? 0).toLocaleString()}
-                </span>
-              </div>
-            </div>
           </div>
         </div>
 
-        <div className="w-full">
+        <div className="w-full shrink-0">
           <SectionTitle>{t.rank}</SectionTitle>
-          <div className="glass bg-background/90 p-3 rounded-lg border border-primary/20 mt-1.5">
-            <div className="flex justify-between text-[11px] text-foreground mb-1.5">
-              <span className="font-bold uppercase tracking-wider text-primary">
-                {t.rankTitle}
-              </span>
-              <span className="text-foreground font-medium">
+          <div className="mt-2 rounded-2xl border border-border/60 bg-background/80 p-3 shadow-sm dark:bg-background/50">
+            <div className="mb-2 flex justify-between gap-2 text-[11px] text-foreground">
+              <span className="font-semibold text-primary">{t.rankTitle}</span>
+              <span className="tabular-nums font-medium text-foreground">
                 {xp.toLocaleString()} / {xpMax.toLocaleString()}
               </span>
             </div>
-            <div className="h-1.5 w-full bg-background/50 border border-primary/20 rounded-full overflow-hidden">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full rounded-full transition-all duration-700"
                 style={{
@@ -523,15 +398,15 @@ export function LeftPanel({
               />
             </div>
             {chestReady ? (
-              <div className="mt-2 rounded-lg border border-amber-500/35 bg-gradient-to-br from-amber-950/40 to-background/80 px-3 py-2 space-y-2">
-                <p className="text-[11px] text-amber-100/95 leading-snug flex items-start gap-2">
-                  <PackageIcon className="size-4 shrink-0 mt-0.5 text-amber-400" />
-                  <span>{t.rankChestOpen}</span>
+              <div className="mt-3 space-y-2 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-950/35 to-background/90 px-2.5 py-2">
+                <p className="flex items-start gap-2 text-[11px] leading-snug text-amber-100/95">
+                  <PackageIcon className="size-4 shrink-0 text-amber-400" />
+                  <span className="line-clamp-3">{t.rankChestOpen}</span>
                 </p>
                 <Button
                   type="button"
                   size="sm"
-                  className="w-full gap-2 bg-amber-600/90 hover:bg-amber-600 text-white"
+                  className="h-8 w-full bg-amber-600 text-[11px] font-medium text-white hover:bg-amber-600/95"
                   disabled={chestBusy || !userEmail?.trim()}
                   onClick={async () => {
                     const em = userEmail?.trim();
@@ -581,45 +456,43 @@ export function LeftPanel({
           </DialogContent>
         </Dialog>
 
-        <div className="w-full">
+        <div className="w-full shrink-0 pb-1">
           <SectionTitle>{t.leaderboard}</SectionTitle>
           <button
             type="button"
             onClick={() => onOpenLeaderboard?.()}
-            className="group w-full text-left mt-1.5 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/[0.08] via-background/40 to-background/80 hover:border-primary/35 hover:from-primary/[0.12] transition-all duration-200 shadow-sm hover:shadow-md px-3 py-1"
+            className="group mt-2 flex w-full items-center gap-3 rounded-2xl border border-border/60 bg-muted/20 px-3 py-2.5 text-left transition-colors hover:border-primary/35 hover:bg-muted/35"
           >
-            <div className="flex items-center gap-1">
-              <div className="flex flex-col min-w-0 flex-1 gap-1">
-                <span className="text-[9px] text-primary uppercase tracking-[0.18em] font-bold">
-                  {t.topPlayersLabel}
-                </span>
-                <span className="text-xs text-muted-foreground leading-snug line-clamp-2">
-                  {t.leaderboard}
-                </span>
-                <div className="flex items-center -space-x-1.5 pt-0.5">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="w-7 h-7 rounded-full border-2 overflow-hidden bg-background/90 ring-1 ring-background/50"
-                      style={{
-                        zIndex: 30 - i * 10,
-                        borderColor:
-                          i === 0
-                            ? "var(--gold-main, var(--gold-bright))"
-                            : "color-mix(in oklch, var(--primary) 28%, var(--border))",
-                      }}
-                    >
-                      {i === 0 && (
-                        <img
-                          src={avatarUrl}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                  ))}
+            <div className="flex -space-x-2 shrink-0">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="h-8 w-8 overflow-hidden rounded-full border-2 bg-background ring-1 ring-background/60"
+                  style={{
+                    zIndex: 30 - i * 10,
+                    borderColor:
+                      i === 0
+                        ? "var(--gold-main, var(--gold-bright))"
+                        : "color-mix(in oklch, var(--primary) 28%, var(--border))",
+                  }}
+                >
+                  {i === 0 && (
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  )}
                 </div>
-              </div>
+              ))}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="block text-[10px] font-semibold text-primary">
+                {t.topPlayersLabel}
+              </span>
+              <span className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+                {t.leaderboard}
+              </span>
             </div>
           </button>
         </div>
@@ -629,7 +502,10 @@ export function LeftPanel({
 
   if (isMobile) {
     return (
-      <div className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-md border-t border-primary/20 z-30 flex justify-around py-2 shrink-0 h-[72px]">
+      <div
+        data-tour-anchor="dashboard-sidebar"
+        className="fixed bottom-0 left-0 w-full bg-background/95 backdrop-blur-md border-t border-primary/20 z-30 flex justify-around py-2.5 shrink-0 h-[78px]"
+      >
         {NAV_ITEMS.map(({ id, Icon, label }) => (
           <button
             key={id}
@@ -637,10 +513,10 @@ export function LeftPanel({
             onClick={() => {
               if (id === "leaderboard") onOpenLeaderboard?.();
             }}
-            className="flex flex-col items-center justify-center text-primary/70 hover:text-primary transition-all px-1.5"
+            className="flex flex-col items-center justify-center text-primary/70 hover:text-primary transition-all px-2"
           >
-            <Icon className="w-5 h-5 mb-0.5" />
-            <span className="text-[8px] uppercase max-w-[65px] text-center leading-tight font-medium">
+            <Icon className="w-5 h-5 mb-1" />
+            <span className="text-[9px] uppercase max-w-[76px] text-center leading-snug font-medium">
               {label}
             </span>
           </button>
@@ -651,12 +527,13 @@ export function LeftPanel({
 
   return (
     <aside
-      className={`glass-panel border-r border-primary/10 flex flex-col z-20 bg-background/30 transition-all duration-300 min-h-0 h-full shrink-0 ${
-        collapsed ? "w-24 p-3" : "w-80 min-w-[18rem] p-4"
+      data-tour-anchor="dashboard-sidebar"
+      className={`glass-panel flex h-full min-h-0 shrink-0 flex-col border-r border-border/40 bg-background/40 z-20 transition-all duration-300 dark:bg-background/25 ${
+        collapsed ? "w-24 p-2" : "w-[22rem] min-w-[20rem] max-w-[min(22rem,92vw)] p-4"
       }`}
     >
       <div
-        className={`flex w-full ${collapsed ? "justify-center" : "justify-end"} shrink-0 mb-3`}
+        className={`flex w-full ${collapsed ? "justify-center" : "justify-end"} mb-2 shrink-0`}
       >
         <button
           className="p-1.5 bg-background/80 border border-primary/30 rounded-md shadow-md hover:bg-primary/20 hover:text-primary transition-all"
@@ -670,7 +547,7 @@ export function LeftPanel({
         </button>
       </div>
 
-      <div className="dashboard-left-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {renderContent()}
       </div>
     </aside>
@@ -679,9 +556,9 @@ export function LeftPanel({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-display text-[10px] text-primary uppercase tracking-[0.3em] flex items-center gap-2 mb-1.5">
+    <h3 className="font-display mb-0 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/90">
       {children}
-      <span className="flex-1 h-px bg-primary/20" />
+      <span className="h-px flex-1 bg-border/80" />
     </h3>
   );
 }

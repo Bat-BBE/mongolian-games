@@ -943,7 +943,7 @@ function WoodenGuidePanel({
         position: "absolute",
         right: 16,
         top: 56,
-        width: 300,
+        width: "min(300px, calc(100vw - 32px))",
         maxHeight: "calc(100% - 72px)",
         overflowY: "auto",
         padding: "12px 14px",

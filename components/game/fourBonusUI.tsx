@@ -10,6 +10,15 @@ import {
 import { ShagaiSideImage } from "./shagaiUI";
 import { useApp } from "@/components/AppContext";
 import { playButtonClick } from "@/lib/uiSounds";
+import {
+  gamePanelLeftDesktop,
+  gamePanelPlayNarrowBottom,
+  gamePanelRightDesktop,
+} from "./gamePanelLayout";
+import { useGameUiNarrow } from "./useGameUiNarrow";
+import GameRulesSheet from "./GameRulesSheet";
+import GameRulesFab from "./GameRulesFab";
+import { useState } from "react";
 
 interface Props {
   state: GameState;
@@ -460,6 +469,290 @@ function HistoryList({
   );
 }
 
+function FourBonesRulesAsideBody({
+  showRulesHeading,
+  t,
+  state,
+  settledSides,
+  language,
+  sessionGain,
+  matchOver,
+  onReset,
+}: {
+  showRulesHeading: boolean;
+  t: FourI18n;
+  state: GameState;
+  settledSides: (ShagaiSide | null)[];
+  language: "mn" | "en";
+  sessionGain?: { coins: number; gems: number };
+  matchOver: boolean;
+  onReset: () => void;
+}) {
+  return (
+    <>
+      {showRulesHeading ? (
+        <div
+          style={{
+            color: "#c8a030",
+            fontSize: 11,
+            letterSpacing: 3,
+            marginBottom: 8,
+          }}
+        >
+          {t.rulesTitle}
+        </div>
+      ) : null}
+      <div
+        style={{
+          color: "#888",
+          fontSize: 11,
+          marginBottom: 8,
+          lineHeight: 1.5,
+        }}
+      >
+        {t.howToPlay}
+      </div>
+      {t.rules.map((r) => (
+        <div
+          key={r.n}
+          style={{
+            display: "flex",
+            gap: 10,
+            marginBottom: 6,
+            alignItems: "flex-start",
+          }}
+        >
+          <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
+            {r.n}
+          </span>
+          <div>
+            <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
+            <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
+          </div>
+        </div>
+      ))}
+
+      <GoldDivider />
+
+      <div
+        style={{
+          color: "#c8a030",
+          fontSize: 11,
+          letterSpacing: 3,
+          marginBottom: 6,
+        }}
+      >
+        {t.scoringTitle}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {t.scoring.map((s) => (
+          <div
+            key={s.label}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: 11,
+              color: "#bbb",
+              padding: "3px 6px",
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: 6,
+            }}
+          >
+            <span>{s.label}</span>
+            <span style={{ color: "#f0c040", fontWeight: "bold" }}>{s.pts}</span>
+          </div>
+        ))}
+      </div>
+
+      <GoldDivider />
+
+      <div
+        style={{
+          color: "#c8a030",
+          fontSize: 11,
+          letterSpacing: 3,
+          marginBottom: 6,
+        }}
+      >
+        {t.statistic}
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 6,
+          marginBottom: 8,
+        }}
+      >
+        {t.stats.map(({ label, valueKey }) => (
+          <div
+            key={label}
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 8,
+              padding: "6px 8px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                color:
+                  valueKey === "playerScore"
+                    ? "#60c060"
+                    : valueKey === "robotScore"
+                      ? "#e06050"
+                      : "#f0c040",
+                fontSize: 16,
+                fontWeight: "bold",
+              }}
+            >
+              {String(state[valueKey] ?? 0)}
+            </div>
+            <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>
+              {label}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <GoldDivider />
+
+      <div
+        style={{
+          color: "#666",
+          fontSize: 10,
+          letterSpacing: 2,
+          marginBottom: 6,
+        }}
+      >
+        {t.shagaiSidesLabel}
+      </div>
+      {(["horse", "sheep", "goat", "camel"] as ShagaiSide[]).map((side) => {
+        const info = SHAGAI_INFO[side];
+        const isSettled = settledSides.includes(side);
+        return (
+          <div
+            key={side}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "3px 6px",
+              borderRadius: 6,
+              marginBottom: 2,
+              background: isSettled
+                ? `rgba(${hexToRgb(info.color)},0.12)`
+                : "transparent",
+              border: isSettled
+                ? `1px solid ${info.color}44`
+                : "1px solid transparent",
+              transition: "all 0.3s",
+            }}
+          >
+            <span style={{ fontSize: 15 }}>{info.symbol}</span>
+            <span
+              style={{
+                color: isSettled ? info.color : "#666",
+                fontSize: 12,
+                flex: 1,
+              }}
+            >
+              {sideName(side, language)}
+            </span>
+            {isSettled && (
+              <span style={{ color: info.color, fontSize: 14 }}>✓</span>
+            )}
+          </div>
+        );
+      })}
+
+      <GoldDivider />
+
+      <div
+        style={{
+          color: "#666",
+          fontSize: 10,
+          letterSpacing: 2,
+          marginBottom: 6,
+        }}
+      >
+        {t.historyTitle}
+      </div>
+      <HistoryList history={state.history} t={t} language={language} />
+
+      {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) ? (
+        <>
+          <GoldDivider />
+          <div
+            style={{
+              color: "#c8a030",
+              fontSize: 10,
+              letterSpacing: 3,
+              marginBottom: 4,
+            }}
+          >
+            {t.rewardLabel}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              fontSize: 12,
+              color: "#ddd",
+            }}
+          >
+            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+              🪙 +{sessionGain.coins}
+            </span>
+            <span style={{ color: "#bfe6ff", fontWeight: "bold" }}>
+              💎 +{sessionGain.gems}
+            </span>
+          </div>
+        </>
+      ) : null}
+
+      {state.totalThrows > 0 && !matchOver && (
+        <button
+          type="button"
+          onClick={() => {
+            playButtonClick();
+            onReset();
+          }}
+          style={{
+            width: "100%",
+            marginTop: 10,
+            padding: "7px 0",
+            fontSize: 11,
+            letterSpacing: 1,
+            background: "rgba(255,255,255,0.04)",
+            color: "#666",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontFamily:
+              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => {
+            const b = e.currentTarget as HTMLButtonElement;
+            b.style.color = "#c8a030";
+            b.style.borderColor = "rgba(200,160,48,0.3)";
+          }}
+          onMouseLeave={(e) => {
+            const b = e.currentTarget as HTMLButtonElement;
+            b.style.color = "#666";
+            b.style.borderColor = "rgba(255,255,255,0.08)";
+          }}
+        >
+          {t.resetBtn}
+        </button>
+      )}
+    </>
+  );
+}
+
 export default function FourBonesUI({
   state,
   onThrow,
@@ -470,6 +763,15 @@ export default function FourBonesUI({
 }: Props) {
   const t = useFourI18n();
   const language = t.language;
+  const narrowUi = useGameUiNarrow();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesFabLabel = language === "mn" ? "Дүрэм" : "Rules";
+  const mainPanelChrome = narrowUi
+    ? gamePanelPlayNarrowBottom()
+    : gamePanelLeftDesktop(300);
+  const mainPanelPad: React.CSSProperties = narrowUi
+    ? { padding: "10px 12px 12px" }
+    : {};
   const canThrow = state.phase === "idle" || state.phase === "robotResult";
   const matchOver = state.phase === "matchOver";
   const playerWinsMatch = matchOver && state.playerScore >= state.robotScore;
@@ -583,23 +885,25 @@ export default function FourBonesUI({
 
       <div
         className="four-bones-panel"
-        style={{ ...panel, top: 20, left: 20, width: 300 }}
+        style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
         <div style={{ textAlign: "center" }}>
           <div
             style={{
               color: "#f0c040",
-              fontSize: 20,
+              fontSize: narrowUi ? 16 : 20,
               fontWeight: "bold",
-              letterSpacing: 3,
+              letterSpacing: narrowUi ? 2 : 3,
               textShadow: "0 0 20px rgba(240,192,64,0.4)",
             }}
           >
             {t.title}
           </div>
-          <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
-            {t.subtitle}
-          </div>
+          {!narrowUi ? (
+            <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
+              {t.subtitle}
+            </div>
+          ) : null}
         </div>
 
         <GoldDivider />
@@ -780,269 +1084,49 @@ export default function FourBonesUI({
         </div>
       </div>
 
-      <div
-        className="four-bones-panel"
-        style={{ ...panel, top: 20, right: 20, width: 240 }}
-      >
+      {!narrowUi ? (
         <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 8,
-          }}
+          className="four-bones-panel"
+          style={{ ...panel, ...gamePanelRightDesktop(240) }}
         >
-          {t.rulesTitle}
+          <FourBonesRulesAsideBody
+            showRulesHeading
+            t={t}
+            state={state}
+            settledSides={settledSides}
+            language={language}
+            sessionGain={sessionGain}
+            matchOver={matchOver}
+            onReset={onReset}
+          />
         </div>
-        <div
-          style={{
-            color: "#888",
-            fontSize: 11,
-            marginBottom: 8,
-            lineHeight: 1.5,
-          }}
-        >
-          {t.howToPlay}
-        </div>
-        {t.rules.map((r) => (
-          <div
-            key={r.n}
-            style={{
-              display: "flex",
-              gap: 10,
-              marginBottom: 6,
-              alignItems: "flex-start",
-            }}
-          >
-            <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
-              {r.n}
-            </span>
-            <div>
-              <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
-              <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
-            </div>
-          </div>
-        ))}
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 6,
-          }}
-        >
-          {t.scoringTitle}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {t.scoring.map((s) => (
-            <div
-              key={s.label}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                fontSize: 11,
-                color: "#bbb",
-                padding: "3px 6px",
-                background: "rgba(255,255,255,0.03)",
-                borderRadius: 6,
-              }}
-            >
-              <span>{s.label}</span>
-              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                {s.pts}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 6,
-          }}
-        >
-          {t.statistic}
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 6,
-            marginBottom: 8,
-          }}
-        >
-          {t.stats.map(({ label, valueKey }) => (
-            <div
-              key={label}
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 8,
-                padding: "6px 8px",
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  color:
-                    valueKey === "playerScore"
-                      ? "#60c060"
-                      : valueKey === "robotScore"
-                        ? "#e06050"
-                        : "#f0c040",
-                  fontSize: 16,
-                  fontWeight: "bold",
-                }}
-              >
-                {String(state[valueKey] ?? 0)}
-              </div>
-              <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>
-                {label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#666",
-            fontSize: 10,
-            letterSpacing: 2,
-            marginBottom: 6,
-          }}
-        >
-          {t.shagaiSidesLabel}
-        </div>
-        {(["horse", "sheep", "goat", "camel"] as ShagaiSide[]).map((side) => {
-          const info = SHAGAI_INFO[side];
-          const isSettled = settledSides.includes(side);
-          return (
-            <div
-              key={side}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "3px 6px",
-                borderRadius: 6,
-                marginBottom: 2,
-                background: isSettled
-                  ? `rgba(${hexToRgb(info.color)},0.12)`
-                  : "transparent",
-                border: isSettled
-                  ? `1px solid ${info.color}44`
-                  : "1px solid transparent",
-                transition: "all 0.3s",
-              }}
-            >
-              <span style={{ fontSize: 15 }}>{info.symbol}</span>
-              <span
-                style={{
-                  color: isSettled ? info.color : "#666",
-                  fontSize: 12,
-                  flex: 1,
-                }}
-              >
-                {sideName(side, language)}
-              </span>
-              {isSettled && (
-                <span style={{ color: info.color, fontSize: 14 }}>✓</span>
-              )}
-            </div>
-          );
-        })}
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#666",
-            fontSize: 10,
-            letterSpacing: 2,
-            marginBottom: 6,
-          }}
-        >
-          {t.historyTitle}
-        </div>
-        <HistoryList history={state.history} t={t} language={language} />
-
-        {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) ? (
-          <>
-            <GoldDivider />
-            <div
-              style={{
-                color: "#c8a030",
-                fontSize: 10,
-                letterSpacing: 3,
-                marginBottom: 4,
-              }}
-            >
-              {t.rewardLabel}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                fontSize: 12,
-                color: "#ddd",
-              }}
-            >
-              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                🪙 +{sessionGain.coins}
-              </span>
-              <span style={{ color: "#bfe6ff", fontWeight: "bold" }}>
-                💎 +{sessionGain.gems}
-              </span>
-            </div>
-          </>
-        ) : null}
-
-        {state.totalThrows > 0 && !matchOver && (
-          <button
+      ) : (
+        <>
+          <GameRulesFab
             onClick={() => {
               playButtonClick();
-              onReset();
+              setRulesOpen(true);
             }}
-            style={{
-              width: "100%",
-              marginTop: 10,
-              padding: "7px 0",
-              fontSize: 11,
-              letterSpacing: 1,
-              background: "rgba(255,255,255,0.04)",
-              color: "#666",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontFamily:
-                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              const b = e.currentTarget as HTMLButtonElement;
-              b.style.color = "#c8a030";
-              b.style.borderColor = "rgba(200,160,48,0.3)";
-            }}
-            onMouseLeave={(e) => {
-              const b = e.currentTarget as HTMLButtonElement;
-              b.style.color = "#666";
-              b.style.borderColor = "rgba(255,255,255,0.08)";
-            }}
+            label={rulesFabLabel}
+          />
+          <GameRulesSheet
+            open={rulesOpen}
+            onClose={() => setRulesOpen(false)}
+            title={t.rulesTitle}
           >
-            {t.resetBtn}
-          </button>
-        )}
-      </div>
+            <FourBonesRulesAsideBody
+              showRulesHeading={false}
+              t={t}
+              state={state}
+              settledSides={settledSides}
+              language={language}
+              sessionGain={sessionGain}
+              matchOver={matchOver}
+              onReset={onReset}
+            />
+          </GameRulesSheet>
+        </>
+      )}
 
       <style>{`
         @keyframes glow {

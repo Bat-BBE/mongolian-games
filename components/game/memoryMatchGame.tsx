@@ -7,6 +7,7 @@ import {
   MATCH_TIME_LIMIT_SEC,
   buildDeck,
   shuffleDeck,
+  shuffleDeckSeeded,
   type MemoryCard,
 } from "./memoryMatchType";
 import { useInventoryGrant } from "./useInventoryGrant";
@@ -16,6 +17,10 @@ import { playButtonClick } from "@/lib/uiSounds";
 
 export type MemoryMatchGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+  /** Online: серверээс ирсэн seed — хоёр талд ижил картууд. */
+  multiplayerSeed?: number | null;
+  /** Online горимд эхлэх товчийг нуух (хост эхлүүлэх хүртэл). */
+  multiplayerAwaitingStart?: boolean;
 };
 
 type Phase = "idle" | "playing" | "won" | "lost";
@@ -24,7 +29,11 @@ function samePair(a: MemoryCard, b: MemoryCard): boolean {
   return a.side === b.side && a.pairGroup === b.pairGroup;
 }
 
-export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
+export default function MemoryMatchGame({
+  onComplete,
+  multiplayerSeed = null,
+  multiplayerAwaitingStart = false,
+}: MemoryMatchGameProps) {
   const { grant, rewardEvents, sessionGain, resetGrants } =
     useInventoryGrant();
   const [phase, setPhase] = useState<Phase>("idle");
@@ -63,6 +72,23 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     setTimeLeft(MATCH_TIME_LIMIT_SEC);
     setPhase("playing");
   }, [resetGrants]);
+
+  const startRoundSeeded = useCallback(
+    (seed: number) => {
+      matchEndedRef.current = false;
+      submittedRef.current = false;
+      lockRef.current = false;
+      resetGrants();
+      const deck = shuffleDeckSeeded(buildDeck(), seed);
+      setCards(deck);
+      setFaceUpIds([]);
+      setMatchedIds(new Set());
+      setMoves(0);
+      setTimeLeft(MATCH_TIME_LIMIT_SEC);
+      setPhase("playing");
+    },
+    [resetGrants],
+  );
 
   const endWin = useCallback(() => {
     if (matchEndedRef.current) return;
@@ -159,6 +185,24 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
     resetGrants();
   }, [clearTimer, resetGrants]);
 
+  useEffect(() => {
+    if (multiplayerSeed == null) return;
+    startRoundSeeded(multiplayerSeed);
+  }, [multiplayerSeed, startRoundSeeded]);
+
+  useEffect(() => {
+    if (multiplayerSeed != null) return;
+    if (!multiplayerAwaitingStart) return;
+    if (phase === "idle" && cards.length === 0) return;
+    resetAll();
+  }, [
+    multiplayerSeed,
+    multiplayerAwaitingStart,
+    phase,
+    cards.length,
+    resetAll,
+  ]);
+
   return (
     <div
       style={{
@@ -246,6 +290,9 @@ export default function MemoryMatchGame({ onComplete }: MemoryMatchGameProps) {
         pairsFound={pairsFound}
         onStart={startRound}
         onRestart={resetAll}
+        multiplayerAwaiting={
+          multiplayerAwaitingStart && phase === "idle" && !multiplayerSeed
+        }
       />
     </div>
   );

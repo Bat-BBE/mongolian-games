@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db.js";
+import { JOURNEY_STATION_COUNT } from "../journeyOrder.js";
 
 export const contentRouter = Router();
 
@@ -184,11 +185,6 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
       strings[row.key] = row.value;
     }
 
-    const totalRes = await pool.query(
-      `SELECT count(*)::int AS c FROM map_stations`,
-    );
-    const totalStations = totalRes.rows[0]?.c ?? 0;
-
     let journeyDay =
       typeof progress.journeyDay === "number" ? progress.journeyDay : 1;
     if (progress.journeyDay === undefined) {
@@ -364,7 +360,7 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
         currentStationLabel:
           lang === "mn" ? "Гэр — төв" : "Home — your ger",
         stationIndexOneBased: null as unknown as number,
-        totalStations,
+        totalStations: JOURNEY_STATION_COUNT,
         displayHeroName:
           lang === "mn"
             ? String(hero?.name_mn ?? profile.heroName ?? "")

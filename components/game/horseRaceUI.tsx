@@ -6,6 +6,15 @@ import { SHAGAI_INFO, sideName } from "./fourBonusType";
 import { ShagaiSideImage } from "./shagaiUI";
 import { useApp } from "@/components/AppContext";
 import { playButtonClick } from "@/lib/uiSounds";
+import {
+  gamePanelLeftDesktop,
+  gamePanelPlayNarrowBottom,
+  gamePanelRightDesktop,
+} from "./gamePanelLayout";
+import { useGameUiNarrow } from "./useGameUiNarrow";
+import GameRulesSheet from "./GameRulesSheet";
+import GameRulesFab from "./GameRulesFab";
+import { useState } from "react";
 
 interface Props {
   state: RaceState;
@@ -483,6 +492,194 @@ function HistoryList({
   );
 }
 
+function HorseRaceRulesAsideBody({
+  showRulesHeading,
+  t,
+  state,
+  language,
+  sessionGain,
+}: {
+  showRulesHeading: boolean;
+  t: RaceI18n;
+  state: RaceState;
+  language: "mn" | "en";
+  sessionGain?: { coins: number; gems: number };
+}) {
+  return (
+    <>
+      {showRulesHeading ? (
+        <div
+          style={{
+            color: "#c8a030",
+            fontSize: 11,
+            letterSpacing: 3,
+            fontWeight: "bold",
+            textAlign: "center",
+          }}
+        >
+          {t.rulesTitle}
+        </div>
+      ) : null}
+      <GoldDivider />
+      <div
+        style={{
+          color: "#bbb",
+          fontSize: 11,
+          lineHeight: 1.5,
+          marginBottom: 8,
+        }}
+      >
+        {t.howToPlay}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        {t.rules.map((r, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "center",
+              padding: "5px 8px",
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: 6,
+            }}
+          >
+            <span style={{ color: "#f0c040", fontSize: 12, minWidth: 18 }}>
+              {r.n}
+            </span>
+            <div>
+              <div
+                style={{ color: "#ddd", fontSize: 11, fontWeight: "bold" }}
+              >
+                {r.t}
+              </div>
+              <div style={{ color: "#888", fontSize: 10 }}>{r.d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <GoldDivider />
+      <div
+        style={{
+          color: "#c8a030",
+          fontSize: 11,
+          letterSpacing: 3,
+          fontWeight: "bold",
+          textAlign: "center",
+        }}
+      >
+        {t.scoringTitle}
+      </div>
+      <GoldDivider />
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {t.scoring.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "4px 8px",
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: 6,
+              fontSize: 11,
+            }}
+          >
+            <span style={{ color: "#ccc" }}>{s.label}</span>
+            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+              {s.pts}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <GoldDivider />
+      <div
+        style={{
+          color: "#c8a030",
+          fontSize: 11,
+          letterSpacing: 3,
+          fontWeight: "bold",
+          textAlign: "center",
+        }}
+      >
+        {t.statistic}
+      </div>
+      <GoldDivider />
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {t.stats.map((s, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "4px 8px",
+              background: "rgba(255,255,255,0.02)",
+              borderRadius: 6,
+              fontSize: 11,
+            }}
+          >
+            <span style={{ color: "#aaa" }}>{s.label}</span>
+            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+              {state[s.valueKey]}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <GoldDivider />
+      <div
+        style={{
+          color: "#c8a030",
+          fontSize: 11,
+          letterSpacing: 3,
+          fontWeight: "bold",
+          textAlign: "center",
+        }}
+      >
+        {t.historyTitle}
+      </div>
+      <GoldDivider />
+      <HistoryList history={state.history} t={t} language={language} />
+
+      {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) && (
+        <>
+          <GoldDivider />
+          <div
+            style={{
+              color: "#c8a030",
+              fontSize: 10,
+              letterSpacing: 2,
+              textAlign: "center",
+            }}
+          >
+            {t.rewardLabel}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 12,
+              marginTop: 4,
+            }}
+          >
+            {sessionGain.coins > 0 && (
+              <span style={{ color: "#f0c040", fontSize: 12 }}>
+                +{sessionGain.coins} coins
+              </span>
+            )}
+            {sessionGain.gems > 0 && (
+              <span style={{ color: "#bfe6ff", fontSize: 12 }}>
+                +{sessionGain.gems} gems
+              </span>
+            )}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
 export default function HorseRaceUI({
   state,
   onThrow,
@@ -494,6 +691,15 @@ export default function HorseRaceUI({
 }: Props) {
   const t = useRaceI18n();
   const language = t.language;
+  const narrowUi = useGameUiNarrow();
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesFabLabel = language === "mn" ? "Дүрэм" : "Rules";
+  const mainPanelChrome = narrowUi
+    ? gamePanelPlayNarrowBottom()
+    : gamePanelLeftDesktop(310);
+  const mainPanelPad: React.CSSProperties = narrowUi
+    ? { padding: "10px 12px 12px" }
+    : {};
 
   const canThrow =
     (state.phase === "idle" ||
@@ -601,23 +807,25 @@ export default function HorseRaceUI({
       {/* LEFT PANEL */}
       <div
         className="horse-race-panel"
-        style={{ ...panel, top: 20, left: 20, width: 310 }}
+        style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
         <div style={{ textAlign: "center" }}>
           <div
             style={{
               color: "#f0c040",
-              fontSize: 20,
+              fontSize: narrowUi ? 16 : 20,
               fontWeight: "bold",
-              letterSpacing: 3,
+              letterSpacing: narrowUi ? 2 : 3,
               textShadow: "0 0 20px rgba(240,192,64,0.4)",
             }}
           >
             {t.title}
           </div>
-          <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
-            {t.subtitle}
-          </div>
+          {!narrowUi ? (
+            <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
+              {t.subtitle}
+            </div>
+          ) : null}
         </div>
 
         <GoldDivider />
@@ -727,179 +935,43 @@ export default function HorseRaceUI({
         )}
       </div>
 
-      {/* RIGHT PANEL */}
-      <div
-        className="horse-race-panel-right"
-        style={{ ...panel, top: 20, right: 20, width: 300 }}
-      >
+      {!narrowUi ? (
         <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            fontWeight: "bold",
-            textAlign: "center",
-          }}
+          className="horse-race-panel-right"
+          style={{ ...panel, ...gamePanelRightDesktop(300) }}
         >
-          {t.rulesTitle}
+          <HorseRaceRulesAsideBody
+            showRulesHeading
+            t={t}
+            state={state}
+            language={language}
+            sessionGain={sessionGain}
+          />
         </div>
-        <GoldDivider />
-        <div
-          style={{
-            color: "#bbb",
-            fontSize: 11,
-            lineHeight: 1.5,
-            marginBottom: 8,
-          }}
-        >
-          {t.howToPlay}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-          {t.rules.map((r, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                gap: 8,
-                alignItems: "center",
-                padding: "5px 8px",
-                background: "rgba(255,255,255,0.02)",
-                borderRadius: 6,
-              }}
-            >
-              <span style={{ color: "#f0c040", fontSize: 12, minWidth: 18 }}>
-                {r.n}
-              </span>
-              <div>
-                <div
-                  style={{ color: "#ddd", fontSize: 11, fontWeight: "bold" }}
-                >
-                  {r.t}
-                </div>
-                <div style={{ color: "#888", fontSize: 10 }}>{r.d}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <GoldDivider />
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            fontWeight: "bold",
-            textAlign: "center",
-          }}
-        >
-          {t.scoringTitle}
-        </div>
-        <GoldDivider />
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {t.scoring.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "4px 8px",
-                background: "rgba(255,255,255,0.02)",
-                borderRadius: 6,
-                fontSize: 11,
-              }}
-            >
-              <span style={{ color: "#ccc" }}>{s.label}</span>
-              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                {s.pts}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <GoldDivider />
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            fontWeight: "bold",
-            textAlign: "center",
-          }}
-        >
-          {t.statistic}
-        </div>
-        <GoldDivider />
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-          {t.stats.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "4px 8px",
-                background: "rgba(255,255,255,0.02)",
-                borderRadius: 6,
-                fontSize: 11,
-              }}
-            >
-              <span style={{ color: "#aaa" }}>{s.label}</span>
-              <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                {state[s.valueKey]}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <GoldDivider />
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            fontWeight: "bold",
-            textAlign: "center",
-          }}
-        >
-          {t.historyTitle}
-        </div>
-        <GoldDivider />
-        <HistoryList history={state.history} t={t} language={language} />
-
-        {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) && (
-          <>
-            <GoldDivider />
-            <div
-              style={{
-                color: "#c8a030",
-                fontSize: 10,
-                letterSpacing: 2,
-                textAlign: "center",
-              }}
-            >
-              {t.rewardLabel}
-            </div>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 12,
-                marginTop: 4,
-              }}
-            >
-              {sessionGain.coins > 0 && (
-                <span style={{ color: "#f0c040", fontSize: 12 }}>
-                  +{sessionGain.coins} coins
-                </span>
-              )}
-              {sessionGain.gems > 0 && (
-                <span style={{ color: "#bfe6ff", fontSize: 12 }}>
-                  +{sessionGain.gems} gems
-                </span>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+      ) : (
+        <>
+          <GameRulesFab
+            onClick={() => {
+              playButtonClick();
+              setRulesOpen(true);
+            }}
+            label={rulesFabLabel}
+          />
+          <GameRulesSheet
+            open={rulesOpen}
+            onClose={() => setRulesOpen(false)}
+            title={t.rulesTitle}
+          >
+            <HorseRaceRulesAsideBody
+              showRulesHeading={false}
+              t={t}
+              state={state}
+              language={language}
+              sessionGain={sessionGain}
+            />
+          </GameRulesSheet>
+        </>
+      )}
 
       <style jsx>{`
         @keyframes rewardFloat {

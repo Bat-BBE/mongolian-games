@@ -444,6 +444,22 @@
     animation: ambient-pulse 6s ease-in-out infinite;
   }
 
+  /* Гар утас: хэт том blur + pulse нь хэсгүүдийн өнгийг холилдуулна — зөөлрүүлэх */
+  @media (max-width: 639px) {
+    .ambient-glow {
+      filter: blur(34px);
+      max-width: min(92vw, 380px);
+      max-height: 260px;
+      animation-name: ambient-pulse-mobile;
+      animation-duration: 8s;
+    }
+  }
+
+  @keyframes ambient-pulse-mobile {
+    0%, 100% { opacity: 0.42; transform: scale(1); }
+    50%       { opacity: 0.58; transform: scale(1.02); }
+  }
+
   .card-top-line {
     position: absolute;
     top: 0;

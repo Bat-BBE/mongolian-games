@@ -5,7 +5,10 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().url(),
-  CORS_ORIGIN: z.string().default("http://localhost:3000"),
+  /** Comma-separated. Dev-д хоёр браузер `localhost` vs `127.0.0.1`-ээр нээвэл нэг нь CORS-оор бүтэхгүй — хоёуланг нь оруулна. */
+  CORS_ORIGIN: z
+    .string()
+    .default("http://localhost:3000,http://127.0.0.1:3000"),
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   FIREBASE_DATABASE_URL: z.string().url().optional(),
   ADMIN_USERNAME: z.string().min(1).optional(),
