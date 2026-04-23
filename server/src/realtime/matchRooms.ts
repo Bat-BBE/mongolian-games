@@ -91,7 +91,7 @@ export class MatchRoomManager {
       hostId: params.hostId,
       gameType: params.gameType.slice(0, 64),
       gameSlug: params.gameSlug.slice(0, 64),
-      maxPlayers: Math.max(2, Math.min(4, params.maxPlayers)),
+      maxPlayers: Math.max(2, Math.min(20, params.maxPlayers)),
       players: new Map([[params.hostId, host]]),
       status: "lobby",
       createdAt: Date.now(),

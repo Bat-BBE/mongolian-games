@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import { randomUUID } from "node:crypto";
+import { attachWsKeepAlive } from "./wsKeepAlive.js";
 
 export type PresencePose = {
   x: number;
@@ -7,11 +8,20 @@ export type PresencePose = {
   ry: number;
 };
 
+export type PresenceLivestock = {
+  sheep: number;
+  goat: number;
+  cow: number;
+  horse: number;
+  camel: number;
+};
+
 type Peer = {
   id: string;
   displayName: string;
-  /** Клиентийн сонгосон FBX/GLB зам — бусад дээр ижил загвараар харагдана. */
   heroModelPath: string;
+  gerLevel: number;
+  livestock: PresenceLivestock;
   ws: WebSocket;
   last: PresencePose | null;
   lastSentServer: number;
@@ -23,6 +33,14 @@ const MAX_HERO_PATH_LEN = 280;
 const POSE_MIN_INTERVAL_MS = 240;
 const MAX_DISPLAY = 36;
 const CLAMP = 6500;
+
+const ZERO_LS: PresenceLivestock = {
+  sheep: 0,
+  goat: 0,
+  cow: 0,
+  horse: 0,
+  camel: 0,
+};
 
 function clampPose(p: PresencePose): PresencePose {
   return {
@@ -50,54 +68,65 @@ function send(ws: WebSocket, msg: Record<string, unknown>): void {
   ws.send(JSON.stringify(msg));
 }
 
+function parseLivestock(body: Record<string, unknown>): PresenceLivestock {
+  const raw = body.livestock;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...ZERO_LS };
+  }
+  const r = raw as Record<string, unknown>;
+  const n = (k: string) => {
+    const v = r[k];
+    return typeof v === "number" && Number.isFinite(v)
+      ? Math.max(0, Math.min(99, Math.floor(v)))
+      : 0;
+  };
+  return {
+    sheep: n("sheep"),
+    goat: n("goat"),
+    cow: n("cow"),
+    horse: n("horse"),
+    camel: n("camel"),
+  };
+}
+
+function wirePeerRow(p: Peer): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: p.id,
+    displayName: p.displayName,
+    heroModelPath: p.heroModelPath,
+    gerLevel: p.gerLevel,
+    livestock: p.livestock,
+  };
+  if (p.last) {
+    row.x = p.last.x;
+    row.z = p.last.z;
+    row.ry = p.last.ry;
+  }
+  return row;
+}
+
 export class MapPresenceHub {
   private readonly peers = new Map<string, Peer>();
 
-  snapshotFor(exceptId: string): Array<{
-    id: string;
-    displayName: string;
-    heroModelPath: string;
-    x: number;
-    z: number;
-    ry: number;
-  }> {
-    const out: Array<{
-      id: string;
-      displayName: string;
-      heroModelPath: string;
-      x: number;
-      z: number;
-      ry: number;
-    }> = [];
+  get peerCount(): number {
+    return this.peers.size;
+  }
+
+  snapshotFor(exceptId: string): Record<string, unknown>[] {
+    const out: Record<string, unknown>[] = [];
     for (const p of this.peers.values()) {
       if (p.id === exceptId || !p.last) continue;
-      out.push({
-        id: p.id,
-        displayName: p.displayName,
-        heroModelPath: p.heroModelPath,
-        x: p.last.x,
-        z: p.last.z,
-        ry: p.last.ry,
-      });
+      out.push(wirePeerRow(p));
     }
     return out;
   }
 
-  broadcastPeerPose(
-    fromId: string,
-    displayName: string,
-    pose: PresencePose,
-  ): void {
-    const from = this.peers.get(fromId);
-    const heroModelPath = from?.heroModelPath ?? DEFAULT_HERO_PATH;
+  private broadcastPeerState(fromId: string): void {
+    const rec = this.peers.get(fromId);
+    if (!rec || !rec.last) return;
     const payload = JSON.stringify({
       type: "peer_pose",
-      id: fromId,
-      displayName,
-      heroModelPath,
-      x: pose.x,
-      z: pose.z,
-      ry: pose.ry,
+      ...wirePeerRow(rec),
     });
     for (const p of this.peers.values()) {
       if (p.id === fromId) continue;
@@ -113,19 +142,22 @@ export class MapPresenceHub {
     }
   }
 
-  addConnection(ws: WebSocket): void {
+  addConnection(ws: WebSocket, shardIndex = 0): void {
+    attachWsKeepAlive(ws, "map-presence");
     const id = randomUUID();
     const peer: Peer = {
       id,
       displayName: "Тоглогч",
       heroModelPath: DEFAULT_HERO_PATH,
+      gerLevel: 1,
+      livestock: { ...ZERO_LS },
       ws,
       last: null,
       lastSentServer: 0,
     };
     this.peers.set(id, peer);
 
-    send(ws, { type: "welcome", id });
+    send(ws, { type: "welcome", id, shard: shardIndex });
 
     const snap = this.snapshotFor(id);
     if (snap.length > 0) {
@@ -150,6 +182,11 @@ export class MapPresenceHub {
             ? body.heroModelPath.slice(0, MAX_HERO_PATH_LEN).trim()
             : "";
         rec.heroModelPath = hp || DEFAULT_HERO_PATH;
+        const gl = Number(body.gerLevel);
+        rec.gerLevel =
+          Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1;
+        rec.livestock = parseLivestock(body);
+        if (rec.last) this.broadcastPeerState(id);
         return;
       }
 
@@ -163,7 +200,7 @@ export class MapPresenceHub {
         rec.lastSentServer = now;
         const pose = clampPose({ x, z, ry });
         rec.last = pose;
-        this.broadcastPeerPose(id, rec.displayName, pose);
+        this.broadcastPeerState(id);
       }
     });
 

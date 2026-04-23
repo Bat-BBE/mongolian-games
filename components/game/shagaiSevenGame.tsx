@@ -20,7 +20,7 @@ import { SevenPairPathAnimator } from "./shagaiSevenAnimator";
 import { SevenCollectAnimator } from "./shagaiSevenCollect";
 import type { KnockBurst } from "./shagaiSevenKnock";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import InventoryRewardOverlay from "./InventoryRewardOverlay";
 
 export type ShagaiSevenGameProps = {
@@ -583,9 +583,8 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
     if (completeRef.current) return;
     completeRef.current = true;
     const won = phase === "won";
-    if (won) grant({ gems: STONE_MATCH_GEMS });
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
-  }, [phase, onComplete, grant]);
+  }, [phase, onComplete]);
 
   const isWin = phase === "won";
   const pathPickActive =

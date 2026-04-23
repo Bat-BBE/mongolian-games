@@ -25,6 +25,9 @@ export interface UrtuuStation {
   /** API/admin map marker image (resolved absolute URL) */
   imageUrl?: string;
   distance?: string;
+  /** Өртөөний товч түүх (API quest_hint / quest_desc) */
+  questHint?: string | null;
+  questDesc?: string | null;
 }
 
 interface UrtuuNodeProps {

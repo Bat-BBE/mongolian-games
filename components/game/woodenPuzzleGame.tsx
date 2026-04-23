@@ -25,7 +25,6 @@ import {
   type PuzzleLevel,
 } from "./woodenPuzzleType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS } from "./gameRewardConstants";
 import InventoryRewardOverlay from "./InventoryRewardOverlay";
 import { playButtonClick } from "@/lib/uiSounds";
 import { useApp } from "@/components/AppContext";
@@ -595,8 +594,7 @@ function PuzzleScene({
 }
 
 export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) {
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const level = ALL_LEVELS[0];
   const snapDistance = level.snapDistance ?? SNAP_DISTANCE;
   const snapAngleRad = level.snapAngleRad ?? SNAP_ANGLE_RAD;
@@ -631,9 +629,8 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
     if (submittedRef.current) return;
     submittedRef.current = true;
     setPhase("won");
-    grant({ gems: STONE_MATCH_GEMS });
     onComplete?.("win", 100);
-  }, [grant, onComplete]);
+  }, [onComplete]);
 
   const onWinRef = useRef(onWin);
   onWinRef.current = onWin;

@@ -20,6 +20,8 @@ type Props = {
   suggestedMatchCode?: string | null;
   /** Хос ол: өрөөг гар ашиглахгүйгээр автоматаар нэгдэнэ. */
   autoMatchmaking?: boolean;
+  /** Homboroi: 1 тоглогчтой үед роботтой эхлүүлэх товч. */
+  homboroiMode?: boolean;
 };
 
 function useStrings() {
@@ -45,12 +47,16 @@ function useStrings() {
         err: "Алдаа",
         need2: "Хамгийн багадаа 2 тоглогч.",
         shared: "Ижил самбар",
-        soloNote: "Энэ тоглоомд зөвхөн өрөө + дохио; ижил тавилга удахгүй.",
+        soloNote:
+          "1–4: ээлжээр 32-руу уралдана. 1-ээр: доорх «Роботтой» эсвэл Online унтраана (өмнөх дүрэм).",
         stationRoom:
           "Энэ өртөө + тоглоомын нийтлэг код — найзтайгаа ижил өрөөнд орно.",
         autoJoining: "Өрөөнд нэгдэж байна…",
         autoHint:
           "Найз ирвэл хамтдаа эхэлнэ. 10 секунд хүлээгээд хүн ирэхгүй бол ганцаарчилсан самбар (роботгүй, ижил дүрэм) автоматаар эхэлнэ.",
+        homboroiSolo: "Роботтой эхлэх (1 хүн)",
+        homboroiNeedReady:
+          "2–4: бүгд бэлэн → «Эхлүүлэх». 1: зөвхөн «Роботтой эхлэх».",
       };
     }
     return {
@@ -72,11 +78,14 @@ function useStrings() {
       err: "Error",
       need2: "Need at least 2 players.",
       shared: "Shared board",
-      soloNote: "Lobby + signals only; same layout coming for more games.",
+      soloNote:
+        "1–4: take turns racing to 32. Solo: button below, or turn Online off (same rules with bot).",
       stationRoom: "Public code for this station + game — friends join the same room.",
       autoJoining: "Joining the room…",
       autoHint:
         "If a friend joins, you start together. After 10s alone, a solo board auto-starts (same rules, no bot).",
+      homboroiSolo: "Start vs bot (1 player)",
+      homboroiNeedReady: "2–4: all ready → «Start» by host. Solo: use «Start vs bot».",
     };
   }, [language]);
 }
@@ -87,6 +96,7 @@ export function MultiplayerMatchPanel({
   supportsSharedBoard,
   suggestedMatchCode,
   autoMatchmaking = false,
+  homboroiMode = false,
 }: Props) {
   const s = useStrings();
   const [joinInput, setJoinInput] = useState("");
@@ -210,7 +220,7 @@ export function MultiplayerMatchPanel({
         {autoMatchmaking && supportsSharedBoard
           ? `${s.autoHint} ${suggestedMatchCode?.trim() ? `★ ${s.shared}.` : ""}`
           : suggestedMatchCode?.trim()
-            ? `${s.stationRoom} ${supportsSharedBoard ? `★ ${s.shared}.` : ""} ${s.hint}`
+            ? `${s.stationRoom} ${supportsSharedBoard ? `★ ${s.shared}.` : ""} ${homboroiMode ? s.soloNote : s.hint}`
             : supportsSharedBoard
               ? `★ ${s.shared}. ${s.hint}`
               : s.soloNote}
@@ -235,32 +245,51 @@ export function MultiplayerMatchPanel({
             </ul>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {me && mp.roomStatus === "lobby" && !autoMatchmaking && (
-              <button
-                type="button"
-                className="rounded-md border border-amber-500/35 bg-amber-950/35 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-900/40"
-                onClick={() => {
-                  playButtonClick();
-                  mp.setReady(!me.ready);
-                }}
-              >
-                {me.ready ? s.unready : s.ready}
-              </button>
-            )}
+            {me &&
+              mp.roomStatus === "lobby" &&
+              !autoMatchmaking &&
+              !(homboroiMode && mp.players.length === 1) && (
+                <button
+                  type="button"
+                  className="rounded-md border border-amber-500/35 bg-amber-950/35 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-900/40"
+                  onClick={() => {
+                    playButtonClick();
+                    mp.setReady(!me.ready);
+                  }}
+                >
+                  {me.ready ? s.unready : s.ready}
+                </button>
+              )}
             {mp.isHost && mp.roomStatus === "lobby" && !autoMatchmaking && (
-              <button
-                type="button"
-                disabled={!allReady}
-                title={!allReady ? s.need2 : undefined}
-                className="inline-flex items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-950/40 px-2.5 py-1 text-[11px] font-medium text-emerald-100/95 enabled:hover:bg-emerald-900/45 disabled:cursor-not-allowed disabled:opacity-45"
-                onClick={() => {
-                  playButtonClick();
-                  mp.startMatch();
-                }}
-              >
-                <IconPlay className="size-3.5" />
-                {s.start}
-              </button>
+              <>
+                {homboroiMode && mp.players.length === 1 ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md border border-sky-500/40 bg-sky-950/45 px-2.5 py-1 text-[11px] font-medium text-sky-100/95 hover:bg-sky-900/45"
+                    onClick={() => {
+                      playButtonClick();
+                      mp.startMatch({ forceSolo: true });
+                    }}
+                  >
+                    <IconPlay className="size-3.5" />
+                    {s.homboroiSolo}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!allReady}
+                    title={!allReady ? s.need2 : undefined}
+                    className="inline-flex items-center gap-1 rounded-md border border-emerald-500/35 bg-emerald-950/40 px-2.5 py-1 text-[11px] font-medium text-emerald-100/95 enabled:hover:bg-emerald-900/45 disabled:cursor-not-allowed disabled:opacity-45"
+                    onClick={() => {
+                      playButtonClick();
+                      mp.startMatch();
+                    }}
+                  >
+                    <IconPlay className="size-3.5" />
+                    {s.start}
+                  </button>
+                )}
+              </>
             )}
             {mp.isHost && mp.roomStatus === "playing" && (
               <button

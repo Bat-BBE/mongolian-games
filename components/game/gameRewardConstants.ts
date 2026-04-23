@@ -3,4 +3,3 @@
  * Нэвтэрсэн үед л профайлд тусгагдана (useInventoryGrant).
  */
 export const STONE_ROUND_COINS = 3;
-export const STONE_MATCH_GEMS = 1;

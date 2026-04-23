@@ -24,6 +24,17 @@ import type { UrtuuStation } from "./UrtuuNode";
 import { materialLibrary } from "./MaterialLibrary";
 import { TerrainBuilder } from "./TerrainBuilder";
 
+function disposeRemoteCampSubtree(obj: THREE.Object3D): void {
+  obj.traverse((o) => {
+    if (o instanceof THREE.Mesh) {
+      o.geometry?.dispose();
+      const mat = o.material;
+      if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+      else mat?.dispose();
+    }
+  });
+}
+
 /** Цэгээс хэсэг хоёр цэгийн хоорондох хамгийн бага зай (x/z). */
 function distPointSegment2D(
   px: number,
@@ -48,7 +59,7 @@ function distPointSegment2D(
 
 /** Алсын тоглогчийн баатар → түүний гэр: хол зай + талын шилжилт (давхцал багасгах). */
 const REMOTE_VISITOR_CAMP_BACK_OFFSET = 32;
-const REMOTE_VISITOR_CAMP_LATERAL_SPREAD = 16;
+const REMOTE_VISITOR_CAMP_LATERAL_SPREAD = 22;
 
 function remoteCampLateralUnit(peerId: string): number {
   let h = 0;
@@ -842,7 +853,7 @@ export class SceneBuilder {
   }
 
   /**
-   * Бусад тоглогчийн дэргэд (тэдний чиглэлийн «хойно») жижиг гэр — таны PLAYER_HOME гэрт нөлөөлөхгүй.
+   * Бусад тоглогчийн дэргэд гэр + хашааны хүрээ (төвөгтэй realtime: түвшин, мал).
    */
   syncRemoteVisitorCamp(
     container: THREE.Group,
@@ -851,32 +862,113 @@ export class SceneBuilder {
     heroZ: number,
     heroRy: number,
     campByPeer: Map<string, THREE.Object3D>,
+    enclosureByPeer: Map<string, THREE.Mesh>,
+    meta?: {
+      gerLevel: number;
+      livestock: {
+        sheep: number;
+        goat: number;
+        cow: number;
+        horse: number;
+        camel: number;
+      };
+    },
   ): void {
     const safeName = `remote_visit_camp_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
-    const lat = REMOTE_VISITOR_CAMP_LATERAL_SPREAD * remoteCampLateralUnit(peerId);
-    const backX = -Math.sin(heroRy) * REMOTE_VISITOR_CAMP_BACK_OFFSET;
-    const backZ = -Math.cos(heroRy) * REMOTE_VISITOR_CAMP_BACK_OFFSET;
+    const lv = Math.max(1, Math.min(30, Math.floor(meta?.gerLevel ?? 1)));
+    const ls = meta?.livestock;
+    const sheepN = Math.max(0, Math.min(99, Math.floor(ls?.sheep ?? 0)));
+    const goatN = Math.max(0, Math.min(99, Math.floor(ls?.goat ?? 0)));
+    const cowN = Math.max(0, Math.min(99, Math.floor(ls?.cow ?? 0)));
+    const horseN = Math.max(0, Math.min(99, Math.floor(ls?.horse ?? 0)));
+    const camelN = Math.max(0, Math.min(99, Math.floor(ls?.camel ?? 0)));
+    const totalMal = Math.min(
+      160,
+      sheepN + goatN + cowN + horseN + camelN,
+    );
+
+    const step = Math.min(lv, 5);
+    const earlyScale = 0.5 + (step - 1) * 0.095;
+    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
+    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
+    const s = earlyScale * midBoost * highBoost * 1.86 * 0.5;
+
+    const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+    let ringSpan = 12.5;
+    if (extraGers > 0) {
+      ringSpan = 13.2 + Math.min(lv * 0.45, 10) + 7;
+    }
+    const yardW = Math.max(
+      34,
+      ringSpan * 2.15 + Math.min(lv, 8) * 0.9 + totalMal * 0.62,
+    );
+    const enclosureR = yardW * 0.5;
+    const metaKey = `${lv}|${totalMal}|${enclosureR.toFixed(1)}|${s.toFixed(2)}`;
+
+    const lat =
+      REMOTE_VISITOR_CAMP_LATERAL_SPREAD * 1.55 * remoteCampLateralUnit(peerId);
+    const backOff =
+      REMOTE_VISITOR_CAMP_BACK_OFFSET + Math.min(58, yardW * 0.13);
+    const backX = -Math.sin(heroRy) * backOff;
+    const backZ = -Math.cos(heroRy) * backOff;
     const sideX = Math.cos(heroRy) * lat;
     const sideZ = -Math.sin(heroRy) * lat;
     const gx = heroX + backX + sideX;
     const gz = heroZ + backZ + sideZ;
     const hy = terrainHeight(gx, gz);
-    const s = 0.9;
     const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
     const y = hy + gerLift;
+
     const existing = campByPeer.get(peerId);
-    if (existing && existing.parent === container) {
+    const needsRebuild =
+      !existing ||
+      existing.parent !== container ||
+      (existing.userData.campMeta as string | undefined) !== metaKey;
+
+    if (needsRebuild) {
+      if (existing) {
+        existing.removeFromParent();
+        disposeRemoteCampSubtree(existing);
+        campByPeer.delete(peerId);
+      }
+      this.makeGer(gx, gz, heroRy, s, false, "", container, safeName);
+      const created = container.getObjectByName(safeName);
+      if (created) {
+        created.userData.campMeta = metaKey;
+        campByPeer.set(peerId, created);
+      }
+    } else if (existing && existing.parent === container) {
       existing.position.set(gx, y, gz);
       existing.rotation.y = heroRy;
-      return;
     }
-    if (existing) {
-      existing.removeFromParent();
-      campByPeer.delete(peerId);
+
+    let ring = enclosureByPeer.get(peerId);
+    if (!ring || (ring.userData.campMeta as string | undefined) !== metaKey) {
+      if (ring) {
+        container.remove(ring);
+        ring.geometry.dispose();
+        (ring.material as THREE.Material).dispose();
+        enclosureByPeer.delete(peerId);
+      }
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x6e5a42,
+        transparent: true,
+        opacity: 0.4,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      ring = new THREE.Mesh(
+        new THREE.RingGeometry(enclosureR * 0.87, enclosureR, 64),
+        mat,
+      );
+      ring.name = `remote_enc_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
+      ring.rotation.x = -Math.PI / 2;
+      ring.userData.campMeta = metaKey;
+      enclosureByPeer.set(peerId, ring);
+      container.add(ring);
     }
-    this.makeGer(gx, gz, heroRy, s, false, "", container, safeName);
-    const created = container.getObjectByName(safeName);
-    if (created) campByPeer.set(peerId, created);
+    const rHy = terrainHeight(gx, gz) + 0.26;
+    ring.position.set(gx, rHy, gz);
   }
 
   private makeFence(

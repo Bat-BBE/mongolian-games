@@ -128,11 +128,13 @@ function computeWealthScore(profile: Record<string, unknown>): number {
   return Math.max(0, Math.floor(base));
 }
 
+/** `lib/homeEconomy.ts` `gerUpgradeCost`-тай ижил байх ёстой */
 function upgradeCost(gerLevel: number): { coins: number; kp: number } {
   const lvl = Math.max(1, Math.floor(gerLevel));
-  return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
+  return { coins: 130 + lvl * 52, kp: 42 + lvl * 11 };
 }
 
+/** `lib/homeEconomy.ts` LIVESTOCK_COIN_PRICES-тай ижил */
 function livestockCost(
   kind: "sheep" | "goat" | "cow" | "horse" | "camel",
   qty: number,
@@ -140,17 +142,18 @@ function livestockCost(
   const q = Math.max(1, Math.floor(qty));
   const unit =
     kind === "sheep"
-      ? 120
+      ? 85
       : kind === "goat"
-        ? 110
+        ? 78
         : kind === "cow"
-          ? 420
+          ? 300
           : kind === "horse"
-            ? 650
-            : 820;
+            ? 480
+            : 600;
   return { coins: unit * q };
 }
 
+/** Ялагчид олгох үндсэн шагнал. Эрдэнийн чулууг зөвхөн өртөөний 2 тоглоомыг анх бүрэн ялсны урамшууллаар өгнө. */
 function rewardFor(gameSlug: string): {
   xp: number;
   kp: number;
@@ -165,38 +168,38 @@ function rewardFor(gameSlug: string): {
   }>;
   gerLevelDelta?: number;
 } {
-  const base = { xp: 12, kp: 4, coins: 8, gems: 0 } as const;
+  const base = { xp: 14, kp: 6, coins: 12, gems: 0 } as const;
   switch (gameSlug) {
     case "shagai":
       return {
         ...base,
-        xp: 16,
-        kp: 6,
-        coins: 10,
+        xp: 18,
+        kp: 9,
+        coins: 17,
         gems: 0,
         livestock: { sheep: 1 },
       };
     case "stone-guess":
-      return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
+      return { ...base, xp: 16, kp: 7, coins: 15, gems: 0 };
     case "four-bones":
-      return { ...base, xp: 20, kp: 7, coins: 12, gems: 1 };
+      return { ...base, xp: 22, kp: 10, coins: 20, gems: 0 };
     case "horse-race":
       return {
         ...base,
-        xp: 22,
-        kp: 8,
-        coins: 14,
-        gems: 1,
+        xp: 24,
+        kp: 12,
+        coins: 22,
+        gems: 0,
         livestock: { horse: 1 },
       };
     case "shagai-guess":
-      return { ...base, xp: 18, kp: 6, coins: 11, gems: 1 };
+      return { ...base, xp: 20, kp: 9, coins: 18, gems: 0 };
     case "seven-shagai":
-      return { ...base, xp: 20, kp: 7, coins: 12, gems: 0 };
+      return { ...base, xp: 22, kp: 10, coins: 19, gems: 0 };
     case "puzzle":
-      return { ...base, xp: 14, kp: 5, coins: 9, gems: 0 };
+      return { ...base, xp: 16, kp: 7, coins: 14, gems: 0 };
     case "modon-onis":
-      return { ...base, xp: 16, kp: 6, coins: 10, gems: 1 };
+      return { ...base, xp: 18, kp: 8, coins: 16, gems: 0 };
     default:
       return { ...base };
   }
@@ -299,7 +302,9 @@ gameRouter.post("/complete", async (req, res) => {
       const doneIds = Array.isArray(doneIdsRaw)
         ? doneIdsRaw.map((x) => String(x))
         : [];
-      if (doneNow && !doneIds.includes(stationSlug)) {
+      const stationFirstFullClear =
+        doneNow && !doneIds.includes(stationSlug);
+      if (stationFirstFullClear) {
         doneIds.push(stationSlug);
       }
       progress.doneStationIds = doneIds;
@@ -312,7 +317,8 @@ gameRouter.post("/complete", async (req, res) => {
         ? { ...(profile.inventory as Record<string, unknown>) }
         : {};
       inv.coins = num(inv.coins, 0) + rwd.coins;
-      inv.gems = num(inv.gems, 0) + rwd.gems;
+      const gemBonus = stationFirstFullClear ? 2 : 0;
+      inv.gems = num(inv.gems, 0) + rwd.gems + gemBonus;
       profile.inventory = inv;
 
       const ger = isPlainRecord(profile.ger)
@@ -338,6 +344,13 @@ gameRouter.post("/complete", async (req, res) => {
       profile.wealthScore = computeWealthScore(profile);
     } else {
       progress.xp = num(progress.xp, 0) + 1;
+      const LOSE_PLAY_COINS = 10;
+      const inv = isPlainRecord(profile.inventory)
+        ? { ...(profile.inventory as Record<string, unknown>) }
+        : {};
+      inv.coins = num(inv.coins, 0) + LOSE_PLAY_COINS;
+      profile.inventory = inv;
+      profile.wealthScore = computeWealthScore(profile);
     }
 
     const upd = await pool.query(

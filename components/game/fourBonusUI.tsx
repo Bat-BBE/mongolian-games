@@ -164,7 +164,11 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     rules: [
       { n: "①", t: "Таны ээлж", d: "Шагай орхих" },
       { n: "②", t: "Оноо хураах", d: "Давтагдаагүй талаар тооцно" },
-      { n: "③", t: "Роботын ээлж", d: "Робот автоматаар орхидог" },
+      {
+        n: "③",
+        t: "Дараагийн тоглогчийн ээлж",
+        d: "Тоглогч ээлж дарааллаар шагай орхино",
+      },
       { n: "④", t: "Ялалт", d: `Түрүүлж ${TARGET_SCORE} оноо давах` },
     ],
     scoringTitle: "ОНООНЫ ШАЛГУУР",
@@ -560,7 +564,9 @@ function FourBonesRulesAsideBody({
             }}
           >
             <span>{s.label}</span>
-            <span style={{ color: "#f0c040", fontWeight: "bold" }}>{s.pts}</span>
+            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+              {s.pts}
+            </span>
           </div>
         ))}
       </div>

@@ -12,15 +12,9 @@ import { loadPlayer } from "@/components/hero-select/hero-data";
 import {
   getDashboardBundle,
   homeBuyLivestock,
-  homeExchangeGemsForCoins,
   homeUpgradeGer,
 } from "@/lib/api";
-import {
-  gerUpgradeCost,
-  LIVESTOCK_COIN_PRICES,
-  WEALTH_COINS_PER_GEM,
-  WEALTH_SCORE_GEM_WEIGHT,
-} from "@/lib/homeEconomy";
+import { gerUpgradeCost, LIVESTOCK_COIN_PRICES } from "@/lib/homeEconomy";
 import type { DashLang, DashStrings } from "./dashboard-strings";
 import { cn } from "@/lib/utils";
 
@@ -142,22 +136,6 @@ export function HomeModal({
     setCamel(Math.max(0, Math.floor(num(ls.camel, 0))));
   }
 
-  async function exchangeGems(qty: number) {
-    if (!email || qty < 1) return;
-    setLoading(true);
-    setErr(null);
-    try {
-      const { user } = await homeExchangeGemsForCoins({ email, gems: qty });
-      const prof = user.profile as Record<string, unknown>;
-      applyProfileFromUser(prof);
-      onChanged?.();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Алдаа");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(100vw-1.5rem,560px)] max-h-[min(90vh,760px)] overflow-y-auto border border-primary/25 bg-background/98 backdrop-blur-xl flex flex-col gap-2">
@@ -191,58 +169,6 @@ export function HomeModal({
           />
         </div>
 
-        <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-2 space-y-1">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {lang === "mn" ? "Чулуу → зоос" : "Gems → coins"}
-          </p>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            {lang === "mn" ? (
-              <>
-                1 эрдэнийн чулууг <strong>{WEALTH_COINS_PER_GEM} зоос</strong>{" "}
-                болгон солино. Жагсаалтын үнэлгээнд чулуу тус бүр{" "}
-                <strong>×{WEALTH_SCORE_GEM_WEIGHT}</strong> оноо (энэ
-                солилцооноос өөр).
-              </>
-            ) : (
-              <>
-                Trade <strong>1 gem</strong> for{" "}
-                <strong>{WEALTH_COINS_PER_GEM} coins</strong>. (Leaderboard
-                score uses gems × {WEALTH_SCORE_GEM_WEIGHT} — not the same as
-                this exchange rate.)
-              </>
-            )}
-          </p>
-          <div className="flex flex-wrap gap-1">
-            {([1, 5, 10] as const).map((n) => (
-              <Button
-                key={n}
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={loading || gems < n}
-                onClick={() => void exchangeGems(n)}
-              >
-                {n === 1
-                  ? lang === "mn"
-                    ? `1 чулуу → ${WEALTH_COINS_PER_GEM} зоос`
-                    : `1 gem → ${WEALTH_COINS_PER_GEM}`
-                  : lang === "mn"
-                    ? `${n} чулуу`
-                    : `${n} gems`}
-              </Button>
-            ))}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={loading || gems < 1}
-              onClick={() => void exchangeGems(gems)}
-            >
-              {lang === "mn" ? "Бүгдийг солих" : "Exchange all"}
-            </Button>
-          </div>
-        </div>
-
         <div className="rounded-xl border border-primary/15 bg-primary/[0.04] p-2 space-y-2">
           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             {lang === "mn" ? "Мал сүрэг" : "Livestock"}
@@ -250,13 +176,12 @@ export function HomeModal({
           <p className="text-[11px] text-muted-foreground leading-snug">
             {lang === "mn" ? (
               <>
-                Малыг зөвхөн <strong>зоосоор</strong> авна. Дутуу бол дээрхээр
-                чулуугаа зоос болгоорой.
+                Малыг зөвхөн <strong>зоосоор</strong> авна. {t.homeGemExchangePointer}
               </>
             ) : (
               <>
-                Livestock costs <strong>coins only</strong> — convert gems above
-                if you need more coins.
+                Livestock costs <strong>coins only</strong>.{" "}
+                {t.homeGemExchangePointer}
               </>
             )}
           </p>

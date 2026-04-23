@@ -12,7 +12,29 @@ import { StationLabels } from "./StationLabels";
 import { STATION_CONFIGS } from "./mapConstants";
 import GameModal from "@/components/game/gameModal";
 import { resolveAssetUrl } from "@/lib/api";
-import { LuCircleHelp as HelpCircle } from "react-icons/lu";
+import {
+  LuBookOpen,
+  LuFlame,
+  LuGhost,
+  LuHand,
+  LuHeart,
+  LuMusic2,
+  LuSmartphone,
+  LuSmile,
+  LuSparkles,
+  LuSwords,
+  LuUser,
+  LuX,
+} from "react-icons/lu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { MapVirtualJoystick } from "./MapVirtualJoystick";
+import type { IconType } from "react-icons";
+
+const MAP_LANDSCAPE_HINT_DISMISSED_KEY = "mapLandscapeHintDismissed";
 
 interface MapAreaProps {
   t: DashStrings;
@@ -35,6 +57,8 @@ interface MapAreaProps {
     available?: boolean;
     games?: MapStationGamePreview[];
     game?: { slug?: string; name: string; desc: string; reward: string };
+    quest_hint?: string | null;
+    quest_desc?: string | null;
   }[];
   heroModelPath?: string | null;
   onGameCompleted?: () => void;
@@ -66,14 +90,55 @@ export function MapArea({
   const presencePublishRef = useRef<
     ((x: number, z: number, ry: number) => void) | null
   >(null);
-  const [mapGuideOpen, setMapGuideOpen] = useState(false);
+  const [mapEmoteOpen, setMapEmoteOpen] = useState(false);
   const [docHidden, setDocHidden] = useState(false);
+  const [mapLandscapeHintDismissed, setMapLandscapeHintDismissed] =
+    useState(false);
+  const [mapLandscapePortraitNarrow, setMapLandscapePortraitNarrow] =
+    useState(false);
+  const [mapLandscapeHintReady, setMapLandscapeHintReady] = useState(false);
+
   useEffect(() => {
     const onVis = () => setDocHidden(document.hidden);
     onVis();
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
+
+  useEffect(() => {
+    try {
+      setMapLandscapeHintDismissed(
+        localStorage.getItem(MAP_LANDSCAPE_HINT_DISMISSED_KEY) === "1",
+      );
+    } catch {
+      /* private mode / blocked storage */
+    }
+    setMapLandscapeHintReady(true);
+  }, []);
+
+  useEffect(() => {
+    const mqPortrait = window.matchMedia("(orientation: portrait)");
+    const mqNarrow = window.matchMedia("(max-width: 1023px)");
+    const sync = () =>
+      setMapLandscapePortraitNarrow(mqPortrait.matches && mqNarrow.matches);
+    sync();
+    mqPortrait.addEventListener("change", sync);
+    mqNarrow.addEventListener("change", sync);
+    return () => {
+      mqPortrait.removeEventListener("change", sync);
+      mqNarrow.removeEventListener("change", sync);
+    };
+  }, []);
+
+  function dismissMapLandscapeHint() {
+    try {
+      localStorage.setItem(MAP_LANDSCAPE_HINT_DISMISSED_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    setMapLandscapeHintDismissed(true);
+  }
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const dismissedStationRef = useRef<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<{
@@ -82,6 +147,12 @@ export function MapArea({
     stationSlug: string;
     gameSlug: string;
   } | null>(null);
+
+  const showMapLandscapeHint =
+    mapLandscapeHintReady &&
+    !mapLandscapeHintDismissed &&
+    mapLandscapePortraitNarrow &&
+    !selectedGame;
 
   const mapStationsRevision = useMemo(
     () =>
@@ -95,6 +166,23 @@ export function MapArea({
         .join("|"),
     [apiStations],
   );
+
+  const presenceLivestock = useMemo(() => {
+    if (!homeLivestock) return null;
+    return {
+      sheep: homeLivestock.sheep,
+      goat: homeLivestock.goat,
+      cow: homeLivestock.cow,
+      horse: homeLivestock.horse,
+      camel: homeLivestock.camel,
+    };
+  }, [
+    homeLivestock?.sheep,
+    homeLivestock?.goat,
+    homeLivestock?.cow,
+    homeLivestock?.horse,
+    homeLivestock?.camel,
+  ]);
 
   const stations: UrtuuStation[] = useMemo(() => {
     const stationMap = new Map(apiStations.map((s) => [s.id, s]));
@@ -128,6 +216,8 @@ export function MapArea({
         gameName: firstGame?.name ?? "",
         gameDesc: firstGame?.desc ?? "",
         reward: firstGame?.reward ?? "",
+        questHint: fromApi?.quest_hint?.trim() || null,
+        questDesc: fromApi?.quest_desc?.trim() || null,
         available: fromApi?.available ?? false,
         pos: {
           left: fromApi?.pos?.left ?? cfg.left,
@@ -166,8 +256,11 @@ export function MapArea({
 
   const { publishPose, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
-    enabled: !selectedGame && !docHidden,
+    /** Тоглоомын цонх нээхэд WS хаавал бусдад peer_left — холболт тасрах шалтгаан болдог */
+    enabled: !docHidden,
     heroModelPath: heroModelPath ?? null,
+    gerLevel: homeGerLevel,
+    livestock: presenceLivestock,
   });
   presencePublishRef.current = publishPose;
 
@@ -187,6 +280,9 @@ export function MapArea({
     showAllMapLabels,
     goToHomeGer,
     travelToStation,
+    mapHeroEmoteIds,
+    playMapHeroEmote,
+    mapVirtualStickRef,
   } = useThreeScene({
     containerRef: canvasRef,
     stations,
@@ -198,6 +294,7 @@ export function MapArea({
     homeGerLevel,
     homeLivestock,
     userEmail,
+    playerHomeKey: [userEmail, playerDisplayName].filter(Boolean).join("|"),
     onHeroAtStationChange,
     paused: !!selectedGame || docHidden,
     presencePublishRef,
@@ -222,6 +319,45 @@ export function MapArea({
     setSelectedId(heroAtStationId);
   }, [heroAtStationId]);
 
+  const mapEmoteIconById: Record<string, IconType> = {
+    wave: LuHand,
+    greet: LuSmile,
+    kiss: LuHeart,
+    dance: LuMusic2,
+    boxing: LuSwords,
+    booty: LuFlame,
+    hip_hop: LuMusic2,
+    praying: LuBookOpen,
+    silly_dance: LuGhost,
+  };
+
+  function mapEmoteAria(id: string): string {
+    switch (id) {
+      case "idle":
+        return t.mapHeroEmoteIdleAria;
+      case "wave":
+        return t.mapHeroEmoteWaveAria;
+      case "greet":
+        return t.mapHeroEmoteGreetAria;
+      case "kiss":
+        return t.mapHeroEmoteKissAria;
+      case "dance":
+        return t.mapHeroEmoteDanceAria;
+      case "boxing":
+        return t.mapHeroEmoteBoxingAria;
+      case "booty":
+        return t.mapHeroEmoteBootyAria;
+      case "hip_hop":
+        return t.mapHeroEmoteHipHopAria;
+      case "praying":
+        return t.mapHeroEmotePrayingAria;
+      case "silly_dance":
+        return t.mapHeroEmoteSillyDanceAria;
+      default:
+        return id;
+    }
+  }
+
   return (
     <main
       data-tour-anchor="map-area"
@@ -229,44 +365,104 @@ export function MapArea({
     >
       <div ref={canvasRef} className="absolute inset-0 min-w-0" />
 
-      {mapGuideOpen ? (
-        <aside
+      {showMapLandscapeHint ? (
+        <div
+          role="status"
           className={cn(
-            "pointer-events-auto absolute left-3 top-3 z-[60] max-h-[min(46vh,320px)] w-[min(calc(100%-1.5rem),15rem)] overflow-y-auto",
-            "rounded-xl border border-sky-400/20 bg-gradient-to-b from-slate-950/96 to-slate-900/94 p-2.5 shadow-2xl backdrop-blur-md",
-            "ring-1 ring-white/10",
+            "pointer-events-auto absolute left-1/2 z-[59] max-w-[min(calc(100%-1.5rem),22rem)] -translate-x-1/2",
+            "top-[max(0.5rem,env(safe-area-inset-top,0px))]",
+            "flex items-start gap-2 rounded-xl border border-sky-400/30 bg-slate-950/94 py-2 pl-2.5 pr-1 shadow-lg backdrop-blur-md",
           )}
-          aria-label={t.mapGuideTitle}
         >
-          <div className="flex items-start justify-between gap-2">
-            <p className="min-w-0 text-[11px] font-semibold leading-tight text-sky-200/95">
-              {t.mapGuideTitle}
-            </p>
-            <button
-              type="button"
-              onClick={() => setMapGuideOpen(false)}
-              className="shrink-0 rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-semibold text-slate-300 hover:bg-white/10"
+          <LuSmartphone
+            className="mt-0.5 size-4 shrink-0 rotate-90 text-sky-300/90 sm:size-[1.05rem]"
+            aria-hidden
+          />
+          <p className="min-w-0 flex-1 text-[11px] font-medium leading-snug text-sky-50/95 sm:text-xs">
+            {t.mapLandscapeHint}
+          </p>
+          <button
+            type="button"
+            onClick={dismissMapLandscapeHint}
+            className="shrink-0 rounded-lg p-1 text-sky-200/80 hover:bg-white/10 hover:text-sky-50"
+            aria-label={t.dialogClose}
+          >
+            <LuX className="size-4" aria-hidden />
+          </button>
+        </div>
+      ) : null}
+
+      {heroModelPath?.trim() ? (
+        <>
+          <MapVirtualJoystick
+            stickRef={mapVirtualStickRef}
+            disabled={!!selectedGame || docHidden}
+            ariaLabel={t.mapJoystickMoveAria}
+            className="absolute right-3 bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom,0px)))] lg:hidden"
+          />
+          <Popover open={mapEmoteOpen} onOpenChange={setMapEmoteOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={t.mapHeroEmoteMenuAria}
+                aria-label={t.mapHeroEmoteMenuAria}
+                className={cn(
+                  "pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
+                  "border border-white/45 bg-white/12 text-amber-100 shadow-md backdrop-blur-md",
+                  "hover:bg-white/18 hover:border-white/55",
+                  "top-[max(0.5rem,env(safe-area-inset-top,0px))] md:top-4",
+                )}
+              >
+                <LuSparkles className="size-5" aria-hidden />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              sideOffset={8}
+              className="z-[200] w-auto border border-white/30 bg-slate-950/98 p-1.5 text-popover-foreground shadow-2xl backdrop-blur-md"
             >
-              {t.mapGuideHide}
-            </button>
-          </div>
-          <ol className="mt-2 list-decimal space-y-1 pl-3.5 text-[10px] leading-snug text-slate-100/90 marker:font-semibold marker:text-sky-300/85">
-            <li>{t.mapGuideStep1}</li>
-            <li>{t.mapGuideStep2}</li>
-            <li>{t.mapGuideStep3}</li>
-          </ol>
-        </aside>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setMapGuideOpen(true)}
-          title={t.mapGuideShow}
-          aria-label={t.mapGuideShow}
-          className="pointer-events-auto absolute left-3 top-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full border border-sky-500/35 bg-slate-950/92 text-sky-200 shadow-lg backdrop-blur-md hover:bg-slate-900 hover:border-sky-400/50"
-        >
-          <HelpCircle className="size-[1.125rem]" aria-hidden />
-        </button>
-      )}
+              <div
+                className="flex flex-wrap justify-end gap-1.5"
+                role="group"
+                aria-label={t.mapHeroEmoteMenuAria}
+              >
+                <button
+                  type="button"
+                  title={t.mapHeroEmoteIdleAria}
+                  aria-label={t.mapHeroEmoteIdleAria}
+                  onClick={() => {
+                    playMapHeroEmote("idle");
+                    setMapEmoteOpen(false);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                >
+                  <LuUser className="size-5" aria-hidden />
+                </button>
+                {mapHeroEmoteIds.map((id) => {
+                  const Icon = mapEmoteIconById[id];
+                  if (!Icon) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      title={mapEmoteAria(id)}
+                      aria-label={mapEmoteAria(id)}
+                      onClick={() => {
+                        playMapHeroEmote(id);
+                        setMapEmoteOpen(false);
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                    >
+                      <Icon className="size-5" aria-hidden />
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </>
+      ) : null}
 
       <StationLabels
         stations={stationsForLabels}
@@ -300,10 +496,10 @@ export function MapArea({
               gameSlug: slug,
             });
           }}
-          loreLabel={t.lore}
-          minigameLabel={t.minigame}
           regionLabel={t.mapRegionLabel}
           gamesSectionLabel={t.gamesAtStation}
+          historyTitle={t.mapStationHistoryTitle}
+          playLabel={t.mapPlayGameShort}
           lockedHint={t.gameStatusLocked}
           doneHint={t.gameStatusDone}
           canPlay

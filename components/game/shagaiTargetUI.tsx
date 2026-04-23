@@ -30,6 +30,19 @@ interface Props {
   sessionGain?: { coins: number; gems: number };
   /** Whose turn the current physical throw belongs to. */
   currentTurn?: "player" | "robot";
+  uiMode?: "robot" | "mp";
+  /** Олон тоглогчийн оноо ба ээлж. */
+  mp?: {
+    myId: string;
+    nameById: Record<string, string>;
+    order: string[];
+    scores: Record<string, number>;
+    turnPlayerId: string;
+  };
+  /** Toast: сүүлчийн нүүдлийн товч мэдээлэл. */
+  mpToastText?: string | null;
+  /** Дүрмийн панелээс нэмэлт дэлгэрэнгүй (талууд гэх мэт) нуух. */
+  compactRules?: boolean;
 }
 
 type UiStrings = {
@@ -80,6 +93,13 @@ type UiStrings = {
   robotTag: string;
   tapHint: string;
   labels: Record<ScoreLabelKey, string>;
+  /** Олон тоглогч */
+  mpSubtitle: string;
+  mpWait: (name: string) => string;
+  youWonMp: string;
+  theyWonMp: (name: string) => string;
+  mpNotYourTurn: string;
+  mpScoring: string;
 };
 
 function useI18n(): UiStrings & { language: "mn" | "en" } {
@@ -144,6 +164,12 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     playerTag: "YOU",
     robotTag: "ROBOT",
     tapHint: "You can also click a shagai to throw",
+    mpSubtitle: "4 SHAGAI · 32 EXACT · 1–4 PLAYERS / TURNS",
+    mpWait: (name) => `${name}'s turn`,
+    youWonMp: "You hit 32 or four horses first!",
+    theyWonMp: (name) => `${name} wins!`,
+    mpNotYourTurn: "Wait — not your turn",
+    mpScoring: "Scoring…",
     labels: {
       "": "",
       berkh: "Dörvön berkh (4 unique)",
@@ -212,6 +238,12 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     playerTag: "ТА",
     robotTag: "РОБОТ",
     tapHint: "Шагай дээр дарж ч шидэж болно",
+    mpSubtitle: "4 ШАГАЙ · ЯГ 32 · 1–4 ТОГЛОГЧ ЭЭЛЖЭЭР",
+    mpWait: (name) => `${name}-н ээлж…`,
+    youWonMp: "Та түрүүлсэн (32 / дөрвөн морь)",
+    theyWonMp: (name) => `${name} яллаа!`,
+    mpNotYourTurn: "Хүлээнэ — таны ээлж биш",
+    mpScoring: "Үр дүн…",
     labels: {
       "": "",
       berkh: "Дөрвөн бэрх (4 өөр)",
@@ -429,10 +461,12 @@ function HistoryList({
   history,
   t,
   language,
+  mpNameFor,
 }: {
   history: GameState["history"];
   t: UiStrings;
   language: "mn" | "en";
+  mpNameFor?: (id: string) => string;
 }) {
   if (history.length === 0)
     return (
@@ -485,7 +519,11 @@ function HistoryList({
                 minWidth: 30,
               }}
             >
-              {r.turn === "robot" ? t.robotTag : t.playerTag}
+              {r.mpThrowerId && mpNameFor
+                ? (mpNameFor(r.mpThrowerId).slice(0, 12) || "?")
+                : r.turn === "robot"
+                  ? t.robotTag
+                  : t.playerTag}
             </span>
             <div style={{ display: "flex", gap: 3 }}>
               {r.sides.map((s, j) => (
@@ -523,6 +561,8 @@ function TargetRulesAsideBody({
   sessionGain,
   matchOver,
   onReset,
+  hideShagaiSides,
+  mpNameFor,
 }: {
   showRulesHeading: boolean;
   t: UiStrings;
@@ -532,6 +572,8 @@ function TargetRulesAsideBody({
   sessionGain?: { coins: number; gems: number };
   matchOver: boolean;
   onReset: () => void;
+  hideShagaiSides?: boolean;
+  mpNameFor?: (id: string) => string;
 }) {
   return (
     <>
@@ -637,90 +679,98 @@ function TargetRulesAsideBody({
           marginBottom: 8,
         }}
       >
-        {t.stats.map(({ label, valueKey }) => (
-          <div
-            key={label}
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 8,
-              padding: "6px 8px",
-              textAlign: "center",
-            }}
-          >
+        {t.stats
+          .filter((s) => (hideShagaiSides ? s.valueKey !== "robotScore" : true))
+          .map(({ label, valueKey }) => (
             <div
+              key={label}
               style={{
-                color:
-                  valueKey === "playerScore"
-                    ? "#60c060"
-                    : valueKey === "robotScore"
-                      ? "#e06050"
-                      : "#f0c040",
-                fontSize: 16,
-                fontWeight: "bold",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 8,
+                padding: "6px 8px",
+                textAlign: "center",
               }}
             >
-              {String(state[valueKey] ?? 0)}
+              <div
+                style={{
+                  color:
+                    valueKey === "playerScore"
+                      ? "#60c060"
+                      : valueKey === "robotScore"
+                        ? "#e06050"
+                        : "#f0c040",
+                  fontSize: 16,
+                  fontWeight: "bold",
+                }}
+              >
+                {String(state[valueKey] ?? 0)}
+              </div>
+              <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>
+                {label}
+              </div>
             </div>
-            <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>
-              {label}
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       <GoldDivider />
 
-      <div
-        style={{
-          color: "#666",
-          fontSize: 10,
-          letterSpacing: 2,
-          marginBottom: 6,
-        }}
-      >
-        {t.shagaiSidesLabel}
-      </div>
-      {(["horse", "sheep", "goat", "camel"] as ShagaiSide[]).map((side) => {
-        const info = SHAGAI_INFO[side];
-        const isSettled = settledSides.includes(side);
-        return (
+      {!hideShagaiSides ? (
+        <>
           <div
-            key={side}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "3px 6px",
-              borderRadius: 6,
-              marginBottom: 2,
-              background: isSettled
-                ? `rgba(${hexToRgb(info.color)},0.12)`
-                : "transparent",
-              border: isSettled
-                ? `1px solid ${info.color}44`
-                : "1px solid transparent",
-              transition: "all 0.3s",
+              color: "#666",
+              fontSize: 10,
+              letterSpacing: 2,
+              marginBottom: 6,
             }}
           >
-            <span style={{ fontSize: 15 }}>{info.symbol}</span>
-            <span
-              style={{
-                color: isSettled ? info.color : "#666",
-                fontSize: 12,
-                flex: 1,
-              }}
-            >
-              {sideName(side, language)}
-            </span>
-            {isSettled && (
-              <span style={{ color: info.color, fontSize: 14 }}>✓</span>
-            )}
+            {t.shagaiSidesLabel}
           </div>
-        );
-      })}
+          {(["horse", "sheep", "goat", "camel"] as ShagaiSide[]).map(
+            (side) => {
+              const info = SHAGAI_INFO[side];
+              const isSettled = settledSides.includes(side);
+              return (
+                <div
+                  key={side}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "3px 6px",
+                    borderRadius: 6,
+                    marginBottom: 2,
+                    background: isSettled
+                      ? `rgba(${hexToRgb(info.color)},0.12)`
+                      : "transparent",
+                    border: isSettled
+                      ? `1px solid ${info.color}44`
+                      : "1px solid transparent",
+                    transition: "all 0.3s",
+                  }}
+                >
+                  <span style={{ fontSize: 15 }}>{info.symbol}</span>
+                  <span
+                    style={{
+                      color: isSettled ? info.color : "#666",
+                      fontSize: 12,
+                      flex: 1,
+                    }}
+                  >
+                    {sideName(side, language)}
+                  </span>
+                  {isSettled && (
+                    <span style={{ color: info.color, fontSize: 14 }}>✓</span>
+                  )}
+                </div>
+              );
+            },
+          )}
 
-      <GoldDivider />
+          <GoldDivider />
+        </>
+      ) : null}
 
       <div
         style={{
@@ -732,7 +782,12 @@ function TargetRulesAsideBody({
       >
         {t.historyTitle}
       </div>
-      <HistoryList history={state.history} t={t} language={language} />
+      <HistoryList
+        history={state.history}
+        t={t}
+        language={language}
+        mpNameFor={mpNameFor}
+      />
 
       {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) ? (
         <>
@@ -765,7 +820,7 @@ function TargetRulesAsideBody({
         </>
       ) : null}
 
-      {state.totalThrows > 0 && !matchOver && (
+      {state.totalThrows > 0 && !matchOver && !hideShagaiSides && (
         <button
           type="button"
           onClick={() => {
@@ -813,6 +868,10 @@ export default function ShagaiTargetUI({
   rewardEvents = [],
   sessionGain,
   currentTurn = "player",
+  uiMode = "robot",
+  mp,
+  mpToastText,
+  compactRules = false,
 }: Props) {
   const t = useI18n();
   const language = t.language;
@@ -825,15 +884,45 @@ export default function ShagaiTargetUI({
   const mainPanelPad: React.CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : {};
-  const canThrow = state.phase === "idle" || state.phase === "robotResult";
+  const isMyTurnMp =
+    uiMode === "mp" && mp ? mp.turnPlayerId === mp.myId : true;
+  const canThrowBase = state.phase === "idle" || state.phase === "robotResult";
+  const canThrow = canThrowBase && (uiMode !== "mp" || isMyTurnMp);
   const matchOver = state.phase === "matchOver";
-  const playerWon = matchOver && state.winner === "player";
-  const robotWon = matchOver && state.winner === "robot";
+  const playerWon =
+    matchOver &&
+    (uiMode === "mp" && state.mpWinnerId != null && mp
+      ? state.mpWinnerId === mp.myId
+      : state.winner === "player");
+  const robotWon =
+    matchOver &&
+    (uiMode === "mp" && state.mpWinnerId != null && mp
+      ? state.mpWinnerId !== mp.myId
+      : state.winner === "robot");
   const lastRound = state.history[state.history.length - 1];
   const playerExactThisRound =
     state.phase === "playerResult" && !!lastRound?.exactWin;
 
   const statusLine = (() => {
+    if (uiMode === "mp" && mp) {
+      if (matchOver) {
+        if (state.mpWinnerId === mp.myId) {
+          return lastRound?.instantMatchWin
+            ? t.youWonFourHorses
+            : t.youWonMp;
+        }
+        const w = state.mpWinnerId
+          ? mp.nameById[state.mpWinnerId] ?? "?"
+          : "?";
+        return t.theyWonMp(w);
+      }
+      if (
+        state.phase === "idle" &&
+        mp.turnPlayerId !== mp.myId
+      ) {
+        return t.mpWait(mp.nameById[mp.turnPlayerId] ?? "…");
+      }
+    }
     if (matchOver) {
       const last = state.history[state.history.length - 1];
       if (playerWon) {
@@ -848,6 +937,26 @@ export default function ShagaiTargetUI({
       return currentTurn === "robot" ? t.robotRolling : t.rollingHint;
     }
     if (state.phase === "playerResult") {
+      if (
+        uiMode === "mp" &&
+        mp &&
+        lastRound?.mpThrowerId &&
+        lastRound.mpThrowerId !== mp.myId
+      ) {
+        const n = mp.nameById[lastRound.mpThrowerId] ?? "?";
+        if (lastRound.instantMatchWin) {
+          return language === "en" ? `${n} — four horses!` : `${n} — дөрвөн морь!`;
+        }
+        if (lastRound.bust) {
+          return language === "en" ? `${n} busted` : `${n} 32-аас хэтэрсэн`;
+        }
+        if (state.lastPlayerPoints === 0) {
+          return language === "en" ? `${n} — 0 pts` : `${n} — 0 оноо`;
+        }
+        return language === "en"
+          ? `${n}: +${state.lastPlayerPoints} pts`
+          : `${n}: +${state.lastPlayerPoints} оноо`;
+      }
       if (playerExactThisRound) return t.youWon;
       if (lastRound?.bust) return t.youBusted;
       if (state.lastPlayerPoints === 0) return t.playerZero;
@@ -890,8 +999,11 @@ export default function ShagaiTargetUI({
   const playerBust =
     state.phase === "playerResult" &&
     !!lastRound?.bust &&
-    lastRound?.turn === "player";
+    (uiMode === "mp" && mp
+      ? lastRound?.mpThrowerId === mp.myId
+      : lastRound?.turn === "player");
   const robotBust =
+    uiMode !== "mp" &&
     (state.phase === "robotResult" || state.phase === "robotThinking") &&
     !!lastRound?.bust &&
     lastRound?.turn === "robot";
@@ -952,6 +1064,31 @@ export default function ShagaiTargetUI({
               </div>
             </div>
           ))}
+          {mpToastText ? (
+            <div
+              style={{
+                marginBottom: 8,
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(200,160,48,0.4)",
+                  background: "rgba(20,16,8,0.75)",
+                  color: "#e8d4a0",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  maxWidth: "min(90vw, 360px)",
+                  textAlign: "center",
+                }}
+              >
+                {mpToastText}
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -973,35 +1110,100 @@ export default function ShagaiTargetUI({
           </div>
           {!narrowUi ? (
             <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
-              {t.subtitle}
+              {uiMode === "mp" ? t.mpSubtitle : t.subtitle}
             </div>
           ) : null}
         </div>
 
         <GoldDivider />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 10,
-            marginBottom: 6,
-          }}
-        >
-          <ScoreCell
-            label={t.you}
-            value={state.playerScore}
-            color={playerBust ? "#e06050" : "#60c060"}
-            pct={pctPlayer}
-            bust={playerBust}
-          />
-          <ScoreCell
-            label={t.robot}
-            value={state.robotScore}
-            color={robotBust ? "#e06050" : "#e08040"}
-            pct={pctRobot}
-            bust={robotBust}
-          />
-        </div>
+        {uiMode === "mp" && mp ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 8,
+              marginBottom: 6,
+            }}
+          >
+            <ScoreCell
+              label={t.you}
+              value={mp.scores[mp.myId] ?? 0}
+              color={playerBust ? "#e06050" : "#60c060"}
+              pct={Math.min(100, ((mp.scores[mp.myId] ?? 0) / TARGET_SCORE) * 100)}
+              bust={playerBust}
+            />
+            <div
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(200,180,90,0.2)",
+                borderRadius: 10,
+                padding: "6px 8px",
+                minHeight: 48,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                justifyContent: "center",
+              }}
+            >
+              {mp.order
+                .filter((id) => id !== mp.myId)
+                .map((id) => {
+                  const v = mp.scores[id] ?? 0;
+                  return (
+                    <div
+                      key={id}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "baseline",
+                        gap: 6,
+                        fontSize: 11,
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "#aaa",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={mp.nameById[id]}
+                      >
+                        {mp.nameById[id] || "—"}
+                      </span>
+                      <span style={{ color: "#e8b030", fontWeight: "bold" }}>
+                        {v}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+              marginBottom: 6,
+            }}
+          >
+            <ScoreCell
+              label={t.you}
+              value={state.playerScore}
+              color={playerBust ? "#e06050" : "#60c060"}
+              pct={pctPlayer}
+              bust={playerBust}
+            />
+            <ScoreCell
+              label={t.robot}
+              value={state.robotScore}
+              color={robotBust ? "#e06050" : "#e08040"}
+              pct={pctRobot}
+              bust={robotBust}
+            />
+          </div>
+        )}
         <div
           style={{
             color: "#666",
@@ -1045,7 +1247,9 @@ export default function ShagaiTargetUI({
           language={language}
         />
 
-        {state.lastPlayerLabel && state.phase === "playerResult" ? (
+        {state.lastPlayerLabel &&
+        state.phase === "playerResult" &&
+        !compactRules ? (
           <div
             style={{
               textAlign: "center",
@@ -1059,9 +1263,10 @@ export default function ShagaiTargetUI({
           </div>
         ) : null}
 
-        {(state.phase === "robotThinking" ||
-          state.phase === "robotResult" ||
-          (state.phase === "matchOver" && state.robotSides)) && (
+        {uiMode !== "mp" &&
+          (state.phase === "robotThinking" ||
+            state.phase === "robotResult" ||
+            (state.phase === "matchOver" && state.robotSides)) && (
           <RobotPanel
             sides={state.robotSides}
             revealed={
@@ -1094,7 +1299,7 @@ export default function ShagaiTargetUI({
             }}
           >
             <div style={{ fontSize: 32, marginBottom: 4 }}>
-              {playerWon ? "🏆" : "🤖"}
+              {playerWon ? "🏆" : uiMode === "mp" ? "👤" : "🤖"}
             </div>
             <div
               style={{
@@ -1104,10 +1309,25 @@ export default function ShagaiTargetUI({
                 letterSpacing: 2,
               }}
             >
-              {playerWon ? t.youWon : t.robotWon}
+              {uiMode === "mp" && state.mpWinnerId && mp
+                ? playerWon
+                  ? t.youWonMp
+                  : t.theyWonMp(
+                      mp.nameById[state.mpWinnerId] ?? "?",
+                    )
+                : playerWon
+                  ? t.youWon
+                  : t.robotWon}
             </div>
             <div style={{ color: "#aaa", fontSize: 11, marginTop: 4 }}>
-              {state.playerScore} : {state.robotScore}
+              {uiMode === "mp" && mp
+                ? Object.entries(mp.scores)
+                    .map(
+                      ([id, s]) =>
+                        `${(mp.nameById[id] || "?").slice(0, 10)}: ${s}`,
+                    )
+                    .join(" · ")
+                : `${state.playerScore} : ${state.robotScore}`}
             </div>
           </div>
         )}
@@ -1155,10 +1375,13 @@ export default function ShagaiTargetUI({
             ? t.resetBtn
             : state.phase === "throwing" || state.phase === "settling"
               ? t.throwingButton
-              : state.phase === "robotThinking" ||
-                  state.phase === "playerResult"
-                ? t.waitingRobot
-                : t.throwButton}
+              : state.phase === "playerResult" && uiMode === "mp"
+                ? t.mpScoring
+              : !canThrow && uiMode === "mp" && !isMyTurnMp
+                ? t.mpNotYourTurn
+                : state.phase === "robotThinking" || state.phase === "playerResult"
+                  ? t.waitingRobot
+                  : t.throwButton}
         </button>
 
         <div
@@ -1187,6 +1410,12 @@ export default function ShagaiTargetUI({
             sessionGain={sessionGain}
             matchOver={matchOver}
             onReset={onReset}
+            hideShagaiSides={compactRules}
+            mpNameFor={
+              uiMode === "mp" && mp
+                ? (id) => mp.nameById[id] ?? "?"
+                : undefined
+            }
           />
         </div>
       ) : (
@@ -1212,6 +1441,12 @@ export default function ShagaiTargetUI({
               sessionGain={sessionGain}
               matchOver={matchOver}
               onReset={onReset}
+              hideShagaiSides={compactRules}
+              mpNameFor={
+                uiMode === "mp" && mp
+                  ? (id) => mp.nameById[id] ?? "?"
+                  : undefined
+              }
             />
           </GameRulesSheet>
         </>

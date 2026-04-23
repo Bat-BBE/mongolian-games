@@ -251,6 +251,8 @@ export type LeaderboardEntry = {
   name: string;
   xp: number;
   hero_id: string | null;
+  /** `GET /api/leaderboard?email=` үед л сервер тооцно */
+  is_you?: boolean;
   meta?: {
     rawXp?: number;
     kp?: number;
@@ -259,10 +261,14 @@ export type LeaderboardEntry = {
   };
 };
 
-export async function getLeaderboard(): Promise<{
+export async function getLeaderboard(forEmail?: string): Promise<{
   entries: LeaderboardEntry[];
 }> {
-  const res = await apiFetch("/api/leaderboard");
+  const em = forEmail?.trim();
+  const url = em
+    ? `/api/leaderboard?${new URLSearchParams({ email: em }).toString()}`
+    : "/api/leaderboard";
+  const res = await apiFetch(url);
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     entries?: LeaderboardEntry[];

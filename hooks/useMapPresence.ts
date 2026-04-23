@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useRef } from "react";
 import { getApiBaseUrl, getMapPresenceWsUrl } from "@/lib/api";
 
+export type MapPresenceLivestock = {
+  sheep: number;
+  goat: number;
+  cow: number;
+  horse: number;
+  camel: number;
+};
+
 export type MapPresencePeer = {
   id: string;
   displayName: string;
@@ -11,6 +19,8 @@ export type MapPresencePeer = {
   x: number;
   z: number;
   ry: number;
+  gerLevel: number;
+  livestock: MapPresenceLivestock;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -19,15 +29,66 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 const DEFAULT_HERO = "/models/hero-22.fbx";
 
+const ZERO_LS: MapPresenceLivestock = {
+  sheep: 0,
+  goat: 0,
+  cow: 0,
+  horse: 0,
+  camel: 0,
+};
+
 function normalizeHeroPath(raw: string | null | undefined): string {
   const t = raw?.trim();
   return t ? t : DEFAULT_HERO;
+}
+
+function parseLivestockFromRow(row: Record<string, unknown>): MapPresenceLivestock {
+  const raw = row.livestock;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...ZERO_LS };
+  }
+  const r = raw as Record<string, unknown>;
+  const n = (k: string) => {
+    const v = r[k];
+    return typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : 0;
+  };
+  return {
+    sheep: Math.max(0, n("sheep")),
+    goat: Math.max(0, n("goat")),
+    cow: Math.max(0, n("cow")),
+    horse: Math.max(0, n("horse")),
+    camel: Math.max(0, n("camel")),
+  };
+}
+
+function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
+  if (typeof row.id !== "string") return null;
+  const x = Number(row.x),
+    z = Number(row.z),
+    ry = Number(row.ry);
+  if (![x, z, ry].every(Number.isFinite)) return null;
+  const gl = Number(row.gerLevel);
+  return {
+    id: row.id,
+    displayName:
+      typeof row.displayName === "string" ? row.displayName : "Тоглогч",
+    heroModelPath: normalizeHeroPath(
+      typeof row.heroModelPath === "string" ? row.heroModelPath : undefined,
+    ),
+    x,
+    z,
+    ry,
+    gerLevel: Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1,
+    livestock: parseLivestockFromRow(row),
+  };
 }
 
 export function useMapPresence(opts: {
   displayName: string;
   enabled: boolean;
   heroModelPath?: string | null;
+  gerLevel?: number;
+  livestock?: MapPresenceLivestock | null;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
   const othersRef = useRef(new Map<string, MapPresencePeer>());
@@ -38,6 +99,12 @@ export function useMapPresence(opts: {
   nameRef.current = opts.displayName;
   const heroPathRef = useRef(normalizeHeroPath(opts.heroModelPath));
   heroPathRef.current = normalizeHeroPath(opts.heroModelPath);
+  const gerLevelRef = useRef(Math.max(1, Math.floor(opts.gerLevel ?? 1)));
+  gerLevelRef.current = Math.max(1, Math.floor(opts.gerLevel ?? 1));
+  const livestockRef = useRef<MapPresenceLivestock>(
+    opts.livestock ?? { ...ZERO_LS },
+  );
+  livestockRef.current = opts.livestock ?? { ...ZERO_LS };
 
   const publishPose = useCallback((x: number, z: number, ry: number) => {
     const w = wsRef.current;
@@ -68,11 +135,14 @@ export function useMapPresence(opts: {
 
     const sendHello = (ws: WebSocket) => {
       if (ws.readyState !== WebSocket.OPEN) return;
+      const ls = livestockRef.current;
       ws.send(
         JSON.stringify({
           type: "hello",
           displayName: nameRef.current?.trim() || "Тоглогч",
           heroModelPath: heroPathRef.current,
+          gerLevel: gerLevelRef.current,
+          livestock: ls,
         }),
       );
     };
@@ -138,25 +208,8 @@ export function useMapPresence(opts: {
           for (const row of msg.peers) {
             if (!isRecord(row) || typeof row.id !== "string") continue;
             if (row.id === myIdRef.current) continue;
-            const x = Number(row.x),
-              z = Number(row.z),
-              ry = Number(row.ry);
-            if (![x, z, ry].every(Number.isFinite)) continue;
-            othersRef.current.set(row.id, {
-              id: row.id,
-              displayName:
-                typeof row.displayName === "string"
-                  ? row.displayName
-                  : "Тоглогч",
-              heroModelPath: normalizeHeroPath(
-                typeof row.heroModelPath === "string"
-                  ? row.heroModelPath
-                  : undefined,
-              ),
-              x,
-              z,
-              ry,
-            });
+            const p = peerFromRow(row);
+            if (p) othersRef.current.set(row.id, p);
           }
           flushList();
           return;
@@ -164,26 +217,11 @@ export function useMapPresence(opts: {
 
         if (ty === "peer_pose" && typeof msg.id === "string") {
           if (msg.id === myIdRef.current) return;
-          const x = Number(msg.x),
-            z = Number(msg.z),
-            ry = Number(msg.ry);
-          if (![x, z, ry].every(Number.isFinite)) return;
-          othersRef.current.set(msg.id, {
-            id: msg.id,
-            displayName:
-              typeof msg.displayName === "string"
-                ? msg.displayName
-                : "Тоглогч",
-            heroModelPath: normalizeHeroPath(
-              typeof msg.heroModelPath === "string"
-                ? msg.heroModelPath
-                : undefined,
-            ),
-            x,
-            z,
-            ry,
-          });
-          flushList();
+          const p = peerFromRow(msg);
+          if (p) {
+            othersRef.current.set(msg.id, p);
+            flushList();
+          }
           return;
         }
 
@@ -211,14 +249,23 @@ export function useMapPresence(opts: {
     if (!opts.enabled) return;
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN) return;
+    const ls = opts.livestock ?? { ...ZERO_LS };
     w.send(
       JSON.stringify({
         type: "hello",
         displayName: nameRef.current?.trim() || "Тоглогч",
         heroModelPath: heroPathRef.current,
+        gerLevel: Math.max(1, Math.floor(opts.gerLevel ?? 1)),
+        livestock: ls,
       }),
     );
-  }, [opts.enabled, opts.heroModelPath, opts.displayName]);
+  }, [
+    opts.enabled,
+    opts.heroModelPath,
+    opts.displayName,
+    opts.gerLevel,
+    opts.livestock,
+  ]);
 
   return { publishPose, remotePeersRef };
 }
