@@ -141,6 +141,11 @@ export interface DashStrings {
   mapHeroEmoteGreetAria: string;
   mapHeroEmoteKissAria: string;
   mapHeroEmoteDanceAria: string;
+  mapHeroEmoteBoxingAria: string;
+  mapHeroEmoteBootyAria: string;
+  mapHeroEmoteHipHopAria: string;
+  mapHeroEmotePrayingAria: string;
+  mapHeroEmoteSillyDanceAria: string;
   /** Map: virtual joystick — accessibility (icon-only) */
   mapJoystickMoveAria: string;
   /** Map: portrait mode — short tip to rotate device (mobile / tablet) */
@@ -669,6 +674,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapHeroEmoteGreetAria: "Мэндчилгээ",
     mapHeroEmoteKissAria: "Үнсэлт",
     mapHeroEmoteDanceAria: "Бүжиг",
+    mapHeroEmoteBoxingAria: "Бокс",
+    mapHeroEmoteBootyAria: "Booty бүжиг",
+    mapHeroEmoteHipHopAria: "Hip hop бүжиг",
+    mapHeroEmotePrayingAria: "Залбирал",
+    mapHeroEmoteSillyDanceAria: "Инээдтэй бүжиг",
     mapJoystickMoveAria: "Баатарыг газрын зураг дээр явуулах",
     mapLandscapeHint: "Газрын зураг илүү тухтай — утсаа хэвтээ болгоно уу.",
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
@@ -1196,6 +1206,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapHeroEmoteGreetAria: "Greet",
     mapHeroEmoteKissAria: "Blow a kiss",
     mapHeroEmoteDanceAria: "Dance",
+    mapHeroEmoteBoxingAria: "Boxing",
+    mapHeroEmoteBootyAria: "Booty dance",
+    mapHeroEmoteHipHopAria: "Hip hop dance",
+    mapHeroEmotePrayingAria: "Praying",
+    mapHeroEmoteSillyDanceAria: "Silly dance",
     mapJoystickMoveAria: "Move hero on the map",
     mapLandscapeHint:
       "For a more comfortable map, rotate your phone to landscape.",

@@ -16,7 +16,7 @@ export type MapVirtualStickRef = MutableRefObject<{
   run: boolean;
 }>;
 
-/** Гар утас + таблет: харагдана. Их дэлгэц (2xl) дээр нээгдсэн — pointer/keyboard-оор. */
+/** MapArea дээр зөвхөн lg-ээс бага дэлгэцэнд (`lg:hidden`) дүрслэгдэнэ. */
 export function MapVirtualJoystick({
   stickRef,
   disabled,
@@ -114,10 +114,7 @@ export function MapVirtualJoystick({
 
   return (
     <div
-      className={cn(
-        "pointer-events-auto z-[55] select-none 2xl:hidden",
-        className,
-      )}
+      className={cn("pointer-events-auto z-[55] select-none", className)}
       style={{ touchAction: "none" }}
     >
       <div
@@ -129,8 +126,8 @@ export function MapVirtualJoystick({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         className={cn(
-          "relative flex h-32 w-32 touch-none items-center justify-center",
-          "rounded-full border-2 border-white/45 bg-slate-950/92 shadow-lg backdrop-blur-md",
+          "relative flex h-28 w-28 touch-none items-center justify-center",
+          "rounded-full border-2 border-white/55 bg-white/8 shadow-lg backdrop-blur-md",
           disabled && "pointer-events-none opacity-35",
         )}
       >

@@ -205,7 +205,7 @@ export default function GameModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-5 md:p-8"
+      className="fixed inset-0 z-[100] flex items-center justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-5 md:p-8"
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >

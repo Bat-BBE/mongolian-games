@@ -6,6 +6,7 @@ import { SceneBuilder } from "./SceneBuilder";
 import { AnimationController } from "./AnimationController";
 import type { LabelPos } from "./AnimationController";
 import type { UrtuuStation } from "./UrtuuNode";
+import type { MapPresencePeer } from "@/hooks/useMapPresence";
 import {
   STATION_CONFIGS,
   JOURNEY_ORDER,
@@ -24,19 +25,19 @@ import {
   type HeroClips,
 } from "../map3d/heroFbx";
 
-/**
- * Газрын зураг дээрх эмот / дохионы FBX-ууд. Файл байхгүй бол 404 — зөвхөн амьд
- * `public/models`-д тавигдсан замыг бич.
- * (Жишээ: Mixamo-аас "Waving Gesture.fbx" татсаар бол энд `/models/waving-gesture.fbx` г.м)
- */
 const MAP_EMOTE_CLIP_FILES: Record<string, string> = {
-  // Хоосон: доороос өөрийн fbx-уудыг нэрээр нь нэм. Байхгүй нэрүүд `loadHeroClipsOptional` алгасана.
+  // `public/models` — байхгүй замыг `loadHeroClipsOptional` алгасна. Засварлах: файлын нэрийг нэг нэгээр.
   // wave: "/models/waving-gesture.fbx",
   // greet: "/models/standing-greeting.fbx",
   // kiss: "/models/blowing-a-kiss.fbx",
   // dance: "/models/hip-hop-dancing.fbx",
+  boxing: "/models/Boxing.fbx",
+  /** Бодит нэр: `Booty Hip Hop Dance.fbx` — booty, hip_hop нэг клип. */
+  booty: "/models/Booty Hip Hop Dance.fbx",
+  // hip_hop: "/models/Booty Hip Hop Dance.fbx",
+  praying: "/models/Praying.fbx",
+  silly_dance: "/models/Silly Dancing.fbx",
 };
-import type { MapPresencePeer } from "@/hooks/useMapPresence";
 
 interface UseThreeSceneOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -578,8 +579,19 @@ export function useThreeScene({
               }
             }
 
-            const emoteIds = (["wave", "greet", "kiss", "dance"] as const)
-              .filter((k) => Boolean(retargeted[k]));
+            const emoteIds = (
+              [
+                "wave",
+                "greet",
+                "kiss",
+                "dance",
+                "boxing",
+                "booty",
+                "hip_hop",
+                "praying",
+                "silly_dance",
+              ] as const
+            ).filter((k) => Boolean(retargeted[k]));
 
             const { mixer, play } = createHeroAnimator(root, retargeted, {
               loopNames: ["idle", "walk", "run"],

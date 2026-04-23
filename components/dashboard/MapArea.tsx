@@ -13,12 +13,16 @@ import { STATION_CONFIGS } from "./mapConstants";
 import GameModal from "@/components/game/gameModal";
 import { resolveAssetUrl } from "@/lib/api";
 import {
+  LuBookOpen,
+  LuFlame,
+  LuGhost,
   LuHand,
   LuHeart,
   LuMusic2,
   LuSmartphone,
   LuSmile,
   LuSparkles,
+  LuSwords,
   LuUser,
   LuX,
 } from "react-icons/lu";
@@ -320,6 +324,11 @@ export function MapArea({
     greet: LuSmile,
     kiss: LuHeart,
     dance: LuMusic2,
+    boxing: LuSwords,
+    booty: LuFlame,
+    hip_hop: LuMusic2,
+    praying: LuBookOpen,
+    silly_dance: LuGhost,
   };
 
   function mapEmoteAria(id: string): string {
@@ -334,6 +343,16 @@ export function MapArea({
         return t.mapHeroEmoteKissAria;
       case "dance":
         return t.mapHeroEmoteDanceAria;
+      case "boxing":
+        return t.mapHeroEmoteBoxingAria;
+      case "booty":
+        return t.mapHeroEmoteBootyAria;
+      case "hip_hop":
+        return t.mapHeroEmoteHipHopAria;
+      case "praying":
+        return t.mapHeroEmotePrayingAria;
+      case "silly_dance":
+        return t.mapHeroEmoteSillyDanceAria;
       default:
         return id;
     }
@@ -374,76 +393,75 @@ export function MapArea({
       ) : null}
 
       {heroModelPath?.trim() ? (
-        <MapVirtualJoystick
-          stickRef={mapVirtualStickRef}
-          disabled={!!selectedGame || docHidden}
-          ariaLabel={t.mapJoystickMoveAria}
-          className="absolute right-3 bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom,0px)))]"
-        />
-      ) : null}
-
-      {heroModelPath?.trim() ? (
-        <Popover open={mapEmoteOpen} onOpenChange={setMapEmoteOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              title={t.mapHeroEmoteMenuAria}
-              aria-label={t.mapHeroEmoteMenuAria}
-              className={cn(
-                "pointer-events-auto absolute right-3 z-[60] flex h-12 w-12 items-center justify-center rounded-full",
-                "border border-amber-400/40 bg-slate-950/94 text-amber-200 shadow-lg backdrop-blur-md",
-                "hover:bg-slate-900 hover:border-amber-300/50",
-                "top-[max(0.5rem,env(safe-area-inset-top,0px))] md:top-4",
-              )}
-            >
-              <LuSparkles className="size-6" aria-hidden />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="end"
-            sideOffset={8}
-            className="w-auto border border-amber-400/25 bg-slate-950/96 p-2 shadow-xl backdrop-blur-md"
-          >
-            <div
-              className="flex flex-wrap justify-end gap-1.5"
-              role="group"
-              aria-label={t.mapHeroEmoteMenuAria}
-            >
+        <>
+          <MapVirtualJoystick
+            stickRef={mapVirtualStickRef}
+            disabled={!!selectedGame || docHidden}
+            ariaLabel={t.mapJoystickMoveAria}
+            className="absolute right-3 bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom,0px)))] lg:hidden"
+          />
+          <Popover open={mapEmoteOpen} onOpenChange={setMapEmoteOpen}>
+            <PopoverTrigger asChild>
               <button
                 type="button"
-                title={t.mapHeroEmoteIdleAria}
-                aria-label={t.mapHeroEmoteIdleAria}
-                onClick={() => {
-                  playMapHeroEmote("idle");
-                  setMapEmoteOpen(false);
-                }}
-                className="flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
+                title={t.mapHeroEmoteMenuAria}
+                aria-label={t.mapHeroEmoteMenuAria}
+                className={cn(
+                  "pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
+                  "border border-white/45 bg-white/12 text-amber-100 shadow-md backdrop-blur-md",
+                  "hover:bg-white/18 hover:border-white/55",
+                  "top-[max(0.5rem,env(safe-area-inset-top,0px))] md:top-4",
+                )}
               >
-                <LuUser className="size-6" aria-hidden />
+                <LuSparkles className="size-5" aria-hidden />
               </button>
-              {mapHeroEmoteIds.map((id) => {
-                const Icon = mapEmoteIconById[id];
-                if (!Icon) return null;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    title={mapEmoteAria(id)}
-                    aria-label={mapEmoteAria(id)}
-                    onClick={() => {
-                      playMapHeroEmote(id);
-                      setMapEmoteOpen(false);
-                    }}
-                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
-                  >
-                    <Icon className="size-6" aria-hidden />
-                  </button>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              sideOffset={8}
+              className="z-[200] w-auto border border-white/30 bg-slate-950/98 p-1.5 text-popover-foreground shadow-2xl backdrop-blur-md"
+            >
+              <div
+                className="flex flex-wrap justify-end gap-1.5"
+                role="group"
+                aria-label={t.mapHeroEmoteMenuAria}
+              >
+                <button
+                  type="button"
+                  title={t.mapHeroEmoteIdleAria}
+                  aria-label={t.mapHeroEmoteIdleAria}
+                  onClick={() => {
+                    playMapHeroEmote("idle");
+                    setMapEmoteOpen(false);
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                >
+                  <LuUser className="size-5" aria-hidden />
+                </button>
+                {mapHeroEmoteIds.map((id) => {
+                  const Icon = mapEmoteIconById[id];
+                  if (!Icon) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      title={mapEmoteAria(id)}
+                      aria-label={mapEmoteAria(id)}
+                      onClick={() => {
+                        playMapHeroEmote(id);
+                        setMapEmoteOpen(false);
+                      }}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                    >
+                      <Icon className="size-5" aria-hidden />
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </>
       ) : null}
 
       <StationLabels

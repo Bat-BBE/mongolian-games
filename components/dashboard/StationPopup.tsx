@@ -87,12 +87,12 @@ export function StationPopup({
   return (
     <>
       <div
-        className="absolute inset-0 z-50 bg-black/50 backdrop-blur-[10px]"
+        className="absolute inset-0 z-[100] bg-black/50 backdrop-blur-[10px]"
         onClick={onClose}
       />
       <div
         className={cn(
-          "absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(540px,calc(100vw-1rem))] max-h-[min(72vh,620px)] overflow-hidden flex flex-col",
+          "absolute bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[min(540px,calc(100vw-1rem))] max-h-[min(72vh,620px)] overflow-hidden flex flex-col",
           "rounded-2xl border border-primary/25 bg-gradient-to-b from-slate-950/98 to-slate-900/95 shadow-2xl",
         )}
         style={{
