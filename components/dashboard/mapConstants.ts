@@ -80,9 +80,10 @@ export function playerHomeWorldAnchor(userKey: string): { x: number; z: number }
   const u = (h >>> 0) / 4294967296;
   const h2 = (h * 1009) ^ (h >>> 16);
   const v = (h2 >>> 0) / 4294967296;
-  const ringR = 62 + u * 58;
-  const arcStart = -Math.PI * 0.32;
-  const arcEnd = Math.PI * 0.48;
+  /** ~20 гэрийн зайтай тойрог — өмнөхөөс илүү өргөн нягтралгүй */
+  const ringR = 98 + u * 118;
+  const arcStart = -Math.PI * 0.44;
+  const arcEnd = Math.PI * 0.56;
   const ang = arcStart + v * (arcEnd - arcStart);
   return {
     x: PLAYER_HOME_X + Math.cos(ang) * ringR,

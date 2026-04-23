@@ -29,7 +29,7 @@ export function useMatchRoom(opts: {
   const [roomStatus, setRoomStatus] = useState<"lobby" | "playing" | null>(
     null,
   );
-  const [maxPlayers, setMaxPlayers] = useState(2);
+  const [maxPlayers, setMaxPlayers] = useState(20);
   const [error, setError] = useState<string | null>(null);
   const [matchSeed, setMatchSeed] = useState<number | null>(null);
   const [matchStartedAt, setMatchStartedAt] = useState<number | null>(null);
@@ -50,7 +50,7 @@ export function useMatchRoom(opts: {
         displayName: nameRef.current?.trim() || "Player",
         gameType: opts.gameType,
         gameSlug: opts.gameSlug,
-        maxPlayers: 2,
+        maxPlayers: 20,
         preferredCode: raw.length === 6 ? raw : undefined,
       });
     },

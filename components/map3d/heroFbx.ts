@@ -5,10 +5,6 @@ import { clone as skelClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export type HeroClips = Record<string, THREE.AnimationClip>;
 
-/**
- * Loaded hero model with optional embedded animation clips (GLB can carry its
- * own clips, FBX sometimes does too).
- */
 export type HeroModel = {
   root: THREE.Group;
   clips: THREE.AnimationClip[];
@@ -22,11 +18,6 @@ const heroModelCache = new Map<
 >();
 const clipCache = new Map<string, Promise<THREE.AnimationClip>>();
 
-/**
- * FBX/GLTF ачаалсны дараа: vertex color, texture colorSpace, PMREM-гүй өндөр metalness
- * (толь шиг «хар»), зарим экспортын бараан суурь өнгө.
- */
-/** Albedo-г sRGB, шугам/norm/metal-rough/alpha гэх мэт data-г `NoColorSpace` — буруу бол өнгө «эвдэгддэг». */
 function setDataTextureColorSpaces(
   mat: THREE.Material,
   sRGB: typeof THREE.SRGBColorSpace,
@@ -119,7 +110,6 @@ export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
   });
 }
 
-/** FBX-тай ижил public хавтас — texture-ууд `input.fbm/...` гэж дурьдагдана. */
 function extractUrlBase(url: string): string {
   const clean = url.split("?")[0] ?? url;
   const i = clean.lastIndexOf("/");
@@ -140,11 +130,6 @@ function extOf(path: string): string {
   return dot >= 0 ? clean.slice(dot + 1).toLowerCase() : "";
 }
 
-/**
- * Measure a model's visible vertical extent. Prefer SkinnedMesh bounding
- * boxes (the actual character geometry) over props / environment helpers
- * that otherwise inflate the box and shrink the character.
- */
 export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3();
@@ -165,9 +150,6 @@ export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   return box;
 }
 
-/** Normalize an object's overall scale so its vertical extent matches
- *  `targetHeight`. Also returns `feetOffsetY` the caller can use to plant
- *  the feet on the ground (`position.y = groundY + feetOffsetY`). */
 export function normalizeHeroHeight(
   obj: THREE.Object3D,
   targetHeight: number,
@@ -183,11 +165,6 @@ export function normalizeHeroHeight(
   return { scale: s, feetOffsetY: -box2.min.y };
 }
 
-/**
- * Газрын 3D map: [Mixamo](https://www.mixamo.com/) ихэвчлэн ~100–200 см нэгж,
- * Blender заримдаа 1.5–2 м. Зөвхөн `scale = 0.015` бол метртэй FBX маш жижиг харагдана.
- * Эхлээд бүх загварыг ижил өндөрт тэгшитгээд (`targetHeight`), дараа нь дэлхийн нэгж.
- */
 export const MAP_HERO_HEIGHT_NORMAL = 200;
 export const MAP_HERO_WORLD_UNIT = 0.015;
 
@@ -196,7 +173,6 @@ export function applyMapHeroWorldScale(root: THREE.Object3D): void {
   root.scale.multiplyScalar(MAP_HERO_WORLD_UNIT);
 }
 
-/** Find the first clip whose name contains any of `names` (case-insensitive). */
 export function pickClip(
   clips: THREE.AnimationClip[],
   names: string[],
@@ -210,15 +186,6 @@ export function pickClip(
   return null;
 }
 
-/**
- * Adapt a clip's track names to the actual bone names of `root`. Mixamo's
- * "standing idle/walk/run" FBX exports use bone names like `mixamorigHips`,
- * while GLB models exported through glTF often have the colon-less versions
- * `Hips` (or `mixamorig:Hips`). If the track's target bone doesn't exist in
- * the skeleton, `AnimationMixer` silently does nothing, so we try a few
- * common prefix variants before giving up.
- */
-/** Скелетон дээр үнэхээр холбогдсон track-ийн тоо (буруу rig-д бага байвал анимаа алгасахад). */
 export function countClipTracksBindingToRig(
   clip: THREE.AnimationClip,
   root: THREE.Object3D,
@@ -273,10 +240,6 @@ export function retargetClipToSkeleton(
   return out;
 }
 
-/**
- * Load a hero model from either FBX or GLB based on file extension. Returns
- * a cloned scene (safe to add to multiple scenes) and any embedded clips.
- */
 export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   const key = modelPath.trim();
   if (!key) throw new Error("Missing modelPath");
@@ -291,10 +254,9 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
             key,
             (gltf) => {
               const root = gltf.scene as unknown as THREE.Group;
-              // Stash clips on the root so SkeletonUtils.clone callers can
-              // retrieve them later if needed.
-              (root as unknown as { animations: THREE.AnimationClip[] })
-                .animations = gltf.animations ?? [];
+              (
+                root as unknown as { animations: THREE.AnimationClip[] }
+              ).animations = gltf.animations ?? [];
               resolve({ root, clips: gltf.animations ?? [] });
             },
             undefined,
@@ -320,14 +282,11 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   }
 
   const base = await p;
-  // Clone with SkeletonUtils so multiple scenes can share the same source.
   const clone = skelClone(base.root) as THREE.Group;
   fixHeroMaterialsForDisplay(clone);
   return { root: clone, clips: base.clips };
 }
 
-/** Back-compat: keep the legacy name in case external code still imports it.
- *  Only use for FBX models. */
 export async function loadFbxModel(modelPath: string): Promise<THREE.Group> {
   const key = modelPath.trim();
   if (!key) throw new Error("Missing modelPath");
@@ -419,4 +378,3 @@ export function createHeroAnimator(
 
   return { mixer, actions, play };
 }
-

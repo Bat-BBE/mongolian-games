@@ -24,6 +24,12 @@ export interface DashStrings {
   treasuryCoinsLabel: string;
   treasuryGemsLabel: string;
   treasuryHint: string;
+  /** Зүүн самбар: эрдэнийн чулуу дээр дарахад нээгдэх солилцоо */
+  treasuryGemExchangeTitle: string;
+  treasuryGemExchangeBlurb: string;
+  treasuryGemExchangeAll: string;
+  /** Гэр: мал авахад чулуу хаанаас солихыг заах */
+  homeGemExchangePointer: string;
   /** Урамшууллын хувь 100% — авдар нээх */
   rankChestOpen: string;
   rankChestClaim: string;
@@ -133,9 +139,12 @@ export interface DashStrings {
   /** First-visit spotlight tour (dashboard) */
   introWelcomeTitle: string;
   introWelcomeBody: string;
-  /** First-visit tour: what gameplay actions are possible */
-  introGameplayTitle: string;
-  introGameplayBody: string;
+  introHeroTitle: string;
+  introHeroBody: string;
+  introStationsTitle: string;
+  introStationsBody: string;
+  introHomeTitle: string;
+  introHomeBody: string;
   introStepMapTitle: string;
   introStepMapBody: string;
   introStepSidebarTitle: string;
@@ -146,6 +155,10 @@ export interface DashStrings {
   introSkip: string;
   introDone: string;
   gamesAtStation: string;
+  /** Map popup / sidebar: station lore heading */
+  mapStationHistoryTitle: string;
+  /** Map popup: short play button */
+  mapPlayGameShort: string;
   gameStatusLocked: string;
   gameStatusDone: string;
 }
@@ -175,7 +188,13 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     treasuryCoinsLabel: "Зоос",
     treasuryGemsLabel: "Э/чулуу",
     treasuryHint:
-      "МО (КП) = тоглоомоос цуглуулах эрдэнэсийн оноо. Зоос = дэлгүүр/гэрт зарцуулах мөнгө. Эрдэнийн чулуу = ховор эрдэнэ (зарим шагнал, солилцоо).",
+      "МО (КП) = тоглоом хожиход нэмэгддэг эрдэнэсийн оноо. Зоос = тоглоом тоглох, ялахад; гэрт зарцуулна. Эрдэнийн чулуу = нэг өртөөний бүх тоглоомыг ялсны урамшуулал (нэг удаа), мөн авдар зэргээр.",
+    treasuryGemExchangeTitle: "Чулуу → зоос",
+    treasuryGemExchangeBlurb:
+      "1 эрдэнийн чулууг зоос болгон солино. Доорх товчоор тоо сонгоно уу.",
+    treasuryGemExchangeAll: "Бүгдийг солих",
+    homeGemExchangePointer:
+      "Чулуугаа зоос болгохыг зүүн самбарын «Э/чулуу» мөр дээр дарж нээнэ үү.",
     rankChestOpen: "Хувь дүүрсэн — авдар нээгээрэй",
     rankChestClaim: "Авдар нээх",
     rankChestResultGem: "Танд 1 эрдэнийн чулуу олдлоо!",
@@ -612,13 +631,13 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "24 цаг тутамд нэг удаа баатраа солино. Дуусах хүртэл түр хүлээнэ үү.",
     profileHeroConfirm: "Сонгох",
     profileNoSession:
-      "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товчоор нэвтэрнэ үү.",
+      "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товч дээр дарч нэвтэрнэ үү.",
     dialogClose: "Хаах",
     mapRegionLabel: "Бүс нутаг",
     mapTravelToStation: "Очих",
     mapReturnHome: "Гэр рүү буцах",
     mapReturnToPreviousSpot: "Өмнөх байрлал руу",
-    mapYourGerTitle: "Чиний гэр",
+    mapYourGerTitle: "Таны гэр",
     mapYourGerSubtitle: "Тоглогчийн суурь · газрын зураг дээрх гэр",
     mapHomePinLabel: "Гэр",
     mapGoToGer: "Гэрт очих",
@@ -627,32 +646,40 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     sidebarAtHomeHint:
       "Газрын зурагнаас өртөө сонгоод «Очих» дээр дарахад та тийш очно Эсвэл баатараа удирдаж явах боломжтой. Өртөөн дээр очиход тоглоом нээгдэнэ.",
     mapGuideTitle: "Юу хийх вэ?",
-    mapGuideStep1: "Өртөө дарна → «Очих» — баатар тэнд очино.",
+    mapGuideStep1: "WASD / сум — явна. Өртөө → «Очих» — шууд очно.",
     mapGuideStep2:
-      "Өртөөн дээр очино — тоглоом харуулна. (7 хоногт тоглоом бүрт 2 удаа.)",
-    mapGuideStep3: "Дэлгэрэнгүй: зүүн самбар.",
+      "Хаалга дээр тэмдэг дарна — тоглоом. (7 хоногт тоглоом бүрт 2 удаа.)",
+    mapGuideStep3: "Гэр, оноо: зүүн самбар, «Миний гэр».",
     mapGuideHide: "Хаах",
     mapGuideShow: "Заавар",
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
-    introWelcomeTitle: "Тавтай морил",
+    introWelcomeTitle: "Тавтай морилно уу",
     introWelcomeBody:
-      "Дараагийн алхмууд эхлээд юу хийж болохыг, дараа нь дэлгэцийн гол хэсгүүдийг заана.",
-    introGameplayTitle: "Юу хийж болох вэ?",
-    introGameplayBody:
-      "• Өртөө сонгоод «Очих» — баатар тэр өртөө рүү очно.\n• Хаалганд ойртвол тоглоом нээгдэнэ.\n• Нэг тоглоомд 7 хоногт хамгийн ихдээ 2 удаа.\n• МО, зоос, урамшуулал цуглуулж, гэрээ сайжруулна.\n• Зүүн самбар болон газрын зургийн «?» дээр нэмэлт заавар байна.",
-    introStepMapTitle: "Газрын зураг",
+      "Танд товчхон заавар харуулна. Дараагийн товчоор алхам алхмаар үргэлжлүүлээрэй — бүгд 7 алхам.",
+    introHeroTitle: "Баатараа хөдөлгөх",
+    introHeroBody:
+      "① Гар товч: WASD эсвэл сум — явна. Shift дарвал хурдан.\n② Эсвэл өртөө сонгоод «Очих» — баатар шууд тэнд очно.",
+    introStationsTitle: "Өртөө, тоглоом",
+    introStationsBody:
+      "① Хаалган дээр ойртож очно.\n② Тэмдэг дээр дарвал тоглоом нээгдэнэ.\n③ Нэг тоглоомд 7 хоногт хамгийн ихдээ 2 удаа.",
+    introHomeTitle: "Гэр, мал, оноо",
+    introHomeBody:
+      "① Ялахад: МО (КП), зоос олно.\n② Нэг өртөөний бүх тоглоомыг анх удаа бүрэн ялбал — эрдэнийн чулуу.\n③ «Миний гэр» цонхноос түвшин ахиулна, зоосоор мал авна.\n④ Чулуугаа зоос болгохыг зүүн самбарын «Э/чулуу» мөр дээр дарна.",
+    introStepMapTitle: "Энэ бол газрын зураг",
     introStepMapBody:
-      "Өртөөг сонгоод «Очих» — баатар тийш очно. «?» дээр дарж товч заавар харна.",
+      "Энд явж, өртөө сонгоно. Баруун дээр «?» — товч заавар.",
     introStepSidebarTitle: "Зүүн самбар",
     introStepSidebarBody:
-      "Одоогийн аялал, эрдэнэс, оноо, удирдлагын самбар — энд.",
+      "Өртөөний мэдээлэл, эрдэнэс (МО, зоос, чулуу), урамшууллын хувь — энд. Гар утас дээр доод талд ижил товчлуурууд байна.",
     introStepNavTitle: "Дээд самбар",
     introStepNavBody:
-      "Баруун дээр: удирдлагын самбар, профайл, хэл (МН/EN), өнгөний горим.",
+      "Жагсаалт, профайл, хэл (МН/EN), өнгө. Энэ зааврыг дахин харахыг профайлын цэснээс.",
     introNext: "Дараагийн",
     introSkip: "Алгасах",
     introDone: "Ойлголоо",
     gamesAtStation: "Тоглоомууд",
+    mapStationHistoryTitle: "Өртөөний түүх",
+    mapPlayGameShort: "Тоглох",
     gameStatusLocked: "Хүлээгдэж буй",
     gameStatusDone: "Дууссан",
   },
@@ -681,7 +708,13 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     treasuryCoinsLabel: "Coins",
     treasuryGemsLabel: "Gems",
     treasuryHint:
-      "KP = merit points from games. Coins = currency for home upgrades and shop. Gems = rare currency (some rewards & exchange).",
+      "KP = merit points earned when you win games. Coins = from playing (and wins); spend at home/shop. Gems = one-time bonus when you win every game at a station, plus chests, etc.",
+    treasuryGemExchangeTitle: "Gems → coins",
+    treasuryGemExchangeBlurb:
+      "Trade gems for coins. Pick an amount below.",
+    treasuryGemExchangeAll: "Exchange all",
+    homeGemExchangePointer:
+      "To convert gems to coins, tap the Gems row in the left treasury panel.",
     rankChestOpen: "Reward bar full — open your chest",
     rankChestClaim: "Open chest",
     rankChestResultGem: "You received 1 gem!",
@@ -1133,32 +1166,40 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     sidebarAtHomeHint:
       "Pick a station on the map and use Go there. Stand by the door to open games.",
     mapGuideTitle: "What to do",
-    mapGuideStep1: "Tap a station → Go there — the hero walks there.",
+    mapGuideStep1: "WASD / arrows — walk. Station → Go there — fast travel.",
     mapGuideStep2:
-      "Stand by the door — open the panel to play (2 plays per game / 7 days).",
-    mapGuideStep3: "More info in the left sidebar.",
+      "At the door, tap the marker — games (2 plays / game / 7 days).",
+    mapGuideStep3: "Ger & stats: left sidebar, My home.",
     mapGuideHide: "Close",
     mapGuideShow: "Help",
     mapHowToSectionTitle: "How to play",
     introWelcomeTitle: "Welcome",
     introWelcomeBody:
-      "Next steps cover what you can do here, then where things are on screen.",
-    introGameplayTitle: "What you can do",
-    introGameplayBody:
-      "• Pick a station and Go there — your hero walks to it.\n• Stand by the door to open games.\n• Up to 2 plays per game every 7 days.\n• Earn KP, coins, and rewards; upgrade your ger.\n• More detail in the left sidebar and the map ? button.",
-    introStepMapTitle: "The map",
+      "A short guided tour. Use Next to go step by step — 7 steps in total.",
+    introHeroTitle: "Move your hero",
+    introHeroBody:
+      "① Keyboard: WASD or arrow keys to walk. Hold Shift to run.\n② Or pick a station and tap Go there — your hero travels there.",
+    introStationsTitle: "Stations & games",
+    introStationsBody:
+      "① Walk up to the station door.\n② Tap the marker to open games.\n③ Up to 2 plays per game every 7 days.",
+    introHomeTitle: "Ger, livestock & rewards",
+    introHomeBody:
+      "① Wins give KP and coins.\n② Clear every game at a station once for bonus gems.\n③ My home: upgrade your ger and buy livestock with coins.\n④ Tap Gems in the left treasury to trade gems for coins.",
+    introStepMapTitle: "This is the map",
     introStepMapBody:
-      "Pick a station and use Go there — your hero walks. Tap ? for quick tips.",
+      "Walk here and pick stations. The ? button has quick tips.",
     introStepSidebarTitle: "Left sidebar",
     introStepSidebarBody:
-      "Expedition, treasury, XP progress, leaderboard — details here.",
+      "Station info, treasury (KP, coins, gems), and reward progress. On phones, the same shortcuts are in the bottom bar.",
     introStepNavTitle: "Top bar",
     introStepNavBody:
-      "Leaderboard, profile & language (MN/EN), and theme toggle.",
+      "Leaderboard, profile, language (MN/EN), theme. Replay this tour from the profile menu.",
     introNext: "Next",
     introSkip: "Skip",
     introDone: "Got it",
     gamesAtStation: "Games",
+    mapStationHistoryTitle: "Station history",
+    mapPlayGameShort: "Play",
     gameStatusLocked: "Locked",
     gameStatusDone: "Completed",
   },

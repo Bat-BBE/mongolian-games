@@ -1,19 +1,11 @@
 import * as THREE from "three";
 
-/**
- * Advanced Texture Manager
- * Creates procedural PBR textures with normal maps, roughness, and detail
- * Photorealistic quality suitable for cinematic rendering
- */
 export class AdvancedTextureManager {
   private diffuseCache = new Map<string, THREE.Texture>();
   private normalCache = new Map<string, THREE.Texture>();
   private roughnessCache = new Map<string, THREE.Texture>();
   private aoCache = new Map<string, THREE.Texture>();
 
-  /**
-   * Create high-quality horse fur texture with detail
-   */
   getHorseFurDiffuse(baseColor = 0x8b6914): THREE.Texture {
     const key = `horse_fur_diffuse_${baseColor}`;
     if (this.diffuseCache.has(key)) {

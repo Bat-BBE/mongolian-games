@@ -10,8 +10,8 @@ import { join } from "node:path";
 import { env } from "./config.js";
 import { MatchRoomManager } from "./realtime/matchRooms.js";
 import { createMatchWebSocketServer } from "./realtime/matchWs.js";
-import { MapPresenceHub } from "./realtime/mapPresence.js";
 import { createMapPresenceWebSocketServer } from "./realtime/mapPresenceWs.js";
+import { MapPresenceShardRouter } from "./realtime/mapPresenceRouter.js";
 import { healthRouter } from "./routes/health.js";
 import { usersRouter } from "./routes/users.js";
 import { gamesPublicRouter } from "./routes/games.js";
@@ -52,7 +52,7 @@ function upgradePathname(req: IncomingMessage): string {
 }
 
 const matchRooms = new MatchRoomManager();
-const mapPresence = new MapPresenceHub();
+const mapPresenceRouter = new MapPresenceShardRouter();
 
 const server = createServer(
   {
@@ -69,7 +69,7 @@ const server = createServer(
 );
 
 const wssMatch = createMatchWebSocketServer(matchRooms);
-const wssPresence = createMapPresenceWebSocketServer(mapPresence);
+const wssPresence = createMapPresenceWebSocketServer(mapPresenceRouter);
 
 server.on("upgrade", (req, socket, head) => {
   const path = upgradePathname(req);

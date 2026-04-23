@@ -16,7 +16,7 @@ import {
   TARGET_SCORE,
 } from "./shagaiTargetType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import {
   getShagaiThrowParams,
   SHAGAI_THROW_START_POSITIONS,
@@ -285,9 +285,8 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.winner === "player";
-    if (won) grant({ gems: STONE_MATCH_GEMS });
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
-  }, [state.phase, state.winner, onComplete, grant]);
+  }, [state.phase, state.winner, onComplete]);
 
   // Shared throw trigger used by both the player's manual "Throw" button and
   // the robot's automatic turn. Resetting isThrown forces SingleShagai's

@@ -17,8 +17,12 @@ function displayNameOrMasked(
   return `${prefix}•••@${domain}`;
 }
 
-leaderboardRouter.get("/", async (_req, res) => {
+leaderboardRouter.get("/", async (req, res) => {
   try {
+    const forEmailRaw =
+      typeof req.query.email === "string" ? req.query.email.trim() : "";
+    const forEmail = forEmailRaw.toLowerCase();
+
     const result = await pool.query(
       `SELECT id, display_name, email, hero_id,
               COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) AS score,
@@ -30,21 +34,25 @@ leaderboardRouter.get("/", async (_req, res) => {
        ORDER BY COALESCE((profile->>'wealthScore')::int, (profile->>'kp')::int, (progress->>'xp')::int, 0) DESC NULLS LAST
        LIMIT 50`,
     );
-    const entries = result.rows.map((r, i) => ({
-      rank: i + 1,
-      name: displayNameOrMasked(
-        r.display_name as string | null,
-        String(r.email ?? ""),
-      ),
-      xp: Number(r.score) || 0,
-      hero_id: r.hero_id as string | null,
-      meta: {
-        rawXp: Number(r.xp) || 0,
-        kp: Number(r.kp) || 0,
-        livestock: r.livestock ?? null,
-        ger: r.ger ?? null,
-      },
-    }));
+    const entries = result.rows.map((r, i) => {
+      const emailNorm = String(r.email ?? "").trim().toLowerCase();
+      return {
+        rank: i + 1,
+        name: displayNameOrMasked(
+          r.display_name as string | null,
+          String(r.email ?? ""),
+        ),
+        xp: Number(r.score) || 0,
+        hero_id: r.hero_id as string | null,
+        is_you: Boolean(forEmail && emailNorm === forEmail),
+        meta: {
+          rawXp: Number(r.xp) || 0,
+          kp: Number(r.kp) || 0,
+          livestock: r.livestock ?? null,
+          ger: r.ger ?? null,
+        },
+      };
+    });
     res.json({ entries });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Query failed";

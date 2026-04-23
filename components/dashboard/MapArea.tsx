@@ -35,6 +35,8 @@ interface MapAreaProps {
     available?: boolean;
     games?: MapStationGamePreview[];
     game?: { slug?: string; name: string; desc: string; reward: string };
+    quest_hint?: string | null;
+    quest_desc?: string | null;
   }[];
   heroModelPath?: string | null;
   onGameCompleted?: () => void;
@@ -96,6 +98,23 @@ export function MapArea({
     [apiStations],
   );
 
+  const presenceLivestock = useMemo(() => {
+    if (!homeLivestock) return null;
+    return {
+      sheep: homeLivestock.sheep,
+      goat: homeLivestock.goat,
+      cow: homeLivestock.cow,
+      horse: homeLivestock.horse,
+      camel: homeLivestock.camel,
+    };
+  }, [
+    homeLivestock?.sheep,
+    homeLivestock?.goat,
+    homeLivestock?.cow,
+    homeLivestock?.horse,
+    homeLivestock?.camel,
+  ]);
+
   const stations: UrtuuStation[] = useMemo(() => {
     const stationMap = new Map(apiStations.map((s) => [s.id, s]));
     return Object.entries(STATION_CONFIGS).map(([id, cfg]) => {
@@ -128,6 +147,8 @@ export function MapArea({
         gameName: firstGame?.name ?? "",
         gameDesc: firstGame?.desc ?? "",
         reward: firstGame?.reward ?? "",
+        questHint: fromApi?.quest_hint?.trim() || null,
+        questDesc: fromApi?.quest_desc?.trim() || null,
         available: fromApi?.available ?? false,
         pos: {
           left: fromApi?.pos?.left ?? cfg.left,
@@ -166,8 +187,11 @@ export function MapArea({
 
   const { publishPose, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
-    enabled: !selectedGame && !docHidden,
+    /** Тоглоомын цонх нээхэд WS хаавал бусдад peer_left — холболт тасрах шалтгаан болдог */
+    enabled: !docHidden,
     heroModelPath: heroModelPath ?? null,
+    gerLevel: homeGerLevel,
+    livestock: presenceLivestock,
   });
   presencePublishRef.current = publishPose;
 
@@ -198,6 +222,7 @@ export function MapArea({
     homeGerLevel,
     homeLivestock,
     userEmail,
+    playerHomeKey: [userEmail, playerDisplayName].filter(Boolean).join("|"),
     onHeroAtStationChange,
     paused: !!selectedGame || docHidden,
     presencePublishRef,
@@ -300,10 +325,10 @@ export function MapArea({
               gameSlug: slug,
             });
           }}
-          loreLabel={t.lore}
-          minigameLabel={t.minigame}
           regionLabel={t.mapRegionLabel}
           gamesSectionLabel={t.gamesAtStation}
+          historyTitle={t.mapStationHistoryTitle}
+          playLabel={t.mapPlayGameShort}
           lockedHint={t.gameStatusLocked}
           doneHint={t.gameStatusDone}
           canPlay

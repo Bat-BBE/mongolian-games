@@ -11,7 +11,7 @@ import {
   type MemoryCard,
 } from "./memoryMatchType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import InventoryRewardOverlay from "./InventoryRewardOverlay";
 import { playButtonClick } from "@/lib/uiSounds";
 
@@ -101,7 +101,6 @@ export default function MemoryMatchGame({
     );
     if (!submittedRef.current) {
       submittedRef.current = true;
-      grant({ gems: STONE_MATCH_GEMS });
       void onComplete?.("win", pct);
     }
   }, [clearTimer, grant, moves, onComplete]);

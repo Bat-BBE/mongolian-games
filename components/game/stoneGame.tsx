@@ -15,7 +15,7 @@ import {
   WIN_SCORE,
 } from "./stoneType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 
 export type StoneGameProps = {
   onComplete?: (result: "win" | "lose") => void;
@@ -292,9 +292,6 @@ export default function StoneGame({ onComplete }: StoneGameProps) {
       setTimeout(() => setBurstActive(false), 1500);
       if (outcome === "player") {
         grant({ coins: STONE_ROUND_COINS });
-        if (newScore.player >= WIN_SCORE) {
-          grant({ gems: STONE_MATCH_GEMS });
-        }
       }
     },
     [grant, state],

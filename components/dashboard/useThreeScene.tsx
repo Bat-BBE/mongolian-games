@@ -44,6 +44,8 @@ interface UseThreeSceneOptions {
   onHeroAtStationChange?: (stationId: string | null) => void;
   /** Имэйл/ID — 3D дээр тоглогч бүрт өөр «танай гэр»-ийн world төв. */
   userEmail?: string;
+  /** Имэйл+нэр хослуулсан түлхүүр — хоосон имэйлтэй тохиолдолд давхцлыг багасгана. */
+  playerHomeKey?: string;
   /** True while a fullscreen minigame is open — map animation/render skips work to save GPU. */
   paused?: boolean;
   /** Газрын зураг дээр бусад тоглогчдад байрлал илгээх (WebSocket). */
@@ -154,6 +156,7 @@ export function useThreeScene({
   heroModelPath,
   onHeroAtStationChange,
   userEmail = "",
+  playerHomeKey = "",
   paused = false,
   presencePublishRef,
   remotePeersRef,
@@ -212,7 +215,9 @@ export function useThreeScene({
     const container = containerRef.current;
     if (!container) return;
 
-    const { x: playerHomeX, z: playerHomeZ } = playerHomeWorldAnchor(userEmail);
+    const homeKey =
+      (playerHomeKey && playerHomeKey.trim()) || userEmail || "guest";
+    const { x: playerHomeX, z: playerHomeZ } = playerHomeWorldAnchor(homeKey);
 
     const scene = new THREE.Scene();
     // Хуучин: цайвар цэнхэр тэнгэр + манан
@@ -330,6 +335,7 @@ export function useThreeScene({
     const remoteAvatarById = new Map<string, THREE.Group>();
     /** Алсын тоглогч бүрийн ойролцоох зочилсон гэр (таны playerHomeGer-ээс тусдаа). */
     const remoteCampById = new Map<string, THREE.Object3D>();
+    const remoteEnclosureById = new Map<string, THREE.Mesh>();
     const remoteHeroMixers = new Set<THREE.AnimationMixer>();
     const hashPeerId = (id: string): number => {
       let h = 0;
@@ -1280,6 +1286,17 @@ export function useThreeScene({
               p.z,
               p.ry,
               remoteCampById,
+              remoteEnclosureById,
+              {
+                gerLevel: p.gerLevel ?? 1,
+                livestock: p.livestock ?? {
+                  sheep: 0,
+                  goat: 0,
+                  cow: 0,
+                  horse: 0,
+                  camel: 0,
+                },
+              },
             );
           }
           for (const [pid, grp] of remoteAvatarById) {
@@ -1292,6 +1309,15 @@ export function useThreeScene({
                 remotePeerGroup.remove(camp);
                 disposeMeshSubtree(camp);
                 remoteCampById.delete(pid);
+              }
+              const enc = remoteEnclosureById.get(pid);
+              if (enc) {
+                remotePeerGroup.remove(enc);
+                enc.geometry.dispose();
+                const m = enc.material;
+                if (Array.isArray(m)) m.forEach((x) => x.dispose());
+                else m.dispose();
+                remoteEnclosureById.delete(pid);
               }
             }
           }
@@ -1374,6 +1400,14 @@ export function useThreeScene({
         disposeMeshSubtree(camp);
       }
       remoteCampById.clear();
+      for (const [, enc] of remoteEnclosureById) {
+        remotePeerGroup.remove(enc);
+        enc.geometry.dispose();
+        const m = enc.material;
+        if (Array.isArray(m)) m.forEach((x) => x.dispose());
+        else m.dispose();
+      }
+      remoteEnclosureById.clear();
       for (const [, grp] of remoteAvatarById) {
         remotePeerGroup.remove(grp);
         disposeRemoteAvatar(grp);
@@ -1407,7 +1441,7 @@ export function useThreeScene({
     };
     // mapStationsRevision, userEmail: 3D шинэчлэл / тоглогчийн тусдаа гэрийн байр.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapStationsRevision, userEmail]);
+  }, [mapStationsRevision, userEmail, playerHomeKey]);
 
   const homeLivestockKey = homeLivestock
     ? `${homeLivestock.sheep},${homeLivestock.goat},${homeLivestock.cow},${homeLivestock.horse},${homeLivestock.camel}`

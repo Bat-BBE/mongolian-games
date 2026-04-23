@@ -373,6 +373,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         open={leaderboardOpen}
         onOpenChange={setLeaderboardOpen}
         lang={lang}
+        viewerEmail={userEmail}
       />
 
       <ProfileModal
@@ -416,6 +417,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           treasury={player.treasury}
           userEmail={userEmail}
           onChestClaimed={() => setGameReloadTick((n) => n + 1)}
+          onTreasuryChanged={() => setGameReloadTick((n) => n + 1)}
           onOpenLeaderboard={openLb}
         />
 

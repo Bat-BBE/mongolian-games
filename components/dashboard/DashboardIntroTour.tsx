@@ -11,10 +11,15 @@ import {
 import { createPortal } from "react-dom";
 import type { DashStrings } from "./dashboard-strings";
 
-const STORAGE_KEY = "mg-dashboard-intro-v1";
+const STORAGE_KEY = "mg-dashboard-intro-v2";
 
-/** null = full-screen card (no spotlight). Order: welcome → gameplay → UI highlights */
+/**
+ * null = гол картыг дэлгэцийн төвд. Дараалал: тавтай морил → баатар → өртөө/тоглоом
+ * → гэр/эдийн засаг → газрын зураг → зүүн самбар → дээд самбар
+ */
 const ANCHORS = [
+  null,
+  null,
   null,
   null,
   "map-area",
@@ -65,7 +70,7 @@ function tooltipStyle(step: number, hole: Hole | null): CSSProperties {
       zIndex: 260,
     };
   }
-  if (step <= 1 || (step > 1 && !hole)) {
+  if (step <= 3 || (step > 3 && !hole)) {
     return {
       position: "fixed",
       left: "50%",
@@ -77,7 +82,7 @@ function tooltipStyle(step: number, hole: Hole | null): CSSProperties {
   }
   const vh = window.innerHeight;
   const vw = window.innerWidth;
-  const cardApprox = 200;
+  const cardApprox = 280;
   let top = hole!.y + hole!.h + 16;
   if (top + cardApprox > vh - 20) {
     top = hole!.y - cardApprox - 16;
@@ -169,15 +174,19 @@ export function DashboardIntroTour({
       case 0:
         return { title: t.introWelcomeTitle, body: t.introWelcomeBody };
       case 1:
-        return { title: t.introGameplayTitle, body: t.introGameplayBody };
+        return { title: t.introHeroTitle, body: t.introHeroBody };
       case 2:
-        return { title: t.introStepMapTitle, body: t.introStepMapBody };
+        return { title: t.introStationsTitle, body: t.introStationsBody };
       case 3:
+        return { title: t.introHomeTitle, body: t.introHomeBody };
+      case 4:
+        return { title: t.introStepMapTitle, body: t.introStepMapBody };
+      case 5:
         return {
           title: t.introStepSidebarTitle,
           body: t.introStepSidebarBody,
         };
-      case 4:
+      case 6:
         return { title: t.introStepNavTitle, body: t.introStepNavBody };
       default:
         return { title: "", body: "" };
@@ -188,7 +197,7 @@ export function DashboardIntroTour({
 
   const w = vw || (typeof window !== "undefined" ? window.innerWidth : 0);
   const h = vh || (typeof window !== "undefined" ? window.innerHeight : 0);
-  const showHole = step >= 2 && hole !== null && w > 0 && h > 0;
+  const showHole = step >= 4 && hole !== null && w > 0 && h > 0;
 
   const overlay = (
     <div
@@ -246,31 +255,31 @@ export function DashboardIntroTour({
         style={{
           ...tooltipStyle(step, hole),
           maxWidth:
-            step === 1
-              ? "min(26rem, calc(100vw - 1.5rem))"
-              : "min(22rem, calc(100vw - 2rem))",
+            step <= 3
+              ? "min(32rem, calc(100vw - 1.25rem))"
+              : "min(24rem, calc(100vw - 2rem))",
         }}
       >
         <p
           id="dashboard-intro-title"
-          className="text-[11px] font-semibold text-sky-200/95"
+          className="font-display text-base font-semibold tracking-wide text-sky-100 sm:text-lg"
         >
           {titleBody.title}
         </p>
         <p
           id="dashboard-intro-desc"
-          className="mt-2 text-[11px] leading-relaxed text-slate-100/90 whitespace-pre-line"
+          className="mt-3 text-sm leading-relaxed text-slate-100/95 whitespace-pre-line sm:text-[15px] sm:leading-[1.55]"
         >
           {titleBody.body}
         </p>
-        <p className="mt-3 text-[10px] tabular-nums text-slate-400">
+        <p className="mt-4 text-xs tabular-nums text-slate-400">
           {step + 1} / {lastStep + 1}
         </p>
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             onClick={finish}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-semibold text-slate-300 hover:bg-white/10"
+            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
           >
             {t.introSkip}
           </button>
@@ -278,7 +287,7 @@ export function DashboardIntroTour({
             <button
               type="button"
               onClick={() => setStep((s) => Math.min(lastStep, s + 1))}
-              className="rounded-lg border border-sky-500/40 bg-sky-600/90 px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-sky-500"
+              className="rounded-lg border border-sky-500/45 bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-sky-500"
             >
               {t.introNext}
             </button>
@@ -286,7 +295,7 @@ export function DashboardIntroTour({
             <button
               type="button"
               onClick={finish}
-              className="rounded-lg border border-sky-500/40 bg-sky-600/90 px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-sky-500"
+              className="rounded-lg border border-sky-500/45 bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-sky-500"
             >
               {t.introDone}
             </button>
