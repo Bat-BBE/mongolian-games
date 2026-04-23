@@ -6,6 +6,8 @@ export type RoundTurn = "player" | "robot";
 
 export interface RoundResult {
   turn: RoundTurn;
+  /** Олон тоглогчийн ээлж — аль тоглогчийн шидэлт вэ. */
+  mpThrowerId?: string;
   sides: ShagaiSide[];
   points: number;
   /** Localized short label describing which scoring rule matched (or ""). */
@@ -42,6 +44,8 @@ export interface GameState {
   lastPlayerPoints: number;
   lastPlayerLabel: string;
   winner: "player" | "robot" | null;
+  /** Олон тоглогч: ялсан тоглогчийн id. */
+  mpWinnerId?: string | null;
 }
 
 export const SHAGAI_INFO: Record<
@@ -168,4 +172,5 @@ export const INITIAL_STATE: GameState = {
   lastPlayerPoints: 0,
   lastPlayerLabel: "",
   winner: null,
+  mpWinnerId: null,
 };

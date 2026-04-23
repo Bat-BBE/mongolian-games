@@ -1,5 +1,6 @@
 import { WebSocketServer, type RawData, type WebSocket } from "ws";
 import { MatchRoomManager, type Room } from "./matchRooms.js";
+import { attachWsKeepAlive } from "./wsKeepAlive.js";
 
 type ConnMeta = { playerId: string };
 
@@ -53,11 +54,15 @@ function roomStatePayload(manager: MatchRoomManager, room: Room) {
 export function createMatchWebSocketServer(
   manager: MatchRoomManager,
 ): WebSocketServer {
-  const wss = new WebSocketServer({ noServer: true });
+  const wss = new WebSocketServer({
+    noServer: true,
+    perMessageDeflate: false,
+  });
 
   setInterval(() => manager.pruneStaleRooms(), 120_000).unref?.();
 
   wss.on("connection", (ws) => {
+    attachWsKeepAlive(ws, "match");
     const playerId = manager.newPlayerId();
     META.set(ws, { playerId });
     send(ws, { type: "welcome", playerId });
@@ -88,7 +93,7 @@ export function createMatchWebSocketServer(
           typeof body.displayName === "string" ? body.displayName : "Player";
         const gameType = typeof body.gameType === "string" ? body.gameType : "";
         const gameSlug = typeof body.gameSlug === "string" ? body.gameSlug : "";
-        let maxPlayers = 2;
+        let maxPlayers = 20;
         if (typeof body.maxPlayers === "number" && Number.isFinite(body.maxPlayers)) {
           maxPlayers = Math.floor(body.maxPlayers);
         }

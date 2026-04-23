@@ -5,10 +5,6 @@ import { clone as skelClone } from "three/examples/jsm/utils/SkeletonUtils.js";
 
 export type HeroClips = Record<string, THREE.AnimationClip>;
 
-/**
- * Loaded hero model with optional embedded animation clips (GLB can carry its
- * own clips, FBX sometimes does too).
- */
 export type HeroModel = {
   root: THREE.Group;
   clips: THREE.AnimationClip[];
@@ -22,11 +18,6 @@ const heroModelCache = new Map<
 >();
 const clipCache = new Map<string, Promise<THREE.AnimationClip>>();
 
-/**
- * FBX/GLTF ачаалсны дараа: vertex color, texture colorSpace, PMREM-гүй өндөр metalness
- * (толь шиг «хар»), зарим экспортын бараан суурь өнгө.
- */
-/** Albedo-г sRGB, шугам/norm/metal-rough/alpha гэх мэт data-г `NoColorSpace` — буруу бол өнгө «эвдэгддэг». */
 function setDataTextureColorSpaces(
   mat: THREE.Material,
   sRGB: typeof THREE.SRGBColorSpace,
@@ -71,6 +62,16 @@ function setDataTextureColorSpaces(
   }
 }
 
+/** Mixamo/FBX: өнгө ихэвчлэн `geometry.attributes.color`-д; материал дээр `vertexColors: true` заавал. */
+function enableVertexColorIfPresent(
+  mat: THREE.Material & { vertexColors?: boolean; needsUpdate?: boolean },
+  hasVertexColor: boolean,
+) {
+  if (!hasVertexColor) return;
+  mat.vertexColors = true;
+  mat.needsUpdate = true;
+}
+
 export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
   const sRGB = THREE.SRGBColorSpace;
   const linear = THREE.NoColorSpace;
@@ -80,16 +81,15 @@ export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
     if (!mesh.geometry) return;
     const g = mesh.geometry;
     const hasVertexColor = !!g.getAttribute("color");
-    const mats: THREE.Material[] = Array.isArray(mesh.material)
-      ? mesh.material
-      : [mesh.material];
-    for (const mat of mats) {
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (let mi = 0; mi < list.length; mi++) {
+      const mat = list[mi]!;
       if (!mat) continue;
       if (
         mat instanceof THREE.MeshStandardMaterial ||
         mat instanceof THREE.MeshPhysicalMaterial
       ) {
-        if (hasVertexColor) mat.vertexColors = true;
+        enableVertexColorIfPresent(mat, hasVertexColor);
         setDataTextureColorSpaces(mat, sRGB, linear);
         if (
           mat.envMap == null &&
@@ -108,18 +108,57 @@ export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
         mat instanceof THREE.MeshLambertMaterial ||
         mat instanceof THREE.MeshPhongMaterial
       ) {
-        if (hasVertexColor) mat.vertexColors = true;
+        enableVertexColorIfPresent(mat, hasVertexColor);
         setDataTextureColorSpaces(mat, sRGB, linear);
         const sum = mat.color.r + mat.color.g + mat.color.b;
         if (sum < 0.04 && !mat.map && !hasVertexColor) {
           mat.color.setRGB(0.78, 0.78, 0.8);
         }
+      } else if (
+        mat instanceof THREE.MeshBasicMaterial ||
+        mat instanceof THREE.MeshToonMaterial
+      ) {
+        enableVertexColorIfPresent(mat, hasVertexColor);
+        if (mat instanceof THREE.MeshBasicMaterial) {
+          if (mat.map) mat.map.colorSpace = sRGB;
+        }
+        if (mat instanceof THREE.MeshToonMaterial) {
+          if (mat.map) mat.map.colorSpace = sRGB;
+        }
+      } else if (hasVertexColor) {
+        const old = mat as THREE.Material & {
+          color?: THREE.Color;
+          map?: THREE.Texture | null;
+          normalMap?: THREE.Texture | null;
+          transparent?: boolean;
+          opacity?: number;
+          side?: THREE.Side;
+        };
+        const rep = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          color: old.color?.clone() ?? new THREE.Color(0xffffff),
+          map: old.map ?? null,
+          normalMap: old.normalMap ?? null,
+          transparent: Boolean(old.transparent),
+          opacity: old.opacity ?? 1,
+          side: old.side ?? THREE.FrontSide,
+        });
+        setDataTextureColorSpaces(rep, sRGB, linear);
+        if (Array.isArray(mesh.material)) {
+          (mesh.material as THREE.Material[])[mi] = rep;
+        } else {
+          mesh.material = rep;
+        }
+        const sum = rep.color.r + rep.color.g + rep.color.b;
+        if (sum < 0.04 && !rep.map) {
+          rep.color.setRGB(0.88, 0.88, 0.9);
+        }
+        if (rep.envMap == null) rep.envMapIntensity = 1.0;
       }
     }
   });
 }
 
-/** FBX-тай ижил public хавтас — texture-ууд `input.fbm/...` гэж дурьдагдана. */
 function extractUrlBase(url: string): string {
   const clean = url.split("?")[0] ?? url;
   const i = clean.lastIndexOf("/");
@@ -140,11 +179,6 @@ function extOf(path: string): string {
   return dot >= 0 ? clean.slice(dot + 1).toLowerCase() : "";
 }
 
-/**
- * Measure a model's visible vertical extent. Prefer SkinnedMesh bounding
- * boxes (the actual character geometry) over props / environment helpers
- * that otherwise inflate the box and shrink the character.
- */
 export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3();
@@ -165,9 +199,6 @@ export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   return box;
 }
 
-/** Normalize an object's overall scale so its vertical extent matches
- *  `targetHeight`. Also returns `feetOffsetY` the caller can use to plant
- *  the feet on the ground (`position.y = groundY + feetOffsetY`). */
 export function normalizeHeroHeight(
   obj: THREE.Object3D,
   targetHeight: number,
@@ -183,11 +214,6 @@ export function normalizeHeroHeight(
   return { scale: s, feetOffsetY: -box2.min.y };
 }
 
-/**
- * Газрын 3D map: [Mixamo](https://www.mixamo.com/) ихэвчлэн ~100–200 см нэгж,
- * Blender заримдаа 1.5–2 м. Зөвхөн `scale = 0.015` бол метртэй FBX маш жижиг харагдана.
- * Эхлээд бүх загварыг ижил өндөрт тэгшитгээд (`targetHeight`), дараа нь дэлхийн нэгж.
- */
 export const MAP_HERO_HEIGHT_NORMAL = 200;
 export const MAP_HERO_WORLD_UNIT = 0.015;
 
@@ -196,7 +222,6 @@ export function applyMapHeroWorldScale(root: THREE.Object3D): void {
   root.scale.multiplyScalar(MAP_HERO_WORLD_UNIT);
 }
 
-/** Find the first clip whose name contains any of `names` (case-insensitive). */
 export function pickClip(
   clips: THREE.AnimationClip[],
   names: string[],
@@ -210,15 +235,6 @@ export function pickClip(
   return null;
 }
 
-/**
- * Adapt a clip's track names to the actual bone names of `root`. Mixamo's
- * "standing idle/walk/run" FBX exports use bone names like `mixamorigHips`,
- * while GLB models exported through glTF often have the colon-less versions
- * `Hips` (or `mixamorig:Hips`). If the track's target bone doesn't exist in
- * the skeleton, `AnimationMixer` silently does nothing, so we try a few
- * common prefix variants before giving up.
- */
-/** Скелетон дээр үнэхээр холбогдсон track-ийн тоо (буруу rig-д бага байвал анимаа алгасахад). */
 export function countClipTracksBindingToRig(
   clip: THREE.AnimationClip,
   root: THREE.Object3D,
@@ -273,10 +289,6 @@ export function retargetClipToSkeleton(
   return out;
 }
 
-/**
- * Load a hero model from either FBX or GLB based on file extension. Returns
- * a cloned scene (safe to add to multiple scenes) and any embedded clips.
- */
 export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   const key = modelPath.trim();
   if (!key) throw new Error("Missing modelPath");
@@ -291,10 +303,9 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
             key,
             (gltf) => {
               const root = gltf.scene as unknown as THREE.Group;
-              // Stash clips on the root so SkeletonUtils.clone callers can
-              // retrieve them later if needed.
-              (root as unknown as { animations: THREE.AnimationClip[] })
-                .animations = gltf.animations ?? [];
+              (
+                root as unknown as { animations: THREE.AnimationClip[] }
+              ).animations = gltf.animations ?? [];
               resolve({ root, clips: gltf.animations ?? [] });
             },
             undefined,
@@ -320,14 +331,11 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   }
 
   const base = await p;
-  // Clone with SkeletonUtils so multiple scenes can share the same source.
   const clone = skelClone(base.root) as THREE.Group;
   fixHeroMaterialsForDisplay(clone);
   return { root: clone, clips: base.clips };
 }
 
-/** Back-compat: keep the legacy name in case external code still imports it.
- *  Only use for FBX models. */
 export async function loadFbxModel(modelPath: string): Promise<THREE.Group> {
   const key = modelPath.trim();
   if (!key) throw new Error("Missing modelPath");
@@ -382,26 +390,75 @@ export async function loadHeroClips(
   return Object.fromEntries(entries) as HeroClips;
 }
 
+export async function loadHeroClipsOptional(
+  clipsByName: Record<string, string>,
+): Promise<HeroClips> {
+  const out: HeroClips = {};
+  for (const [name, path] of Object.entries(clipsByName)) {
+    try {
+      const clip = await loadFbxClip(path);
+      clip.name = name;
+      out[name] = clip;
+    } catch {
+      /* файл байхгүй */
+    }
+  }
+  return out;
+}
+
 export function createHeroAnimator(
   root: THREE.Object3D,
   clips: HeroClips,
+  opts?: {
+    /** Давтагдах анимац (үлдсэн нь нэг удаа тоглоод idle руу) */
+    loopNames?: string[];
+    onFiniteEnd?: () => void;
+  },
 ): {
   mixer: THREE.AnimationMixer;
   actions: Map<string, THREE.AnimationAction>;
   play: (name: string, fadeSec?: number) => void;
 } {
+  const loopNames = new Set(opts?.loopNames ?? ["idle", "walk", "run"]);
   const mixer = new THREE.AnimationMixer(root);
   const actions = new Map<string, THREE.AnimationAction>();
   for (const [name, clip] of Object.entries(clips)) {
     const action = mixer.clipAction(clip);
-    action.clampWhenFinished = false;
-    if (name === "walk" || name === "run" || name === "idle") {
+    if (loopNames.has(name)) {
       action.setLoop(THREE.LoopRepeat, Infinity);
+      action.clampWhenFinished = false;
+    } else {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
     }
     actions.set(name, action);
   }
 
   let current = "";
+
+  const fadeToIdle = (fadeSec: number) => {
+    const idleA = actions.get("idle");
+    const prevA = current ? actions.get(current) : undefined;
+    if (prevA && prevA !== idleA) prevA.fadeOut(fadeSec);
+    if (idleA) {
+      idleA.reset().fadeIn(fadeSec).play();
+      current = "idle";
+    }
+  };
+
+  mixer.addEventListener("finished", (e) => {
+    const ev = e as { action?: THREE.AnimationAction };
+    const finished = ev.action;
+    if (!finished) return;
+    let finishedName: string | undefined;
+    for (const [n, a] of actions) {
+      if (a === finished) finishedName = n;
+    }
+    if (!finishedName || loopNames.has(finishedName)) return;
+    opts?.onFiniteEnd?.();
+    fadeToIdle(0.22);
+  });
+
   const play = (name: string, fadeSec = 0.25) => {
     const next = actions.get(name);
     if (!next) return;
@@ -419,4 +476,3 @@ export function createHeroAnimator(
 
   return { mixer, actions, play };
 }
-

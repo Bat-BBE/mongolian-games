@@ -18,7 +18,7 @@ import {
 } from "./horseRaceType";
 import type { ShagaiSide } from "./shagai";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import {
   getShagaiThrowParams,
   SHAGAI_HORSE_RACE_THROW_START_POSITIONS,
@@ -564,9 +564,8 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.winner === "player";
-    if (won) grant({ gems: STONE_MATCH_GEMS });
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
-  }, [state.phase, state.winner, onComplete, grant]);
+  }, [state.phase, state.winner, onComplete]);
 
   const startThrow = useCallback(
     (turn: "player" | "robot") => {

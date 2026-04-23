@@ -1,9 +1,10 @@
+/** Тоглоомын орлоготой зэрэгцүүлсэн үнэ (7 хоногт 2 тоглолт/тоглоом). */
 export const LIVESTOCK_COIN_PRICES = {
-  sheep: 120,
-  goat: 110,
-  cow: 420,
-  horse: 650,
-  camel: 820,
+  sheep: 85,
+  goat: 78,
+  cow: 300,
+  horse: 480,
+  camel: 600,
 } as const;
 
 export type LivestockKind = keyof typeof LIVESTOCK_COIN_PRICES;
@@ -13,7 +14,7 @@ export function gerUpgradeCost(gerLevel: number): {
   kp: number;
 } {
   const lvl = Math.max(1, Math.floor(gerLevel));
-  return { coins: 200 + lvl * 80, kp: 60 + lvl * 15 };
+  return { coins: 130 + lvl * 52, kp: 42 + lvl * 11 };
 }
 
 /** Чулуу → зоос солих ханш (тоглоомын API-тай ижил) */

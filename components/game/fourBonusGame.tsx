@@ -17,7 +17,7 @@ import {
   TARGET_SCORE,
 } from "./fourBonusType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import {
   getShagaiThrowParams,
   SHAGAI_THROW_START_POSITIONS,
@@ -306,11 +306,8 @@ export default function FourBonesGame({
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.playerScore >= state.robotScore;
-    if (won) {
-      grant({ gems: STONE_MATCH_GEMS });
-    }
     onComplete?.(won ? "win" : "lose");
-  }, [state.phase, state.playerScore, state.robotScore, onComplete, grant]);
+  }, [state.phase, state.playerScore, state.robotScore, onComplete]);
 
   const startThrow = useCallback((turn: "player" | "robot") => {
     const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());

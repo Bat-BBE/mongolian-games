@@ -48,6 +48,7 @@ export default function GameModal({
     gameType,
     gameSlug,
     displayName: playerName,
+    maxRoomPlayers: gameType === "shagai" ? 4 : undefined,
   });
 
   /** Хос ол: нээгдэхэд шууд нийтлэг өрөө; бусад тоглоомд зөвхөн Online товчоор. */
@@ -204,7 +205,7 @@ export default function GameModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-5 md:p-8"
+      className="fixed inset-0 z-[100] flex items-center justify-center px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:p-5 md:p-8"
       style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(10px)" }}
       onClick={onClose}
     >
@@ -286,11 +287,16 @@ export default function GameModal({
               supportsSharedBoard={mpSharedBoard}
               suggestedMatchCode={stationMatchCode}
               autoMatchmaking={gameType === "puzzle"}
+              homboroiMode={gameType === "shagai"}
             />
           ) : null}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {gameType === "shagai" && (
-            <ShagaiGame onComplete={(r, pct) => void submit(r, pct)} />
+            <ShagaiGame
+              onComplete={(r, pct) => void submit(r, pct)}
+              match={multiplayerOn ? mp : null}
+              multiplayerOn={multiplayerOn}
+            />
           )}
           {gameType === "stone-guess" && (
             <StoneGame onComplete={(r) => void submit(r)} />

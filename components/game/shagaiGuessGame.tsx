@@ -25,7 +25,7 @@ import {
   robotPickHidden,
 } from "./shagaiGuessType";
 import { useInventoryGrant } from "./useInventoryGrant";
-import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import { STONE_ROUND_COINS } from "./gameRewardConstants";
 
 export type ShagaiGuessGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -527,13 +527,12 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
     if (matchSentRef.current) return;
     matchSentRef.current = true;
     const won = state.winner === "player";
-    if (won) grant({ gems: STONE_MATCH_GEMS });
     const progressPct = Math.max(
       0,
       Math.min(100, Math.round((state.playerStack / TOTAL_SHAGAI) * 100)),
     );
     onComplete?.(won ? "win" : "lose", progressPct);
-  }, [state.phase, state.winner, state.playerStack, onComplete, grant]);
+  }, [state.phase, state.winner, state.playerStack, onComplete]);
 
   // -- Round flow --------------------------------------------------------
   const onStartRound = useCallback(() => {
