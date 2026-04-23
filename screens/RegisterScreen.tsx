@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X } from "lucide-react";
+import { LuX as X } from "react-icons/lu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "@/components/AppContext";
-import { HEROES, loadPlayer, savePlayer } from "@/components/hero-select/hero-data";
+import { HEROES, loadPlayer, savePlayer, type Hero } from "@/components/hero-select/hero-data";
+import { mergeHeroesFromApi } from "@/components/hero-select/map-from-api";
+import { getContentHeroes } from "@/lib/api";
 import { HERO_STRINGS } from "@/components/hero-select/hero-strings";
 import type { HeroId, Lang } from "@/components/hero-select/hero-strings";
 import { StarField } from "@/components/hero-select/StarField";
@@ -21,8 +23,12 @@ export default function HeroSelectPage() {
   const [playerName, setPlayerName] = useState("");
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
   const [toast, setToast]           = useState({ msg: "", visible: false });
+  const [heroes, setHeroes]         = useState<Hero[]>(HEROES);
 
-  const selectedHero = HEROES.find((h) => h.id === selectedId)!;
+  const roster =
+    Array.isArray(heroes) && heroes.length > 0 ? heroes : HEROES;
+  const selectedHero =
+    roster.find((h) => h.id === selectedId) ?? roster[0]!;
   const activeColor  = screen === "hero" ? selectedHero.color : "#C8A84B";
 
   useEffect(() => {
@@ -33,6 +39,23 @@ export default function HeroSelectPage() {
       setScreen("hero");
     }
   }, []);
+
+  useEffect(() => {
+    if (screen !== "hero") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { heroes: rows } = await getContentHeroes();
+        if (cancelled) return;
+        setHeroes(mergeHeroesFromApi(Array.isArray(rows) ? rows : []));
+      } catch {
+        if (!cancelled) setHeroes(HEROES);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [screen]);
 
   const save = useCallback((name: string, heroId: HeroId) => {
     savePlayer({ name, heroId });
@@ -54,13 +77,20 @@ export default function HeroSelectPage() {
   const handlePlay = () => {
     if (!selectedHero.available) return;
     save(playerName, selectedId);
-    showToast(t.toast(playerName, t.name[selectedId]));
+    showToast(
+      t.toast(
+        playerName,
+        lang === "mn" ? selectedHero.nameMn : selectedHero.nameEn,
+      ),
+    );
     // navigate to game: router.push('/game')
   };
 
   const handleGuest = () => {
     const name = lang === "mn" ? "Зочин" : "Guest";
-    showToast(t.toast(name, t.name[selectedId]));
+    showToast(
+      t.toast(name, lang === "mn" ? selectedHero.nameMn : selectedHero.nameEn),
+    );
   };
 
   return (
@@ -123,6 +153,7 @@ export default function HeroSelectPage() {
               <HeroChooseScreen
                 t={t}
                 lang={lang}
+                heroes={roster}
                 playerName={playerName}
                 selectedId={selectedId}
                 setSelectedId={setSelectedId}

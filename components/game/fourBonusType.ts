@@ -6,26 +6,43 @@ export interface ShagaiThrow {
   settled: boolean;
 }
 
+export type RoundTurn = "player" | "robot";
+
 export interface RoundResult {
+  turn: RoundTurn;
   sides: ShagaiSide[];
   isDorvenBerkh: boolean;
+  points: number;
   throwNumber: number;
 }
 
+export type MatchPhase =
+  | "idle" 
+  | "throwing" 
+  | "settling" 
+  | "playerResult" 
+  | "robotThinking" 
+  | "robotResult" 
+  | "matchOver"; 
+
 export interface GameState {
-  phase: "idle" | "throwing" | "settling" | "result";
-  throws: ShagaiThrow[];
+  phase: MatchPhase;
   history: RoundResult[];
   totalThrows: number;
-  wins: number;
+  playerScore: number;
+  robotScore: number;
   streak: number;
   bestStreak: number;
+  robotSides: ShagaiSide[] | null;
+  robotPoints: number;
+  lastPlayerPoints: number;
 }
 
 export const SHAGAI_INFO: Record<
   ShagaiSide,
   {
-    name: string;
+    nameMn: string;
+    nameEn: string;
     symbol: string;
     color: string;
     glow: string;
@@ -33,28 +50,32 @@ export const SHAGAI_INFO: Record<
   }
 > = {
   horse: {
-    name: "Морь",
+    nameMn: "Морь",
+    nameEn: "Horse",
     symbol: "🐴",
     color: "#f0c040",
     glow: "rgba(240,192,64,0.6)",
     mongol: "ᠮᠣᠷᠢ",
   },
   sheep: {
-    name: "Хонь",
+    nameMn: "Хонь",
+    nameEn: "Sheep",
     symbol: "🐑",
     color: "#90d890",
     glow: "rgba(144,216,144,0.6)",
     mongol: "ᠬᠣᠨᠢ",
   },
   goat: {
-    name: "Ямаа",
+    nameMn: "Ямаа",
+    nameEn: "Goat",
     symbol: "🐐",
     color: "#c8956a",
     glow: "rgba(200,149,106,0.6)",
     mongol: "ᠢᠮᠠᠭ᠎ᠠ",
   },
   camel: {
-    name: "Тэмээ",
+    nameMn: "Тэмээ",
+    nameEn: "Camel",
     symbol: "🐫",
     color: "#e0a050",
     glow: "rgba(224,160,80,0.6)",
@@ -62,18 +83,19 @@ export const SHAGAI_INFO: Record<
   },
 };
 
+export function sideName(
+  side: ShagaiSide,
+  language: "mn" | "en",
+): string {
+  return language === "en" ? SHAGAI_INFO[side].nameEn : SHAGAI_INFO[side].nameMn;
+}
+
+import { detectShagaiSide, weightedTraditionalSide } from "./shagai";
+
+// Delegate to the shared quaternion-aware detector so both games share the
+// same detector; torque bias targets: sheep 30%, goat 30%, horse 20%, camel 20%.
 export function detectSide(rotX: number, rotZ: number): ShagaiSide {
-  const norm = (a: number) =>
-    ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const rx = norm(rotX);
-  const rz = norm(rotZ);
-  const xFlat = rx < 0.45 || rx > 5.83;
-  const xFlip = rx > 2.7 && rx < 3.58;
-  const zFlip = rz > 2.7 && rz < 3.58;
-  if (xFlat && !xFlip) return "horse";
-  if (xFlip && zFlip) return "camel";
-  if (zFlip && !xFlip) return "sheep";
-  return "goat";
+  return detectShagaiSide(rotX, rotZ);
 }
 
 export function isDorvenBerkh(sides: ShagaiSide[]): boolean {
@@ -82,30 +104,39 @@ export function isDorvenBerkh(sides: ShagaiSide[]): boolean {
   return set.size === 4;
 }
 
-export function getResultMessage(sides: ShagaiSide[], isWin: boolean): string {
-  if (isWin) {
-    return "🎊 ДӨРВӨН БЭРХ! Бүх 4 тал гарлаа — их аз!";
-  }
-  const counts: Record<string, number> = {};
-  sides.forEach((s) => {
-    counts[s] = (counts[s] || 0) + 1;
-  });
-  const dupes = Object.entries(counts).filter(([, v]) => v > 1);
-  if (dupes.length) {
-    const names = dupes
-      .map(([k]) => SHAGAI_INFO[k as ShagaiSide].name)
-      .join(", ");
-    return `${names} давхарласан. Дахин шидэ!`;
-  }
-  return "Дахин оролдоорой!";
+/**
+ * Scoring table for the competitive Dörvön Berkh vs Robot mode.
+ *
+ * 4 unique sides (Dörvön Berkh) → 12 pts
+ * 3 unique sides                → 5 pts
+ * 2 unique sides                → 2 pts
+ * 1 unique side (all 4 equal)   → 8 pts ("дөрвөн адил" — rare)
+ */
+export function scoreRoll(sides: ShagaiSide[]): { points: number; unique: number } {
+  const unique = new Set(sides).size;
+  if (unique === 4) return { points: 12, unique };
+  if (unique === 3) return { points: 5, unique };
+  if (unique === 2) return { points: 2, unique };
+  return { points: 8, unique };
 }
+
+/** Generate a robot roll of 4 shagai using the shared traditional probabilities. */
+export function rollRobotSides(): ShagaiSide[] {
+  return [0, 1, 2, 3].map(() => weightedTraditionalSide() as ShagaiSide);
+}
+
+/** First side to reach this wins the match. */
+export const TARGET_SCORE = 30;
 
 export const INITIAL_STATE: GameState = {
   phase: "idle",
-  throws: [],
   history: [],
   totalThrows: 0,
-  wins: 0,
+  playerScore: 0,
+  robotScore: 0,
   streak: 0,
   bestStreak: 0,
+  robotSides: null,
+  robotPoints: 0,
+  lastPlayerPoints: 0,
 };

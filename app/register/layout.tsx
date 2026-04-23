@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Inter, Cinzel, Marcellus } from "next/font/google";
+import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
-const inter = Inter({ subsets: ["latin"] });
-const cinzel = Cinzel({ 
-  subsets: ["latin"], 
-  variable: "--font-cinzel" 
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-inter",
 });
-const marcellus = Marcellus({ 
-  weight: "400", 
-  subsets: ["latin"],
-  variable: "--font-marcellus" 
+
+const playfair = Playfair_Display({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-playfair",
 });
 
 export const metadata: Metadata = {
@@ -27,16 +26,20 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth dark">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600&family=Marcellus&display=swap"
-          rel="stylesheet"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
         />
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.className} ${cinzel.variable} ${marcellus.variable}`}>
+      <body
+        className={`${inter.className} ${inter.variable} ${playfair.variable} font-sans antialiased`}
+      >
         <Navbar />
         {children}
       </body>

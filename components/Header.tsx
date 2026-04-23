@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
 export default function Header() {
   const { t, language, setLanguage } = useApp();
@@ -18,6 +19,7 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeLink, setActiveLink] = useState("#");
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [menuPortalEl, setMenuPortalEl] = useState<HTMLElement | null>(null);
 
   const navRef = useRef<HTMLElement>(null);
   const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
@@ -42,6 +44,10 @@ export default function Header() {
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    setMenuPortalEl(document.body);
   }, []);
 
   useEffect(() => {
@@ -174,15 +180,17 @@ export default function Header() {
         isScrolled ? "py-2" : "py-3 md:py-5"
       }`}
       style={{
+        // Softer dark header: less blue, warmer ink.
         background: isScrolled
-          ? "background"
-          : "background",
+          ? "color-mix(in oklch, var(--background) 86%, transparent)"
+          : "color-mix(in oklch, var(--background) 68%, transparent)",
         borderBottom: isScrolled
-          ? "1px solid color-mix(in oklch, var(--primary) 18%, var(--border))"
-          : "background",
+          ? "1px solid color-mix(in oklch, var(--primary) 14%, var(--border))"
+          : "1px solid transparent",
         boxShadow: isScrolled
-          ? "0 4px 32px -8px color-mix(in oklch, var(--primary) 12%, transparent)"
-          : "background",
+          ? "0 10px 40px -18px color-mix(in oklch, black 55%, transparent)"
+          : "0 1px 0 color-mix(in oklch, var(--primary) 10%, transparent)",
+        backdropFilter: "blur(18px) saturate(1.25)",
       }}
     >
       <div
@@ -248,7 +256,7 @@ export default function Header() {
           />
 
           <span
-            className="hidden md:block font-heritage italic leading-tight"
+            className="hidden md:block font-body italic leading-tight"
             style={{
               fontSize: "clamp(0.7rem, 1.2vw, 0.7rem)",
               color: "color-mix(in oklch, var(--foreground) 62%, transparent)",
@@ -349,100 +357,111 @@ export default function Header() {
         </div>
       </div>
 
-      <div
-        className={`fixed inset-0 z-40 transition-opacity duration-300 lg:hidden ${
-          isMobileMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        style={{
-          background: "color-mix(in oklch, oklch(0% 0 0) 70%, transparent)",
-          backdropFilter: "blur(4px)",
-        }}
-        onClick={() => setIsMobileMenuOpen(false)}
-      />
-      <nav
-        className={`fixed top-0 right-0 z-50 flex h-full w-[78vw] max-w-xs flex-col border-l transition-transform duration-300 lg:hidden ${
-          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        }`}
-        style={{
-          background: "color-mix(in oklch, var(--background) 98%, black 2%)",
-          borderColor: "color-mix(in oklch, var(--primary) 26%, var(--border))",
-          boxShadow: "-18px 0 40px color-mix(in oklch, black 85%, transparent)",
-        }}
-      >
-        <div 
-          className="flex items-center justify-between px-6 pt-6 pb-4 border-b"
-          style={{
-            borderColor: "color-mix(in oklch, var(--primary) 18%, var(--border))"
-          }}
-        >
-          <span
-            className="font-display text-sm font-semibold uppercase tracking-[0.26em]"
-            style={{ color: "color-mix(in oklch, var(--foreground) 80%, transparent)" }}
-          >
-            {t.nav.title}
-          </span>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            aria-label="Цэс хаах"
-            className="w-15 h-7 rounded-full flex items-center justify-center"
-            style={{
-              border: "1px solid color-mix(in oklch, var(--primary) 26%, var(--border))",
-              background: "color-mix(in oklch, var(--primary) 8%, transparent)"
-            }}
-          >
-            <span className="relative w-3.5 h-3.5">
-              <span 
-                className="absolute inset-0 rotate-45 rounded-full"
-                style={{
-                  background: "var(--gold-bright)",
-                  width: "2px",
-                  height: "14px",
-                  left: "6px"
-                }}
+      {menuPortalEl &&
+        createPortal(
+          <>
+            <div
+              className={`fixed inset-0 z-[45] transition-opacity duration-300 lg:hidden ${
+                isMobileMenuOpen
+                  ? "opacity-100 pointer-events-auto"
+                  : "opacity-0 pointer-events-none"
+              }`}
+              style={{
+                background:
+                  "color-mix(in oklch, oklch(0.08 0.02 75) 62%, transparent)",
+                backdropFilter: "blur(8px)",
+              }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-hidden={!isMobileMenuOpen}
+            />
+            <nav
+              className={`fixed top-0 right-0 bottom-0 z-[60] flex min-h-0 w-[min(88vw,20rem)] max-w-sm flex-col overflow-hidden rounded-l-2xl border-y border-l border-primary/35 bg-card text-card-foreground shadow-[-24px_0_48px_-8px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-out dark:border-primary/45 dark:shadow-[-24px_0_56px_-6px_rgba(0,0,0,0.75)] lg:hidden ${
+                isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+              }`}
+              aria-hidden={!isMobileMenuOpen}
+            >
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-amber-600/90 via-amber-500/70 to-amber-700/85 dark:from-amber-500/80 dark:via-amber-400/50 dark:to-amber-600/75"
+                aria-hidden
               />
-              <span 
-                className="absolute inset-0 -rotate-45 rounded-full"
-                style={{
-                  background: "var(--gold-bright)",
-                  width: "2px",
-                  height: "14px",
-                  left: "6px"
-                }}
-              />
-            </span>
-          </button>
-        </div>
-
-        <ul className="flex flex-col gap-1 px-4 pt-4 pb-6">
-          {navLinks.map((link) => (
-            <li key={link.href}>
-              <a
-                href={link.href}
-                onClick={(e) => handleNavClick(e, link.href)}
-                className="flex items-center justify-between rounded-full px-4 py-3 font-display text-sm uppercase tracking-[0.18em] transition-colors"
-                style={{
-                  color:
-                    activeLink === link.href
-                      ? "var(--gold-bright)"
-                      : "color-mix(in oklch, var(--foreground) 78%, transparent)",
-                  background:
-                    activeLink === link.href
-                      ? "color-mix(in oklch, var(--primary) 12%, transparent)"
-                      : "transparent",
-                }}
+              <div
+                className="flex items-center justify-between border-b border-border/80 bg-gradient-to-r from-card via-card to-muted/30 px-5 pt-6 pb-4 pl-6 dark:from-card dark:via-card dark:to-muted/20"
               >
-                <span>{link.name}</span>
-                <span
-                  className="ml-3 text-xs opacity-70"
-                  aria-hidden="true"
-                >
-                  {link.icon}
+                <span className="font-display text-sm font-semibold uppercase tracking-[0.26em] text-card-foreground">
+                  {t.nav.title}
                 </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  aria-label="Цэс хаах"
+                  className="w-15 h-7 rounded-full flex items-center justify-center"
+                  style={{
+                    border:
+                      "1px solid color-mix(in oklch, var(--primary) 26%, var(--border))",
+                    background:
+                      "color-mix(in oklch, var(--primary) 8%, transparent)",
+                  }}
+                >
+                  <span className="relative w-3.5 h-3.5">
+                    <span
+                      className="absolute inset-0 rotate-45 rounded-full"
+                      style={{
+                        background: "var(--gold-bright)",
+                        width: "2px",
+                        height: "14px",
+                        left: "6px",
+                      }}
+                    />
+                    <span
+                      className="absolute inset-0 -rotate-45 rounded-full"
+                      style={{
+                        background: "var(--gold-bright)",
+                        width: "2px",
+                        height: "14px",
+                        left: "6px",
+                      }}
+                    />
+                  </span>
+                </button>
+              </div>
+
+              <ul className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 pt-4 pb-8">
+                {navLinks.map((link) => (
+                  <li key={link.href}>
+                    <a
+                      href={link.href}
+                      onClick={(e) => handleNavClick(e, link.href)}
+                      className="flex items-center justify-between rounded-xl px-4 py-3 font-display text-sm uppercase tracking-[0.16em] transition-colors hover:bg-muted/60"
+                      style={{
+                        color:
+                          activeLink === link.href
+                            ? "var(--gold-bright)"
+                            : "color-mix(in oklch, var(--card-foreground) 88%, transparent)",
+                        background:
+                          activeLink === link.href
+                            ? "color-mix(in oklch, var(--primary) 22%, transparent)"
+                            : "transparent",
+                        border:
+                          activeLink === link.href
+                            ? "1px solid color-mix(in oklch, var(--primary) 35%, transparent)"
+                            : "1px solid transparent",
+                      }}
+                    >
+                      <span>{link.name}</span>
+                      <span
+                        className="ml-3 text-xs opacity-70"
+                        aria-hidden="true"
+                      >
+                        {link.icon}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </>,
+          menuPortalEl
+        )}
     </header>
   );
 }

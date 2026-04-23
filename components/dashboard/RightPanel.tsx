@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, BookOpen, Zap, Lock } from "lucide-react";
+import { LuEye as Eye, LuBookOpen as BookOpen, LuZap as Zap, LuLock as Lock } from "react-icons/lu";
 import type { DashStrings } from "./dashboard-strings";
 
 interface RightPanelProps {
@@ -12,9 +12,9 @@ interface RightPanelProps {
 }
 
 const MASTERY_UNLOCKED = [
-  { Icon: Zap,      title: "The Swift Rider" },
+  { Icon: Zap, title: "The Swift Rider" },
   { Icon: BookOpen, title: "Empire Historian" },
-  { Icon: Eye,      title: "Eagle Hunter" },
+  { Icon: Eye, title: "Eagle Hunter" },
 ];
 
 const SEASONS = ["spring", "summer", "autumn", "winter"] as const;

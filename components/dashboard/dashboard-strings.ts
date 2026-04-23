@@ -19,6 +19,17 @@ export interface DashStrings {
   questDesc: string;
   continueJourney: string;
   treasury: string;
+  /** Эрдэнэсийн сан доторх мөрүүд — КП нь «МО», чулуу нь эрдэнэ, зоос тусдаа */
+  treasuryKpLabel: string;
+  treasuryCoinsLabel: string;
+  treasuryGemsLabel: string;
+  treasuryHint: string;
+  /** Урамшууллын хувь 100% — авдар нээх */
+  rankChestOpen: string;
+  rankChestClaim: string;
+  rankChestResultGem: string;
+  rankChestResultKp: string;
+  rankChestResultCoins: string;
 
   urtuuChain: string;
   discovered: string;
@@ -32,6 +43,12 @@ export interface DashStrings {
 
   leaderboard: string;
   activeBonus: string;
+  /** Sidebar: аяллын өдөр / Journey day */
+  journeyDayLabel: string;
+  /** Leaderboard avatar row heading */
+  topPlayersLabel: string;
+  /** "Өртөө" / Station — уртуу дугаарын угтвар */
+  urtuuCounter: string;
   journal: string;
   beginRelay: string;
 
@@ -64,15 +81,82 @@ export interface DashStrings {
     system: string;
     toggle: string;
   };
+
+  accountMenuProfile: string;
+  /** Account dropdown: replay dashboard spotlight tour */
+  accountMenuTour: string;
+  accountMenuLogout: string;
+  profileEmailLabel: string;
+  profileLevelLabel: string;
+  profileXpLabel: string;
+  profileKpLabel: string;
+  profileStationLabel: string;
+  profileTierLabel: string;
+  profilePageTitle: string;
+  profileVisitedStationsTitle: string;
+  profileChangeHeroTitle: string;
+  profileHeroCooldownLabel: string;
+  profileHeroOnCooldown: string;
+  profileHeroConfirm: string;
+  profileNoSession: string;
+  dialogClose: string;
+  mapRegionLabel: string;
+  /** Map: travel hero to selected urtuu */
+  mapTravelToStation: string;
+  /** Map: walk hero back to ger (home) */
+  mapReturnHome: string;
+  /** Map: cancel travel and restore hero to spot before «Очих» */
+  mapReturnToPreviousSpot: string;
+  /** Map: label above the player’s home ger (distinct from urtuu gers) */
+  mapYourGerTitle: string;
+  mapYourGerSubtitle: string;
+  /** Map: short pin text on the 3D home ger (keep brief) */
+  mapHomePinLabel: string;
+  /** Sidebar: jump camera to home ger on the 3D map */
+  mapGoToGer: string;
+  /** Left panel: section title when hero is at ger (not «Одоогийн өртөө») */
+  sidebarAtHomeSectionTitle: string;
+  /** Left panel: status line when at ger */
+  sidebarAtHomeBadge: string;
+  /** Left panel: short hint when at ger (no Go home button) */
+  sidebarAtHomeHint: string;
+  /** Map overlay: how-to title (keep short) */
+  mapGuideTitle: string;
+  mapGuideStep1: string;
+  mapGuideStep2: string;
+  mapGuideStep3: string;
+  mapGuideHide: string;
+  /** Map: help button label (short) */
+  mapGuideShow: string;
+  /** Left panel: section title matching map guide */
+  mapHowToSectionTitle: string;
+  /** First-visit spotlight tour (dashboard) */
+  introWelcomeTitle: string;
+  introWelcomeBody: string;
+  /** First-visit tour: what gameplay actions are possible */
+  introGameplayTitle: string;
+  introGameplayBody: string;
+  introStepMapTitle: string;
+  introStepMapBody: string;
+  introStepSidebarTitle: string;
+  introStepSidebarBody: string;
+  introStepNavTitle: string;
+  introStepNavBody: string;
+  introNext: string;
+  introSkip: string;
+  introDone: string;
+  gamesAtStation: string;
+  gameStatusLocked: string;
+  gameStatusDone: string;
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
   mn: {
     title: "МОНГОЛЫН УЛАМЖЛАЛТ ТОГЛООМ",
-    knowledgePoints: "Мэдлэгийн Оноо",
+    knowledgePoints: "Цуглуулсан Оноо",
     dailyTokens: "Өдрийн Токен",
-    rank: "Зэрэг Дэвших",
-    rankTitle: "Элч",
+    rank: "Урамшуулал",
+    rankTitle: "Хувь",
     nav: {
       dashboard: "Хяналтын самбар",
       map: "Газрын зураг",
@@ -87,6 +171,16 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Орхоны хөндийг гатлан Их Хааны тамгыг хүргэх. Өөрчлөгдөх салхинаас болгоомжил.",
     continueJourney: "Аяллыг Үргэлжлүүлэх",
     treasury: "Эрдэнэс",
+    treasuryKpLabel: "МО (КП)",
+    treasuryCoinsLabel: "Зоос",
+    treasuryGemsLabel: "Э/чулуу",
+    treasuryHint:
+      "МО (КП) = тоглоомоос цуглуулах эрдэнэсийн оноо. Зоос = дэлгүүр/гэрт зарцуулах мөнгө. Эрдэнийн чулуу = ховор эрдэнэ (зарим шагнал, солилцоо).",
+    rankChestOpen: "Хувь дүүрсэн — авдар нээгээрэй",
+    rankChestClaim: "Авдар нээх",
+    rankChestResultGem: "Танд 1 эрдэнийн чулуу олдлоо!",
+    rankChestResultKp: "Танд +{n} МО олдлоо!",
+    rankChestResultCoins: "Танд +{n} зоос олдлоо!",
 
     urtuuChain: "Өртөө Гинж",
     discovered: "Нээгдсэн",
@@ -100,11 +194,14 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     },
 
     currentLocation: "Одоогийн байршил",
-    nextStation: "Дараагийн уртуу",
+    nextStation: "Дараагийн өртөө",
     locked: "Хаалттай",
 
     leaderboard: "Жагсаалт",
     activeBonus: "Идэвхтэй Оноо",
+    journeyDayLabel: "Аяллын өдөр",
+    topPlayersLabel: "Топ тоглогчид",
+    urtuuCounter: "Өртөө",
     journal: "Өдрийн Тэмдэглэл",
     beginRelay: "Шинэ Өртөө эхлүүлэх Эхлүүлэх",
 
@@ -497,14 +594,75 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       system: "Систем",
       toggle: "Theme солих",
     },
+
+    accountMenuProfile: "Профайл",
+    accountMenuTour: "Заавар харах",
+    accountMenuLogout: "Гарах",
+    profileEmailLabel: "И-мэйл",
+    profileLevelLabel: "Түвшин",
+    profileXpLabel: "Туршлага (XP)",
+    profileKpLabel: "Мэдлэгийн оноо",
+    profileStationLabel: "Одоогийн өртөө",
+    profileTierLabel: "Зэрэглэл",
+    profilePageTitle: "Тоглогчийн профайл",
+    profileVisitedStationsTitle: "Очсон өртөөнүүд",
+    profileChangeHeroTitle: "Баатар солих",
+    profileHeroCooldownLabel: "Дараагийн солих хүртэлх хугацаа:",
+    profileHeroOnCooldown:
+      "24 цаг тутамд нэг удаа баатраа солино. Дуусах хүртэл түр хүлээнэ үү.",
+    profileHeroConfirm: "Сонгох",
+    profileNoSession:
+      "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товчоор нэвтэрнэ үү.",
+    dialogClose: "Хаах",
+    mapRegionLabel: "Бүс нутаг",
+    mapTravelToStation: "Очих",
+    mapReturnHome: "Гэр рүү буцах",
+    mapReturnToPreviousSpot: "Өмнөх байрлал руу",
+    mapYourGerTitle: "Чиний гэр",
+    mapYourGerSubtitle: "Тоглогчийн суурь · газрын зураг дээрх гэр",
+    mapHomePinLabel: "Гэр",
+    mapGoToGer: "Гэрт очих",
+    sidebarAtHomeSectionTitle: "Таны суурь",
+    sidebarAtHomeBadge: "Гэртээ байна",
+    sidebarAtHomeHint:
+      "Газрын зурагнаас өртөө сонгоод «Очих» дээр дарахад та тийш очно Эсвэл баатараа удирдаж явах боломжтой. Өртөөн дээр очиход тоглоом нээгдэнэ.",
+    mapGuideTitle: "Юу хийх вэ?",
+    mapGuideStep1: "Өртөө дарна → «Очих» — баатар тэнд очино.",
+    mapGuideStep2:
+      "Өртөөн дээр очино — тоглоом харуулна. (7 хоногт тоглоом бүрт 2 удаа.)",
+    mapGuideStep3: "Дэлгэрэнгүй: зүүн самбар.",
+    mapGuideHide: "Хаах",
+    mapGuideShow: "Заавар",
+    mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
+    introWelcomeTitle: "Тавтай морил",
+    introWelcomeBody:
+      "Дараагийн алхмууд эхлээд юу хийж болохыг, дараа нь дэлгэцийн гол хэсгүүдийг заана.",
+    introGameplayTitle: "Юу хийж болох вэ?",
+    introGameplayBody:
+      "• Өртөө сонгоод «Очих» — баатар тэр өртөө рүү очно.\n• Хаалганд ойртвол тоглоом нээгдэнэ.\n• Нэг тоглоомд 7 хоногт хамгийн ихдээ 2 удаа.\n• МО, зоос, урамшуулал цуглуулж, гэрээ сайжруулна.\n• Зүүн самбар болон газрын зургийн «?» дээр нэмэлт заавар байна.",
+    introStepMapTitle: "Газрын зураг",
+    introStepMapBody:
+      "Өртөөг сонгоод «Очих» — баатар тийш очно. «?» дээр дарж товч заавар харна.",
+    introStepSidebarTitle: "Зүүн самбар",
+    introStepSidebarBody:
+      "Одоогийн аялал, эрдэнэс, оноо, удирдлагын самбар — энд.",
+    introStepNavTitle: "Дээд самбар",
+    introStepNavBody:
+      "Баруун дээр: удирдлагын самбар, профайл, хэл (МН/EN), өнгөний горим.",
+    introNext: "Дараагийн",
+    introSkip: "Алгасах",
+    introDone: "Ойлголоо",
+    gamesAtStation: "Тоглоомууд",
+    gameStatusLocked: "Хүлээгдэж буй",
+    gameStatusDone: "Дууссан",
   },
 
   en: {
     title: "MONGOLIAN TRADITIONAL GAMES",
     knowledgePoints: "Knowledge Points",
     dailyTokens: "Daily Tokens",
-    rank: "Rank Progression",
-    rankTitle: "Messenger",
+    rank: "Reward",
+    rankTitle: "Rank",
     nav: {
       dashboard: "Dashboard",
       map: "Map",
@@ -519,6 +677,16 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Crossing the Orkhon Valley to deliver the seal of the Great Khan. Beware of the changing winds.",
     continueJourney: "Continue Journey",
     treasury: "Treasury",
+    treasuryKpLabel: "KP",
+    treasuryCoinsLabel: "Coins",
+    treasuryGemsLabel: "Gems",
+    treasuryHint:
+      "KP = merit points from games. Coins = currency for home upgrades and shop. Gems = rare currency (some rewards & exchange).",
+    rankChestOpen: "Reward bar full — open your chest",
+    rankChestClaim: "Open chest",
+    rankChestResultGem: "You received 1 gem!",
+    rankChestResultKp: "You received +{n} KP!",
+    rankChestResultCoins: "You received +{n} coins!",
 
     urtuuChain: "Urtuu Chain",
     discovered: "Discovered",
@@ -537,6 +705,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
 
     leaderboard: "Leaderboard",
     activeBonus: "Active Relay Bonus",
+    journeyDayLabel: "Journey day",
+    topPlayersLabel: "Top Players",
+    urtuuCounter: "Station",
     journal: "Journal",
     beginRelay: "Begin New Relay",
 
@@ -929,5 +1100,101 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       system: "System",
       toggle: "Theme Mode",
     },
+
+    accountMenuProfile: "Profile",
+    accountMenuTour: "Show tour",
+    accountMenuLogout: "Sign out",
+    profileEmailLabel: "Email",
+    profileLevelLabel: "Level",
+    profileXpLabel: "Experience (XP)",
+    profileKpLabel: "Knowledge points",
+    profileStationLabel: "Current station",
+    profileTierLabel: "Tier",
+    profilePageTitle: "Player profile",
+    profileVisitedStationsTitle: "Stations visited",
+    profileChangeHeroTitle: "Change hero",
+    profileHeroCooldownLabel: "Next change in",
+    profileHeroOnCooldown:
+      "You can change your hero once every 24 hours. Please wait until the timer ends.",
+    profileHeroConfirm: "Save this hero",
+    profileNoSession:
+      "No player session found. Use Play on the home page to sign in.",
+    dialogClose: "Close",
+    mapRegionLabel: "Region",
+    mapTravelToStation: "Go there",
+    mapReturnHome: "Return to ger",
+    mapReturnToPreviousSpot: "Back to previous spot",
+    mapYourGerTitle: "Your ger",
+    mapYourGerSubtitle: "Your home base on the journey map",
+    mapHomePinLabel: "Home",
+    mapGoToGer: "Home",
+    sidebarAtHomeSectionTitle: "Your base",
+    sidebarAtHomeBadge: "At your ger",
+    sidebarAtHomeHint:
+      "Pick a station on the map and use Go there. Stand by the door to open games.",
+    mapGuideTitle: "What to do",
+    mapGuideStep1: "Tap a station → Go there — the hero walks there.",
+    mapGuideStep2:
+      "Stand by the door — open the panel to play (2 plays per game / 7 days).",
+    mapGuideStep3: "More info in the left sidebar.",
+    mapGuideHide: "Close",
+    mapGuideShow: "Help",
+    mapHowToSectionTitle: "How to play",
+    introWelcomeTitle: "Welcome",
+    introWelcomeBody:
+      "Next steps cover what you can do here, then where things are on screen.",
+    introGameplayTitle: "What you can do",
+    introGameplayBody:
+      "• Pick a station and Go there — your hero walks to it.\n• Stand by the door to open games.\n• Up to 2 plays per game every 7 days.\n• Earn KP, coins, and rewards; upgrade your ger.\n• More detail in the left sidebar and the map ? button.",
+    introStepMapTitle: "The map",
+    introStepMapBody:
+      "Pick a station and use Go there — your hero walks. Tap ? for quick tips.",
+    introStepSidebarTitle: "Left sidebar",
+    introStepSidebarBody:
+      "Expedition, treasury, XP progress, leaderboard — details here.",
+    introStepNavTitle: "Top bar",
+    introStepNavBody:
+      "Leaderboard, profile & language (MN/EN), and theme toggle.",
+    introNext: "Next",
+    introSkip: "Skip",
+    introDone: "Got it",
+    gamesAtStation: "Games",
+    gameStatusLocked: "Locked",
+    gameStatusDone: "Completed",
   },
 };
+
+/** API `ui_strings.key` → DashStrings field (left sidebar + rank labels). */
+const SIDEBAR_STRING_KEYS: Record<string, keyof DashStrings> = {
+  "sidebar.currentExpedition": "currentExpedition",
+  "sidebar.mainQuest": "mainQuest",
+  "sidebar.questTitle": "questTitle",
+  "sidebar.questDesc": "questDesc",
+  "sidebar.continueJourney": "continueJourney",
+  "sidebar.treasury": "treasury",
+  "sidebar.rank": "rank",
+  "sidebar.rankTitle": "rankTitle",
+  "sidebar.leaderboard": "leaderboard",
+  "sidebar.activeBonus": "activeBonus",
+  "sidebar.journeyDayLabel": "journeyDayLabel",
+  "sidebar.topPlayersLabel": "topPlayersLabel",
+  "sidebar.urtuuCounter": "urtuuCounter",
+};
+
+export function mergeDashboardSidebar(
+  base: DashStrings,
+  apiStrings: Record<string, string>,
+  computed?: Partial<Pick<DashStrings, "questTitle" | "questDesc">>,
+): DashStrings {
+  const next: DashStrings = { ...base };
+  const mut = next as unknown as Record<string, string>;
+  for (const [apiKey, field] of Object.entries(SIDEBAR_STRING_KEYS)) {
+    const v = apiStrings[apiKey];
+    if (typeof v === "string" && v.length > 0) {
+      mut[field] = v;
+    }
+  }
+  if (computed?.questTitle) next.questTitle = computed.questTitle;
+  if (computed?.questDesc) next.questDesc = computed.questDesc;
+  return next;
+}

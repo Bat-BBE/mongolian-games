@@ -2,17 +2,23 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { LuX as X } from "react-icons/lu";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/components/AppContext";
-import { HEROES, loadPlayer, savePlayer } from "./hero-data";
-import { HERO_STRINGS } from "./hero-strings";
-import type { HeroId, Lang } from "./hero-strings";
+import { HEROES, loadPlayer, savePlayer, type Hero } from "./hero-data";
+import { mergeHeroesFromApi } from "./map-from-api";
+import {
+  HERO_STRINGS,
+  parseHeroId,
+  type HeroId,
+  type Lang,
+} from "./hero-strings";
+import { getContentHeroes } from "@/lib/api";
 import { StarField } from "./StarField";
 import { HeroToast } from "./HeroToast";
 import { NameEntryScreen } from "./NameEntryScreen";
 import { HeroChooseScreen } from "./HeroChooseScreen";
-import {getUserByEmail, registerEmail} from "@/lib/firebase-auth";
+import { getUserByEmail, registerEmail } from "@/lib/firebase-auth";
 
 export default function HeroSelectPage() {
   const router = useRouter();
@@ -20,21 +26,44 @@ export default function HeroSelectPage() {
   const lang = language as Lang;
   const t = HERO_STRINGS[lang];
 
-  const [mounted, setMounted]       = useState(false);
-  const [screen, setScreen]         = useState<"email" | "hero">("email");
-  const [email, setEmail]           = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [screen, setScreen] = useState<"email" | "hero">("email");
+  const [email, setEmail] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
-  const [toast, setToast]           = useState({ msg: "", visible: false });
+  const [toast, setToast] = useState({ msg: "", visible: false });
+  const [heroes, setHeroes] = useState<Hero[]>(HEROES);
 
-  const selectedHero = HEROES.find((h) => h.id === selectedId)!;
-  const activeColor  = screen === "hero" ? selectedHero.color : "#b38600";
+  const roster = Array.isArray(heroes) && heroes.length > 0 ? heroes : HEROES;
+  const selectedHero = roster.find((h) => h.id === selectedId) ?? roster[0]!;
+  const activeColor = screen === "hero" ? selectedHero.color : "#b38600";
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!heroSelectOpen || screen !== "hero") return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { heroes: rows } = await getContentHeroes();
+        if (cancelled) return;
+        setHeroes(mergeHeroesFromApi(Array.isArray(rows) ? rows : []));
+      } catch {
+        if (!cancelled) setHeroes(HEROES);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [heroSelectOpen, screen]);
 
   useEffect(() => {
     document.body.style.overflow = heroSelectOpen ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [heroSelectOpen]);
 
   // useEffect(() => {
@@ -69,7 +98,7 @@ export default function HeroSelectPage() {
       showToast(
         lang === "mn"
           ? "И-мэйл хаягаа зөв оруулна уу"
-          : "Please enter a valid email"
+          : "Please enter a valid email",
       );
       return;
     }
@@ -79,7 +108,7 @@ export default function HeroSelectPage() {
     if (user) {
       savePlayer({
         name: trimmed,
-        heroId: user.profile.heroId,
+        heroId: parseHeroId(user.profile.heroId),
       });
       setHeroSelectOpen(false);
       router.push("/home");
@@ -102,23 +131,25 @@ export default function HeroSelectPage() {
 
   return createPortal(
     <>
-      <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div
+        className="fixed inset-0 flex items-center justify-center p-3 sm:p-4"
+        style={{ zIndex: 9999 }}
+      >
         <div
           className="absolute inset-0 backdrop-blur"
           onClick={() => setHeroSelectOpen(false)}
         />
-
         <StarField color={activeColor} />
-
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none transition-all duration-700">
           <div
-            className="w-[700px] h-[700px] rounded-full blur-[140px] transition-all duration-700"
-            style={{ background: `radial-gradient(ellipse, ${activeColor}16 0%, transparent 70%)` }}
+            className="w-[min(95vw,500px)] h-[min(56vh,420px)] rounded-full blur-[120px] transition-all duration-700"
+            style={{
+              background: `radial-gradient(ellipse, ${activeColor}16 0%, transparent 70%)`,
+            }}
           />
         </div>
-
         <div
-          className="relative w-full max-w-3xl rounded-[2rem] overflow-hidden overflow-y-auto max-h-[100vh]"
+          className="relative w-full max-w-[min(100%,42rem)] rounded-2xl overflow-hidden overflow-y-auto max-h-[min(94dvh,800px)] overscroll-contain"
           style={{
             zIndex: 10,
             background: "var(--background)",
@@ -132,18 +163,20 @@ export default function HeroSelectPage() {
         >
           <button
             onClick={() => setHeroSelectOpen(false)}
-            className="absolute top-4 right-4 z-20 p-1.5 rounded-full transition-all duration-200"
+            className="absolute top-3 right-3 z-20 p-1.5 rounded-full transition-all duration-200"
             style={{
               background: "var(--glass-border",
               border: "1px solid var(--popever)",
             }}
             onMouseEnter={(e) => {
               // (e.currentTarget as HTMLElement).style.color = "var(--secondary)";
-              (e.currentTarget as HTMLElement).style.background = "var(--muted-foreground)";
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--muted-foreground)";
             }}
             onMouseLeave={(e) => {
               // (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
-              (e.currentTarget as HTMLElement).style.background = "var(--primary)";
+              (e.currentTarget as HTMLElement).style.background =
+                "var(--primary)";
             }}
           >
             <X className="w-4 h-4 text-foreground" />
@@ -163,6 +196,7 @@ export default function HeroSelectPage() {
             <HeroChooseScreen
               t={t}
               lang={lang}
+              heroes={roster}
               playerName={email}
               selectedId={selectedId}
               setSelectedId={setSelectedId}

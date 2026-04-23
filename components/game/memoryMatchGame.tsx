@@ -1,0 +1,299 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SHAGAI_INFO } from "./fourBonusType";
+import MemoryMatchUI from "./memoryMatchUI";
+import {
+  MATCH_TIME_LIMIT_SEC,
+  buildDeck,
+  shuffleDeck,
+  shuffleDeckSeeded,
+  type MemoryCard,
+} from "./memoryMatchType";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import InventoryRewardOverlay from "./InventoryRewardOverlay";
+import { playButtonClick } from "@/lib/uiSounds";
+
+export type MemoryMatchGameProps = {
+  onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+  /** Online: серверээс ирсэн seed — хоёр талд ижил картууд. */
+  multiplayerSeed?: number | null;
+  /** Online горимд эхлэх товчийг нуух (хост эхлүүлэх хүртэл). */
+  multiplayerAwaitingStart?: boolean;
+};
+
+type Phase = "idle" | "playing" | "won" | "lost";
+
+function samePair(a: MemoryCard, b: MemoryCard): boolean {
+  return a.side === b.side && a.pairGroup === b.pairGroup;
+}
+
+export default function MemoryMatchGame({
+  onComplete,
+  multiplayerSeed = null,
+  multiplayerAwaitingStart = false,
+}: MemoryMatchGameProps) {
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [cards, setCards] = useState<MemoryCard[]>([]);
+  const [faceUpIds, setFaceUpIds] = useState<number[]>([]);
+  const [matchedIds, setMatchedIds] = useState<Set<number>>(() => new Set());
+  const [moves, setMoves] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(MATCH_TIME_LIMIT_SEC);
+  const lockRef = useRef(false);
+  const submittedRef = useRef(false);
+  const matchEndedRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const pairsFound = useMemo(
+    () => Math.floor(matchedIds.size / 2),
+    [matchedIds],
+  );
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const startRound = useCallback(() => {
+    matchEndedRef.current = false;
+    submittedRef.current = false;
+    lockRef.current = false;
+    resetGrants();
+    const deck = shuffleDeck(buildDeck());
+    setCards(deck);
+    setFaceUpIds([]);
+    setMatchedIds(new Set());
+    setMoves(0);
+    setTimeLeft(MATCH_TIME_LIMIT_SEC);
+    setPhase("playing");
+  }, [resetGrants]);
+
+  const startRoundSeeded = useCallback(
+    (seed: number) => {
+      matchEndedRef.current = false;
+      submittedRef.current = false;
+      lockRef.current = false;
+      resetGrants();
+      const deck = shuffleDeckSeeded(buildDeck(), seed);
+      setCards(deck);
+      setFaceUpIds([]);
+      setMatchedIds(new Set());
+      setMoves(0);
+      setTimeLeft(MATCH_TIME_LIMIT_SEC);
+      setPhase("playing");
+    },
+    [resetGrants],
+  );
+
+  const endWin = useCallback(() => {
+    if (matchEndedRef.current) return;
+    matchEndedRef.current = true;
+    clearTimer();
+    setPhase("won");
+    const pct = Math.max(
+      55,
+      Math.min(100, 100 - Math.max(0, moves - 8) * 4),
+    );
+    if (!submittedRef.current) {
+      submittedRef.current = true;
+      grant({ gems: STONE_MATCH_GEMS });
+      void onComplete?.("win", pct);
+    }
+  }, [clearTimer, grant, moves, onComplete]);
+
+  const endLose = useCallback(() => {
+    if (matchEndedRef.current) return;
+    matchEndedRef.current = true;
+    clearTimer();
+    setPhase("lost");
+    const pct = Math.round((pairsFound / 8) * 100);
+    if (!submittedRef.current) {
+      submittedRef.current = true;
+      void onComplete?.("lose", Math.max(5, pct));
+    }
+  }, [clearTimer, onComplete, pairsFound]);
+
+  useEffect(() => {
+    if (phase !== "playing") return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          queueMicrotask(() => endLose());
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearTimer();
+  }, [phase, clearTimer, endLose]);
+
+  useEffect(() => {
+    if (phase === "playing" && pairsFound >= 8) {
+      endWin();
+    }
+  }, [phase, pairsFound, endWin]);
+
+  const handleCardClick = useCallback(
+    (card: MemoryCard) => {
+      if (phase !== "playing" || lockRef.current) return;
+      if (matchedIds.has(card.id)) return;
+      if (faceUpIds.includes(card.id)) return;
+
+      playButtonClick();
+
+      const nextUp = [...faceUpIds, card.id];
+      setFaceUpIds(nextUp);
+
+      if (nextUp.length < 2) return;
+
+      setMoves((m) => m + 1);
+      const [id1, id2] = nextUp;
+      const c1 = cards.find((c) => c.id === id1)!;
+      const c2 = cards.find((c) => c.id === id2)!;
+
+      if (samePair(c1, c2)) {
+        grant({ coins: STONE_ROUND_COINS });
+        setMatchedIds((prev) => new Set([...prev, id1, id2]));
+        setFaceUpIds([]);
+        return;
+      }
+
+      lockRef.current = true;
+      window.setTimeout(() => {
+        setFaceUpIds([]);
+        lockRef.current = false;
+      }, 750);
+    },
+    [phase, matchedIds, faceUpIds, cards, grant],
+  );
+
+  const resetAll = useCallback(() => {
+    clearTimer();
+    matchEndedRef.current = false;
+    setPhase("idle");
+    setCards([]);
+    setFaceUpIds([]);
+    setMatchedIds(new Set());
+    setMoves(0);
+    setTimeLeft(MATCH_TIME_LIMIT_SEC);
+    submittedRef.current = false;
+    resetGrants();
+  }, [clearTimer, resetGrants]);
+
+  useEffect(() => {
+    if (multiplayerSeed == null) return;
+    startRoundSeeded(multiplayerSeed);
+  }, [multiplayerSeed, startRoundSeeded]);
+
+  useEffect(() => {
+    if (multiplayerSeed != null) return;
+    if (!multiplayerAwaitingStart) return;
+    if (phase === "idle" && cards.length === 0) return;
+    resetAll();
+  }, [
+    multiplayerSeed,
+    multiplayerAwaitingStart,
+    phase,
+    cards.length,
+    resetAll,
+  ]);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        minHeight: 420,
+        background:
+          "radial-gradient(ellipse 70% 60% at 50% 40%, #1a2820 0%, #0a0c0a 100%)",
+      }}
+    >
+      <InventoryRewardOverlay
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 24,
+          right: "min(360px, 34vw)",
+          top: 24,
+          bottom: 24,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: 10,
+            width: "100%",
+            maxWidth: 420,
+            aspectRatio: "1",
+          }}
+        >
+          {cards.map((card) => {
+            const up =
+              faceUpIds.includes(card.id) || matchedIds.has(card.id);
+            const info = SHAGAI_INFO[card.side];
+            return (
+              <button
+                key={card.id}
+                type="button"
+                onClick={() => void handleCardClick(card)}
+                disabled={phase !== "playing" || matchedIds.has(card.id)}
+                style={{
+                  borderRadius: 14,
+                  border: up
+                    ? `2px solid ${info.color}`
+                    : "2px solid rgba(200,160,48,0.35)",
+                  background: up
+                    ? `linear-gradient(160deg, ${info.color}33, #1a1814)`
+                    : "linear-gradient(160deg, #2a2418, #141210)",
+                  cursor:
+                    phase !== "playing" || matchedIds.has(card.id)
+                      ? "default"
+                      : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: up ? 36 : 18,
+                  color: up ? info.color : "rgba(200,160,48,0.45)",
+                  boxShadow: up
+                    ? `0 0 20px ${info.glow}`
+                    : "inset 0 2px 8px rgba(0,0,0,0.4)",
+                  transition: "transform 0.15s ease, box-shadow 0.2s",
+                  transform: up ? "scale(1)" : "scale(0.98)",
+                  padding: 0,
+                  minHeight: 0,
+                }}
+              >
+                {up ? info.symbol : "❖"}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <MemoryMatchUI
+        phase={phase}
+        timeLeft={timeLeft}
+        moves={moves}
+        pairsFound={pairsFound}
+        onStart={startRound}
+        onRestart={resetAll}
+        multiplayerAwaiting={
+          multiplayerAwaitingStart && phase === "idle" && !multiplayerSeed
+        }
+      />
+    </div>
+  );
+}

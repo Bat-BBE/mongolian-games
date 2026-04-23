@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Inter, Cinzel, Marcellus } from "next/font/google";
+import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AuthProvider } from "@/components/AuthContext";
 import { AppProvider } from "@/components/AppContext";
 import HeroSelectPage from "@/components/hero-select/Hero-select-page";
 
-const inter = Inter({ subsets: ["latin"] });
-const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel" });
-const marcellus = Marcellus({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-marcellus",
+const inter = Inter({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-inter",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-playfair",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
       <body
-        className={`${inter.className} ${cinzel.variable} ${marcellus.variable} bg-[#050608] text-slate-200`}
+        className={`${inter.className} ${inter.variable} ${playfair.variable} bg-background text-foreground font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -35,10 +38,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppProvider>
-            {children}
-            <HeroSelectPage />
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              {children}
+              <HeroSelectPage />
+            </AppProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

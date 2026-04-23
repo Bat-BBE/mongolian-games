@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#0a0f18"/>
+    </linearGradient>
+    <linearGradient id="dune" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#sky)"/>
+  <path d="M0,560 C180,520 260,640 420,600 C610,552 680,520 820,560 C980,608 1080,600 1200,560 L1200,800 L0,800 Z" fill="url(#dune)"/>
+  <path d="M0,610 C160,580 310,720 520,660 C720,604 820,590 980,640 C1070,668 1140,664 1200,640 L1200,800 L0,800 Z" fill="#0a0f18" opacity="0.55"/>
+  <circle cx="980" cy="190" r="62" fill="#fde68a" opacity="0.18"/>
+  <circle cx="980" cy="190" r="38" fill="#fbbf24" opacity="0.22"/>
+</svg>
+

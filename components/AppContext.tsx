@@ -83,49 +83,48 @@ const mn: Translations = {
     title1: "МОНГОЛЫН",
     title2: "УЛАМЖЛАЛТ ТОГЛООМУУД",
     subtitle:
-      "Монголын ардын уламжлалт тоглоом наадгай, нүүдэлчдийн соёл, оюуны өвийг орчин үеийн 3D технологиор амилуулсан дижитал тоглоомын ертөнц.",
+      "Монголын уламжлалт тоглоом наадгай, нүүдэлчдийн соёл, оюуны өвийг орчин үеийн 3D технологиор амилуулсан дижитал тоглоомын ертөнц.",
     cta: "Тоглож эхлэх",
-    free:
-      "Энэхүү платформ нь Монголын өв соёл, тоглоом наадгайг орчин үеийн технологитой хослуулан шинэ үеийн хүүхэд залууст хүргэх зорилготой.",
+    free: "Энэхүү платформ нь Монголын өв соёл, тоглоом наадгайг орчин үеийн технологитой хослуулан шинэ үеийн хүүхэд залууст хүргэх зорилготой.",
   },
 
   whatIs: {
     heading: "ТАНИЛЦУУЛГА",
     intro:
-      "Монголын ардын уламжлалт тоглоом наадгай нь нүүдэлчдийн ахуй амьдрал, байгальтайгаа зохицон орших ухаан, оюуны сэтгэлгээ, хүмүүжил ёс суртахууныг илэрхийлсэн соёлын үнэт өв юм. Эрт үеэс монголчууд хүүхэд багачууддаа тоглоомоор дамжуулан авхаалж самбаа, хурц ухаан, хамтач зан, тэсвэр хатуужлыг төлөвшүүлж иржээ. Энэхүү платформ нь Монголын уламжлалт тоглоомыг орчин үеийн технологитой хослуулан шинэ үеийн хэрэглэгчдэд сонирхолтой хэлбэрээр хүргэх зорилготой.",
+      "Монголын уламжлалт тоглоом наадгай нь нүүдэлчдийн ахуй амьдрал, байгальтайгаа зохицон орших ухаан, оюуны сэтгэлгээ, хүмүүжил ёс суртахууныг илэрхийлсэн соёлын үнэт өв юм. Эрт үеэс монголчууд хүүхэд багачууддаа тоглоомоор дамжуулан авхаалж самбаа, хурц ухаан, нийтлэг зан, тэсвэр хатуужлыг төлөвшүүлж иржээ. Энэхүү платформ нь Монголын уламжлалт тоглоомыг орчин үеийн технологитой хослуулан шинэ үеийн хэрэглэгчдэд сонирхолтой хэлбэрээр хүргэх зорилготой.",
 
     items: [
       {
         title: "Уламжлалт тоглоомын дижитал сэргэлт",
         description:
-          "Монголын эртний тоглоом наадгайг орчин үеийн 3D технологи, интерактив систем ашиглан дахин бүтээж, хэрэглэгчид сонирхолтой хэлбэрээр тоглох боломжийг олгоно."
+          "Монголын эртний тоглоом наадгайг орчин үеийн 3D технологи, интерактив систем ашиглан дахин бүтээж, хэрэглэгчид сонирхолтой хэлбэрээр тоглох боломжийг олгоно.",
       },
       {
         title: "Нүүдэлчдийн соёлын өв",
         description:
-          "Монгол тоглоом бүр нь мал аж ахуй, ан гөрөө, ахуй амьдрал, байгальтайгаа зохицон амьдрах ухааныг илэрхийлдэг соёлын өв юм."
+          "Монгол тоглоом бүр нь мал аж ахуй, ан гөрөө, ахуй амьдрал, байгальтайгаа зохицон амьдрах ухааныг илэрхийлдэг соёлын өв юм.",
       },
       {
         title: "Оюуны хөгжил",
         description:
-          "Шагайн наадгай, оньсон тоглоом зэрэг нь логик сэтгэлгээ, анхаарал төвлөрөл, ой тогтоолт, асуудал шийдвэрлэх чадварыг хөгжүүлдэг."
+          "Шагайн наадгай, оньсон тоглоом зэрэг нь логик сэтгэлгээ, анхаарал төвлөрөл, ой тогтоолт, асуудал шийдвэрлэх чадварыг хөгжүүлдэг.",
       },
       {
         title: "Хүүхэд залуучуудад зориулсан боловсрол",
         description:
-          "Тоглоомын явцад хэрэглэгчид Монголын түүх, зан заншил, уламжлалт тоглоомуудын утга учрыг ойлгож суралцах боломжтой."
+          "Тоглоомын явцад хэрэглэгчид Монголын түүх, зан заншил, уламжлалт тоглоомуудын утга учрыг ойлгож суралцах боломжтой.",
       },
       {
         title: "Виртуал аялал",
         description:
-          "Тоглогч Монгол орны газрын зураг дээрх өртөөнүүдээр аялж тухайн бүс нутагтай холбоотой тоглоомуудыг нээн тоглоно."
+          "Тоглогч Монгол орны газрын зураг дээрх өртөөнүүдээр аялж тухайн бүс нутагтай холбоотой тоглоомуудыг нээн тоглоно.",
       },
       {
         title: "Соёлын өвийг хадгалан түгээх",
         description:
-          "Энэхүү төсөл нь Монголын уламжлалт тоглоом наадгайг шинэ үеийн хүүхэд залуус болон олон улсын хэрэглэгчдэд танилцуулж соёлын өвийг хадгалан хамгаалахад чиглэнэ."
-      }
-    ]
+          "Энэхүү төсөл нь Монголын уламжлалт тоглоом наадгайг шинэ үеийн хүүхэд залуус болон олон улсын хэрэглэгчдэд танилцуулж соёлын өвийг хадгалан хамгаалахад чиглэнэ.",
+      },
+    ],
   },
 
   howItWorks: {
@@ -157,7 +156,7 @@ const mn: Translations = {
   games: {
     heading: "УЛАМЖЛАЛТ ТОГЛООМУУД",
     intro:
-      "Монголын уламжлалт тоглоомууд нь хүүхэд багачуудын оюун ухаан, авхаалж самбаа, хамтач зан чанарыг хөгжүүлэх зорилготой байжээ.",
+      "Монголын уламжлалт тоглоомууд нь хүүхэд багачуудын оюун ухаан, авхаалж самбаа, нийтэч зан чанарыг хөгжүүлэх зорилготой байжээ.",
     items: [
       {
         name: "Шагайн наадгай",
@@ -177,11 +176,11 @@ const mn: Translations = {
       },
       {
         name: "Хорол",
-        desc: "Монголчуудын уламжлалт хөлөгт тоглоом бөгөөд стратеги, хамтын ажиллагааг хөгжүүлдэг.",
+        desc: "Зэндмэнэ: 60 мод, жин, гэр эсвэл цай — тоглоом дотор бүрэн дүрмийн заавар.",
       },
       {
-        name: "Оньсон тоглоом",
-        desc: "Оюун ухаан сорих модон оньс тайлах уламжлалт тоглоом.",
+        name: "Хос ол",
+        desc: "Санах ой, логик — 4×4 дээр шагайн талыг хос болгон ол.",
       },
       {
         name: "Тэвэг өшиглөх",
@@ -193,7 +192,7 @@ const mn: Translations = {
       },
     ],
     play: "Тоглох",
-    lock: "Удахгүй"
+    lock: "Удахгүй",
   },
 
   features: {
@@ -220,8 +219,7 @@ const mn: Translations = {
     heading1: "Монголын өв соёлын ертөнцөд",
     heading2: "Өөрийн аяллаа өнөөдөр эхлүүл",
     button: "Аяллаа эхлүүлэх",
-    note:
-      "Энэхүү тоглоом нь боловсрол, соёлын танин мэдэхүйн зорилготой.",
+    note: "Энэхүү тоглоом нь боловсрол, соёлын танин мэдэхүйн зорилготой.",
   },
 
   footer: {
@@ -254,8 +252,7 @@ const en: Translations = {
     subtitle:
       "A digital platform that revives Mongolia's traditional games and nomadic cultural heritage through immersive interactive gameplay.",
     cta: "Start Playing",
-    free:
-      "This project introduces Mongolian cultural heritage and traditional games using modern technology.",
+    free: "This project introduces Mongolian cultural heritage and traditional games using modern technology.",
   },
 
   whatIs: {
@@ -267,34 +264,34 @@ const en: Translations = {
       {
         title: "Digital revival of traditional games",
         description:
-          "Ancient Mongolian games are recreated using modern 3D technology and interactive systems, allowing users to experience and play them in an engaging digital environment."
+          "Ancient Mongolian games are recreated using modern 3D technology and interactive systems, allowing users to experience and play them in an engaging digital environment.",
       },
       {
         title: "Nomadic cultural heritage",
         description:
-          "Each traditional game reflects aspects of nomadic life such as animal husbandry, hunting traditions, daily lifestyle, and the wisdom of living in harmony with nature."
+          "Each traditional game reflects aspects of nomadic life such as animal husbandry, hunting traditions, daily lifestyle, and the wisdom of living in harmony with nature.",
       },
       {
         title: "Intellectual development",
         description:
-          "Games such as ankle bone games and traditional puzzles help develop logical thinking, concentration, memory, and problem-solving skills."
+          "Games such as ankle bone games and traditional puzzles help develop logical thinking, concentration, memory, and problem-solving skills.",
       },
       {
         title: "Educational experience for children and youth",
         description:
-          "While playing, users can learn about Mongolian history, traditions, and the cultural meanings behind traditional games."
+          "While playing, users can learn about Mongolian history, traditions, and the cultural meanings behind traditional games.",
       },
       {
         title: "Virtual journey",
         description:
-          "Players travel across stations located on the map of Mongolia and unlock games associated with different regions."
+          "Players travel across stations located on the map of Mongolia and unlock games associated with different regions.",
       },
       {
         title: "Preserving and promoting cultural heritage",
         description:
-          "This project aims to introduce Mongolian traditional games to younger generations and international audiences while helping preserve and promote cultural heritage."
-      }
-    ]
+          "This project aims to introduce Mongolian traditional games to younger generations and international audiences while helping preserve and promote cultural heritage.",
+      },
+    ],
   },
 
   howItWorks: {
@@ -346,11 +343,11 @@ const en: Translations = {
       },
       {
         name: "Khorol",
-        desc: "A traditional Mongolian board strategy game.",
+        desc: "Zendmene: 60 pieces, trump, gers or tea — full rules inside the game modal.",
       },
       {
-        name: "Puzzle Locks",
-        desc: "Traditional wooden puzzle games that challenge logical thinking.",
+        name: "Memory Pairs",
+        desc: "Train memory and logic — match pairs of shagai sides on a 4×4 grid before time runs out.",
       },
       {
         name: "Teveg",

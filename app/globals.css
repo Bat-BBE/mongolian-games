@@ -10,8 +10,9 @@
 @theme inline {
   --color-background:           var(--background);
   --color-foreground:           var(--foreground);
-  --font-sans:                  var(--font-geist-sans);
-  --font-mono:                  var(--font-geist-mono);
+  --font-sans:                  var(--font-inter);
+  --font-display:               var(--font-playfair);
+  --font-mono:                  ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
   --color-sidebar-ring:         var(--sidebar-ring);
   --color-sidebar-border:       var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -103,6 +104,12 @@
   --grad-crimson:  linear-gradient(135deg, #5a0000 0%, #8B0000 50%, #C9A84C 100%);
   --grad-hero:     linear-gradient(180deg, rgba(10,7,3,0.2) 0%, rgba(10,7,3,0.55) 55%, rgba(5,4,3,1) 100%);
   --grad-shimmer:  linear-gradient(105deg, transparent 30%, rgba(237,217,138,0.55) 50%, transparent 70%);
+  /**
+   * Нүүр hero — Ногоон нутаг, гол (Unsplash, Sodbayar Photography, Сэлэнгэ).
+   * https://unsplash.com/photos/a-river-running-through-a-lush-green-countryside-pM6ALGrv7yw
+   * Өөрийн зураг: public/images/hero-bg.jpg → --hero-bg-image: url("/images/hero-bg.jpg");
+   */
+  --hero-bg-image: url("https://images.unsplash.com/photo-1717489577924-54fbf10ba676?q=85&w=2400&auto=format&fit=crop");
 
   --glass-bg:     rgba(248, 242, 228, 0.68);
   --glass-border: rgba(201, 168, 76, 0.22);
@@ -156,7 +163,7 @@
 
   body {
     @apply bg-background text-foreground overflow-x-hidden;
-    font-family: 'Crimson Pro', Georgia, serif;
+    font-family: var(--font-inter);
     transition: background-color 0.4s ease, color 0.4s ease;
     background-image:
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
@@ -176,9 +183,13 @@
     color: var(--foreground);
   }
 
-  .font-display   { font-family: 'Cinzel', 'Playfair Display', Georgia, serif; }
-  .font-heritage  { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; }
-  .font-body      { font-family: 'Crimson Pro', Georgia, serif; }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair);
+  }
+
+  .font-display   { font-family: var(--font-playfair); }
+  .font-heritage  { font-family: var(--font-playfair); font-style: italic; }
+  .font-body      { font-family: var(--font-inter); }
 }
 
 @layer components {
@@ -216,6 +227,54 @@
     transform: translateY(-4px) scale(1.01);
   }
 
+  /* Dashboard зүүн самбар — глобал алтан scrollbar-аас зөөлөн, шилэн фонд илүү тохино */
+  .dashboard-left-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--primary) 38%, transparent) transparent;
+  }
+  .dashboard-left-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .dashboard-left-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dashboard-left-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--primary) 42%, transparent);
+    border-radius: 9999px;
+  }
+  .dashboard-left-scroll::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--primary) 58%, transparent);
+  }
+
+  /* Админ — нүүрний glass-card-тай ижил хүрээ + сүүдэр (тогтмол card, blurгүй) */
+  .admin-panel {
+    border-radius: var(--radius);
+    background: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid color-mix(in oklch, var(--primary) 16%, var(--border));
+    box-shadow:
+      0 4px 28px -4px color-mix(in oklch, var(--primary) 10%, transparent),
+      inset 0 1px 0 color-mix(in oklch, var(--gold-light, #EDD98A) 18%, transparent);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      color 0.15s ease;
+  }
+
+  .admin-panel-elevated {
+    border-radius: var(--radius);
+    background: var(--muted);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px -2px color-mix(in oklch, var(--primary) 6%, transparent);
+    transition:
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      color 0.15s ease;
+  }
+
   .text-gold {
     background: var(--grad-gold);
     -webkit-background-clip: text;
@@ -239,7 +298,7 @@
     background-size: 220% 220%;
     color: oklch(0.09 0.015 55);
     font-weight: 800;
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-playfair);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     border: none;
@@ -271,7 +330,7 @@
     background: transparent;
     border: 1px solid color-mix(in oklch, var(--primary) 55%, transparent);
     color: var(--gold-bright);
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-playfair);
     letter-spacing: 0.15em;
     text-transform: uppercase;
     font-size: 0.7rem;
@@ -334,16 +393,16 @@
       0 0 0 5px color-mix(in oklch, var(--primary) 9%, transparent),
       0 5px 18px color-mix(in oklch, var(--primary) 18%, transparent);
     color: var(--gold-bright);
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-inter);
   }
 
   .hero-section {
     background:
       var(--grad-hero),
-      url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2070&auto=format&fit=crop');
-    /* url('https://news.mn/en/wp-content/uploads/sites/3/2020/07/6-530x352.jpeg'); */
+      var(--hero-bg-image);
     background-size: cover;
-    background-position: center 30%;
+    background-position: center 38%;
+    background-repeat: no-repeat;
     will-change: transform;
   }
 
@@ -356,7 +415,7 @@
   }
 
   .nav-link {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-playfair);
     font-size: 0.65rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -385,6 +444,22 @@
     animation: ambient-pulse 6s ease-in-out infinite;
   }
 
+  /* Гар утас: хэт том blur + pulse нь хэсгүүдийн өнгийг холилдуулна — зөөлрүүлэх */
+  @media (max-width: 639px) {
+    .ambient-glow {
+      filter: blur(34px);
+      max-width: min(92vw, 380px);
+      max-height: 260px;
+      animation-name: ambient-pulse-mobile;
+      animation-duration: 8s;
+    }
+  }
+
+  @keyframes ambient-pulse-mobile {
+    0%, 100% { opacity: 0.42; transform: scale(1); }
+    50%       { opacity: 0.58; transform: scale(1.02); }
+  }
+
   .card-top-line {
     position: absolute;
     top: 0;
@@ -395,7 +470,7 @@
   }
 
   .footer-link {
-    font-family: 'Cinzel', serif;
+    font-family: var(--font-playfair);
     font-size: 0.6rem;
     letter-spacing: 0.22em;
     text-transform: uppercase;

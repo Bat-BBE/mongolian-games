@@ -23,7 +23,7 @@ export default function Footer() {
           <div className="h-6 w-px bg-border mx-1 sm:mx-2" />
 
           <span
-            className="font-heritage tracking-[0.25em] uppercase"
+            className="font-body tracking-[0.25em] uppercase"
             style={{
               fontSize: "clamp(0.45rem, 1.2vw, 0.65rem)",
               color: "var(--muted-foreground)",

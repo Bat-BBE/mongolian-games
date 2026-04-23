@@ -6,14 +6,22 @@ import { Physics, usePlane } from "@react-three/cannon";
 import { Suspense, useState, useCallback, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import SingleShagai from "./singleShagai";
+import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import FourBonesUI from "./fourBonusUI";
 import {
   GameState,
   INITIAL_STATE,
   ShagaiSide,
   isDorvenBerkh,
+  scoreRoll,
+  TARGET_SCORE,
 } from "./fourBonusType";
+import { useInventoryGrant } from "./useInventoryGrant";
+import { STONE_MATCH_GEMS, STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  getShagaiThrowParams,
+  SHAGAI_THROW_START_POSITIONS,
+} from "./shagaiThrowShared";
 
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
@@ -31,7 +39,9 @@ function GameTable() {
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0, 0]}>
         <planeGeometry args={[25, 25]} />
-        <meshStandardMaterial color="#090705" roughness={1} />
+        {/* Warm dark brown instead of near-black so the mat doesn't look
+            like it's floating in a void. */}
+        <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
 
       <mesh
@@ -218,32 +228,6 @@ function GoldParticles({ active }: { active: boolean }) {
   );
 }
 
-const START_POSITIONS: [number, number, number][] = [
-  [-1.5, 4.5, -0.8],
-  [-0.5, 5.0, 0.2],
-  [0.5, 5.5, -0.3],
-  [1.5, 4.8, 0.7],
-];
-
-function getThrowParams(i: number): {
-  vel: [number, number, number];
-  angVel: [number, number, number];
-} {
-  const spread = 2.5;
-  return {
-    vel: [
-      (Math.random() - 0.5) * spread * 2,
-      6 + Math.random() * 4,
-      (Math.random() - 0.5) * spread * 2,
-    ] as [number, number, number],
-    angVel: [
-      (Math.random() - 0.5) * 22,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 22,
-    ] as [number, number, number],
-  };
-}
-
 interface SceneProps {
   state: GameState;
   throwParams: {
@@ -257,7 +241,6 @@ interface SceneProps {
 }
 
 function GameScene({
-  state,
   throwParams,
   isThrown,
   settledSides,
@@ -265,6 +248,7 @@ function GameScene({
   isWin,
 }: SceneProps) {
   const allDone = settledSides.every((s) => s !== null);
+  const pieceTemplate = useShagaiThrowPieceTemplate();
 
   return (
     <>
@@ -276,99 +260,217 @@ function GameScene({
         <SingleShagai
           key={i}
           id={i}
-          startPos={START_POSITIONS[i]}
+          startPos={SHAGAI_THROW_START_POSITIONS[i]}
           throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
           throwAngVel={throwParams[i]?.angVel ?? [5, 5, 5]}
           isThrown={isThrown}
           onSettle={onSettle}
           highlight={isWin && allDone}
           resultSide={settledSides[i]}
+          pieceTemplate={pieceTemplate}
+          maxOnkhRetries={0}
         />
       ))}
     </>
   );
 }
 
-export default function FourBonesGame() {
+export default function FourBonesGame({
+  onComplete,
+}: {
+  onComplete?: (result: "win" | "lose") => void;
+}) {
+  const { grant, rewardEvents, sessionGain, resetGrants } =
+    useInventoryGrant();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
-    ReturnType<typeof getThrowParams>[]
-  >([0, 1, 2, 3].map((i) => getThrowParams(i)));
+    ReturnType<typeof getShagaiThrowParams>[]
+  >([0, 1, 2, 3].map(() => getShagaiThrowParams()));
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
     null,
     null,
     null,
     null,
   ]);
+  const [currentTurn, setCurrentTurn] = useState<"player" | "robot">("player");
+  const currentTurnRef = useRef<"player" | "robot">("player");
   const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
   const settledCount = useRef(0);
   const resultSentRef = useRef(false);
-  const isWin =
-    state.phase === "result" &&
-    state.history.length > 0 &&
-    state.history[state.history.length - 1].isDorvenBerkh;
+  const matchSentRef = useRef(false);
 
-  const handleThrow = useCallback(() => {
-    if (state.phase === "throwing" || state.phase === "settling") return;
+  // Match-over side-effect (rewards + onComplete).
+  useEffect(() => {
+    if (state.phase !== "matchOver") return;
+    if (matchSentRef.current) return;
+    matchSentRef.current = true;
+    const won = state.playerScore >= state.robotScore;
+    if (won) {
+      grant({ gems: STONE_MATCH_GEMS });
+    }
+    onComplete?.(won ? "win" : "lose");
+  }, [state.phase, state.playerScore, state.robotScore, onComplete, grant]);
 
-    const params = [0, 1, 2, 3].map((i) => getThrowParams(i));
+  const startThrow = useCallback((turn: "player" | "robot") => {
+    const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
     setThrowParams(params);
     settledRef.current = [null, null, null, null];
     settledCount.current = 0;
     resultSentRef.current = false;
     setSettledSides([null, null, null, null]);
+    setCurrentTurn(turn);
+    currentTurnRef.current = turn;
 
     setState((prev) => ({
       ...prev,
       phase: "throwing",
-      throws: [],
-      totalThrows: prev.totalThrows + 1,
+      // Only player throws advance the totalThrows counter (matches the
+      // other shagai games).
+      totalThrows:
+        turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
+      // Reset the previous robot result on the start of a new player throw
+      // so the robot panel doesn't show stale data.
+      robotSides: turn === "player" ? null : prev.robotSides,
+      robotPoints: turn === "player" ? 0 : prev.robotPoints,
     }));
 
     setIsThrown(false);
     setTimeout(() => setIsThrown(true), 50);
-  }, [state.phase]);
-
-  const handleSettle = useCallback((id: number, side: ShagaiSide) => {
-    if (settledRef.current[id] !== null) return;
-
-    settledRef.current[id] = side;
-    settledCount.current += 1;
-
-    setSettledSides([...settledRef.current]);
-    setState((prev) => ({ ...prev, phase: "settling" }));
-
-    if (settledCount.current >= 4 && !resultSentRef.current) {
-      resultSentRef.current = true;
-
-      setTimeout(() => {
-        const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
-        const win = isDorvenBerkh(sides);
-
-        setState((prev) => ({
-          ...prev,
-          phase: "result",
-          history: [
-            ...prev.history,
-            { sides, isDorvenBerkh: win, throwNumber: prev.totalThrows },
-          ],
-          wins: prev.wins + (win ? 1 : 0),
-          streak: win ? prev.streak + 1 : 0,
-          bestStreak: win
-            ? Math.max(prev.bestStreak, prev.streak + 1)
-            : prev.bestStreak,
-        }));
-      }, 500);
-    }
   }, []);
+
+  const handleThrow = useCallback(() => {
+    if (
+      state.phase !== "idle" &&
+      state.phase !== "playerResult" &&
+      state.phase !== "robotResult"
+    )
+      return;
+    startThrow("player");
+  }, [state.phase, startThrow]);
+
+  const handleSettle = useCallback(
+    (id: number, side: ShagaiSide) => {
+      if (settledRef.current[id] !== null) return;
+
+      settledRef.current[id] = side;
+      settledCount.current += 1;
+
+      setSettledSides([...settledRef.current]);
+      setState((prev) => ({ ...prev, phase: "settling" }));
+
+      if (settledCount.current >= 4 && !resultSentRef.current) {
+        resultSentRef.current = true;
+
+        setTimeout(() => {
+          const sides = settledRef.current.filter(Boolean) as ShagaiSide[];
+          const win = isDorvenBerkh(sides);
+          const { points } = scoreRoll(sides);
+          const turn = currentTurnRef.current;
+
+          if (turn === "player") {
+            if (points > 0) grant({ coins: STONE_ROUND_COINS });
+
+            setState((prev) => {
+              const nextStreak = win ? prev.streak + 1 : 0;
+              return {
+                ...prev,
+                phase: "playerResult",
+                history: [
+                  ...prev.history,
+                  {
+                    turn: "player",
+                    sides,
+                    isDorvenBerkh: win,
+                    points,
+                    throwNumber: prev.totalThrows,
+                  },
+                ],
+                playerScore: prev.playerScore + points,
+                streak: nextStreak,
+                bestStreak: Math.max(prev.bestStreak, nextStreak),
+                lastPlayerPoints: points,
+              };
+            });
+          } else {
+            setState((prev) => ({
+              ...prev,
+              phase: "robotResult",
+              robotSides: sides,
+              robotPoints: points,
+              robotScore: prev.robotScore + points,
+              history: [
+                ...prev.history,
+                {
+                  turn: "robot",
+                  sides,
+                  isDorvenBerkh: win,
+                  points,
+                  throwNumber: prev.totalThrows,
+                },
+              ],
+            }));
+          }
+        }, 500);
+      }
+    },
+    [grant],
+  );
+
+  // After playerResult, schedule the robot's turn.
+  useEffect(() => {
+    if (state.phase !== "playerResult") return;
+    // If player already reached target, end match.
+    if (state.playerScore >= TARGET_SCORE) {
+      setState((prev) => ({ ...prev, phase: "matchOver" }));
+      return;
+    }
+    const t1 = setTimeout(() => {
+      setState((prev) => ({ ...prev, phase: "robotThinking" }));
+    }, 1400);
+    return () => clearTimeout(t1);
+  }, [state.phase, state.playerScore]);
+
+  // Robot thinking → physically throw its own 4 shagai (same mat as the
+  // player). handleSettle picks up the result once they come to rest and
+  // advances the phase to "robotResult".
+  useEffect(() => {
+    if (state.phase !== "robotThinking") return;
+    const t1 = setTimeout(() => {
+      startThrow("robot");
+    }, 1100);
+    return () => clearTimeout(t1);
+  }, [state.phase, startThrow]);
+
+  // After robotResult, decide next step.
+  useEffect(() => {
+    if (state.phase !== "robotResult") return;
+    if (
+      state.playerScore >= TARGET_SCORE ||
+      state.robotScore >= TARGET_SCORE
+    ) {
+      const t1 = setTimeout(() => {
+        setState((prev) => ({ ...prev, phase: "matchOver" }));
+      }, 1100);
+      return () => clearTimeout(t1);
+    }
+    // Otherwise stay on robotResult; player can throw again.
+  }, [state.phase, state.playerScore, state.robotScore]);
 
   const handleReset = useCallback(() => {
     setState(INITIAL_STATE);
     setSettledSides([null, null, null, null]);
+    setCurrentTurn("player");
+    currentTurnRef.current = "player";
     settledCount.current = 0;
     setIsThrown(false);
-  }, []);
+    resultSentRef.current = false;
+    matchSentRef.current = false;
+    resetGrants();
+  }, [resetGrants]);
+
+  const isWin =
+    state.phase === "matchOver" && state.playerScore >= state.robotScore;
 
   return (
     <div
@@ -376,7 +478,8 @@ export default function FourBonesGame() {
         width: "100%",
         height: "100%",
         position: "relative",
-        background: "#080604",
+        background:
+          "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #241810 45%, #160e08 100%)",
         overflow: "hidden",
       }}
     >
@@ -406,7 +509,7 @@ export default function FourBonesGame() {
           <Environment preset="night" />
           <Physics
             gravity={[0, -14, 0]}
-            defaultContactMaterial={{ friction: 0.75, restitution: 0.18 }}
+            defaultContactMaterial={{ friction: 0.88, restitution: 0.12 }}
           >
             <PhysicsFloor />
             <GameScene
@@ -435,6 +538,8 @@ export default function FourBonesGame() {
         onThrow={handleThrow}
         onReset={handleReset}
         settledSides={settledSides}
+        rewardEvents={rewardEvents}
+        sessionGain={sessionGain}
       />
     </div>
   );

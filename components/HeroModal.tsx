@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Cloud } from 'lucide-react';
+import { LuX as X, LuCloud as Cloud } from "react-icons/lu";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import HeroCard from './HeroCard';

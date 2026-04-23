@@ -5,6 +5,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { cn } from '@/lib/utils';
+import {
+  loadHeroModel,
+  normalizeHeroHeight,
+  pickClip,
+} from '@/components/map3d/heroFbx';
 
 interface HeroCardProps {
   name: string;
@@ -44,15 +49,18 @@ function HeroViewer({
     const scene = new THREE.Scene();
     scene.background = null; // transparent — card bg shows through
 
-    // Camera
-    const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 500);
-    camera.position.set(0, 1.4, 5.5);
-    camera.lookAt(0, 0.9, 0);
+    // Camera — frame the character so it fills the card: aim at mid-torso
+    // (roughly chest-height after the 1.8-unit normalize places feet at y=-1)
+    // and bring the camera in close.
+    const camera = new THREE.PerspectiveCamera(34, W / H, 0.1, 500);
+    camera.position.set(0, 0.1, 3.6);
+    camera.lookAt(0, -0.1, 0);
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -114,34 +122,54 @@ function HeroViewer({
     controls.enableRotate = false;
     controls.autoRotate = true;
     controls.autoRotateSpeed = 1.8;
-    controls.target.set(0, 0.9, 0);
+    controls.target.set(0, -0.1, 0);
 
-    // Load model
-    const loader = new FBXLoader();
+    // Load model (FBX or GLB auto-detected by extension).
     let mixer: THREE.AnimationMixer | null = null;
     const clock = new THREE.Clock();
+    let disposed = false;
 
-    loader.load(modelPath, (obj) => {
-      obj.scale.setScalar(0.018);
-      obj.position.set(0, -1, 0);
-      obj.traverse((c) => {
-        if (c instanceof THREE.Mesh) {
-          c.castShadow = true;
-          c.receiveShadow = true;
+    (async () => {
+      try {
+        const { root: obj, clips: embedded } = await loadHeroModel(modelPath);
+        if (disposed) return;
+
+        // Normalize the character to ~1.8 units tall regardless of source
+        // units, then ensure its feet rest on the ground disc at y=-1.
+        const { feetOffsetY } = normalizeHeroHeight(obj, 1.8);
+        obj.position.set(0, -1 + feetOffsetY, 0);
+        obj.traverse((c) => {
+          if (c instanceof THREE.Mesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+          }
+        });
+        scene.add(obj);
+
+        mixer = new THREE.AnimationMixer(obj);
+
+        // Prefer an idle clip embedded in the hero model itself.
+        const embeddedIdle = pickClip(embedded, ['idle']);
+        if (embeddedIdle) {
+          mixer.clipAction(embeddedIdle).play();
+          setReady(true);
+          return;
         }
-      });
-      scene.add(obj);
-
-      mixer = new THREE.AnimationMixer(obj);
-
-      // Try to load idle animation
-      loader.load('/models/standing idle 01.fbx', (animObj) => {
-        if (animObj.animations[0]) {
-          mixer!.clipAction(animObj.animations[0]).play();
-        }
+        // Fall back to the external Mixamo idle clip (requires a compatible
+        // skeleton; still shows the mesh if bones don't match).
+        const fbxLoader = new FBXLoader();
+        fbxLoader.load('/models/standing idle 01.fbx', (animObj) => {
+          if (!mixer || disposed) return;
+          const first = animObj.animations?.[0];
+          if (first) mixer.clipAction(first).play();
+          setReady(true);
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('HeroCard: failed to load model', modelPath, err);
         setReady(true);
-      });
-    });
+      }
+    })();
 
     // Animate
     const animate = () => {
@@ -156,6 +184,7 @@ function HeroViewer({
     animate();
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(rafRef.current);
       renderer.dispose();
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
@@ -209,18 +238,23 @@ export default function HeroCard({
         style={{
           border: selected
             ? `2px solid ${accentColor}`
-            : '1.5px solid rgba(255,255,255,0.08)',
+            : '1.5px solid color-mix(in oklch, var(--foreground) 8%, transparent)',
           boxShadow: selected
             ? `0 0 24px 4px ${accentColor}44, 0 0 6px 1px ${accentColor}33`
             : hovered && !locked
             ? `0 0 14px 2px ${accentColor}22`
             : 'none',
-          background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 100%)',
+          background:
+            'linear-gradient(160deg, color-mix(in oklch, var(--background) 60%, #0f172a) 0%, color-mix(in oklch, var(--background) 60%, #1e293b) 100%)',
         }}
       >
-        {/* Locked state */}
         {locked ? (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              background: 'color-mix(in oklch, var(--background) 80%, #0f172a)',
+            }}
+          >
             <div
               className="flex flex-col items-center gap-2 opacity-40"
               style={{ color: accentColor }}
@@ -272,7 +306,12 @@ export default function HeroCard({
             <div className="absolute bottom-3 left-0 right-0 text-center px-1 pointer-events-none">
               <span
                 className="text-[9px] font-bold uppercase tracking-widest transition-colors duration-300"
-                style={{ color: selected ? accentColor : 'rgba(255,255,255,0.38)' }}
+                style={{
+                  color: selected
+                    ? accentColor
+                    : 'color-mix(in oklch, #ffffff 70%, transparent)',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                }}
               >
                 {title}
               </span>
@@ -290,8 +329,8 @@ export default function HeroCard({
             color: selected && !locked
               ? accentColor
               : hovered && !locked
-              ? 'rgba(255,255,255,0.75)'
-              : 'rgba(255,255,255,0.35)',
+              ? 'color-mix(in oklch, var(--foreground) 80%, transparent)'
+              : 'color-mix(in oklch, var(--foreground) 45%, transparent)',
             textShadow: selected && !locked ? `0 0 10px ${accentColor}88` : 'none',
           }}
         >

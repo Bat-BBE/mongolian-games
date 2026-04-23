@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2 } from "lucide-react";
+import { LuCircleCheckBig as CheckCircle2 } from "react-icons/lu";
 import { useApp } from "./AppContext";
 
 export default function Features() {
@@ -8,7 +8,7 @@ export default function Features() {
 
   return (
     <section
-      className="py-20 px-6 lg:px-10 bg-background relative overflow-hidden"
+      className="relative isolate overflow-hidden border-t border-border/45 bg-background py-20 px-6 lg:px-10"
       id="features"
     >
       <div
@@ -17,7 +17,7 @@ export default function Features() {
           width: 900,
           height: 300,
           background:
-            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 6%, transparent) 0%, transparent 65%)",
+            "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 14%, transparent) 0%, color-mix(in oklch, var(--gold-bright) 12%, transparent) 38%, transparent 72%)",
         }}
       />
       <div className="text-center mb-10">

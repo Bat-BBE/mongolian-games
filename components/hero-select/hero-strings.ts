@@ -1,12 +1,24 @@
-
 export type HeroId = "shikhikhutag" | "tatatunga" | "subutai" | "rashid";
 export type Lang = "mn" | "en";
+
+/** DB / JSON-аас ирсэн утгыг HeroId болгоно. */
+export function parseHeroId(raw: unknown): HeroId {
+  if (
+    raw === "shikhikhutag" ||
+    raw === "tatatunga" ||
+    raw === "subutai" ||
+    raw === "rashid"
+  ) {
+    return raw;
+  }
+  return "shikhikhutag";
+}
 
 export const HERO_STRINGS = {
   mn: {
     gameTagline: "⚔ Монгол Домог ⚔",
-    gameTitle1: "Дайн &",
-    gameTitle2: "Туульс",
+    gameTitle1: "Өв &",
+    gameTitle2: "Соёл",
     namePlaceholder: "Нэрээ оруулна уу...",
     emailPlaceholder: "И-мэйл хаяг",
     emailHint: "Бүртгэлтэй бол шууд тоглоомд орно",
@@ -22,7 +34,8 @@ export const HERO_STRINGS = {
     playBtn: "Аянд гарах",
     guest: "Зочноор үргэлжлүүлэх",
     autoSave: "Таны дэвшил үүлэнд автоматаар хадгалагдана",
-    toast: (name: string, hero: string) => `⚔ ${name} — ${hero}-тай хамт аян эхэллээ!`,
+    toast: (name: string, hero: string) =>
+      `⚔ ${name} — ${hero}-тай хамт аян эхэллээ!`,
     role: {
       shikhikhutag: "Мэргэн Ухаан · Зан Суртахуун",
       tatatunga: "Мэдлэг · Гэгээрэл",
@@ -44,8 +57,8 @@ export const HERO_STRINGS = {
   },
   en: {
     gameTagline: "⚔ Mongol Legend ⚔",
-    gameTitle1: "War &",
-    gameTitle2: "Tales",
+    gameTitle1: "Heritage &",
+    gameTitle2: "Culture",
     namePlaceholder: "Enter your name...",
     emailPlaceholder: "Enter your email...",
     emailHint: "Registered users go directly to the game",
@@ -61,7 +74,8 @@ export const HERO_STRINGS = {
     playBtn: "Begin the Journey",
     guest: "Continue as Guest",
     autoSave: "Your progress and high scores will be automatically saved",
-    toast: (name: string, hero: string) => `⚔ ${name} — The journey begins with ${hero}!`,
+    toast: (name: string, hero: string) =>
+      `⚔ ${name} — The journey begins with ${hero}!`,
     role: {
       shikhikhutag: "Wisdom · Morality",
       tatatunga: "Knowledge · Enlightenment",

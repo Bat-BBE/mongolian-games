@@ -9,7 +9,7 @@ export default function Navbar() {
             JMT
           </span>
           <div className="h-8 w-px bg-primary/20 mx-2" />
-          <span className="font-heritage text-xs tracking-[0.3em] uppercase text-primary/80">
+          <span className="font-body italic text-xs tracking-[0.3em] uppercase text-primary/80">
             Journey Through Mongolian Time
           </span>
         </div>

@@ -1,11 +1,16 @@
 "use client";
 
-import { Lock } from "lucide-react";
+import { LuLock as Lock } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 
 export interface UrtuuStation {
   id: string;
   name: string;
+  /** Газар зүй / бүс (API-аас). */
+  region?: string;
+  /** Энэ өртөөнд холбогдсон бүх тоглоом — popup-д харуулна. */
+  games?: { slug: string; name: string; desc: string; reward: string }[];
+  gameSlug?: string;
   gameName: string;
   gameDesc: string;
   reward: string;
@@ -16,7 +21,9 @@ export interface UrtuuStation {
   isCurrent?: boolean;
   /** already completed? */
   isDone?: boolean;
-  icon?: string; // material icon name
+  icon?: string;
+  /** API/admin map marker image (resolved absolute URL) */
+  imageUrl?: string;
   distance?: string;
 }
 

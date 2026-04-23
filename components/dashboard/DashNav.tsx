@@ -1,8 +1,22 @@
 "use client";
 
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { DashStrings, DashLang } from "./dashboard-strings";
-import { useRef, useState, CSSProperties } from "react";
+import { useRef, CSSProperties } from "react";
+import {
+  LuTrophy as Trophy,
+  LuChevronDown as ChevronDown,
+  LuUser as User,
+  LuCircleHelp as CircleHelp,
+  LuLogOut as LogOut,
+} from "react-icons/lu";
 
 interface DashNavProps {
   t: DashStrings;
@@ -12,6 +26,11 @@ interface DashNavProps {
   playerTitle: string;
   avatarUrl: string;
   level: number;
+  userEmail: string;
+  onOpenProfile: () => void;
+  onLogout: () => void;
+  onOpenLeaderboard?: () => void;
+  onShowIntroTour?: () => void;
 }
 
 export function DashNav({
@@ -22,10 +41,13 @@ export function DashNav({
   playerTitle,
   avatarUrl,
   level,
+  userEmail,
+  onOpenProfile,
+  onLogout,
+  onOpenLeaderboard,
+  onShowIntroTour,
 }: DashNavProps) {
   const navRef = useRef<HTMLElement>(null);
-  const linkRefs = useRef<(HTMLAnchorElement | null)[]>([]);
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
 
   const goldText = {
     background: "var(--grad-gold)",
@@ -71,6 +93,7 @@ export function DashNav({
       {(["mn", "en"] as const).map((lng) => (
         <button
           key={lng}
+          type="button"
           onClick={() => setLang(lng)}
           aria-pressed={lang === lng}
           style={langBtnStyle(lang === lng)}
@@ -124,61 +147,121 @@ export function DashNav({
         </div>
       </div>
 
-      <div className="flex items-center gap-[clamp(8px,1.2vw,16px)]">
-        <div className="flex items-center gap-[clamp(6px,1vw,12px)]">
-          <div className="text-right hidden sm:block">
-            <p
-              className="font-bold"
-              style={{
-                color: "var(--foreground)",
-                fontSize: "clamp(11px,0.9vw,14px)",
-              }}
-            >
-              {playerName}
-            </p>
-
-            <p
-              className="uppercase"
-              style={{
-                fontSize: "clamp(8px,0.7vw,11px)",
-                letterSpacing: "0.08em",
-                color: "color-mix(in oklch,var(--foreground)60%,transparent)",
-              }}
-            >
-              {playerTitle}
-            </p>
-          </div>
-
-          <div
-            className="relative"
+      <div
+        data-tour-anchor="nav-actions"
+        className="flex items-center gap-[clamp(8px,1.2vw,16px)]"
+      >
+        {onOpenLeaderboard ? (
+          <button
+            type="button"
+            onClick={onOpenLeaderboard}
+            className="p-2 rounded-full border border-primary/25 bg-background/50 hover:bg-primary/15 hover:border-primary/45 transition-colors shrink-0"
             style={{
-              width: "clamp(34px,3vw,46px)",
-              height: "clamp(34px,3vw,46px)",
+              color: "color-mix(in oklch, var(--primary) 85%, transparent)",
             }}
+            title={t.leaderboard}
+            aria-label={t.leaderboard}
           >
-            <img
-              src={avatarUrl}
-              alt={playerName}
-              className="w-full h-full rounded-full object-cover border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
-            />
+            <Trophy className="size-[clamp(20px,1.5vw,26px)]" />
+          </button>
+        ) : null}
 
-            <div
-              className="absolute flex items-center justify-center rounded-full font-black"
-              style={{
-                bottom: "-3px",
-                right: "-3px",
-                width: "clamp(14px,1.2vw,20px)",
-                height: "clamp(14px,1.2vw,20px)",
-                fontSize: "clamp(7px,0.6vw,10px)",
-                background: "var(--primary)",
-                color: "var(--primary-foreground)",
-                border: "2px solid var(--background)",
-              }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-[clamp(6px,1vw,12px)] rounded-lg pl-2 pr-2 py-1 border bg-background/40 hover:bg-primary/10 hover:border-primary/30 transition-colors text-left max-w-[min(280px,50vw)]"
             >
-              {level}
+              <div className="text-right hidden sm:block min-w-0 flex-1">
+                <p
+                  className="font-bold truncate"
+                  style={{
+                    color: "var(--foreground)",
+                    fontSize: "clamp(11px,0.9vw,14px)",
+                  }}
+                >
+                  {playerName}
+                </p>
+
+                <p
+                  className="uppercase truncate"
+                  style={{
+                    fontSize: "clamp(8px,0.7vw,11px)",
+                    letterSpacing: "0.08em",
+                    color:
+                      "color-mix(in oklch,var(--foreground)60%,transparent)",
+                  }}
+                >
+                  {playerTitle}
+                </p>
+              </div>
+
+              <div
+                className="relative shrink-0"
+                style={{
+                  width: "clamp(34px,3vw,46px)",
+                  height: "clamp(34px,3vw,46px)",
+                }}
+              >
+                <img
+                  src={avatarUrl || "/images/shikhikhutag.png"}
+                  alt=""
+                  className="w-full h-full rounded-full object-contain border-2 border-primary shadow-[0_0_12px_rgba(212,175,55,0.4)]"
+                />
+
+                <div
+                  className="absolute flex items-center justify-center rounded-full font-black"
+                  style={{
+                    bottom: "-3px",
+                    right: "-3px",
+                    width: "clamp(14px,1.2vw,20px)",
+                    height: "clamp(14px,1.2vw,20px)",
+                    fontSize: "clamp(7px,0.6vw,10px)",
+                    background: "var(--primary)",
+                    color: "var(--primary-foreground)",
+                    border: "2px solid var(--background)",
+                  }}
+                >
+                  {level}
+                </div>
+              </div>
+              <ChevronDown className="size-4 text-muted-foreground shrink-0 hidden sm:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="min-w-[220px] border-primary/20 bg-zinc-950/95 backdrop-blur-md"
+          >
+            <div className="px-2 py-1.5 text-[10px] text-muted-foreground truncate border-b border-white/5 mb-1">
+              {userEmail}
             </div>
-          </div>
-        </div>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={onOpenProfile}
+            >
+              <User className="size-4" />
+              {t.accountMenuProfile}
+            </DropdownMenuItem>
+            {onShowIntroTour ? (
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={onShowIntroTour}
+              >
+                <CircleHelp className="size-4" />
+                {t.accountMenuTour}
+              </DropdownMenuItem>
+            ) : null}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer text-red-300 focus:text-red-100 focus:bg-red-950/50"
+              onClick={onLogout}
+            >
+              <LogOut className="size-4" />
+              {t.accountMenuLogout}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <LangToggle />
         <ModeToggle />
       </div>

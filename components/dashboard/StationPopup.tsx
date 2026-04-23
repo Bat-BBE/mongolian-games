@@ -1,105 +1,271 @@
 "use client";
 
-import { X, Star, Gamepad2, BookOpen } from "lucide-react";
+import {
+  LuX as X,
+  LuStar as Star,
+  LuGamepad2 as Gamepad2,
+  LuBookOpen as BookOpen,
+} from "react-icons/lu";
 import { cn } from "@/lib/utils";
 import type { UrtuuStation } from "./UrtuuNode";
+import {
+  gameWeeklyPlaysRemaining,
+  stationAllGamesWeeklyLocked,
+} from "./mapConstants";
 
 interface StationPopupProps {
   station: UrtuuStation | null;
   onClose: () => void;
-  onPlay: (id: string) => void;
+  onPlay: (gameSlug: string, gameName?: string) => void;
+  onTravel?: () => void;
+  onReturnHome?: () => void;
+  onReturnToPreviousSpot?: () => void;
+  travelLabel?: string;
+  returnHomeLabel?: string;
+  returnPrevLabel?: string;
+  heroTargetId?: string | null;
   loreLabel: string;
   minigameLabel: string;
-  /** Зөвхөн одоогийн өртөө дээр тоглоом эхлүүлэх */
+  regionLabel: string;
+  gamesSectionLabel: string;
+  lockedHint: string;
+  doneHint: string;
   canPlay?: boolean;
+  stationSteps?: Record<string, { completedGameSlugs: string[] }>;
+  stationGameVisits?: Record<string, Record<string, number[]>>;
 }
 
 export function StationPopup({
   station,
   onClose,
   onPlay,
+  onTravel,
+  onReturnHome,
+  onReturnToPreviousSpot,
+  travelLabel = "Очих",
+  returnHomeLabel = "Гэр рүү буцах",
+  returnPrevLabel = "Өмнөх байрлал руу",
+  heroTargetId = null,
   loreLabel,
   minigameLabel,
+  regionLabel,
+  gamesSectionLabel,
+  lockedHint,
+  doneHint,
   canPlay = true,
+  stationSteps,
+  stationGameVisits,
 }: StationPopupProps) {
   if (!station) return null;
+
+  const list =
+    station.games && station.games.length > 0
+      ? station.games
+      : [
+          {
+            slug: station.gameSlug ?? "",
+            name: station.gameName,
+            desc: station.gameDesc,
+            reward: station.reward,
+          },
+        ];
+
+  const completed = new Set(
+    stationSteps?.[station.id]?.completedGameSlugs?.map(String) ?? [],
+  );
+  const gameSlugs = list
+    .map((g) => g.slug)
+    .filter((s): s is string => Boolean(s && String(s).trim()));
+  const stationWeeklyExhausted = stationAllGamesWeeklyLocked(
+    station.id,
+    gameSlugs,
+    stationGameVisits,
+  );
+  const nextRequired =
+    list.map((g) => g.slug).find((slug) => slug && !completed.has(slug)) ??
+    null;
 
   return (
     <>
       <div
-        className="absolute inset-0 z-40"
+        className="absolute inset-0 z-40 bg-black/25 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
         className={cn(
-          "absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-[480px]",
+          "absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(520px,calc(100vw-1.5rem))] max-h-[min(70vh,560px)] overflow-y-auto",
           "glass rounded-3xl border border-primary/30 p-6",
-          "animate-fade-up shadow-2xl"
+          "animate-fade-up shadow-2xl",
         )}
-        style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(212,175,55,0.08)" }}
+        style={{
+          boxShadow:
+            "0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(212,175,55,0.08)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full glass hover:bg-white/10 transition-all"
+          className="absolute top-4 right-4 z-10 w-7 h-7 flex items-center justify-center rounded-full glass hover:bg-white/10 transition-all"
         >
           <X className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
 
         <div className="flex gap-5 items-start">
           <div
-            className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-primary/20 text-4xl"
-            style={{ background: "color-mix(in oklch, var(--primary) 15%, transparent)" }}
+            className="w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 border border-primary/20 text-4xl overflow-hidden"
+            style={{
+              background:
+                "color-mix(in oklch, var(--primary) 15%, transparent)",
+            }}
           >
-            {station.icon}
+            {station.imageUrl ? (
+              <img
+                src={station.imageUrl}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span>{station.icon?.trim() || "📍"}</span>
+            )}
           </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h4 className="font-display text-xl text-foreground tracking-wide">{station.name}</h4>
-              <span className="text-[9px] bg-primary text-black px-2 py-0.5 rounded font-bold uppercase tracking-tighter">
-                {station.gameName}
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">{station.gameDesc}</p>
+          <div className="flex-1 min-w-0 pr-8">
+            <h4 className="font-display text-xl text-foreground tracking-wide">
+              {station.name}
+            </h4>
+            {station.region ? (
+              <p className="text-[10px] uppercase tracking-[0.2em] text-primary/80 mt-1">
+                {regionLabel}: {station.region}
+              </p>
+            ) : null}
 
-            <div className="flex gap-4 mb-4">
-              <div className="flex items-center gap-1 text-[9px] text-primary font-bold uppercase tracking-widest">
-                <Gamepad2 className="w-3 h-3" />
-                {minigameLabel}: {station.gameName}
-              </div>
-              <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-bold uppercase tracking-widest">
+            {/* <div className="flex gap-4 mt-3 mb-2 text-[9px] text-muted-foreground font-bold uppercase tracking-widest">
+              <span className="flex items-center gap-1">
+                <Gamepad2 className="w-3 h-3 text-primary" />
+                {minigameLabel}
+              </span>
+              <span className="flex items-center gap-1">
                 <BookOpen className="w-3 h-3" />
                 {loreLabel}
-              </div>
-            </div>
+              </span>
+            </div> */}
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 text-[10px] font-bold text-primary">
-                <Star className="w-3.5 h-3.5" />
-                {station.reward}
+            {onTravel || onReturnHome ? (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {onTravel ? (
+                  <button
+                    type="button"
+                    onClick={onTravel}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-black transition-all hover:scale-[1.01]"
+                    style={{ background: "var(--gold-gradient)" }}
+                  >
+                    {travelLabel}
+                  </button>
+                ) : null}
+                {onReturnHome ? (
+                  <button
+                    type="button"
+                    onClick={onReturnHome}
+                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-primary/40 bg-primary/10 text-foreground hover:bg-primary/20 transition-all"
+                  >
+                    {returnHomeLabel}
+                  </button>
+                ) : null}
+                {heroTargetId && onReturnToPreviousSpot ? (
+                  <button
+                    type="button"
+                    onClick={onReturnToPreviousSpot}
+                    className="px-4 py-2 rounded-xl text-[10px] font-semibold tracking-wide border border-white/15 bg-black/25 text-muted-foreground hover:text-foreground hover:bg-black/35 transition-all"
+                  >
+                    {returnPrevLabel}
+                  </button>
+                ) : null}
               </div>
-              <button
-                type="button"
-                disabled={!canPlay}
-                onClick={() => canPlay && onPlay(station.id)}
-                className={cn(
-                  "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  canPlay
-                    ? "text-black hover:scale-105"
-                    : "text-muted-foreground cursor-not-allowed opacity-60",
-                )}
-                style={
-                  canPlay ? { background: "var(--gold-gradient)" } : undefined
-                }
-              >
-                {canPlay
-                  ? `${station.gameName} →`
-                  : station.isDone
-                    ? "Дууссан"
-                    : "Хүлээгдэж буй"}
-              </button>
-            </div>
+            ) : null}
+
+            <p className="text-[11px] font-display tracking-[0.12em] text-primary/90 mb-3">
+              {gamesSectionLabel} ({list.length})
+            </p>
+
+            <p className="text-[10px] text-muted-foreground mb-3">
+              {stationWeeklyExhausted
+                ? "Энэ өртөөний бүх тоглоомын 7 хоногийн лимит дууссан — өртөө түгжигдсэн."
+                : "Тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа тоглож болно."}
+            </p>
+
+            <ul className="space-y-3">
+              {list.map((g) =>
+                (() => {
+                  const slug = g.slug?.trim() || "";
+                  const isDone = slug ? completed.has(slug) : false;
+                  const gameRem = slug
+                    ? gameWeeklyPlaysRemaining(
+                        station.id,
+                        slug,
+                        stationGameVisits,
+                      )
+                    : 0;
+                  const progressionLocked =
+                    Boolean(slug) &&
+                    !completed.has(slug) &&
+                    slug !== nextRequired;
+                  const canStart =
+                    canPlay &&
+                    Boolean(slug) &&
+                    gameRem > 0 &&
+                    !progressionLocked;
+
+                  const statusText = progressionLocked
+                    ? lockedHint
+                    : gameRem <= 0
+                      ? "Энэ тоглоомын 7 хоногийн лимит дууссан"
+                      : isDone
+                        ? doneHint
+                        : lockedHint;
+
+                  return (
+                    <li
+                      key={`${station.id}-${g.slug || g.name}`}
+                      className="rounded-2xl border border-white/10 bg-black/20 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <span className="text-[11px] font-bold text-foreground">
+                          {g.name}
+                        </span>
+                        <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary shrink-0">
+                          <Star className="w-3 h-3" />
+                          {g.reward}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                        {g.desc}
+                      </p>
+                      <button
+                        type="button"
+                        disabled={!canStart}
+                        onClick={() =>
+                          canStart && g.slug && onPlay(g.slug, g.name)
+                        }
+                        className={cn(
+                          "w-full px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                          canStart
+                            ? "text-black hover:scale-[1.01]"
+                            : "text-muted-foreground cursor-not-allowed opacity-60",
+                        )}
+                        style={
+                          canStart
+                            ? { background: "var(--gold-gradient)" }
+                            : undefined
+                        }
+                      >
+                        {canStart ? `${g.name} →` : statusText}
+                      </button>
+                    </li>
+                  );
+                })(),
+              )}
+            </ul>
           </div>
         </div>
       </div>

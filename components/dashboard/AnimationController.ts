@@ -15,16 +15,34 @@ interface AnimationControllerOptions {
   birds: BirdEntry[];
   markerMeshes: Map<string, THREE.Mesh>;
   labelAnchors: Map<string, THREE.Vector3>;
+  doorAnchors?: Map<string, THREE.Vector3>;
+  heroMixerRef?: { current: THREE.AnimationMixer | null };
+  /** Screen projection for map overlays (direction arrows from hero). */
+  heroRootRef?: { current: THREE.Object3D | null };
+  /**
+   * FBX walk/run нь явагчийн байрлал/эргэлтийг клипээр шилжүүлдэг тул mixer.update()
+   * дараа кодоор тооцсон газар дээр буцаана.
+   */
+  heroKinematicRef?: {
+    current: { pos: THREE.Vector3; ry: number; has: boolean };
+  };
   currentStationId: string;
-  onLabelUpdate: (positions: Record<string, LabelPos>) => void;
+  /** UI шошгууд өндөр цэг; сум — газар орчмын төсөл. */
+  onLabelUpdate: (
+    uiPositions: Record<string, LabelPos>,
+    arrowPositions: Record<string, LabelPos>,
+  ) => void;
   onBeforeRender?: (elapsed: number, delta: number) => void;
 }
 
 export class AnimationController {
   private opts: AnimationControllerOptions;
   private animId = 0;
+  /** When true, the RAF loop keeps scheduling but skips work (e.g. minigame modal open). */
+  private paused = false;
   private clock = new THREE.Clock();
   private _tmp = new THREE.Vector3();
+  private _tmpGround = new THREE.Vector3();
 
   private theta = 0.18;
   private tTheta = 0.18;
@@ -146,6 +164,13 @@ export class AnimationController {
     this.opts.currentStationId = id;
   }
 
+  setPaused(value: boolean): void {
+    if (!value && this.paused) {
+      this.clock.getDelta();
+    }
+    this.paused = value;
+  }
+
   start(): void {
     const {
       renderer,
@@ -153,11 +178,13 @@ export class AnimationController {
       camera,
       container,
       sun,
-      horses,
       clouds,
       birds,
       markerMeshes,
       labelAnchors,
+      heroMixerRef,
+      heroRootRef,
+      heroKinematicRef,
       currentStationId,
       onLabelUpdate,
       onBeforeRender,
@@ -165,6 +192,7 @@ export class AnimationController {
 
     const loop = (): void => {
       this.animId = requestAnimationFrame(loop);
+      if (this.paused) return;
       const delta = this.clock.getDelta();
       const t = this.clock.elapsedTime;
       const L = 0.05;
@@ -198,24 +226,6 @@ export class AnimationController {
         }
       });
 
-      horses.forEach((h) => {
-        const angle = h.phase + t * h.speed;
-        const nx = h.orbitCx + Math.cos(angle) * h.orbitR;
-        const nz = h.orbitCz + Math.sin(angle) * h.orbitR;
-        h.group.position.set(nx, terrainHeight(nx, nz), nz);
-        h.group.rotation.y = angle + Math.PI / 2;
-        const legs = (h.group as any)._legGroups as THREE.Group[] | undefined;
-        if (legs) {
-          const gait = t * h.speed * 8;
-          legs[0].rotation.x = Math.sin(gait) * 0.45;
-          legs[1].rotation.x = -Math.sin(gait) * 0.45;
-          legs[2].rotation.x = -Math.sin(gait) * 0.45;
-          legs[3].rotation.x = Math.sin(gait) * 0.45;
-          h.group.position.y =
-            terrainHeight(nx, nz) + Math.abs(Math.sin(gait)) * 0.08;
-        }
-      });
-
       birds.forEach((bird, i) => {
         const angle = t * bird.speed + (i / birds.length) * Math.PI * 2;
         bird.arm.position.x = bird.radius;
@@ -233,17 +243,48 @@ export class AnimationController {
         if (cloud.g.position.x < -220) cloud.g.position.x = 220;
       });
 
+      heroMixerRef?.current?.update(delta);
+
+      const kin = heroKinematicRef?.current;
+      if (heroRootRef?.current && kin?.has) {
+        const r = heroRootRef.current;
+        r.position.copy(kin.pos);
+        r.rotation.y = kin.ry;
+      }
+
       const cw = container.clientWidth,
         ch = container.clientHeight;
       const np: Record<string, LabelPos> = {};
+      const npArrow: Record<string, LabelPos> = {};
       labelAnchors.forEach((wp, id) => {
         np[id] = projectToScreen(wp, camera, cw, ch, this._tmp);
+        const gy = terrainHeight(wp.x, wp.z) + 0.52;
+        this._tmpGround.set(wp.x, gy, wp.z);
+        npArrow[id] = projectToScreen(
+          this._tmpGround,
+          camera,
+          cw,
+          ch,
+          this._tmp,
+        );
       });
-      onLabelUpdate(np);
+      if (heroRootRef?.current) {
+        const hp = heroRootRef.current.position;
+        np["__hero__"] = projectToScreen(hp, camera, cw, ch, this._tmp);
+        const hy = terrainHeight(hp.x, hp.z) + 0.36;
+        this._tmpGround.set(hp.x, hy, hp.z);
+        npArrow["__hero__"] = projectToScreen(
+          this._tmpGround,
+          camera,
+          cw,
+          ch,
+          this._tmp,
+        );
+      }
+      onLabelUpdate(np, npArrow);
 
       renderer.render(scene, camera);
     };
-
     loop();
   }
 

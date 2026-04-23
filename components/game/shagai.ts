@@ -1,4 +1,7 @@
+import * as THREE from "three";
+
 export type ShagaiSide = "horse" | "sheep" | "goat" | "camel";
+type FaceName = "-y" | "+y" | "+x" | "-x" | "+z" | "-z";
 
 export interface ShagaiResult {
   side: ShagaiSide;
@@ -68,24 +71,151 @@ export const SHAgAI_SIDES: Record<ShagaiSide, ShagaiResult> = {
   },
 };
 
+export interface ShagaiDetectOptions {
+  remapOnkh?: boolean;
+  /**
+   * Оньс дээр санамсаргүй хонь/ямаа — хуучин.
+   * false (анхдагч) = +z / -z талын аль нь дээшилснийг геометрээр ялгана.
+   */
+  randomOnkh?: boolean;
+}
+
+export type ShagaiDetection = ShagaiSide;
+
+export function weightedTraditionalSide(): ShagaiSide {
+  const r = Math.random();
+  if (r < 0.38) return "sheep"; // 38%
+  if (r < 0.76) return "goat"; // 38%
+  if (r < 0.91) return "horse"; // 15%
+  return "camel"; // 9%
+}
+
+export function biasSideForThrow(): ShagaiSide {
+  const r = Math.random();
+  if (r < 0.3) return "sheep";
+  if (r < 0.6) return "goat";
+  if (r < 0.8) return "horse";
+  return "camel";
+}
+
+/** Нисэх үеийн torque — biasSideForThrow-той ижил (морь/тэмээ гарна). */
+export function biasSideForAirTorque(): ShagaiSide {
+  return biasSideForThrow();
+}
+
+export const SHAGAI_SIDE_UP_AXIS: Record<ShagaiSide, THREE.Vector3> = {
+  sheep: new THREE.Vector3(0, 0, 1),
+  goat: new THREE.Vector3(0, 0, -1),
+  horse: new THREE.Vector3(0, -1, 0),
+  camel: new THREE.Vector3(0, 1, 0),
+};
+
+export const SHAGAI_PHYS_BOX: [number, number, number] = [0.74, 0.58, 0.72];
+
+const FACE_VECTORS: Record<FaceName, THREE.Vector3> = {
+  "+x": new THREE.Vector3(1, 0, 0),
+  "-x": new THREE.Vector3(-1, 0, 0),
+  "+y": new THREE.Vector3(0, 1, 0),
+  "-y": new THREE.Vector3(0, -1, 0),
+  "+z": new THREE.Vector3(0, 0, 1),
+  "-z": new THREE.Vector3(0, 0, -1),
+};
+
+const FACE_TO_SIDE: Record<"+y" | "-y", ShagaiSide> = {
+  "-y": "horse",
+  "+y": "camel",
+};
+
+export function buildTargetQuaternion(side: ShagaiSide): THREE.Quaternion {
+  const localUp = SHAGAI_SIDE_UP_AXIS[side].clone();
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const align = new THREE.Quaternion().setFromUnitVectors(localUp, worldUp);
+  const yaw = new THREE.Quaternion().setFromAxisAngle(
+    worldUp,
+    Math.random() * Math.PI * 2,
+  );
+  return yaw.multiply(align);
+}
+
+function detectBestFace(quat: THREE.Quaternion): {
+  face: FaceName;
+  dot: number;
+} {
+  const worldUp = new THREE.Vector3(0, 1, 0);
+
+  let bestFace: FaceName = "+z";
+  let bestDot = -Infinity;
+
+  (Object.entries(FACE_VECTORS) as [FaceName, THREE.Vector3][]).forEach(
+    ([face, localVec]) => {
+      const worldVec = localVec.clone().applyQuaternion(quat);
+      const dot = worldVec.dot(worldUp);
+      if (dot > bestDot) {
+        bestDot = dot;
+        bestFace = face;
+      }
+    },
+  );
+
+  return { face: bestFace, dot: bestDot };
+}
+
+export function isShagaiOnkh(
+  quat: THREE.Quaternion,
+  minTipUpDot = 0.76,
+): boolean {
+  const { face, dot } = detectBestFace(quat);
+  return (face === "+x" || face === "-x") && dot >= minTipUpDot;
+}
+
+/**
+ * Оньс (хажуу тал дээш) — аль урт тал (+z эсвэл -z) илүү дээшилснийг шалгаж хонь/ямаа заана.
+ */
+export function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const sheepTilt = new THREE.Vector3(0, 0, 1)
+    .applyQuaternion(quat)
+    .dot(worldUp);
+  const goatTilt = new THREE.Vector3(0, 0, -1)
+    .applyQuaternion(quat)
+    .dot(worldUp);
+  return sheepTilt >= goatTilt ? "sheep" : "goat";
+}
+
+export function detectShagaiFromQuaternion(
+  quat: THREE.Quaternion,
+  options: ShagaiDetectOptions = {},
+): ShagaiSide {
+  const { remapOnkh = true, randomOnkh = false } = options;
+  const { face } = detectBestFace(quat);
+
+  if (face === "+z") return "sheep";
+  if (face === "-z") return "goat";
+
+  if (face === "+x" || face === "-x") {
+    if (remapOnkh) {
+      if (randomOnkh) {
+        return Math.random() < 0.5 ? "sheep" : "goat";
+      }
+      return resolveSheepGoatFromOnkh(quat);
+    }
+    return weightedTraditionalSide();
+  }
+
+  return FACE_TO_SIDE[face];
+}
+
+export function detectShagaiSideFromQuaternion(
+  quat: THREE.Quaternion,
+  options: ShagaiDetectOptions = {},
+): ShagaiSide {
+  return detectShagaiFromQuaternion(quat, options);
+}
+
 export function detectShagaiSide(rotX: number, rotZ: number): ShagaiSide {
-  const norm = (a: number) =>
-    ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const rx = norm(rotX);
-  const rz = norm(rotZ);
-
-  const xFlat = rx < 0.45 || rx > 5.83;
-  const xFlip = rx > 2.7 && rx < 3.58;
-  const zFlat = rz < 0.45 || rz > 5.83;
-  const zFlip = rz > 2.7 && rz < 3.58;
-
-  if (xFlat && zFlat) return "horse";
-  if (xFlip && zFlip) return "camel";
-  if (zFlip && !xFlip) return "sheep";
-  if (xFlip && !zFlip) return "goat";
-
-  if (rx < Math.PI) return rz < Math.PI ? "horse" : "sheep";
-  return rz < Math.PI ? "goat" : "camel";
+  const euler = new THREE.Euler(rotX, 0, rotZ, "XYZ");
+  const quat = new THREE.Quaternion().setFromEuler(euler);
+  return detectShagaiSideFromQuaternion(quat);
 }
 
 export interface ThrowRecord {
