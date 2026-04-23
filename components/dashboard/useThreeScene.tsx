@@ -293,10 +293,15 @@ export function useThreeScene({
 
     scene.add(new THREE.HemisphereLight(0x8ec0e8, 0x6a9a45, 0.52));
 
-    const builder = new SceneBuilder(scene, highlightStationId, doneStationIds, {
-      x: playerHomeX,
-      z: playerHomeZ,
-    });
+    const builder = new SceneBuilder(
+      scene,
+      highlightStationId,
+      doneStationIds,
+      {
+        x: playerHomeX,
+        z: playerHomeZ,
+      },
+    );
     builderRef.current = builder;
 
     builder.buildSky();
@@ -483,7 +488,8 @@ export function useThreeScene({
             const safePath = rawPath.endsWith(".fbx.fbx")
               ? rawPath.slice(0, -4)
               : rawPath;
-            const { root, clips: embeddedClips } = await loadHeroModel(safePath);
+            const { root, clips: embeddedClips } =
+              await loadHeroModel(safePath);
             if (disposed) return;
             // Гэртэй харьцуулахад жижиг харагдуулна (гэрүүдийг томруулсан)
             root.scale.setScalar(0.015);
@@ -523,7 +529,9 @@ export function useThreeScene({
             let idleClip: THREE.AnimationClip | undefined;
             if (embeddedIdle) {
               const r = retargetClipToSkeleton(embeddedIdle, root);
-              if (countClipTracksBindingToRig(r, root) >= MIN_EMBEDDED_IDLE_BONES) {
+              if (
+                countClipTracksBindingToRig(r, root) >= MIN_EMBEDDED_IDLE_BONES
+              ) {
                 idleClip = r;
               }
             }
@@ -965,8 +973,6 @@ export function useThreeScene({
         const mvzKeys = (stKeys.up ? 1 : 0) - (stKeys.down ? 1 : 0);
         const klenKeys = Math.sqrt(mvxKeys * mvxKeys + mvzKeys * mvzKeys);
 
-        // --- Hero movement first (өмнөх кадрын camera чиглэлээр); дараа нь камер pivot —
-        // эсрэг дараалал нь «араас сүүлтэй» хоцролт үүсгэдэг (React state биш).
         const rootMove = heroRootRef.current;
         const playMove = heroPlayRef.current;
         if (rootMove && playMove) {
@@ -1052,11 +1058,6 @@ export function useThreeScene({
               cameraState.currentLook.copy(p);
             }
             followSmooth = cameraState.isDragging ? 24 : st.run ? 55 : 45;
-            // if (klenKeys > 0.01) {
-            //   followSmooth = cameraState.isDragging ? 24 : st.run ? 55 : 45;
-            // } else {
-            //   followSmooth = cameraState.isDragging ? 16 : 11;
-            // }
           }
         }
         const smoothPos = 1 - Math.exp(-followSmooth * dt);
@@ -1192,7 +1193,9 @@ export function useThreeScene({
               remoteLoadGen?: number;
             };
             const slot = av.getObjectByName("remote_hero_slot") as THREE.Group;
-            const fallback = av.getObjectByName("remote_fallback") as THREE.Group;
+            const fallback = av.getObjectByName(
+              "remote_fallback",
+            ) as THREE.Group;
             if (ud.remoteHeroPath !== wantPath) {
               ud.remoteHeroPath = wantPath;
               ud.remoteLoadGen = (ud.remoteLoadGen ?? 0) + 1;
@@ -1233,7 +1236,10 @@ export function useThreeScene({
                   }
                   if (idleClip) {
                     const retargeted: HeroClips = { idle: idleClip };
-                    const { mixer, play } = createHeroAnimator(root, retargeted);
+                    const { mixer, play } = createHeroAnimator(
+                      root,
+                      retargeted,
+                    );
                     if (disposed || ud.remoteLoadGen !== gen) {
                       mixer.stopAllAction();
                       disposeMeshSubtree(root);

@@ -1,6 +1,13 @@
 import "dotenv/config";
 import { z } from "zod";
 
+/** Railway дээр хоосон string үлдэхээр Zod унадаг — undefined болгоно */
+function emptyToUndefined(v: unknown): unknown {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "string" && v.trim() === "") return undefined;
+  return v;
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(4000),
@@ -9,11 +16,17 @@ const envSchema = z.object({
   CORS_ORIGIN: z
     .string()
     .default("http://localhost:3000,http://127.0.0.1:3000"),
-  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
-  FIREBASE_DATABASE_URL: z.string().url().optional(),
-  ADMIN_USERNAME: z.string().min(1).optional(),
-  ADMIN_PASSWORD: z.string().min(1).optional(),
-  JWT_SECRET: z.string().min(32).optional(),
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.preprocess(
+    emptyToUndefined,
+    z.string().optional(),
+  ),
+  FIREBASE_DATABASE_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().url().optional(),
+  ),
+  ADMIN_USERNAME: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  ADMIN_PASSWORD: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  JWT_SECRET: z.preprocess(emptyToUndefined, z.string().min(32).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;
