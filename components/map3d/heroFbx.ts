@@ -341,26 +341,75 @@ export async function loadHeroClips(
   return Object.fromEntries(entries) as HeroClips;
 }
 
+export async function loadHeroClipsOptional(
+  clipsByName: Record<string, string>,
+): Promise<HeroClips> {
+  const out: HeroClips = {};
+  for (const [name, path] of Object.entries(clipsByName)) {
+    try {
+      const clip = await loadFbxClip(path);
+      clip.name = name;
+      out[name] = clip;
+    } catch {
+      /* файл байхгүй */
+    }
+  }
+  return out;
+}
+
 export function createHeroAnimator(
   root: THREE.Object3D,
   clips: HeroClips,
+  opts?: {
+    /** Давтагдах анимац (үлдсэн нь нэг удаа тоглоод idle руу) */
+    loopNames?: string[];
+    onFiniteEnd?: () => void;
+  },
 ): {
   mixer: THREE.AnimationMixer;
   actions: Map<string, THREE.AnimationAction>;
   play: (name: string, fadeSec?: number) => void;
 } {
+  const loopNames = new Set(opts?.loopNames ?? ["idle", "walk", "run"]);
   const mixer = new THREE.AnimationMixer(root);
   const actions = new Map<string, THREE.AnimationAction>();
   for (const [name, clip] of Object.entries(clips)) {
     const action = mixer.clipAction(clip);
-    action.clampWhenFinished = false;
-    if (name === "walk" || name === "run" || name === "idle") {
+    if (loopNames.has(name)) {
       action.setLoop(THREE.LoopRepeat, Infinity);
+      action.clampWhenFinished = false;
+    } else {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
     }
     actions.set(name, action);
   }
 
   let current = "";
+
+  const fadeToIdle = (fadeSec: number) => {
+    const idleA = actions.get("idle");
+    const prevA = current ? actions.get(current) : undefined;
+    if (prevA && prevA !== idleA) prevA.fadeOut(fadeSec);
+    if (idleA) {
+      idleA.reset().fadeIn(fadeSec).play();
+      current = "idle";
+    }
+  };
+
+  mixer.addEventListener("finished", (e) => {
+    const ev = e as { action?: THREE.AnimationAction };
+    const finished = ev.action;
+    if (!finished) return;
+    let finishedName: string | undefined;
+    for (const [n, a] of actions) {
+      if (a === finished) finishedName = n;
+    }
+    if (!finishedName || loopNames.has(finishedName)) return;
+    opts?.onFiniteEnd?.();
+    fadeToIdle(0.22);
+  });
+
   const play = (name: string, fadeSec = 0.25) => {
     const next = actions.get(name);
     if (!next) return;

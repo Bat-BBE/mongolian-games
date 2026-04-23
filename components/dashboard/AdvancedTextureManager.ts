@@ -61,25 +61,19 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Generate normal map for horse fur
-   */
   getHorseFurNormal(): THREE.Texture {
     const key = "horse_fur_normal";
     if (this.normalCache.has(key)) {
       return this.normalCache.get(key)!;
     }
-
     const canvas = document.createElement("canvas");
     canvas.width = 512;
     canvas.height = 512;
     const ctx = canvas.getContext("2d")!;
 
-    // Start with medium gray (neutral normal)
     ctx.fillStyle = "#8080ff";
     ctx.fillRect(0, 0, 512, 512);
 
-    // Add directional hair strokes to normal map
     for (let y = 0; y < 512; y += 8) {
       for (let x = 0; x < 512; x += 8) {
         const angle = Math.sin(x * 0.05 + y * 0.03) * 3;
@@ -90,7 +84,6 @@ export class AdvancedTextureManager {
       }
     }
 
-    // Add fine detail
     const imageData = ctx.getImageData(0, 0, 512, 512);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
@@ -113,9 +106,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Generate roughness map for horse fur
-   */
   getHorseFurRoughness(): THREE.Texture {
     const key = "horse_fur_roughness";
     if (this.roughnessCache.has(key)) {
@@ -127,11 +117,9 @@ export class AdvancedTextureManager {
     canvas.height = 512;
     const ctx = canvas.getContext("2d")!;
 
-    // Base roughness (lighter = glossier in grayscale)
     ctx.fillStyle = "#aaaaaa";
     ctx.fillRect(0, 0, 512, 512);
 
-    // Add variation - some areas more glossy (darker) from mane/tail oil
     for (let i = 0; i < 200; i++) {
       const x = Math.random() * 512;
       const y = Math.random() * 512;
@@ -156,9 +144,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * High-quality camel fur texture
-   */
   getCamelFurDiffuse(baseColor = 0xb8864a): THREE.Texture {
     const key = `camel_fur_diffuse_${baseColor}`;
     if (this.diffuseCache.has(key)) {
@@ -174,7 +159,6 @@ export class AdvancedTextureManager {
     const g = (baseColor >> 8) & 0xff;
     const b = baseColor & 0xff;
 
-    // Base with natural shading
     const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
     gradient.addColorStop(
       0,
@@ -188,7 +172,6 @@ export class AdvancedTextureManager {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Thick hair texture
     for (let i = 0; i < 80000; i++) {
       const x = Math.random() * 1024;
       const y = Math.random() * 1024;
@@ -203,7 +186,6 @@ export class AdvancedTextureManager {
       ctx.stroke();
     }
 
-    // Darker patches for realistic variation
     for (let i = 0; i < 20; i++) {
       const x = Math.random() * 1024;
       const y = Math.random() * 1024;
@@ -230,9 +212,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Realistic stone/rock texture
-   */
   getStoneDiffuse(variant = 0): THREE.Texture {
     const key = `stone_diffuse_${variant}`;
     if (this.diffuseCache.has(key)) {
@@ -248,7 +227,6 @@ export class AdvancedTextureManager {
     ctx.fillStyle = baseColors[variant % baseColors.length];
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Add cracks and erosion patterns
     for (let i = 0; i < 100; i++) {
       const x = Math.random() * 1024;
       const y = Math.random() * 1024;
@@ -259,7 +237,6 @@ export class AdvancedTextureManager {
       ctx.fillRect(x, y, width, height);
     }
 
-    // Rock texture detail
     const imageData = ctx.getImageData(0, 0, 1024, 1024);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
@@ -279,9 +256,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Stone normal map
-   */
   getStoneNormal(): THREE.Texture {
     const key = "stone_normal";
     if (this.normalCache.has(key)) {
@@ -296,7 +270,6 @@ export class AdvancedTextureManager {
     ctx.fillStyle = "#8080ff";
     ctx.fillRect(0, 0, 512, 512);
 
-    // Add crack normal detail
     for (let i = 0; i < 60; i++) {
       const x = Math.random() * 512;
       const y = Math.random() * 512;
@@ -337,9 +310,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Professional grass/steppe texture
-   */
   getGrassDiffuse(): THREE.Texture {
     const key = "grass_diffuse";
     if (this.diffuseCache.has(key)) {
@@ -351,7 +321,6 @@ export class AdvancedTextureManager {
     canvas.height = 512;
     const ctx = canvas.getContext("2d")!;
 
-    // Base steppe grass colors
     const gradient = ctx.createLinearGradient(0, 0, 0, 512);
     gradient.addColorStop(0, "#6a8c4a");
     gradient.addColorStop(0.5, "#5a7c3a");
@@ -359,7 +328,6 @@ export class AdvancedTextureManager {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 1024, 512);
 
-    // Dense grass blades
     for (let i = 0; i < 100000; i++) {
       const x = Math.random() * 1024;
       const y = Math.random() * 512;
@@ -387,9 +355,6 @@ export class AdvancedTextureManager {
     return texture;
   }
 
-  /**
-   * Clear all cached textures
-   */
   clear(): void {
     this.diffuseCache.forEach((t) => t.dispose());
     this.normalCache.forEach((t) => t.dispose());
@@ -401,9 +366,6 @@ export class AdvancedTextureManager {
     this.aoCache.clear();
   }
 
-  /**
-   * Get memory stats
-   */
   getStats() {
     return {
       diffuseCount: this.diffuseCache.size,

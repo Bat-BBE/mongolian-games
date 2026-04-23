@@ -134,6 +134,17 @@ export interface DashStrings {
   mapGuideHide: string;
   /** Map: help button label (short) */
   mapGuideShow: string;
+  /** Map: emote menu — accessibility (icon-only) */
+  mapHeroEmoteMenuAria: string;
+  mapHeroEmoteIdleAria: string;
+  mapHeroEmoteWaveAria: string;
+  mapHeroEmoteGreetAria: string;
+  mapHeroEmoteKissAria: string;
+  mapHeroEmoteDanceAria: string;
+  /** Map: virtual joystick — accessibility (icon-only) */
+  mapJoystickMoveAria: string;
+  /** Map: portrait mode — short tip to rotate device (mobile / tablet) */
+  mapLandscapeHint: string;
   /** Left panel: section title matching map guide */
   mapHowToSectionTitle: string;
   /** First-visit spotlight tour (dashboard) */
@@ -652,28 +663,37 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapGuideStep3: "Гэр, оноо: зүүн самбар, «Миний гэр».",
     mapGuideHide: "Хаах",
     mapGuideShow: "Заавар",
+    mapHeroEmoteMenuAria: "Баатарын дохио сонгох",
+    mapHeroEmoteIdleAria: "Зогсолт",
+    mapHeroEmoteWaveAria: "Дохих",
+    mapHeroEmoteGreetAria: "Мэндчилгээ",
+    mapHeroEmoteKissAria: "Үнсэлт",
+    mapHeroEmoteDanceAria: "Бүжиг",
+    mapJoystickMoveAria: "Баатарыг газрын зураг дээр явуулах",
+    mapLandscapeHint:
+      "Газрын зураг илүү тухтай — утсаа хэвтээ болгоно уу.",
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
     introWelcomeTitle: "Тавтай морилно уу",
     introWelcomeBody:
-      "Танд товчхон заавар харуулна. Дараагийн товчоор алхам алхмаар үргэлжлүүлээрэй — бүгд 7 алхам.",
-    introHeroTitle: "Баатараа хөдөлгөх",
+      "Танд товчхон хэрхэн тоголох заавар харуулна. Дараагийх товч дээр дарч алхам алхмаар үргэлжлүүлээрэй — Амжилт.",
+    introHeroTitle: "Баатараа удирдах",
     introHeroBody:
-      "① Гар товч: WASD эсвэл сум — явна. Shift дарвал хурдан.\n② Эсвэл өртөө сонгоод «Очих» — баатар шууд тэнд очно.",
+      "① Гар товч: WASD эсвэл сум — дарж баатраа удирдана. Shift дарахад илүү хурдан явна.\n② Эсвэл өртөө сонгоод «Очих» дарах — баатар шууд тэнд очно.\n③ Гар утас, таблет: зүүн доод тойрог — хуруугаар чирж явна; ирмэгт ойртуулахад хурдан явна.",
     introStationsTitle: "Өртөө, тоглоом",
     introStationsBody:
-      "① Хаалган дээр ойртож очно.\n② Тэмдэг дээр дарвал тоглоом нээгдэнэ.\n③ Нэг тоглоомд 7 хоногт хамгийн ихдээ 2 удаа.",
+      "① Өртөөн дээр ойртож очно.\n② Өртөөний нэр дээр дарвал тоглоом нээгдэнэ.\n③ Нэг тоглоомыг 7 хоногт хамгийн ихдээ 2 удаа тоголох боломжтой.",
     introHomeTitle: "Гэр, мал, оноо",
     introHomeBody:
-      "① Ялахад: МО (КП), зоос олно.\n② Нэг өртөөний бүх тоглоомыг анх удаа бүрэн ялбал — эрдэнийн чулуу.\n③ «Миний гэр» цонхноос түвшин ахиулна, зоосоор мал авна.\n④ Чулуугаа зоос болгохыг зүүн самбарын «Э/чулуу» мөр дээр дарна.",
+      "① Ялахад: Шагнал (КП), зоос олно.\n② Нэг өртөөний бүх тоглоомыг ялбал — эрдэнийн чулуу авна.\n③ «Гэр» -ийн нэр дээр дарахад цонх ирэх бөгөөд цонхноос гэрээ сайжруулах, зоосоор мал худалдаж авч болно.\n④ Чулуугаа зоос болгохыг зүүн самбарын «Э/чулуу» мөр дээр дарна.",
     introStepMapTitle: "Энэ бол газрын зураг",
     introStepMapBody:
-      "Энд явж, өртөө сонгоно. Баруун дээр «?» — товч заавар.",
-    introStepSidebarTitle: "Зүүн самбар",
+      "Энд явж, өртөөгөөр аялж тоглоом тоголно. Аль ч өртөөн дээр очиж хүссэн тоглоомоо тоглох боломжтой ",
+    introStepSidebarTitle: "Мэдээллийн самбар",
     introStepSidebarBody:
-      "Өртөөний мэдээлэл, эрдэнэс (МО, зоос, чулуу), урамшууллын хувь — энд. Гар утас дээр доод талд ижил товчлуурууд байна.",
-    introStepNavTitle: "Дээд самбар",
+      "Өртөөний мэдээлэл, эрдэнэс (түвшин, зоос, чулуу), урамшууллын хувь — энд харагдана. Гар утас дээр доод талд ижил товчлуурууд байна.",
+    introStepNavTitle: "Дээд талын самбар",
     introStepNavBody:
-      "Жагсаалт, профайл, хэл (МН/EN), өнгө. Энэ зааврыг дахин харахыг профайлын цэснээс.",
+      "Онооны жагсаалт, профайл харах, хэл (МН/EN), өнгө солих үйлдлүүдийг хийх боломжтой. Зааврыг дахин харахыг хүсвэл профайлын цэснээс дахин харах боломтой.",
     introNext: "Дараагийн",
     introSkip: "Алгасах",
     introDone: "Ойлголоо",
@@ -710,8 +730,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     treasuryHint:
       "KP = merit points earned when you win games. Coins = from playing (and wins); spend at home/shop. Gems = one-time bonus when you win every game at a station, plus chests, etc.",
     treasuryGemExchangeTitle: "Gems → coins",
-    treasuryGemExchangeBlurb:
-      "Trade gems for coins. Pick an amount below.",
+    treasuryGemExchangeBlurb: "Trade gems for coins. Pick an amount below.",
     treasuryGemExchangeAll: "Exchange all",
     homeGemExchangePointer:
       "To convert gems to coins, tap the Gems row in the left treasury panel.",
@@ -1172,13 +1191,22 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapGuideStep3: "Ger & stats: left sidebar, My home.",
     mapGuideHide: "Close",
     mapGuideShow: "Help",
+    mapHeroEmoteMenuAria: "Choose hero gesture",
+    mapHeroEmoteIdleAria: "Idle stance",
+    mapHeroEmoteWaveAria: "Wave",
+    mapHeroEmoteGreetAria: "Greet",
+    mapHeroEmoteKissAria: "Blow a kiss",
+    mapHeroEmoteDanceAria: "Dance",
+    mapJoystickMoveAria: "Move hero on the map",
+    mapLandscapeHint:
+      "For a more comfortable map, rotate your phone to landscape.",
     mapHowToSectionTitle: "How to play",
     introWelcomeTitle: "Welcome",
     introWelcomeBody:
       "A short guided tour. Use Next to go step by step — 7 steps in total.",
     introHeroTitle: "Move your hero",
     introHeroBody:
-      "① Keyboard: WASD or arrow keys to walk. Hold Shift to run.\n② Or pick a station and tap Go there — your hero travels there.",
+      "① Keyboard: WASD or arrow keys to walk. Hold Shift to run.\n② Or pick a station and tap Go there — your hero travels there.\n③ Phones & tablets: drag the ring at the lower-left; push near the edge to run.",
     introStationsTitle: "Stations & games",
     introStationsBody:
       "① Walk up to the station door.\n② Tap the marker to open games.\n③ Up to 2 plays per game every 7 days.",
