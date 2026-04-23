@@ -67,6 +67,13 @@ export function MapArea({
     ((x: number, z: number, ry: number) => void) | null
   >(null);
   const [mapGuideOpen, setMapGuideOpen] = useState(false);
+  const [docHidden, setDocHidden] = useState(false);
+  useEffect(() => {
+    const onVis = () => setDocHidden(document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const dismissedStationRef = useRef<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<{
@@ -159,7 +166,7 @@ export function MapArea({
 
   const { publishPose, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
-    enabled: !selectedGame,
+    enabled: !selectedGame && !docHidden,
     heroModelPath: heroModelPath ?? null,
   });
   presencePublishRef.current = publishPose;
@@ -192,7 +199,7 @@ export function MapArea({
     homeLivestock,
     userEmail,
     onHeroAtStationChange,
-    paused: !!selectedGame,
+    paused: !!selectedGame || docHidden,
     presencePublishRef,
     remotePeersRef,
   });

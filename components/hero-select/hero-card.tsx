@@ -10,6 +10,7 @@ import {
   normalizeHeroHeight,
   pickClip,
 } from '@/components/map3d/heroFbx';
+import { tryAttachHeroIbl } from '@/components/map3d/heroIbl';
 
 interface HeroCardProps {
   name: string;
@@ -55,12 +56,18 @@ function HeroViewer({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.3;
     el.appendChild(renderer.domElement);
     rendererRef.current = renderer;
+
+    void tryAttachHeroIbl(scene, renderer).then((rel) => {
+      if (disposed) rel();
+      else releaseIbl = rel;
+    });
 
     scene.add(new THREE.AmbientLight(0x8899bb, 1.2));
 
@@ -115,7 +122,6 @@ function HeroViewer({
 
     let mixer: THREE.AnimationMixer | null = null;
     const clock = new THREE.Clock();
-    let disposed = false;
 
     (async () => {
       try {
@@ -132,20 +138,26 @@ function HeroViewer({
         scene.add(obj);
 
         mixer = new THREE.AnimationMixer(obj);
+        setReady(true);
 
         const embeddedIdle = pickClip(embedded, ['idle']);
         if (embeddedIdle) {
           mixer.clipAction(embeddedIdle).play();
-          setReady(true);
           return;
         }
         const fbxLoader = new FBXLoader();
-        fbxLoader.load('/models/standing idle 01.fbx', (animObj) => {
-          if (!mixer || disposed) return;
-          const first = animObj.animations?.[0];
-          if (first) mixer.clipAction(first).play();
-          setReady(true);
-        });
+        fbxLoader.load(
+          '/models/Idle.fbx',
+          (animObj) => {
+            if (!mixer || disposed) return;
+            const first = animObj.animations?.[0];
+            if (first) mixer.clipAction(first).play();
+          },
+          undefined,
+          () => {
+            // fallback clip missing: model still visible, static bind pose
+          },
+        );
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn('hero-card: failed to load model', modelPath, err);
@@ -166,6 +178,7 @@ function HeroViewer({
     return () => {
       disposed = true;
       cancelAnimationFrame(rafRef.current);
+      releaseIbl?.();
       renderer.dispose();
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
     };

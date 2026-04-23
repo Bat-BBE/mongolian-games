@@ -14,7 +14,6 @@ export type HeroModel = {
   clips: THREE.AnimationClip[];
 };
 
-const fbxLoader = new FBXLoader();
 const gltfLoader = new GLTFLoader();
 const modelCache = new Map<string, Promise<THREE.Group>>();
 const heroModelCache = new Map<
@@ -22,6 +21,117 @@ const heroModelCache = new Map<
   Promise<{ root: THREE.Group; clips: THREE.AnimationClip[] }>
 >();
 const clipCache = new Map<string, Promise<THREE.AnimationClip>>();
+
+/**
+ * FBX/GLTF ачаалсны дараа: vertex color, texture colorSpace, PMREM-гүй өндөр metalness
+ * (толь шиг «хар»), зарим экспортын бараан суурь өнгө.
+ */
+/** Albedo-г sRGB, шугам/norm/metal-rough/alpha гэх мэт data-г `NoColorSpace` — буруу бол өнгө «эвдэгддэг». */
+function setDataTextureColorSpaces(
+  mat: THREE.Material,
+  sRGB: typeof THREE.SRGBColorSpace,
+  linear: typeof THREE.NoColorSpace,
+) {
+  const setL = (tex: THREE.Texture | null | undefined) => {
+    if (tex && "colorSpace" in tex) (tex as THREE.Texture).colorSpace = linear;
+  };
+  if (
+    mat instanceof THREE.MeshStandardMaterial ||
+    mat instanceof THREE.MeshPhysicalMaterial
+  ) {
+    if (mat.map) mat.map.colorSpace = sRGB;
+    if (mat.emissiveMap) mat.emissiveMap.colorSpace = sRGB;
+    setL(mat.normalMap);
+    setL(mat.roughnessMap);
+    setL(mat.metalnessMap);
+    setL(mat.aoMap);
+    setL(mat.bumpMap);
+    setL(mat.alphaMap);
+    setL(mat.lightMap);
+    setL(mat.displacementMap);
+  }
+  if (mat instanceof THREE.MeshPhysicalMaterial) {
+    setL(mat.clearcoatNormalMap);
+    setL(mat.sheenColorMap);
+    setL(mat.sheenRoughnessMap);
+    setL(mat.specularColorMap);
+    setL(mat.specularIntensityMap);
+  }
+  if (
+    mat instanceof THREE.MeshLambertMaterial ||
+    mat instanceof THREE.MeshPhongMaterial
+  ) {
+    if (mat.map) mat.map.colorSpace = sRGB;
+    if (mat.emissiveMap) mat.emissiveMap.colorSpace = sRGB;
+    setL(mat.normalMap);
+    setL(mat.bumpMap);
+    setL(mat.specularMap);
+    setL(mat.lightMap);
+    setL(mat.alphaMap);
+  }
+}
+
+export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
+  const sRGB = THREE.SRGBColorSpace;
+  const linear = THREE.NoColorSpace;
+  root.traverse((o) => {
+    if (!(o instanceof THREE.Mesh)) return;
+    const mesh = o;
+    if (!mesh.geometry) return;
+    const g = mesh.geometry;
+    const hasVertexColor = !!g.getAttribute("color");
+    const mats: THREE.Material[] = Array.isArray(mesh.material)
+      ? mesh.material
+      : [mesh.material];
+    for (const mat of mats) {
+      if (!mat) continue;
+      if (
+        mat instanceof THREE.MeshStandardMaterial ||
+        mat instanceof THREE.MeshPhysicalMaterial
+      ) {
+        if (hasVertexColor) mat.vertexColors = true;
+        setDataTextureColorSpaces(mat, sRGB, linear);
+        if (
+          mat.envMap == null &&
+          mat.metalness > 0.55 &&
+          mat.metalnessMap == null
+        ) {
+          mat.metalness = Math.min(mat.metalness * 0.45, 0.42);
+          mat.roughness = Math.max(mat.roughness, 0.28);
+        }
+        const sum = mat.color.r + mat.color.g + mat.color.b;
+        if (sum < 0.04 && !mat.map && !hasVertexColor) {
+          mat.color.setRGB(0.88, 0.88, 0.9);
+        }
+        if (mat.envMap == null) mat.envMapIntensity = 1.0;
+      } else if (
+        mat instanceof THREE.MeshLambertMaterial ||
+        mat instanceof THREE.MeshPhongMaterial
+      ) {
+        if (hasVertexColor) mat.vertexColors = true;
+        setDataTextureColorSpaces(mat, sRGB, linear);
+        const sum = mat.color.r + mat.color.g + mat.color.b;
+        if (sum < 0.04 && !mat.map && !hasVertexColor) {
+          mat.color.setRGB(0.78, 0.78, 0.8);
+        }
+      }
+    }
+  });
+}
+
+/** FBX-тай ижил public хавтас — texture-ууд `input.fbm/...` гэж дурьдагдана. */
+function extractUrlBase(url: string): string {
+  const clean = url.split("?")[0] ?? url;
+  const i = clean.lastIndexOf("/");
+  if (i <= 0) return "/";
+  return clean.slice(0, i + 1);
+}
+
+function createFbxLoaderForUrl(assetUrl: string): FBXLoader {
+  const loader = new FBXLoader();
+  loader.setResourcePath(extractUrlBase(assetUrl));
+  return loader;
+}
 
 function extOf(path: string): string {
   const q = path.indexOf("?");
@@ -71,6 +181,19 @@ export function normalizeHeroHeight(
   obj.scale.multiplyScalar(s);
   const box2 = measureHeroBox(obj);
   return { scale: s, feetOffsetY: -box2.min.y };
+}
+
+/**
+ * Газрын 3D map: [Mixamo](https://www.mixamo.com/) ихэвчлэн ~100–200 см нэгж,
+ * Blender заримдаа 1.5–2 м. Зөвхөн `scale = 0.015` бол метртэй FBX маш жижиг харагдана.
+ * Эхлээд бүх загварыг ижил өндөрт тэгшитгээд (`targetHeight`), дараа нь дэлхийн нэгж.
+ */
+export const MAP_HERO_HEIGHT_NORMAL = 200;
+export const MAP_HERO_WORLD_UNIT = 0.015;
+
+export function applyMapHeroWorldScale(root: THREE.Object3D): void {
+  normalizeHeroHeight(root, MAP_HERO_HEIGHT_NORMAL);
+  root.scale.multiplyScalar(MAP_HERO_WORLD_UNIT);
 }
 
 /** Find the first clip whose name contains any of `names` (case-insensitive). */
@@ -182,7 +305,7 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
     } else {
       p = new Promise<{ root: THREE.Group; clips: THREE.AnimationClip[] }>(
         (resolve, reject) => {
-          fbxLoader.load(
+          createFbxLoaderForUrl(key).load(
             key,
             (obj) => {
               resolve({ root: obj, clips: obj.animations ?? [] });
@@ -199,6 +322,7 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   const base = await p;
   // Clone with SkeletonUtils so multiple scenes can share the same source.
   const clone = skelClone(base.root) as THREE.Group;
+  fixHeroMaterialsForDisplay(clone);
   return { root: clone, clips: base.clips };
 }
 
@@ -210,7 +334,7 @@ export async function loadFbxModel(modelPath: string): Promise<THREE.Group> {
   let p = modelCache.get(key);
   if (!p) {
     p = new Promise((resolve, reject) => {
-      fbxLoader.load(
+      createFbxLoaderForUrl(key).load(
         key,
         (obj) => resolve(obj),
         undefined,
@@ -229,7 +353,7 @@ export async function loadFbxClip(path: string): Promise<THREE.AnimationClip> {
   let p = clipCache.get(key);
   if (!p) {
     p = new Promise((resolve, reject) => {
-      fbxLoader.load(
+      createFbxLoaderForUrl(key).load(
         key,
         (animObj) => {
           const clip = animObj.animations?.[0];

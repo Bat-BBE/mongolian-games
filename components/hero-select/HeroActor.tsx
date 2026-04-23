@@ -10,6 +10,7 @@ import {
   normalizeHeroHeight,
   pickClip,
 } from "@/components/map3d/heroFbx";
+import { tryAttachHeroIbl } from "@/components/map3d/heroIbl";
 
 interface HeroActorProps {
   className?: string;
@@ -70,6 +71,7 @@ export default function HeroActor({
     ];
 
     let disposed = false;
+    let releaseIbl: (() => void) | null = null;
 
     const init = async () => {
       const { root: object, clips: embeddedClips } =
@@ -104,13 +106,15 @@ export default function HeroActor({
         containerRef.current!.clientHeight,
       );
       renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      // renderer.outputEncoding = THREE.sRGBEncoding;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.2;
       containerRef.current!.appendChild(renderer.domElement);
       rendererRef.current = renderer;
+
+      releaseIbl = await tryAttachHeroIbl(scene, renderer);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -301,6 +305,8 @@ export default function HeroActor({
       // Store cleanup on the component so the outer effect can call it.
       resizeCleanupRef.current = () => {
         window.removeEventListener("resize", handleResize);
+        releaseIbl?.();
+        releaseIbl = null;
         if (rendererRef.current && containerRef.current) {
           if (containerRef.current.contains(rendererRef.current.domElement)) {
             containerRef.current.removeChild(rendererRef.current.domElement);

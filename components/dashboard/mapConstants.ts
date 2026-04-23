@@ -123,6 +123,13 @@ export const TERRAIN_D   = 10000;
 /** Газрын нарийвчлал (хэт багасгавал «зураг шиг» хоосон харагдана). */
 export const TERRAIN_SEG = 256;
 
+/** 3D map — нарны сүүдрийн texture (2048 = илүү нарийвчлал, 1024 = GPU/VRAM хөнгөвч). */
+export const MAP_PERF_SHADOW_MAP = 1024;
+/** Retina: өндөр DPR = fill rate их; бууруулбал илүү тогтвортой FPS. */
+export const MAP_PERF_MAX_DPR = 1.25;
+/** Газрын 2D label overlay: React setState-ийг 60Hz бүр дуудахгүй. */
+export const MAP_LABEL_UI_MIN_INTERVAL_MS = 45;
+
 /** Firebase/хуучин өгөгдөлд `orkhon` гэж ирвэл зураг дээрх slug руу. */
 export function normalizeStationId(raw: string | undefined): string {
   let s = raw?.trim() || "ulaanbaatar";
