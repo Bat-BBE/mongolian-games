@@ -42,6 +42,9 @@ function HeroViewer({
     if (!mountRef.current) return;
     const el = mountRef.current;
 
+    let disposed = false;
+    let releaseIbl: (() => void) | undefined;
+
     const W = el.clientWidth;
     const H = el.clientHeight;
 
