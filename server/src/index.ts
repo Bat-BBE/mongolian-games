@@ -111,8 +111,7 @@ server.on("error", (err: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 
-/** Cloud (Railway/Render г.м.) нь ихэвчлэн бүх интерфейс дээр сонсохыг шаарддаг */
-server.listen(env.PORT, "0.0.0.0", () => {
+server.listen(env.PORT, "localhost", () => {
   const nUp = server.listenerCount("upgrade");
   console.log(`API listening on http://0.0.0.0:${env.PORT}`);
   console.log(`Match WebSocket: ws://localhost:${env.PORT}/ws/match`);

@@ -9,11 +9,20 @@ export type MatchRoomPlayer = {
   ready: boolean;
 };
 
+export type PeerRelayEvent = {
+  id: number;
+  from: string;
+  channel: string;
+  payload: unknown;
+};
+
 export function useMatchRoom(opts: {
   enabled: boolean;
   gameType: string;
   gameSlug: string;
   displayName: string;
+  /** Эзлэх өрөөний дээд хязгаар (жишээ нь Homboroi: 4). */
+  maxRoomPlayers?: number;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
   const nameRef = useRef(opts.displayName);
@@ -33,6 +42,10 @@ export function useMatchRoom(opts: {
   const [error, setError] = useState<string | null>(null);
   const [matchSeed, setMatchSeed] = useState<number | null>(null);
   const [matchStartedAt, setMatchStartedAt] = useState<number | null>(null);
+  const [lastPeerRelay, setLastPeerRelay] = useState<PeerRelayEvent | null>(
+    null,
+  );
+  const relaySeqRef = useRef(0);
 
   const send = useCallback((msg: Record<string, unknown>) => {
     const w = wsRef.current;
@@ -50,11 +63,22 @@ export function useMatchRoom(opts: {
         displayName: nameRef.current?.trim() || "Player",
         gameType: opts.gameType,
         gameSlug: opts.gameSlug,
-        maxPlayers: 20,
+        maxPlayers: opts.maxRoomPlayers ?? 20,
         preferredCode: raw.length === 6 ? raw : undefined,
       });
     },
-    [send, opts.gameType, opts.gameSlug],
+    [send, opts.gameType, opts.gameSlug, opts.maxRoomPlayers],
+  );
+
+  const sendRelay = useCallback(
+    (channel: string, payload: unknown) => {
+      send({
+        type: "relay",
+        channel: channel.slice(0, 64),
+        payload: payload === undefined ? null : payload,
+      });
+    },
+    [send],
   );
 
   const joinRoom = useCallback(
@@ -77,6 +101,7 @@ export function useMatchRoom(opts: {
     setRoomStatus(null);
     setMatchSeed(null);
     setMatchStartedAt(null);
+    setLastPeerRelay(null);
   }, [send]);
 
   const setReady = useCallback(
@@ -112,6 +137,8 @@ export function useMatchRoom(opts: {
       setRoomStatus(null);
       setMatchSeed(null);
       setMatchStartedAt(null);
+      setLastPeerRelay(null);
+      relaySeqRef.current = 0;
       setError(null);
       return;
     }
@@ -157,6 +184,8 @@ export function useMatchRoom(opts: {
         setRoomStatus(null);
         setMatchSeed(null);
         setMatchStartedAt(null);
+        setLastPeerRelay(null);
+        relaySeqRef.current = 0;
         attempt += 1;
         const delay = Math.min(
           30_000,
@@ -207,6 +236,8 @@ export function useMatchRoom(opts: {
           setRoomStatus(null);
           setMatchSeed(null);
           setMatchStartedAt(null);
+          setLastPeerRelay(null);
+          relaySeqRef.current = 0;
           return;
         }
         if (ty === "room_state") {
@@ -242,6 +273,18 @@ export function useMatchRoom(opts: {
             setMatchStartedAt(msg.startedAt);
           return;
         }
+        if (ty === "peer_relay") {
+          const from = typeof msg.from === "string" ? msg.from : "";
+          const channel = typeof msg.channel === "string" ? msg.channel : "";
+          relaySeqRef.current += 1;
+          setLastPeerRelay({
+            id: relaySeqRef.current,
+            from,
+            channel,
+            payload: msg.payload,
+          });
+          return;
+        }
       };
     };
 
@@ -275,6 +318,8 @@ export function useMatchRoom(opts: {
     setReady,
     startMatch,
     resetRoomLobby,
+    sendRelay,
+    lastPeerRelay,
   };
 }
 

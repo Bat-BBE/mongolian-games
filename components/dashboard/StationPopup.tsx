@@ -87,12 +87,12 @@ export function StationPopup({
   return (
     <>
       <div
-        className="absolute inset-0 z-40 bg-black/50 backdrop-blur-[5px]"
+        className="absolute inset-0 z-50 bg-black/50 backdrop-blur-[10px]"
         onClick={onClose}
       />
       <div
         className={cn(
-          "absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(440px,calc(100vw-1rem))] max-h-[min(72vh,520px)] overflow-hidden flex flex-col",
+          "absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[min(540px,calc(100vw-1rem))] max-h-[min(72vh,620px)] overflow-hidden flex flex-col",
           "rounded-2xl border border-primary/25 bg-gradient-to-b from-slate-950/98 to-slate-900/95 shadow-2xl",
         )}
         style={{
@@ -169,7 +169,7 @@ export function StationPopup({
                 <button
                   type="button"
                   onClick={onTravel}
-                  className="rounded-lg px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-black transition-transform hover:scale-[1.02]"
+                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-primary/18"
                   style={{ background: "var(--gold-gradient)" }}
                 >
                   {travelLabel}
@@ -179,7 +179,7 @@ export function StationPopup({
                 <button
                   type="button"
                   onClick={onReturnHome}
-                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-[9px] font-semibold text-foreground hover:bg-primary/18"
+                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-primary/18"
                 >
                   {returnHomeLabel}
                 </button>
@@ -202,7 +202,7 @@ export function StationPopup({
           <p className="mb-2 text-[9px] leading-snug text-muted-foreground/90">
             {stationWeeklyExhausted
               ? "7 хоногийн лимит дууссан."
-              : "Тоглоом бүрт 7 хоногт хамгийн ихдээ 2 удаа."}
+              : "Тоглоом бүр 7 хоногт хамгийн ихдээ 2 удаа тоголно."}
           </p>
 
           <div className="grid grid-cols-2 gap-2">
@@ -228,30 +228,27 @@ export function StationPopup({
               return (
                 <div
                   key={`${station.id}-${g.slug || g.name}`}
-                  className="flex flex-col rounded-xl border border-white/10 bg-black/25 p-2"
+                  className="flex flex-col rounded-lg border border-white/10 bg-black/25 p-2"
                 >
-                  <p className="line-clamp-2 min-h-[2.25rem] text-[10px] font-semibold leading-tight text-foreground">
-                    {g.name}
-                  </p>
-                  <p className="mt-0.5 flex items-center gap-0.5 text-[9px] font-medium text-primary/90">
-                    <Star className="size-2.5 shrink-0" />
-                    <span className="truncate">{g.reward}</span>
-                  </p>
+                  <div className="flex justify-between">
+                    <p className="line-clamp-1 min-h-[1.25rem] text-[10px] font-semibold leading-tight text-foreground">
+                      {g.name}
+                    </p>
+                    <p className="flex items-center gap-0.5 text-[9px] font-medium text-primary/90">
+                      <Star className="size-2.5 shrink-0" />
+                      <span className="truncate">{g.reward}</span>
+                    </p>
+                  </div>
                   <button
                     type="button"
                     disabled={!canStart}
                     onClick={() => canStart && g.slug && onPlay(g.slug, g.name)}
                     className={cn(
-                      "mt-2 w-full rounded-lg py-1.5 text-[9px] font-bold uppercase tracking-wide transition-all",
+                      "mt-1 w-full rounded-lg py-1.5 text-[9px] font-bold uppercase transition-all",
                       canStart
-                        ? "text-black hover:brightness-110"
-                        : "cursor-not-allowed bg-muted/40 text-muted-foreground opacity-70",
+                        ? "text-white/90 bg-primary/10 border border-primary/30 hover:bg-primary/30"
+                        : "cursor-not-allowed bg-muted/70 text-muted-foreground opacity-70",
                     )}
-                    style={
-                      canStart
-                        ? { background: "var(--gold-gradient)" }
-                        : undefined
-                    }
                   >
                     {canStart ? playLabel : statusText}
                   </button>

@@ -48,6 +48,7 @@ export default function GameModal({
     gameType,
     gameSlug,
     displayName: playerName,
+    maxRoomPlayers: gameType === "shagai" ? 4 : undefined,
   });
 
   /** Хос ол: нээгдэхэд шууд нийтлэг өрөө; бусад тоглоомд зөвхөн Online товчоор. */
@@ -286,11 +287,16 @@ export default function GameModal({
               supportsSharedBoard={mpSharedBoard}
               suggestedMatchCode={stationMatchCode}
               autoMatchmaking={gameType === "puzzle"}
+              homboroiMode={gameType === "shagai"}
             />
           ) : null}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {gameType === "shagai" && (
-            <ShagaiGame onComplete={(r, pct) => void submit(r, pct)} />
+            <ShagaiGame
+              onComplete={(r, pct) => void submit(r, pct)}
+              match={multiplayerOn ? mp : null}
+              multiplayerOn={multiplayerOn}
+            />
           )}
           {gameType === "stone-guess" && (
             <StoneGame onComplete={(r) => void submit(r)} />

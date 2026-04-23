@@ -378,7 +378,7 @@ export function MapArea({
           stickRef={mapVirtualStickRef}
           disabled={!!selectedGame || docHidden}
           ariaLabel={t.mapJoystickMoveAria}
-          className="absolute left-3 bottom-[max(6rem,calc(5.5rem+env(safe-area-inset-bottom,0px)))] md:bottom-6"
+          className="absolute right-3 bottom-[max(5.5rem,calc(4.5rem+env(safe-area-inset-bottom,0px)))]"
         />
       ) : null}
 
@@ -390,23 +390,23 @@ export function MapArea({
               title={t.mapHeroEmoteMenuAria}
               aria-label={t.mapHeroEmoteMenuAria}
               className={cn(
-                "pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
-                "border border-amber-400/35 bg-slate-950/92 text-amber-200 shadow-lg backdrop-blur-md",
+                "pointer-events-auto absolute right-3 z-[60] flex h-12 w-12 items-center justify-center rounded-full",
+                "border border-amber-400/40 bg-slate-950/94 text-amber-200 shadow-lg backdrop-blur-md",
                 "hover:bg-slate-900 hover:border-amber-300/50",
-                "bottom-[max(6rem,calc(5.5rem+env(safe-area-inset-bottom,0px)))] md:bottom-6",
+                "top-[max(0.5rem,env(safe-area-inset-top,0px))] md:top-4",
               )}
             >
-              <LuSparkles className="size-[1.125rem]" aria-hidden />
+              <LuSparkles className="size-6" aria-hidden />
             </button>
           </PopoverTrigger>
           <PopoverContent
-            side="top"
+            side="bottom"
             align="end"
             sideOffset={8}
-            className="w-auto border border-amber-400/25 bg-slate-950/96 p-1.5 shadow-xl backdrop-blur-md"
+            className="w-auto border border-amber-400/25 bg-slate-950/96 p-2 shadow-xl backdrop-blur-md"
           >
             <div
-              className="flex flex-wrap justify-end gap-1"
+              className="flex flex-wrap justify-end gap-1.5"
               role="group"
               aria-label={t.mapHeroEmoteMenuAria}
             >
@@ -418,9 +418,9 @@ export function MapArea({
                   playMapHeroEmote("idle");
                   setMapEmoteOpen(false);
                 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
               >
-                <LuUser className="size-[1.125rem]" aria-hidden />
+                <LuUser className="size-6" aria-hidden />
               </button>
               {mapHeroEmoteIds.map((id) => {
                 const Icon = mapEmoteIconById[id];
@@ -435,9 +435,9 @@ export function MapArea({
                       playMapHeroEmote(id);
                       setMapEmoteOpen(false);
                     }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
+                    className="flex h-12 w-12 items-center justify-center rounded-full border border-white/12 bg-white/5 text-slate-100 hover:bg-white/12"
                   >
-                    <Icon className="size-[1.125rem]" aria-hidden />
+                    <Icon className="size-6" aria-hidden />
                   </button>
                 );
               })}

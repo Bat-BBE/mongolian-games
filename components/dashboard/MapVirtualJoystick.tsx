@@ -16,7 +16,7 @@ export type MapVirtualStickRef = MutableRefObject<{
   run: boolean;
 }>;
 
-/** Дэлгэцийн зүүн доод — камерын чиглэлд тулгуурлан баатарыг явуулна (x: баруун/зүүн, z: урагш/хойш). */
+/** Гар утас + таблет: харагдана. Их дэлгэц (2xl) дээр нээгдсэн — pointer/keyboard-оор. */
 export function MapVirtualJoystick({
   stickRef,
   disabled,
@@ -129,17 +129,17 @@ export function MapVirtualJoystick({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         className={cn(
-          "relative flex h-[7.25rem] w-[7.25rem] touch-none items-center justify-center sm:h-[8.25rem] sm:w-[8.25rem]",
-          "rounded-full border border-sky-500/35 bg-slate-950/75 shadow-lg backdrop-blur-md",
+          "relative flex h-32 w-32 touch-none items-center justify-center",
+          "rounded-full border-2 border-white/45 bg-slate-950/92 shadow-lg backdrop-blur-md",
           disabled && "pointer-events-none opacity-35",
         )}
       >
         <div
-          className="pointer-events-none absolute inset-2 rounded-full border border-white/10 bg-white/[0.04]"
+          className="pointer-events-none absolute inset-[10px] rounded-full border border-white/20 bg-white/[0.1]"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute h-[42%] w-[42%] rounded-full border border-sky-400/25 bg-sky-500/15 shadow-inner"
+          className="pointer-events-none absolute h-[32%] w-[32%] rounded-full border border-white/55 bg-white/30 shadow-md"
           style={{
             transform: `translate(${knob.x}px, ${knob.y}px)`,
           }}

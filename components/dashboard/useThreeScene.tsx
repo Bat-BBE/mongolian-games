@@ -24,12 +24,17 @@ import {
   type HeroClips,
 } from "../map3d/heroFbx";
 
-/** Mixamo FBX-уудыг `public/models` дээр ижил нэрээр тавина (байхгүй бол алгасагдана). */
+/**
+ * Газрын зураг дээрх эмот / дохионы FBX-ууд. Файл байхгүй бол 404 — зөвхөн амьд
+ * `public/models`-д тавигдсан замыг бич.
+ * (Жишээ: Mixamo-аас "Waving Gesture.fbx" татсаар бол энд `/models/waving-gesture.fbx` г.м)
+ */
 const MAP_EMOTE_CLIP_FILES: Record<string, string> = {
-  wave: "/models/Waving Gesture.fbx",
-  greet: "/models/Standing Greeting.fbx",
-  kiss: "/models/Blowing A Kiss.fbx",
-  dance: "/models/Hip Hop Dancing.fbx",
+  // Хоосон: доороос өөрийн fbx-уудыг нэрээр нь нэм. Байхгүй нэрүүд `loadHeroClipsOptional` алгасана.
+  // wave: "/models/waving-gesture.fbx",
+  // greet: "/models/standing-greeting.fbx",
+  // kiss: "/models/blowing-a-kiss.fbx",
+  // dance: "/models/hip-hop-dancing.fbx",
 };
 import type { MapPresencePeer } from "@/hooks/useMapPresence";
 

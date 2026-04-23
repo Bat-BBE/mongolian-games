@@ -24,7 +24,7 @@ export default function HeroActor({
   className = "",
   autoRotate = true,
   backgroundColor = "#111827",
-  modelPath = "/models/hero-2.fbx",
+  modelPath = "/models/hero-select.fbx",
 }: HeroActorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -188,9 +188,6 @@ export default function HeroActor({
       const mixer = new THREE.AnimationMixer(object);
       mixerRef.current = mixer;
 
-      // 1) Prefer animations embedded in the hero model itself (GLB can ship
-      //    with idle/walk/run). Map the embedded clips onto the action names
-      //    this component already uses.
       const loadedAnimations: { [key: string]: THREE.AnimationClip } = {};
 
       const tryRegister = (

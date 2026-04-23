@@ -70,7 +70,7 @@ function TreasuryRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5">
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-muted/25 px-2.5 py-1.5">
       <span className="text-[11px] font-medium text-muted-foreground">
         {label}
       </span>
@@ -227,251 +227,263 @@ export function LeftPanel({
         )}
       >
         {show("quest") ? (
-        <div className="flex shrink-0 flex-col gap-2">
-          {sheetFilter == null ? (
-            <SectionTitle>
-              {activeStationId === "home"
-                ? t.sidebarAtHomeSectionTitle
-                : t.currentExpedition}
-            </SectionTitle>
-          ) : null}
-          <div
-            className="relative shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-background/80 shadow-sm ring-1 ring-black/[0.04] dark:bg-background/60 dark:ring-white/[0.06]"
-            style={{
-              boxShadow: `0 0 0 1px color-mix(in oklch, ${accentColor} 12%, transparent), 0 8px 24px -12px color-mix(in oklch, ${accentColor} 25%, transparent)`,
-            }}
-          >
+          <div className="flex shrink-0 flex-col gap-2">
+            {sheetFilter == null ? (
+              <SectionTitle>
+                {activeStationId === "home"
+                  ? t.sidebarAtHomeSectionTitle
+                  : t.currentExpedition}
+              </SectionTitle>
+            ) : null}
             <div
-              className={cn(
-                "flex flex-col gap-2.5 p-3",
-                activeStationId !== "home" &&
-                  sheetFilter == null &&
-                  "max-h-[min(38vh,280px)] overflow-y-auto",
-                relaxed && "gap-3 p-4 sm:p-4 max-h-[min(60vh,480px)] overflow-y-auto",
-              )}
+              className="relative shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-background/80 shadow-sm ring-1 ring-black/[0.04] dark:bg-background/60 dark:ring-white/[0.06]"
+              style={{
+                boxShadow: `0 0 0 1px color-mix(in oklch, ${accentColor} 12%, transparent), 0 8px 24px -12px color-mix(in oklch, ${accentColor} 25%, transparent)`,
+              }}
             >
-              {activeStationId !== "home" ? (
-                <span
-                  className={cn(
-                    "inline-flex w-fit rounded-full bg-primary/12 px-2 py-0.5 font-semibold text-primary",
-                    tx("text-[9px]", "text-xs"),
-                  )}
-                >
-                  {lang === "mn" ? "Өртөө" : "Station"}
-                </span>
-              ) : null}
-              {activeStationId !== "home" && stationInfo ? (
-                <>
-                  <div>
-                    <h4
-                      className={cn(
-                        "font-display font-semibold leading-tight tracking-tight text-foreground",
-                        tx("text-[14px]", "text-base"),
-                      )}
-                    >
-                      {stationInfo.name}
-                    </h4>
-                    {stationInfo.region ? (
-                      <p
+              <div
+                className={cn(
+                  "flex flex-col gap-2.5 p-3",
+                  activeStationId !== "home" &&
+                    sheetFilter == null &&
+                    "max-h-[min(38vh,280px)] overflow-y-auto",
+                  relaxed &&
+                    "gap-3 p-4 sm:p-4 max-h-[min(60vh,480px)] overflow-y-auto",
+                )}
+              >
+                {activeStationId !== "home" ? (
+                  <span
+                    className={cn(
+                      "inline-flex w-fit rounded-full bg-primary/12 px-2 py-0.5 font-semibold text-primary",
+                      tx("text-[9px]", "text-xs"),
+                    )}
+                  >
+                    {lang === "mn" ? "Өртөө" : "Station"}
+                  </span>
+                ) : null}
+                {activeStationId !== "home" && stationInfo ? (
+                  <>
+                    <div className="flex aligin-center">
+                      <h4
                         className={cn(
-                          "mt-0.5 font-medium text-primary/85",
-                          tx("text-[10px]", "text-sm"),
+                          "font-display font-semibold leading-tight tracking-tight text-foreground",
+                          tx("text-[16px]", "text-base"),
                         )}
                       >
-                        {stationInfo.region}
-                      </p>
-                    ) : null}
-                  </div>
-                  {stationStoryText.title || stationStoryText.desc ? (
-                    <div className="rounded-lg border border-sky-500/20 bg-sky-950/10 px-2 py-1.5 sm:px-3 sm:py-2">
-                      <p
-                        className={cn(
-                          "mb-0.5 font-semibold uppercase tracking-wider text-sky-200/85",
-                          tx("text-[9px]", "text-xs"),
-                        )}
-                      >
-                        {t.mapStationHistoryTitle}
-                      </p>
-                      {stationStoryText.title ? (
+                        {stationInfo.name}
+                      </h4>
+                      {/* {stationInfo.region ? (
                         <p
                           className={cn(
-                            "font-medium leading-snug text-foreground",
-                            tx("line-clamp-2 text-[10px]", "text-sm line-clamp-none"),
+                            "mt-0.5 font-medium text-primary/85",
+                            tx("text-[10px]", "text-sm"),
                           )}
                         >
-                          {stationStoryText.title}
+                          {stationInfo.region}
                         </p>
-                      ) : null}
-                      {stationStoryText.desc ? (
-                        <p
-                          className={cn(
-                            "leading-relaxed text-muted-foreground",
-                            tx(
-                              "line-clamp-4 text-[10px]",
-                              "text-sm line-clamp-none mt-1.5",
-                            ),
-                            stationStoryText.title ? "mt-1" : "",
-                          )}
-                        >
-                          {stationStoryText.desc}
-                        </p>
-                      ) : null}
+                      ) : null} */}
                     </div>
-                  ) : (
+                    {/* {stationStoryText.title || stationStoryText.desc ? (
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-950/10 px-2 py-1.5 sm:px-3 sm:py-2">
+                        <p
+                          className={cn(
+                            "mb-0.5 font-semibold uppercase tracking-wider text-sky-200/85",
+                            tx("text-[9px]", "text-xs"),
+                          )}
+                        >
+                          {t.mapStationHistoryTitle}
+                        </p>
+                        {stationStoryText.title ? (
+                          <p
+                            className={cn(
+                              "font-medium leading-snug text-foreground",
+                              tx(
+                                "line-clamp-2 text-[10px]",
+                                "text-sm line-clamp-none",
+                              ),
+                            )}
+                          >
+                            {stationStoryText.title}
+                          </p>
+                        ) : null}
+                        {stationStoryText.desc ? (
+                          <p
+                            className={cn(
+                              "leading-relaxed text-muted-foreground",
+                              tx(
+                                "line-clamp-4 text-[10px]",
+                                "text-sm line-clamp-none mt-1.5",
+                              ),
+                              stationStoryText.title ? "mt-1" : "",
+                            )}
+                          >
+                            {stationStoryText.desc}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : ( */}
                     <p
                       className={cn(
-                        "leading-relaxed text-muted-foreground",
-                        tx("line-clamp-2 text-[10px]", "text-sm line-clamp-none"),
+                        "text-muted-foreground",
+                        tx("text-[12px]", "text-sm"),
                       )}
                     >
                       {t.questDesc}
                     </p>
-                  )}
-                </>
-              ) : activeStationId !== "home" ? (
-                <>
-                  <h4
-                    className={cn(
-                      "font-display font-semibold leading-tight text-foreground",
-                      tx("text-[14px]", "text-base"),
-                    )}
-                  >
-                    {currentStationLabel?.trim() || activeStationId}
-                  </h4>
-                  <p
-                    className={cn(
-                      "leading-relaxed text-muted-foreground",
-                      tx("line-clamp-2 text-[10px]", "text-sm line-clamp-none"),
-                    )}
-                  >
-                    {t.questDesc}
-                  </p>
-                </>
-              ) : (
-                <div className="space-y-1.5">
-                  <p
-                    className={cn(
-                      "font-display font-semibold text-foreground",
-                      tx("text-sm", "text-base"),
-                    )}
-                  >
-                    {t.sidebarAtHomeBadge}
-                  </p>
-                  <p
-                    className={cn(
-                      "leading-relaxed text-muted-foreground",
-                      tx("text-[10px]", "text-sm"),
-                    )}
-                  >
-                    {t.sidebarAtHomeHint}
-                  </p>
-                </div>
-              )}
-              {activeStationId !== "home" &&
-                journeyDay != null &&
-                totalStations != null &&
-                totalStations > 0 && (
-                  <p
-                    className={cn(
-                      "border-t border-border/40 pt-2 leading-snug text-muted-foreground",
-                      tx("line-clamp-2 text-[9px]", "text-xs line-clamp-none"),
-                    )}
-                  >
-                    <span className="font-semibold text-primary">
-                      {t.journeyDayLabel} {journeyDay}
-                    </span>
-                    {stationIndex != null && currentStationLabel ? (
-                      <>
-                        <span className="text-muted-foreground/60"> · </span>
-                        <span>
-                          {stationIndex}/{totalStations}
-                        </span>
-                        <span className="text-muted-foreground/60"> · </span>
-                        <span className="text-foreground/85">
-                          {currentStationLabel}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-muted-foreground/60"> · </span>
-                        <span>
-                          {lang === "mn" ? "Зураг дээр сонгоно" : "Pick on map"}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                )}
-              {activeStationId !== "home" && displayGames.length > 0 && (
-                <div className="min-h-0 shrink rounded-lg border border-border/50 bg-muted/15 px-2 py-2 sm:px-3 sm:py-2.5">
-                  <p
-                    className={cn(
-                      "mb-1.5 font-semibold uppercase tracking-wider text-foreground/80",
-                      tx("text-[9px]", "text-xs"),
-                    )}
-                  >
-                    {lang === "mn" ? "Тоглоом" : "Games"}
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                    {displayGames.slice(0, 4).map((g) => {
-                      const wkRem =
-                        activeStationId && g.slug
-                          ? gameWeeklyPlaysRemaining(
-                              activeStationId,
-                              g.slug,
-                              stationGameVisits,
-                            )
-                          : 2;
-                      const wkLabel =
-                        wkRem <= 0
-                          ? lang === "mn"
-                            ? "7х ✕"
-                            : "Cap"
-                          : lang === "mn"
-                            ? `${wkRem}/2`
-                            : `${wkRem}/2`;
-
-                      return (
-                        <div
-                          key={g.id}
-                          className="rounded-md border border-border/40 bg-background/50 px-1.5 py-1 sm:px-2 sm:py-1.5"
-                        >
-                          <p
-                            className={cn(
-                              "line-clamp-2 font-medium leading-tight text-foreground",
-                              tx("text-[10px]", "text-sm"),
-                            )}
-                          >
-                            {lang === "mn" ? g.name_mn : g.name_en}
-                          </p>
-                          <p
-                            className={cn(
-                              "mt-0.5 tabular-nums text-muted-foreground",
-                              tx("text-[9px]", "text-xs"),
-                            )}
-                          >
-                            {wkLabel}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {displayGames.length > 4 ? (
-                    <p
+                    {/* )} */}
+                  </>
+                ) : activeStationId !== "home" ? (
+                  <>
+                    <h4
                       className={cn(
-                        "mt-1 text-muted-foreground",
-                        tx("text-[9px]", "text-xs"),
+                        "font-display font-semibold leading-tight text-foreground",
+                        tx("text-[14px]", "text-base"),
                       )}
                     >
-                      {lang === "mn"
-                        ? `+${displayGames.length - 4} бусад — зураг дээр нээнэ үү`
-                        : `+${displayGames.length - 4} more — open on map`}
+                      {currentStationLabel?.trim() || activeStationId}
+                    </h4>
+                    <p
+                      className={cn(
+                        "leading-relaxed text-muted-foreground",
+                        tx(
+                          "line-clamp-2 text-[10px]",
+                          "text-sm line-clamp-none",
+                        ),
+                      )}
+                    >
+                      {t.questDesc}
                     </p>
-                  ) : null}
-                </div>
-              )}
+                  </>
+                ) : (
+                  <div className="space-y-1.5">
+                    <p
+                      className={cn(
+                        "font-display font-semibold text-foreground",
+                        tx("text-sm", "text-base"),
+                      )}
+                    >
+                      {t.sidebarAtHomeBadge}
+                    </p>
+                    <p
+                      className={cn(
+                        "leading-relaxed text-muted-foreground",
+                        tx("text-[12px]", "text-sm"),
+                      )}
+                    >
+                      {t.sidebarAtHomeHint}
+                    </p>
+                  </div>
+                )}
+                {/* {activeStationId !== "home" &&
+                  journeyDay != null &&
+                  totalStations != null &&
+                  totalStations > 0 && (
+                    <p
+                      className={cn(
+                        "border-t border-border/40 pt-2 leading-snug text-muted-foreground",
+                        tx(
+                          "line-clamp-2 text-[9px]",
+                          "text-xs line-clamp-none",
+                        ),
+                      )}
+                    >
+                      <span className="font-semibold text-primary">
+                        {t.journeyDayLabel} {journeyDay}
+                      </span>
+                      {stationIndex != null && currentStationLabel ? (
+                        <>
+                          <span className="text-muted-foreground/60"> · </span>
+                          <span>
+                            {stationIndex}/{totalStations}
+                          </span>
+                          <span className="text-muted-foreground/60"> · </span>
+                          <span className="text-foreground/85">
+                            {currentStationLabel}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-muted-foreground/60"> · </span>
+                          <span>
+                            {lang === "mn"
+                              ? "Зураг дээр сонгоно"
+                              : "Pick on map"}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  )} */}
+                {activeStationId !== "home" && displayGames.length > 0 && (
+                  <div className="min-h-0 shrink rounded-lg bg-muted px-2 py-2 sm:px-3 sm:py-2.5">
+                    <p
+                      className={cn(
+                        "mb-1.5 font-semibold uppercase tracking-wider text-foreground/80",
+                        tx("text-[10px]", "text-xs"),
+                      )}
+                    >
+                      {lang === "mn" ? "Тоглоом" : "Games"}
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      {displayGames.slice(0, 4).map((g) => {
+                        const wkRem =
+                          activeStationId && g.slug
+                            ? gameWeeklyPlaysRemaining(
+                                activeStationId,
+                                g.slug,
+                                stationGameVisits,
+                              )
+                            : 2;
+                        const wkLabel =
+                          wkRem <= 0
+                            ? lang === "mn"
+                              ? "7х ✕"
+                              : "Cap"
+                            : lang === "mn"
+                              ? `${wkRem}/2`
+                              : `${wkRem}/2`;
+
+                        return (
+                          <div
+                            key={g.id}
+                            className="rounded-md border border-primary/30 bg-nuted px-1.5 py-1 sm:px-2 sm:py-1.5"
+                          >
+                            <p
+                              className={cn(
+                                "line-clamp-2 font-medium leading-tight text-",
+                                tx("text-[10px]", "text-sm"),
+                              )}
+                            >
+                              {lang === "mn" ? g.name_mn : g.name_en}
+                            </p>
+                            <p
+                              className={cn(
+                                "mt-0.5 tabular-nums text-muted-foreground",
+                                tx("text-[9px]", "text-xs"),
+                              )}
+                            >
+                              {wkLabel}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {displayGames.length > 4 ? (
+                      <p
+                        className={cn(
+                          "mt-1 text-muted-foreground",
+                          tx("text-[9px]", "text-xs"),
+                        )}
+                      >
+                        {lang === "mn"
+                          ? `+${displayGames.length - 4} бусад — зураг дээр нээнэ үү`
+                          : `+${displayGames.length - 4} more — open on map`}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         ) : null}
 
         {show("treasury") ? (
@@ -506,7 +518,7 @@ export function LeftPanel({
                     setGemExErr(null);
                     setGemExchangeOpen(true);
                   }}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5 text-left transition-colors hover:border-primary/35 hover:bg-muted/40 disabled:pointer-events-none disabled:opacity-45"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-primary/30 bg-muted/25 px-2.5 py-1.5 text-left transition-colors hover:border-primary/35 hover:bg-muted/40 disabled:pointer-events-none disabled:opacity-45"
                 >
                   <span
                     className={cn(
@@ -535,22 +547,24 @@ export function LeftPanel({
             {sheetFilter == null ? <SectionTitle>{t.rank}</SectionTitle> : null}
             <div
               className={cn(
-                "mt-2 rounded-2xl border border-border/60 bg-background/80 shadow-sm dark:bg-background/50",
+                "mt-1 rounded-2xl border border-border/60 bg-background/80 shadow-sm dark:bg-background/50",
                 relaxed ? "p-4" : "p-3",
               )}
             >
               <div
                 className={cn(
-                  "mb-2 flex justify-between gap-2 text-foreground",
+                  "mb-1 flex justify-between gap-1 text-foreground",
                   tx("text-[11px]", "text-sm"),
                 )}
               >
-                <span className="font-semibold text-primary">{t.rankTitle}</span>
+                <span className="font-semibold text-primary">
+                  {t.rankTitle}
+                </span>
                 <span className="tabular-nums font-medium text-foreground">
                   {xp.toLocaleString()} / {xpMax.toLocaleString()}
                 </span>
               </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -573,7 +587,9 @@ export function LeftPanel({
                         relaxed ? "size-5" : "size-4",
                       )}
                     />
-                    <span className={relaxed ? "line-clamp-none" : "line-clamp-3"}>
+                    <span
+                      className={relaxed ? "line-clamp-none" : "line-clamp-3"}
+                    >
                       {t.rankChestOpen}
                     </span>
                   </p>
@@ -624,7 +640,7 @@ export function LeftPanel({
             <button
               type="button"
               onClick={() => onOpenLeaderboard?.()}
-              className="group mt-2 flex w-full items-center gap-2.5 rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:border-primary/35 hover:bg-muted/35"
+              className="group mt-1 flex w-full items-center gap-2.5 rounded-2xl border border-border/60 bg-muted/20 px-3 py-2 text-left transition-colors hover:border-primary/35 hover:bg-muted/35"
             >
               <div className="flex -space-x-1.5 shrink-0">
                 {[0, 1, 2].map((i) => (
@@ -686,7 +702,7 @@ export function LeftPanel({
           if (!o) setGemExErr(null);
         }}
       >
-        <DialogContent className="w-[min(100vw-1.5rem,400px)] border-primary/20">
+        <DialogContent className="w-[min(100vw-1.5rem,400px)] border-primary/20 bg-muted">
           <DialogHeader>
             <DialogTitle className="font-display text-base">
               {t.treasuryGemExchangeTitle}
@@ -858,7 +874,7 @@ export function LeftPanel({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-display mb-0 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary/90">
+    <h3 className="font-display mb-0 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-primary/90">
       {children}
       <span className="h-px flex-1 bg-border/80" />
     </h3>

@@ -62,6 +62,16 @@ function setDataTextureColorSpaces(
   }
 }
 
+/** Mixamo/FBX: өнгө ихэвчлэн `geometry.attributes.color`-д; материал дээр `vertexColors: true` заавал. */
+function enableVertexColorIfPresent(
+  mat: THREE.Material & { vertexColors?: boolean; needsUpdate?: boolean },
+  hasVertexColor: boolean,
+) {
+  if (!hasVertexColor) return;
+  mat.vertexColors = true;
+  mat.needsUpdate = true;
+}
+
 export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
   const sRGB = THREE.SRGBColorSpace;
   const linear = THREE.NoColorSpace;
@@ -71,16 +81,15 @@ export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
     if (!mesh.geometry) return;
     const g = mesh.geometry;
     const hasVertexColor = !!g.getAttribute("color");
-    const mats: THREE.Material[] = Array.isArray(mesh.material)
-      ? mesh.material
-      : [mesh.material];
-    for (const mat of mats) {
+    const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (let mi = 0; mi < list.length; mi++) {
+      const mat = list[mi]!;
       if (!mat) continue;
       if (
         mat instanceof THREE.MeshStandardMaterial ||
         mat instanceof THREE.MeshPhysicalMaterial
       ) {
-        if (hasVertexColor) mat.vertexColors = true;
+        enableVertexColorIfPresent(mat, hasVertexColor);
         setDataTextureColorSpaces(mat, sRGB, linear);
         if (
           mat.envMap == null &&
@@ -99,12 +108,52 @@ export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
         mat instanceof THREE.MeshLambertMaterial ||
         mat instanceof THREE.MeshPhongMaterial
       ) {
-        if (hasVertexColor) mat.vertexColors = true;
+        enableVertexColorIfPresent(mat, hasVertexColor);
         setDataTextureColorSpaces(mat, sRGB, linear);
         const sum = mat.color.r + mat.color.g + mat.color.b;
         if (sum < 0.04 && !mat.map && !hasVertexColor) {
           mat.color.setRGB(0.78, 0.78, 0.8);
         }
+      } else if (
+        mat instanceof THREE.MeshBasicMaterial ||
+        mat instanceof THREE.MeshToonMaterial
+      ) {
+        enableVertexColorIfPresent(mat, hasVertexColor);
+        if (mat instanceof THREE.MeshBasicMaterial) {
+          if (mat.map) mat.map.colorSpace = sRGB;
+        }
+        if (mat instanceof THREE.MeshToonMaterial) {
+          if (mat.map) mat.map.colorSpace = sRGB;
+        }
+      } else if (hasVertexColor) {
+        const old = mat as THREE.Material & {
+          color?: THREE.Color;
+          map?: THREE.Texture | null;
+          normalMap?: THREE.Texture | null;
+          transparent?: boolean;
+          opacity?: number;
+          side?: THREE.Side;
+        };
+        const rep = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          color: old.color?.clone() ?? new THREE.Color(0xffffff),
+          map: old.map ?? null,
+          normalMap: old.normalMap ?? null,
+          transparent: Boolean(old.transparent),
+          opacity: old.opacity ?? 1,
+          side: old.side ?? THREE.FrontSide,
+        });
+        setDataTextureColorSpaces(rep, sRGB, linear);
+        if (Array.isArray(mesh.material)) {
+          (mesh.material as THREE.Material[])[mi] = rep;
+        } else {
+          mesh.material = rep;
+        }
+        const sum = rep.color.r + rep.color.g + rep.color.b;
+        if (sum < 0.04 && !rep.map) {
+          rep.color.setRGB(0.88, 0.88, 0.9);
+        }
+        if (rep.envMap == null) rep.envMapIntensity = 1.0;
       }
     }
   });

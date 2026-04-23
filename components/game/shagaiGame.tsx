@@ -21,10 +21,49 @@ import {
   getShagaiThrowParams,
   SHAGAI_THROW_START_POSITIONS,
 } from "./shagaiThrowShared";
+import ShagaiHomboroiMulti from "./shagaiHomboroiMulti";
+import type { MatchRoomControls } from "@/hooks/useMatchRoom";
+import { useApp } from "@/components/AppContext";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+  match?: MatchRoomControls | null;
+  multiplayerOn?: boolean;
 };
+
+function ShagaiLobbyWait() {
+  const { language } = useApp();
+  return (
+    <div
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        padding: 20,
+        color: "rgba(255,255,255,0.8)",
+        fontSize: 14,
+        lineHeight: 1.5,
+        background:
+          "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #160e08 100%)",
+      }}
+    >
+      {language === "en" ? (
+        <span>
+          In the room — set Ready, then the host starts (2+). Solo host: «Start
+          vs bot».
+        </span>
+      ) : (
+        <span>
+          Өрөөнд: бүгд «Бэлэн» → 2+ бол эзэн «Эхлүүлэх». 1-ээр: «Роботтой
+          эхлэх».
+        </span>
+      )}
+    </div>
+  );
+}
 
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
@@ -258,7 +297,7 @@ function GameScene({
   );
 }
 
-export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
+function ShagaiGameSolo({ onComplete }: ShagaiGameProps) {
   const { grant, rewardEvents, sessionGain, resetGrants } =
     useInventoryGrant();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
@@ -578,4 +617,33 @@ export default function ShagaiGame({ onComplete }: ShagaiGameProps) {
       />
     </div>
   );
+}
+
+export default function ShagaiGame({
+  onComplete,
+  match = null,
+  multiplayerOn = false,
+}: ShagaiGameProps) {
+  const lobbyBlock =
+    multiplayerOn &&
+    match?.roomCode &&
+    match.roomStatus === "lobby";
+  if (lobbyBlock) {
+    return <ShagaiLobbyWait />;
+  }
+  const humanMp =
+    match &&
+    match.roomStatus === "playing" &&
+    match.players.length >= 2;
+  if (humanMp) {
+    return (
+      <ShagaiHomboroiMulti
+        onComplete={onComplete ?? (() => {})}
+        mp={match}
+        lastPeerRelay={match.lastPeerRelay}
+        sendRelay={match.sendRelay}
+      />
+    );
+  }
+  return <ShagaiGameSolo onComplete={onComplete} />;
 }
