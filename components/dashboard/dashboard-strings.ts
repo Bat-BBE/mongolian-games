@@ -170,6 +170,16 @@ export interface DashStrings {
   introNext: string;
   introSkip: string;
   introDone: string;
+  /** Short label for each of the 7 intro steps (stepper in UI). */
+  introStepLabels: [
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
   gamesAtStation: string;
   /** Map popup / sidebar: station lore heading */
   mapStationHistoryTitle: string;
@@ -682,30 +692,39 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapJoystickMoveAria: "Баатарыг газрын зураг дээр явуулах",
     mapLandscapeHint: "Газрын зураг илүү тухтай — утсаа хэвтээ болгоно уу.",
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
-    introWelcomeTitle: "Тавтай морилно уу",
+    introWelcomeTitle: "Эхний заавар — 7 алхам",
     introWelcomeBody:
-      "Танд хэрхэн тоглох зааварчилгаа өгнөө. <<Дараагийн>> товч дээр дарж алхам алхмаар зааварчилгаа аваарай — Амжилт.",
-    introHeroTitle: "Баатараа удирдах",
+      "Та одоо Үндсэн хуудас (dashboard) дээр байна. Энэ дэлгэц 3 гол хэсгээс бүрдэнэ:\n\n▸ ЗҮҮН — аялал, даалгавар, эрдэнэс (КП, зоос, эрдэнийн чулуу)\n▸ ТӨВ/БАРУУН — 3D газрын зураг; энд баатраа удирдана\n▸ Гэр: зураг дээрх home өртөө руу очих, эсвэл гэр/малыг зөвхөн цонхоор нээж — гэр, малаа сайжруулна\n\n«Дараагийн» товчоор алхам бүр гарна. Алхам 5–7 дээр цэнхэр хүрээтэй газар нь тухайн товчлуур, хэсгийг заана. Картын доор алхмын нэр гарна.",
+    introHeroTitle: "Алхам 2. Баатараа хаана, хэрхэн хөдөлгөх вэ",
     introHeroBody:
-      "① Баатар удирдах: WASD эсвэл keyboard <--> сум — дарж баатраа удирдана. Shift дарахад илүү хурдан явна.\n② Эсвэл өртөө сонгоод «Очих» дарах — баатар шууд тэнд очно.\n③ Гар утас, таблет: зүүн доод тойрог — хуруугаар чирж явна; ирмэгт ойртуулахад хурдан явна.",
-    introStationsTitle: "Өртөө, тоглоом",
+      "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар зэрэгцэнэ.\n\n【Хэрхэн】\n• Утас, таб — зүүн доод дугуй (joystick): чирж явуулна; ирмэгт ойртуулахад хурдан\n• Компьютер — WASD эсвэл сум, Shift = гүйх\n\n【Өртөө рүү амралтгүй очих】 Зүүн самбар — «Очих» эсвэл өртөө сонгоод баатар шууд тэнд зөөгнөнө.\n\nДараагийн алхам: өртөө, тоглоомыг хаанаас нээгддэг нь.",
+    introStationsTitle: "Алхам 3. Өртөө сонгож, тоглоом нээх",
     introStationsBody:
-      "① Газрын зураг дээр түүхэн өртөөнүүд байгаа бөгөөд тус тусдаа тоглоомын дотроо агуулна.\n② Өртөөний нэр дээр дарвал тоглоом нээгдэнэ.\n③ Нэг тоглоомыг 7 хоногт хамгийн ихдээ 2 удаа тоголох боломжтой.",
-    introHomeTitle: "Гэр, мал, оноо",
+      "【Хаана】 3D газрын зураг дээр өөр өөр түүхэн өртөө (тэмдэгтэй).\n\n【Юу хийх】 Өртөө ойртуулж эсвэл нэрийг дар — тоглоомын жагсаалт гарна. Сонгоод нэвтрэх/тоглох.\n\n【Дүрэм】 Нэг тоглоомыг 7 хоногт хамгийн ихдээ 2 удаа. Эхэнд өөрийн эхний өртөөгөөс эхлүүлэх нь зөв.",
+    introHomeTitle: "Алхам 4. Гэр, мал, оноо — хаанаас удирдах вэ",
     introHomeBody:
-      "① Тоглоом тоглоод ялахад шагнал (КП), зоос авах болно.\n② Нэг өртөөний бүх тоглоомыг амжилттай давбал — эрдэнийн чулуу авна.\n③ «Гэр» -ийн нэр дээр дарахад цонх нээгдэх бөгөөд цонхноос гэрээ сайжруулах, цуглуулсан зоос, эрдэнэсээрээ мал худалдаж авч болно.\n④ Эрдэнийн чулуугаа зоос болгохдоо зүүн самбар дээрх «Э/чулуу» дээр болгоно.",
-    introStepMapTitle: "Энэ бол 3D газар",
+      "【Гэр цонх】 Газрын зураг дээр home/нутаг өртөө руу очих (баатар home дээр) — гэр, малыг цонхоор нээж сайжруулна. Заримд «Миний гэр» товч байна.\n\n【Оноо】 Тоглоом ялалт → КП, зоос (зүүн — Эрдэнэс). Өртөө бүтэн → эрдэнийн чулуу (нэг удаа). Чулууг зоос болгох — зүүн «Э/чулуу».\n\n【Баатар, профайл】 Дээд баруун аватар/нэр дар — профайл, баатар солих.",
+    introStepMapTitle: "Алхам 5. 3D газрын зураг (одоо тодорхойлсон)",
     introStepMapBody:
-      "Энд баатраа удирдан явж, өртөөгөөр аялж тоглоом тоголно. Та ямар ч өртөөн дээр очиж хүссэн тоглоомоо тоглох боломжтой ",
-    introStepSidebarTitle: "Мэдээллийн самбар",
+      "Цэнхэр хүрээ — энэ л 3D нутаг. Баатар, өртөө, гэр (home), тусламж (?), утсан дээр дугуй/камер. Утас босоо бол хэвтээ болгоод үз — илүү тод.",
+    introStepSidebarTitle: "Алхам 6. Зүүн самбар (аялал, эрдэнэс)",
     introStepSidebarBody:
-      "Өртөөний мэдээлэл, эрдэнэс (түвшин, зоос, чулуу), урамшууллын хувь гээд тоглоом болон өртөөний бүх мэдээлэл энд харагдана. Гар утас дээр доод талд товч гарч ирэх бөгөөд түүн дээр дарч мэдээллээ харах боломжтой.",
-    introStepNavTitle: "Дээд талын самбар",
+      "Зүүн тал (утас: доод товчоор): одоогийн өртөө, даалгавар, КП/зоос/чулуу, авдар, чулуу→зоос солилцоо. Өртөө, тоглоомын гол мэдээлэл энд.",
+    introStepNavTitle: "Алхам 7. Дээд мөр (хэл, профайл)",
     introStepNavBody:
-      "Онооны жагсаалт, профайл харах, хэл(mn/en), өнгө солих үйлдлүүдийг хийх боломжтой. Зааврыг дахин харахыг хүсвэл профайлын цэсэнд орж харах боломтой. \n Тоглоом тоголж сонирхолтой байдлаар өв уламжлаллаа сэргээцгээе 😃",
+      "Цэнхэр хүрээ — онооны жагсаалт, профайл (баатар/нэр), МН/EN, өнгө. Заавар дахин: профайлын цэс эсвэл тусламж.\n«Ойлголоо» дар — заавар хаагдана. Амжилт! 🌿",
     introNext: "Дараагийн",
     introSkip: "Алгасах",
     introDone: "Ойлголоо",
+    introStepLabels: [
+      "Танилцах · бүтэц",
+      "Баатар · хөдөлгөөн",
+      "Өртөө · тоглоом",
+      "Гэр · оноо",
+      "3D газар",
+      "Зүүн самбар",
+      "Дээд меню",
+    ],
     gamesAtStation: "Тоглоомууд",
     mapStationHistoryTitle: "Өртөөний түүх",
     mapPlayGameShort: "Тоглох",
@@ -1215,30 +1234,39 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapLandscapeHint:
       "For a more comfortable map, rotate your phone to landscape.",
     mapHowToSectionTitle: "How to play",
-    introWelcomeTitle: "Welcome",
+    introWelcomeTitle: "Onboarding — 7 steps",
     introWelcomeBody:
-      "A short guided tour. Use Next to go step by step — 7 steps in total.",
-    introHeroTitle: "Move your hero",
+      "You are on the home dashboard. It has three main areas:\n\n▸ LEFT — journey, tasks, rewards (KP, coins, bonus gems)\n▸ CENTER/RIGHT — 3D map; move your hero here\n▸ Home/ger: walk to the home stop on the map, or open ger/livestock in its panel to upgrade\n\nUse Next for each step. Steps 5–7 highlight a control with a blue frame. A short line under the card shows the current step name.",
+    introHeroTitle: "Step 2. Where the hero is, how to move",
     introHeroBody:
-      "① Keyboard: WASD or arrow keys to walk. Hold Shift to run.\n② Or pick a station and tap Go there — your hero travels there.\n③ Phones & tablets: drag the ring at the lower-left; push near the edge to run.",
-    introStationsTitle: "Stations & games",
+      "【Where】 The 3D hero is on the red path in the middle; a 2D board sits on the left.\n\n【How】\n• Phone / tablet: lower-left joystick — drag; push toward the edge to run\n• Desktop: WASD or arrows, Shift to sprint\n\n【Jump to a station】 Left panel — “Go” / pick a stop — the hero warps there.\n\nNext: how you open a station and a game.",
+    introStationsTitle: "Step 3. Choose a stop, open a game",
     introStationsBody:
-      "① Walk up to the station door.\n② Tap the marker to open games.\n③ Up to 2 plays per game every 7 days.",
-    introHomeTitle: "Ger, livestock & rewards",
+      "【Where】 Historic stops (markers) on the 3D map.\n\n【What to do】 Walk up or tap the name — a game list opens. Choose and start.\n\n【Rule】 At most 2 plays per game every 7 days. Good to start at your first stop.",
+    introHomeTitle: "Step 4. Ger, animals, points — where to manage",
     introHomeBody:
-      "① Wins give KP and coins.\n② Clear every game at a station once for bonus gems.\n③ My home: upgrade your ger and buy livestock with coins.\n④ Tap Gems in the left treasury to trade gems for coins.",
-    introStepMapTitle: "This is the map",
+      "【Home panel】 Walk to the home / homeland stop (hero on home) to open — upgrade ger and animals. Some UIs have a “My home” button.\n\n【Points】 Wins → KP and coins (left — Treasury). All games at a stop once → bonus gem (one-time). Turn gems to coins — left “E/gem” (or equivalent).\n\n【Avatar / profile】 Top-right name or picture — profile and hero look.",
+    introStepMapTitle: "Step 5. 3D map (highlighted)",
     introStepMapBody:
-      "Walk here and pick stations. The ? button has quick tips.",
-    introStepSidebarTitle: "Left sidebar",
+      "The blue frame is this 3D world. Hero, stops, home (?), and on phones a ring / camera. Rotate to landscape for a better view.",
+    introStepSidebarTitle: "Step 6. Left sidebar (journey, treasury)",
     introStepSidebarBody:
-      "Station info, treasury (KP, coins, gems), and reward progress. On phones, the same shortcuts are in the bottom bar.",
-    introStepNavTitle: "Top bar",
+      "Left (on phones, often a bottom control): current stop, tasks, KP/coins/gems, rewards, gem→coin. Core info about the stop and games lives here.",
+    introStepNavTitle: "Step 7. Top bar (language, profile)",
     introStepNavBody:
-      "Leaderboard, profile, language (MN/EN), theme. Replay this tour from the profile menu.",
+      "Blue frame: leaderboard, profile (name/hero), MN/EN, theme. To replay the tour: profile menu or help.\nTap “Got it” to close. Enjoy! 🌿",
     introNext: "Next",
     introSkip: "Skip",
     introDone: "Got it",
+    introStepLabels: [
+      "Overview · layout",
+      "Hero · movement",
+      "Stop · game",
+      "Home · points",
+      "3D map",
+      "Left bar",
+      "Top menu",
+    ],
     gamesAtStation: "Games",
     mapStationHistoryTitle: "Station history",
     mapPlayGameShort: "Play",

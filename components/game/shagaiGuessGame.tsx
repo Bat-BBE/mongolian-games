@@ -386,16 +386,21 @@ function WinLights({ active, side }: { active: boolean; side: Player | null }) {
 }
 
 // --------------------------------------------------------------------------
-// Scene root.
+// Scene root (reused in online 1v1).
 // --------------------------------------------------------------------------
-function GameScene({
+export function ShagaiGuessGameScene({
   state,
   hiddenReveal,
   robotThinking,
+  leftName = "YOU",
+  rightName = "ROBOT",
 }: {
   state: GuessState;
   hiddenReveal: { player: number; robot: number } | null;
   robotThinking: boolean;
+  /** Hand labels (default YOU / ROBOT; online uses play order names). */
+  leftName?: string;
+  rightName?: string;
 }) {
   const template = useShagaiTemplate();
   const reveal =
@@ -440,7 +445,7 @@ function GameScene({
         template={template}
         tint="#b0e8b0"
         reveal={reveal}
-        label="YOU"
+        label={leftName}
         accent="#60c060"
       />
       <Hand
@@ -449,7 +454,7 @@ function GameScene({
         template={template}
         tint="#f0b8a8"
         reveal={reveal}
-        label="ROBOT"
+        label={rightName}
         accent="#e06050"
       />
 
@@ -636,7 +641,7 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
 
         <Suspense fallback={null}>
           <Environment preset="night" />
-          <GameScene
+          <ShagaiGuessGameScene
             state={state}
             hiddenReveal={revealHidden}
             robotThinking={robotThinking}

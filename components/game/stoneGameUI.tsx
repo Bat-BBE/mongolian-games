@@ -26,6 +26,12 @@ interface Props {
   onRestart: () => void;
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
   sessionGain?: { coins: number; gems: number };
+  /** 2 хүний online — эзэн = player, зочин = computer (дотоод төлөв). */
+  multiplayer?: {
+    iAmHost: boolean;
+    opponentName: string;
+    lang: "mn" | "en";
+  };
 }
 
 type StoneI18n = {
@@ -172,10 +178,14 @@ function ScoreBar({
   score,
   round,
   t,
+  leftLabel,
+  rightLabel,
 }: {
   score: { player: number; computer: number };
   round: number;
   t: StoneI18n;
+  leftLabel?: string;
+  rightLabel?: string;
 }) {
   return (
     <div
@@ -191,7 +201,7 @@ function ScoreBar({
           {score.player}
         </div>
         <div style={{ color: "#888", fontSize: 10, letterSpacing: 2 }}>
-          {t.player}
+          {leftLabel ?? t.player}
         </div>
       </div>
       <div style={{ textAlign: "center" }}>
@@ -205,7 +215,7 @@ function ScoreBar({
           {score.computer}
         </div>
         <div style={{ color: "#888", fontSize: 10, letterSpacing: 2 }}>
-          {t.computer}
+          {rightLabel ?? t.computer}
         </div>
       </div>
     </div>
@@ -363,16 +373,22 @@ function ResultPanel({
   onNext,
   onRestart,
   t,
+  mp,
 }: {
   state: GameState;
   onNext: () => void;
   onRestart: () => void;
   t: StoneI18n;
+  mp?: { iAmHost: boolean; opponentName: string; lang: "mn" | "en" };
 }) {
   const last = state.history[state.history.length - 1];
   const gameOver =
     state.score.player >= WIN_SCORE || state.score.computer >= WIN_SCORE;
-  const playerWins = state.score.player >= WIN_SCORE;
+  const playerWins = mp
+    ? mp.iAmHost
+      ? state.score.player >= WIN_SCORE
+      : state.score.computer >= WIN_SCORE
+    : state.score.player >= WIN_SCORE;
 
   return (
     <div style={{ textAlign: "center" }}>
@@ -391,10 +407,20 @@ function ResultPanel({
               fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             }}
           >
-            {playerWins ? t.youWon : t.computerWonGame}
+            {playerWins
+              ? t.youWon
+              : mp
+                ? mp.lang === "en"
+                  ? `${mp.opponentName} wins!`
+                  : `${mp.opponentName} яллаа!`
+                : t.computerWonGame}
           </div>
           <div style={{ color: "#888", fontSize: 13, marginBottom: 16 }}>
-            {state.score.player} : {state.score.computer}
+            {mp
+              ? mp.iAmHost
+                ? `${state.score.player} : ${state.score.computer}`
+                : `${state.score.computer} : ${state.score.player}`
+              : `${state.score.player} : ${state.score.computer}`}
           </div>
           <button
             onClick={() => {
@@ -411,48 +437,121 @@ function ResultPanel({
           {last && (
             <div
               style={{
-                background:
-                  last.outcome === "player"
-                    ? "rgba(96,192,96,0.12)"
-                    : last.outcome === "computer"
-                      ? "rgba(224,96,80,0.12)"
-                      : "rgba(200,160,48,0.10)",
-                border:
-                  last.outcome === "player"
-                    ? "1px solid #60c06044"
-                    : last.outcome === "computer"
-                      ? "1px solid #e0605044"
-                      : "1px solid rgba(200,160,48,0.22)",
+                background: (() => {
+                  const meWin =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "player") ||
+                      (!mp.iAmHost && last.outcome === "computer"));
+                  const meLose =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "computer") ||
+                      (!mp.iAmHost && last.outcome === "player"));
+                  if (meWin) return "rgba(96,192,96,0.12)";
+                  if (meLose) return "rgba(224,96,80,0.12)";
+                  if (!mp)
+                    return last.outcome === "player"
+                      ? "rgba(96,192,96,0.12)"
+                      : last.outcome === "computer"
+                        ? "rgba(224,96,80,0.12)"
+                        : "rgba(200,160,48,0.10)";
+                  return "rgba(200,160,48,0.10)";
+                })(),
+                border: (() => {
+                  const meWin =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "player") ||
+                      (!mp.iAmHost && last.outcome === "computer"));
+                  const meLose =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "computer") ||
+                      (!mp.iAmHost && last.outcome === "player"));
+                  if (meWin) return "1px solid #60c06044";
+                  if (meLose) return "1px solid #e0605044";
+                  if (!mp)
+                    return last.outcome === "player"
+                      ? "1px solid #60c06044"
+                      : last.outcome === "computer"
+                        ? "1px solid #e0605044"
+                        : "1px solid rgba(200,160,48,0.22)";
+                  return "1px solid rgba(200,160,48,0.22)";
+                })(),
                 borderRadius: 12,
                 padding: "12px 16px",
                 marginBottom: 14,
               }}
             >
               <div style={{ fontSize: 28, marginBottom: 6 }}>
-                {last.outcome === "player"
-                  ? "✅"
-                  : last.outcome === "computer"
-                    ? "❌"
-                    : "🤝"}
+                {(() => {
+                  const meWin =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "player") ||
+                      (!mp.iAmHost && last.outcome === "computer"));
+                  if (meWin) return "✅";
+                  const meLose =
+                    mp &&
+                    ((mp.iAmHost && last.outcome === "computer") ||
+                      (!mp.iAmHost && last.outcome === "player"));
+                  if (meLose) return "❌";
+                  if (!mp)
+                    return last.outcome === "player"
+                      ? "✅"
+                      : last.outcome === "computer"
+                        ? "❌"
+                        : "🤝";
+                  return "🤝";
+                })()}
               </div>
               <div
                 style={{
-                  color:
-                    last.outcome === "player"
-                      ? "#60c060"
-                      : last.outcome === "computer"
-                        ? "#e06050"
-                        : "#f0c040",
+                  color: (() => {
+                    const meWin =
+                      mp &&
+                      ((mp.iAmHost && last.outcome === "player") ||
+                        (!mp.iAmHost && last.outcome === "computer"));
+                    const meLose =
+                      mp &&
+                      ((mp.iAmHost && last.outcome === "computer") ||
+                        (!mp.iAmHost && last.outcome === "player"));
+                    if (meWin) return "#60c060";
+                    if (meLose) return "#e06050";
+                    if (!mp)
+                      return last.outcome === "player"
+                        ? "#60c060"
+                        : last.outcome === "computer"
+                          ? "#e06050"
+                          : "#f0c040";
+                    return "#f0c040";
+                  })(),
                   fontSize: 16,
                   fontWeight: "bold",
                   marginBottom: 4,
                 }}
               >
-                {last.outcome === "player"
-                  ? t.playerWin
-                  : last.outcome === "computer"
-                    ? t.computerWin
-                    : t.tie}
+                {mp
+                  ? (() => {
+                      const meWin =
+                        (mp.iAmHost && last.outcome === "player") ||
+                        (!mp.iAmHost && last.outcome === "computer");
+                      const theyWin =
+                        (mp.iAmHost && last.outcome === "computer") ||
+                        (!mp.iAmHost && last.outcome === "player");
+                      if (meWin)
+                        return mp.lang === "en"
+                          ? "You guessed right!"
+                          : "Та зөв таалаа!";
+                      if (theyWin)
+                        return mp.lang === "en"
+                          ? `${mp.opponentName} guessed right!`
+                          : `${mp.opponentName} зөв таалаа!`;
+                      return mp.lang === "en"
+                        ? "Both wrong"
+                        : t.tie;
+                    })()
+                  : last.outcome === "player"
+                    ? t.playerWin
+                    : last.outcome === "computer"
+                      ? t.computerWin
+                      : t.tie}
               </div>
               <div style={{ color: "#ccc", fontSize: 13, lineHeight: 1.6 }}>
                 {t.playerGrabbed(last.playerStones)}{" "}
@@ -462,7 +561,11 @@ function ResultPanel({
                 <b style={{ color: "#f0c040" }}>{last.total}</b>
               </div>
               <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
-                {t.youGuessed(last.playerGuess, last.computerGuess)}
+                {mp
+                  ? mp.lang === "en"
+                    ? `You guessed ${mp.iAmHost ? last.playerGuess : last.computerGuess}, they guessed ${mp.iAmHost ? last.computerGuess : last.playerGuess}`
+                    : `Та ${mp.iAmHost ? last.playerGuess : last.computerGuess}, тэд ${mp.iAmHost ? last.computerGuess : last.playerGuess} гэж таалаа`
+                  : t.youGuessed(last.playerGuess, last.computerGuess)}
               </div>
             </div>
           )}
@@ -501,9 +604,11 @@ function primaryBtn(bg: string, fg: string): React.CSSProperties {
 function HistoryDots({
   history,
   t,
+  mp,
 }: {
   history: GameState["history"];
   t: StoneI18n;
+  mp?: { iAmHost: boolean };
 }) {
   if (history.length === 0) return null;
   return (
@@ -516,8 +621,14 @@ function HistoryDots({
       }}
     >
       {history.map((r, i) => {
-        const won = r.outcome === "player";
-        const lost = r.outcome === "computer";
+        const won = mp
+          ? (mp.iAmHost && r.outcome === "player") ||
+            (!mp.iAmHost && r.outcome === "computer")
+          : r.outcome === "player";
+        const lost = mp
+          ? (mp.iAmHost && r.outcome === "computer") ||
+            (!mp.iAmHost && r.outcome === "player")
+          : r.outcome === "computer";
         const label = won ? t.won : lost ? t.lost : t.draw;
         const bg = won ? "#60c060" : lost ? "#e06050" : "#c8a030";
         return (
@@ -603,9 +714,28 @@ export default function StoneGameUI({
   onRestart,
   rewardEvents = [],
   sessionGain,
+  multiplayer: mp,
 }: Props) {
   const { language } = useApp();
   const t = useStoneI18n();
+  const youLabel = language === "en" ? "YOU" : "ТА";
+  const scoreBar =
+    mp != null
+      ? {
+          score: {
+            player: mp.iAmHost ? state.score.player : state.score.computer,
+            computer: mp.iAmHost ? state.score.computer : state.score.player,
+          },
+          leftLabel: youLabel,
+          rightLabel: mp.opponentName?.trim()
+            ? mp.opponentName.slice(0, 20)
+            : "?",
+        }
+      : {
+          score: state.score,
+          leftLabel: undefined as string | undefined,
+          rightLabel: undefined as string | undefined,
+        };
   const narrowUi = useGameUiNarrow();
   const [rulesOpen, setRulesOpen] = useState(false);
   const rulesFabLabel = language === "mn" ? "Дүрэм" : "Rules";
@@ -753,52 +883,144 @@ export default function StoneGameUI({
         </div>
 
         <Divider />
-        <ScoreBar score={state.score} round={state.round} t={t} />
-        <HistoryDots history={state.history} t={t} />
+        <ScoreBar
+          score={scoreBar.score}
+          round={state.round}
+          t={t}
+          leftLabel={scoreBar.leftLabel}
+          rightLabel={scoreBar.rightLabel}
+        />
+        <HistoryDots history={state.history} t={t} mp={mp} />
         <Divider />
 
         {state.phase === "pick" && (
           <div>
-            <StonePicker
-              selected={state.playerStones}
-              onPick={onPick}
-              label={t.pickLabel}
-            />
-            {state.playerStones === null && (
-              <div
-                style={{
-                  color: "#555",
-                  fontSize: 11,
-                  textAlign: "center",
-                  marginTop: 10,
-                }}
-              >
-                {t.pickHint}
-              </div>
-            )}
-            {state.playerStones !== null && (
-              <div
-                style={{
-                  color: "#c8a030",
-                  fontSize: 12,
-                  textAlign: "center",
-                  marginTop: 10,
-                  animation: "pulse 1s infinite",
-                }}
-              >
-                {t.pickChosen(state.playerStones)}
-              </div>
+            {!mp ? (
+              <>
+                <StonePicker
+                  selected={state.playerStones}
+                  onPick={onPick}
+                  label={t.pickLabel}
+                />
+                {state.playerStones === null && (
+                  <div
+                    style={{
+                      color: "#555",
+                      fontSize: 11,
+                      textAlign: "center",
+                      marginTop: 10,
+                    }}
+                  >
+                    {t.pickHint}
+                  </div>
+                )}
+                {state.playerStones !== null && (
+                  <div
+                    style={{
+                      color: "#c8a030",
+                      fontSize: 12,
+                      textAlign: "center",
+                      marginTop: 10,
+                      animation: "pulse 1s infinite",
+                    }}
+                  >
+                    {t.pickChosen(state.playerStones)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {((mp.iAmHost && state.playerStones === null) ||
+                  (!mp.iAmHost && state.computerStones === null)) && (
+                  <StonePicker
+                    selected={
+                      mp.iAmHost ? state.playerStones : state.computerStones
+                    }
+                    onPick={onPick}
+                    label={t.pickLabel}
+                  />
+                )}
+                {((mp.iAmHost && state.playerStones === null) ||
+                  (!mp.iAmHost && state.computerStones === null)) && (
+                  <div
+                    style={{
+                      color: "#555",
+                      fontSize: 11,
+                      textAlign: "center",
+                      marginTop: 10,
+                    }}
+                  >
+                    {t.pickHint}
+                  </div>
+                )}
+                {((mp.iAmHost && state.playerStones !== null) ||
+                  (!mp.iAmHost && state.computerStones !== null)) &&
+                  ((mp.iAmHost && state.computerStones === null) ||
+                    (!mp.iAmHost && state.playerStones === null)) && (
+                    <div
+                      style={{
+                        color: "#c8a030",
+                        fontSize: 12,
+                        textAlign: "center",
+                        marginTop: 10,
+                      }}
+                    >
+                      {mp.lang === "en"
+                        ? "Waiting for opponent to pick…"
+                        : "Өрсөлдөгч чулуу сонгож байна…"}
+                    </div>
+                  )}
+              </>
             )}
           </div>
         )}
 
         {state.phase === "guess" && (
-          <GuessPicker
-            selected={state.playerGuess}
-            onGuess={onGuess}
-            label={t.guessLabel(state.playerStones ?? 0)}
-            rangeLabel={t.guessRange}
-          />
+          <>
+            {!mp ? (
+              <GuessPicker
+                selected={state.playerGuess}
+                onGuess={onGuess}
+                label={t.guessLabel(state.playerStones ?? 0)}
+                rangeLabel={t.guessRange}
+              />
+            ) : (
+              <>
+                {((mp.iAmHost && state.playerGuess === null) ||
+                  (!mp.iAmHost && state.computerGuess === null)) && (
+                  <GuessPicker
+                    selected={
+                      mp.iAmHost ? state.playerGuess : state.computerGuess
+                    }
+                    onGuess={onGuess}
+                    label={t.guessLabel(
+                      (mp.iAmHost
+                        ? state.playerStones
+                        : state.computerStones) ?? 0,
+                    )}
+                    rangeLabel={t.guessRange}
+                  />
+                )}
+                {((mp.iAmHost && state.playerGuess !== null) ||
+                  (!mp.iAmHost && state.computerGuess !== null)) &&
+                  ((mp.iAmHost && state.computerGuess === null) ||
+                    (!mp.iAmHost && state.playerGuess === null)) && (
+                    <div
+                      style={{
+                        color: "#c8a030",
+                        fontSize: 12,
+                        textAlign: "center",
+                        marginTop: 12,
+                      }}
+                    >
+                      {mp.lang === "en"
+                        ? "Waiting for opponent to guess…"
+                        : "Өрсөлдөгч таалгаж байна…"}
+                    </div>
+                  )}
+              </>
+            )}
+          </>
         )}
 
         {state.phase === "result" && (
@@ -807,6 +1029,7 @@ export default function StoneGameUI({
             onNext={onNext}
             onRestart={onRestart}
             t={t}
+            mp={mp}
           />
         )}
       </div>
@@ -816,7 +1039,28 @@ export default function StoneGameUI({
           className="stone-game-panel"
           style={{ ...panel, ...gamePanelRightDesktop(200) }}
         >
-          <StoneRulesAsideBody showHeading t={t} />
+          {mp ? (
+            <>
+              <div
+                style={{
+                  color: "#c8a030",
+                  fontSize: 11,
+                  letterSpacing: 2,
+                  marginBottom: 8,
+                }}
+              >
+                {t.rulesTitle}
+              </div>
+              <Divider />
+              <p style={{ color: "#888", fontSize: 11, lineHeight: 1.5 }}>
+                {mp.lang === "en"
+                  ? "Two players: same rules as vs the robot. Max 2 in the room — you play each other."
+                  : "2 тоглогч: роботтой тоглохоос дүрэм нь ижил. Өрөөнд хамгийн ихдээ 2 — хоорондоо тоглоно."}
+              </p>
+            </>
+          ) : (
+            <StoneRulesAsideBody showHeading t={t} />
+          )}
         </div>
       ) : (
         <>
@@ -832,7 +1076,15 @@ export default function StoneGameUI({
             onClose={() => setRulesOpen(false)}
             title={t.rulesTitle}
           >
-            <StoneRulesAsideBody showHeading={false} t={t} />
+            {mp ? (
+              <p style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
+                {mp.lang === "en"
+                  ? "Two players: same rules as vs the robot. Max 2 in the room — you play each other."
+                  : "2 тоглогч: роботтой тоглохоос дүрэм нь ижил. Өрөөнд хамгийн ихдээ 2 — хоорондоо тоглоно."}
+              </p>
+            ) : (
+              <StoneRulesAsideBody showHeading={false} t={t} />
+            )}
           </GameRulesSheet>
         </>
       )}

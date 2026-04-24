@@ -21,7 +21,7 @@ export type StoneGameProps = {
   onComplete?: (result: "win" | "lose") => void;
 };
 
-function CinematicCamera({ phase }: { phase: GameState["phase"] }) {
+export function CinematicCamera({ phase }: { phase: GameState["phase"] }) {
   const { camera } = useThree();
   const targetPos = useRef(new THREE.Vector3(0, 4, 7));
   const targetLook = useRef(new THREE.Vector3(0, 0, 0));
@@ -184,35 +184,38 @@ function StoneBurst({
   );
 }
 
-// ── 3D Scene агуулга ───────────────────────────
-function GameScene({
+// ── 3D Scene агуулга (online 2P-д дахин ашиглана) ───────────────────────────
+export function GameScene({
   state,
   burstActive,
+  /** Бид зочин тоглогч бол гарын байрлалыг эргүүлнэ (зүүн = би). */
+  swapHands = false,
 }: {
   state: GameState;
   burstActive: boolean;
+  swapHands?: boolean;
 }) {
-  const showPlayerStones =
-    state.playerStones !== null &&
-    (state.phase === "guess" || state.phase === "result");
-  // Requirement: robot stones should NOT be shown until after result.
-  const showComputerStones =
-    state.phase === "result" && state.computerStones !== null;
+  const myStones = swapHands ? state.computerStones : state.playerStones;
+  const oppStones = swapHands ? state.playerStones : state.computerStones;
+  const showMyStones =
+    myStones !== null && (state.phase === "guess" || state.phase === "result");
+  const showOppStones =
+    state.phase === "result" && oppStones !== null;
 
   return (
     <>
       <GameTable />
       <StoneHand
-        stoneCount={showPlayerStones ? (state.playerStones ?? 0) : 0}
-        isOpen={showPlayerStones}
+        stoneCount={showMyStones ? (myStones ?? 0) : 0}
+        isOpen={showMyStones}
         isPlayer={true}
         position={[-2.0, 0.1, 0.5]}
         revealAnim={state.phase === "result"}
         phase={state.phase}
       />
       <StoneHand
-        stoneCount={showComputerStones ? (state.computerStones ?? 0) : 0}
-        isOpen={showComputerStones}
+        stoneCount={showOppStones ? (oppStones ?? 0) : 0}
+        isOpen={showOppStones}
         isPlayer={false}
         position={[2.0, 0.1, 0.5]}
         revealAnim={state.phase === "result"}
