@@ -26,15 +26,12 @@ import {
 } from "../map3d/heroFbx";
 
 const MAP_EMOTE_CLIP_FILES: Record<string, string> = {
-  // `public/models` — байхгүй замыг `loadHeroClipsOptional` алгасна. Засварлах: файлын нэрийг нэг нэгээр.
   // wave: "/models/waving-gesture.fbx",
   // greet: "/models/standing-greeting.fbx",
   // kiss: "/models/blowing-a-kiss.fbx",
   // dance: "/models/hip-hop-dancing.fbx",
   boxing: "/models/Boxing.fbx",
-  /** Бодит нэр: `Booty Hip Hop Dance.fbx` — booty, hip_hop нэг клип. */
   booty: "/models/Booty Hip Hop Dance.fbx",
-  // hip_hop: "/models/Booty Hip Hop Dance.fbx",
   praying: "/models/Praying.fbx",
   silly_dance: "/models/Silly Dancing.fbx",
 };
@@ -42,7 +39,6 @@ const MAP_EMOTE_CLIP_FILES: Record<string, string> = {
 interface UseThreeSceneOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
   stations: UrtuuStation[];
-  /** Icons/images from API өөрчлөгдөхөд 3D шошгыг дахин зурах */
   mapStationsRevision?: string;
   currentStationId: string;
   doneStationIds: string[];
@@ -57,17 +53,12 @@ interface UseThreeSceneOptions {
   onSelectStation?: (stationId: string) => void;
   heroModelPath?: string | null;
   onHeroAtStationChange?: (stationId: string | null) => void;
-  /** Имэйл/ID — 3D дээр тоглогч бүрт өөр «танай гэр»-ийн world төв. */
   userEmail?: string;
-  /** Имэйл+нэр хослуулсан түлхүүр — хоосон имэйлтэй тохиолдолд давхцлыг багасгана. */
   playerHomeKey?: string;
-  /** True while a fullscreen minigame is open — map animation/render skips work to save GPU. */
   paused?: boolean;
-  /** Газрын зураг дээр бусад тоглогчдад байрлал илгээх (WebSocket). */
   presencePublishRef?: React.MutableRefObject<
     ((x: number, z: number, ry: number) => void) | null
   >;
-  /** Бусад тоглогчдын capsule — ref.current шинэчлэгдэнэ. */
   remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
 }
 
@@ -190,7 +181,6 @@ export function useThreeScene({
   const [showAllMapLabels, setShowAllMapLabels] = useState(false);
   const [mapHeroEmoteIds, setMapHeroEmoteIds] = useState<string[]>([]);
   const playMapHeroEmoteRef = useRef<((id: string) => void) | null>(null);
-  /** Гар утас / таблет — виртуал joystick (x,z чиглэл, run хурд). */
   const mapVirtualStickRef = useRef({ x: 0, z: 0, run: false });
   const labelUiThrottleRef = useRef<{
     stationId: string | null;
@@ -202,8 +192,6 @@ export function useThreeScene({
   useEffect(() => {
     onSelectRef.current = onSelectStation ?? null;
   }, [onSelectStation]);
-
-  /** Updated in the render loop when the hero enters a door radius (marker click only then). */
   const heroAtStationIdRef = useRef<string | null>(null);
 
   const flyToStationRef = useRef<((id: string, snap?: boolean) => void) | null>(
@@ -239,7 +227,6 @@ export function useThreeScene({
     const { x: playerHomeX, z: playerHomeZ } = playerHomeWorldAnchor(homeKey);
 
     const scene = new THREE.Scene();
-    // Хуучин: цайвар цэнхэр тэнгэр + манан
     scene.background = new THREE.Color(0x92c4e8);
     scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00088);
 
@@ -352,7 +339,6 @@ export function useThreeScene({
     remotePeerGroup.name = "remote_peers";
     scene.add(remotePeerGroup);
     const remoteAvatarById = new Map<string, THREE.Group>();
-    /** Алсын тоглогч бүрийн ойролцоох зочилсон гэр (таны playerHomeGer-ээс тусдаа). */
     const remoteCampById = new Map<string, THREE.Object3D>();
     const remoteEnclosureById = new Map<string, THREE.Mesh>();
     const remoteHeroMixers = new Set<THREE.AnimationMixer>();
@@ -404,10 +390,6 @@ export function useThreeScene({
       });
     }
 
-    /**
-     * Алсын тоглогч: ачаалал хүртэл placeholder, дараа нь presence-ийн heroModelPath (тоглогчийн сонгосон загвар).
-     * Гадаад idle FBX татахгүй — зөвхөн загварт суусан clip эсвэл статик.
-     */
     function buildRemotePlayerAvatar(id: string): THREE.Group {
       const hue = (hashPeerId(id) % 360) / 360;
       const col = new THREE.Color().setHSL(hue, 0.55, 0.5);
@@ -486,7 +468,6 @@ export function useThreeScene({
       current: null as ((name: string, fadeSec?: number) => void) | null,
     };
     const heroEmotePlayingRef = { current: false };
-    /** Гар удирдлага: хурд тэгшлэгдэнэ (гэнэтийн шилжилт багасна). */
     const heroManualVelRef = { current: new THREE.Vector3(0, 0, 0) };
     const heroKinematicRef = {
       current: {
@@ -517,7 +498,6 @@ export function useThreeScene({
             const { root, clips: embeddedClips } =
               await loadHeroModel(safePath);
             if (disposed) return;
-            // Гэртэй харьцуулахад жижиг харагдуулна (гэрүүдийг томруулсан)
             root.scale.setScalar(0.015);
             root.traverse((c) => {
               if (c instanceof THREE.Mesh) {
@@ -531,9 +511,6 @@ export function useThreeScene({
               run: "/models/standing run forward.fbx",
             });
             if (disposed) return;
-
-            // Mixamo FBX-ийн ясны нэр өөр загвартай бол retarget хийхгүй бол
-            // толгой/хүрээ буруу эргэсэн харагдана.
             const MIN_MOVE_BONES = 8;
             const MIN_EMBEDDED_IDLE_BONES = 3;
 
@@ -629,15 +606,12 @@ export function useThreeScene({
             play("idle", 0);
             scene.add(root);
           } catch {
-            // If hero fails to load, map still works.
-            // eslint-disable-next-line no-console
             console.warn("Hero model failed to load for map:", heroModelPath);
             setMapHeroEmoteIds([]);
             playMapHeroEmoteRef.current = null;
           }
         })();
       };
-      // Defer heavy FBX parsing to avoid blocking the first map paint.
       const ric = (globalThis as any).requestIdleCallback as
         | ((cb: () => void, opts?: { timeout?: number }) => void)
         | undefined;

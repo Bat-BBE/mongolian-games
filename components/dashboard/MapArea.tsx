@@ -39,10 +39,15 @@ const MAP_LANDSCAPE_HINT_DISMISSED_KEY = "mapLandscapeHintDismissed";
 interface MapAreaProps {
   t: DashStrings;
   userEmail: string;
-  /** Газрын presence дээр харагдах нэр */
   playerDisplayName: string;
   homeGerLevel?: number;
-  homeLivestock?: { sheep: number; goat: number; cow: number; horse: number; camel: number };
+  homeLivestock?: {
+    sheep: number;
+    goat: number;
+    cow: number;
+    horse: number;
+    camel: number;
+  };
   currentStationId: string;
   doneStationIds: string[];
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
@@ -63,9 +68,7 @@ interface MapAreaProps {
   heroModelPath?: string | null;
   onGameCompleted?: () => void;
   onOpenHome?: () => void;
-  /** Гэрт шууд очих (камер) — зүүн самбарын товч */
   onRegisterFlyHome?: (fly: () => void) => void;
-  /** Газрын зураг дээр баатар аль өртөөний хаалганд байгаа — зүүн самбар */
   onHeroAtStationChange?: (stationId: string | null) => void;
 }
 
@@ -110,9 +113,7 @@ export function MapArea({
       setMapLandscapeHintDismissed(
         localStorage.getItem(MAP_LANDSCAPE_HINT_DISMISSED_KEY) === "1",
       );
-    } catch {
-      /* private mode / blocked storage */
-    }
+    } catch {}
     setMapLandscapeHintReady(true);
   }, []);
 
@@ -133,9 +134,7 @@ export function MapArea({
   function dismissMapLandscapeHint() {
     try {
       localStorage.setItem(MAP_LANDSCAPE_HINT_DISMISSED_KEY, "1");
-    } catch {
-      /* ignore */
-    }
+    } catch {}
     setMapLandscapeHintDismissed(true);
   }
 
@@ -158,9 +157,11 @@ export function MapArea({
     () =>
       apiStations
         .map((s) =>
-          [s.id, s.icon ?? "", s.image_url != null ? String(s.image_url) : ""].join(
-            ":",
-          ),
+          [
+            s.id,
+            s.icon ?? "",
+            s.image_url != null ? String(s.image_url) : "",
+          ].join(":"),
         )
         .sort()
         .join("|"),
@@ -256,7 +257,6 @@ export function MapArea({
 
   const { publishPose, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
-    /** Тоглоомын цонх нээхэд WS хаавал бусдад peer_left — холболт тасрах шалтгаан болдог */
     enabled: !docHidden,
     heroModelPath: heroModelPath ?? null,
     gerLevel: homeGerLevel,
