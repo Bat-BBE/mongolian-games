@@ -16,7 +16,6 @@ export type MapVirtualStickRef = MutableRefObject<{
   run: boolean;
 }>;
 
-/** MapArea дээр зөвхөн lg-ээс бага дэлгэцэнд (`lg:hidden`) дүрслэгдэнэ. */
 export function MapVirtualJoystick({
   stickRef,
   disabled,
@@ -29,13 +28,22 @@ export function MapVirtualJoystick({
   className?: string;
 }) {
   const baseRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ pid: number; cx: number; cy: number; maxR: number } | null>(
-    null,
-  );
+  const dragRef = useRef<{
+    pid: number;
+    cx: number;
+    cy: number;
+    maxR: number;
+  } | null>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
 
   const applyPolar = useCallback(
-    (clientX: number, clientY: number, cx: number, cy: number, maxR: number) => {
+    (
+      clientX: number,
+      clientY: number,
+      cx: number,
+      cy: number,
+      maxR: number,
+    ) => {
       const dx = clientX - cx;
       const dy = clientY - cy;
       const dist = Math.hypot(dx, dy);
@@ -52,9 +60,8 @@ export function MapVirtualJoystick({
       const ux = dx / dist;
       const uy = dy / dist;
       setKnob({ x: ux * Math.min(cap, dist), y: uy * Math.min(cap, dist) });
-      // Дэлгэцийн «дээш» → газрын урагш (+z), баруун → +x (камерын харгалзах тэнхлэгтэй нийцнэ).
       stickRef.current.x = ux * mag;
-      stickRef.current.z = (-uy) * mag;
+      stickRef.current.z = -uy * mag;
       stickRef.current.run = mag >= 0.88;
     },
     [stickRef],
