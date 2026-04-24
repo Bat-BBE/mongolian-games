@@ -19,6 +19,18 @@ import ShagaiGuessGameMulti, {
   ShagaiGuessOnlineLobby,
 } from "./shagaiGuessGameMulti";
 import ShagaiSevenGame from "./shagaiSevenGame";
+import FourPowersGame from "./fourPowersGame";
+import FourPowersGameMulti, {
+  FourPowersOnlineLobby,
+} from "./fourPowersGameMulti";
+import WoodenDiceGame from "./woodenDiceGame";
+import WoodenDiceGameMulti, {
+  WoodenDiceOnlineLobby,
+} from "./woodenDiceGameMulti";
+import StoneCairnMemoryGame from "./stoneCairnMemoryGame";
+import StoneCairnMemoryGameMulti, {
+  StoneCairnOnlineLobby,
+} from "./stoneCairnMemoryGameMulti";
 import MemoryMatchGame from "./memoryMatchGame";
 import KhorolGame from "./khorolGame";
 import WoodenPuzzleGame from "./woodenPuzzleGame";
@@ -62,16 +74,22 @@ export default function GameModal({
             gameType === "stone-guess" ||
             gameType === "four-bones" ||
             gameType === "horse-race" ||
+            gameType === "four-powers" ||
+            gameType === "wooden-dice" ||
+            gameType === "stone-cairn" ||
             gameType === "shagai-guess"))),
     gameType,
     gameSlug,
     displayName: playerName,
     maxRoomPlayers:
-      gameType === "stone-guess" || gameType === "shagai-guess"
+      gameType === "stone-guess" ||
+      gameType === "shagai-guess" ||
+      gameType === "wooden-dice" ||
+      gameType === "stone-cairn"
         ? 2
         : gameType === "shagai" ||
             gameType === "four-bones" ||
-            gameType === "horse-race"
+            gameType === "horse-race" || gameType === "four-powers"
           ? 4
           : undefined,
   });
@@ -250,6 +268,36 @@ export default function GameModal({
     gameType === "shagai-guess" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
+  const fourPowersLobbyBlock =
+    multiplayerOn &&
+    gameType === "four-powers" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const fourPowersHumanMp =
+    multiplayerOn &&
+    gameType === "four-powers" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const woodenDiceLobbyBlock =
+    multiplayerOn &&
+    gameType === "wooden-dice" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const woodenDiceHumanMp =
+    multiplayerOn &&
+    gameType === "wooden-dice" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const stoneCairnLobbyBlock =
+    multiplayerOn &&
+    gameType === "stone-cairn" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const stoneCairnHumanMp =
+    multiplayerOn &&
+    gameType === "stone-cairn" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
   const puzzleMpActive = mpSharedBoard && multiplayerOn;
   const mpBlocksSoloStart =
     puzzleMpActive &&
@@ -357,7 +405,10 @@ export default function GameModal({
                 gameType === "stone-guess" ||
                 gameType === "four-bones" ||
                 gameType === "horse-race" ||
-                gameType === "shagai-guess"
+                gameType === "shagai-guess" ||
+                gameType === "four-powers" ||
+                gameType === "wooden-dice" ||
+                gameType === "stone-cairn"
               }
             />
           ) : null}
@@ -439,6 +490,66 @@ export default function GameModal({
             !shagaiGuessLobbyBlock &&
             !shagaiGuessHumanMp && (
               <ShagaiGuessGame
+                onComplete={(r, pct) => void submit(r, pct)}
+              />
+            )}
+          {gameType === "four-powers" && fourPowersLobbyBlock && (
+            <FourPowersOnlineLobby />
+          )}
+          {gameType === "four-powers" &&
+            !fourPowersLobbyBlock &&
+            fourPowersHumanMp && (
+              <FourPowersGameMulti
+                onComplete={(r, pct) => void submit(r, pct)}
+                mp={mp}
+                lastPeerRelay={mp.lastPeerRelay}
+                sendRelay={mp.sendRelay}
+              />
+            )}
+          {gameType === "four-powers" &&
+            !fourPowersLobbyBlock &&
+            !fourPowersHumanMp && (
+              <FourPowersGame
+                onComplete={(r, pct) => void submit(r, pct)}
+              />
+            )}
+          {gameType === "wooden-dice" && woodenDiceLobbyBlock && (
+            <WoodenDiceOnlineLobby />
+          )}
+          {gameType === "wooden-dice" &&
+            !woodenDiceLobbyBlock &&
+            woodenDiceHumanMp && (
+              <WoodenDiceGameMulti
+                onComplete={(r, pct) => void submit(r, pct)}
+                mp={mp}
+                lastPeerRelay={mp.lastPeerRelay}
+                sendRelay={mp.sendRelay}
+              />
+            )}
+          {gameType === "wooden-dice" &&
+            !woodenDiceLobbyBlock &&
+            !woodenDiceHumanMp && (
+              <WoodenDiceGame
+                onComplete={(r, pct) => void submit(r, pct)}
+              />
+            )}
+          {gameType === "stone-cairn" && stoneCairnLobbyBlock && (
+            <StoneCairnOnlineLobby />
+          )}
+          {gameType === "stone-cairn" &&
+            !stoneCairnLobbyBlock &&
+            stoneCairnHumanMp && (
+              <StoneCairnMemoryGameMulti
+                onComplete={(r, pct) => void submit(r, pct)}
+                mp={mp}
+                lastPeerRelay={mp.lastPeerRelay}
+                sendRelay={mp.sendRelay}
+              />
+            )}
+          {gameType === "stone-cairn" &&
+            !stoneCairnLobbyBlock &&
+            !stoneCairnHumanMp && (
+              <StoneCairnMemoryGame
                 onComplete={(r, pct) => void submit(r, pct)}
               />
             )}
