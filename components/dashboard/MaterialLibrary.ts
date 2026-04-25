@@ -113,8 +113,8 @@ export class MaterialLibrary {
 
     const material = new THREE.MeshStandardMaterial({
       map: this.textureManager.getHideTexture(256, 256, color),
-      roughness: 0.8,
-      metalness: 0,
+      roughness: 0.72,
+      metalness: 0.04,
       color,
     });
 

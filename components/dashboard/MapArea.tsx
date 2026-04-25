@@ -249,14 +249,25 @@ export function MapArea({
   );
 
   const stationsForLabels = useMemo(
-    () => [homeStationForLabel, ...stations],
+    () => [homeStationForLabel, ...stations.filter((s) => s.id !== "home")],
     [homeStationForLabel, stations],
   );
 
   const selectedStation = stations.find((s) => s.id === selectedId) ?? null;
 
+  const playerHomeKeyRaw = useMemo(
+    () => [userEmail, playerDisplayName].filter(Boolean).join("|"),
+    [userEmail, playerDisplayName],
+  );
+  const presenceHomeKey = useMemo(
+    () =>
+      (playerHomeKeyRaw && playerHomeKeyRaw.trim()) || userEmail || "guest",
+    [playerHomeKeyRaw, userEmail],
+  );
+
   const { publishPose, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
+    homeKey: presenceHomeKey,
     enabled: !docHidden,
     heroModelPath: heroModelPath ?? null,
     gerLevel: homeGerLevel,
@@ -294,7 +305,7 @@ export function MapArea({
     homeGerLevel,
     homeLivestock,
     userEmail,
-    playerHomeKey: [userEmail, playerDisplayName].filter(Boolean).join("|"),
+    playerHomeKey: playerHomeKeyRaw,
     onHeroAtStationChange,
     paused: !!selectedGame || docHidden,
     presencePublishRef,
@@ -361,7 +372,7 @@ export function MapArea({
   return (
     <main
       data-tour-anchor="map-area"
-      className="flex-1 min-w-0 relative overflow-hidden bg-background"
+      className="map-area-root flex-1 min-w-0 relative overflow-hidden"
     >
       <div ref={canvasRef} className="absolute inset-0 min-w-0" />
 
@@ -371,20 +382,23 @@ export function MapArea({
           className={cn(
             "pointer-events-auto absolute left-1/2 z-[59] max-w-[min(calc(100%-1.5rem),22rem)] -translate-x-1/2",
             "top-[max(0.5rem,env(safe-area-inset-top,0px))]",
-            "flex items-start gap-2 rounded-xl border border-sky-400/30 bg-slate-950/94 py-2 pl-2.5 pr-1 shadow-lg backdrop-blur-md",
+            "map-ui-surface flex items-start gap-2 rounded-xl py-2 pl-2.5 pr-1",
           )}
         >
           <LuSmartphone
-            className="mt-0.5 size-4 shrink-0 rotate-90 text-sky-300/90 sm:size-[1.05rem]"
+            className="mt-0.5 size-4 shrink-0 rotate-90 text-[color:var(--map-fog)] sm:size-[1.05rem]"
             aria-hidden
           />
-          <p className="min-w-0 flex-1 text-[11px] font-medium leading-snug text-sky-50/95 sm:text-xs">
+          <p
+            className="min-w-0 flex-1 text-[11px] font-medium leading-snug sm:text-xs"
+            style={{ color: "var(--map-ui-text)" }}
+          >
             {t.mapLandscapeHint}
           </p>
           <button
             type="button"
             onClick={dismissMapLandscapeHint}
-            className="shrink-0 rounded-lg p-1 text-sky-200/80 hover:bg-white/10 hover:text-sky-50"
+            className="shrink-0 rounded-lg p-1 text-[color:var(--map-ui-text-muted)] hover:bg-white/10"
             aria-label={t.dialogClose}
           >
             <LuX className="size-4" aria-hidden />
@@ -407,13 +421,14 @@ export function MapArea({
                 title={t.mapHeroEmoteMenuAria}
                 aria-label={t.mapHeroEmoteMenuAria}
                 className={cn(
-                  "pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
-                  "border border-white/45 bg-white/12 text-amber-100 shadow-md backdrop-blur-md",
-                  "hover:bg-white/18 hover:border-white/55",
+                  "map-ui-fab pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
                   "top-[max(0.5rem,env(safe-area-inset-top,0px))] md:top-4",
                 )}
               >
-                <LuSparkles className="size-5" aria-hidden />
+                <LuSparkles
+                  className="size-5 text-[color:var(--gold-pale)]"
+                  aria-hidden
+                />
               </button>
             </PopoverTrigger>
             <PopoverContent
@@ -435,7 +450,7 @@ export function MapArea({
                     playMapHeroEmote("idle");
                     setMapEmoteOpen(false);
                   }}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                  className="map-ui-ghost-btn flex h-9 w-9 items-center justify-center rounded-full"
                 >
                   <LuUser className="size-5" aria-hidden />
                 </button>
@@ -452,7 +467,7 @@ export function MapArea({
                         playMapHeroEmote(id);
                         setMapEmoteOpen(false);
                       }}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-amber-50 hover:bg-white/18"
+                      className="map-ui-ghost-btn flex h-9 w-9 items-center justify-center rounded-full"
                     >
                       <Icon className="size-5" aria-hidden />
                     </button>

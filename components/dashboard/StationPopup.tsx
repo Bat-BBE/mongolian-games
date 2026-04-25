@@ -87,17 +87,21 @@ export function StationPopup({
   return (
     <>
       <div
-        className="absolute inset-0 z-[100] bg-black/50 backdrop-blur-[10px]"
+        className="map-station-scrim absolute inset-0 z-[100] backdrop-blur-[10px]"
         onClick={onClose}
+        style={{ background: "var(--map-overlay-scrim)" }}
       />
       <div
         className={cn(
-          "absolute bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[min(540px,calc(100vw-1rem))] max-h-[min(72vh,620px)] overflow-hidden flex flex-col",
-          "rounded-2xl border border-primary/25 bg-gradient-to-b from-slate-950/98 to-slate-900/95 shadow-2xl",
+          "map-station-card absolute bottom-4 left-1/2 -translate-x-1/2 z-[100] w-[min(540px,calc(100vw-1rem))] max-h-[min(72vh,620px)] overflow-hidden flex flex-col",
+          "rounded-2xl border shadow-2xl",
         )}
         style={{
+          borderColor: "var(--map-ui-border)",
+          background: `linear-gradient(180deg, var(--map-ui-surface-2) 0%, var(--map-ui-surface) 100%)`,
+          color: "var(--map-ui-text)",
           boxShadow:
-            "0 16px 48px rgba(0,0,0,0.55), 0 0 32px rgba(212,175,55,0.06)",
+            "0 16px 48px rgba(0,0,0,0.5), 0 0 36px color-mix(in srgb, var(--gold) 8%, transparent)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -169,8 +173,8 @@ export function StationPopup({
                 <button
                   type="button"
                   onClick={onTravel}
-                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-foreground hover:bg-primary/18"
-                  style={{ background: "var(--gold-gradient)" }}
+                  className="rounded-lg border border-primary/35 px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-95"
+                  style={{ backgroundImage: "var(--grad-gold)" }}
                 >
                   {travelLabel}
                 </button>

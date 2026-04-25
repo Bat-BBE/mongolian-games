@@ -5,6 +5,7 @@ import {
   mkMat,
   mkFurMat,
   terrainHeight,
+  terrainHeightFeet,
   terrainBiome,
   pseudoNoise2D,
   smoothstep,
@@ -19,6 +20,7 @@ import {
   STATION_SPREAD,
   PLAYER_HOME_X,
   PLAYER_HOME_Z,
+  playerHomeWorldAnchor,
 } from "./mapConstants";
 import type { UrtuuStation } from "./UrtuuNode";
 import { materialLibrary } from "./MaterialLibrary";
@@ -57,18 +59,6 @@ function distPointSegment2D(
   return Math.hypot(px - qx, pz - qz);
 }
 
-/** Алсын тоглогчийн баатар → түүний гэр: хол зай + талын шилжилт (давхцал багасгах). */
-const REMOTE_VISITOR_CAMP_BACK_OFFSET = 32;
-const REMOTE_VISITOR_CAMP_LATERAL_SPREAD = 22;
-
-function remoteCampLateralUnit(peerId: string): number {
-  let h = 0;
-  for (let i = 0; i < peerId.length; i++) {
-    h = (h * 31 + peerId.charCodeAt(i)) >>> 0;
-  }
-  return (h % 2001) / 1000 - 1;
-}
-
 /** urtuunuudiin ger busad urtuunuudees tom baina shuu */
 const STATION_MAIN_GER_SCALE = 3.2;
 const STATION_SATELLITE_GER_SCALE_MIN = 1.68;
@@ -77,6 +67,15 @@ const STATION_SATELLITE_GER_SCALE_MAX = 1.98;
 const STATION_CENTER_CLEAR = 62;
 /** ub-bogdiin urtuu hol bairluulah */
 const STATION_CENTER_CLEAR_ULAANBAATAR = 74;
+
+/**
+ * Процедурын морь, тэмээг **гэрийн ойролцоо** болон world map-ийн **ижил** нэг
+ * хэмжээтэй (Өмнө `rand(1.12,1.42)*1.48` нь 1.66-2.1 — хэт хол зөрүүтэй).
+ */
+const PROCEDURAL_HORSE_UNIFIED_SCALE = 1.27 * 1.48; // old median
+const PROCEDURAL_HORSE_SCALE_JITTER = 0.02;
+const PROCEDURAL_CAMEL_UNIFIED_SCALE = 1.18 * 1.42; // old median
+const PROCEDURAL_CAMEL_SCALE_JITTER = 0.02;
 
 type StationPeripheryPreset = {
   trees?: number;
@@ -853,17 +852,19 @@ export class SceneBuilder {
   }
 
   /**
-   * Бусад тоглогчийн дэргэд гэр + хашааны хүрээ (төвөгтэй realtime: түвшин, мал).
+   * Бусад тоглогчийн гэр: world anchor дээр тогтмол (баатрын хөдөлгөөнд дагалдахгүй).
+   * `playerHomeWorldAnchor` — `homeKey` эсвүл `homeKey` хоосон бол `peerId`.
    */
   syncRemoteVisitorCamp(
     container: THREE.Group,
     peerId: string,
-    heroX: number,
-    heroZ: number,
-    heroRy: number,
+    _heroX: number,
+    _heroZ: number,
+    _heroRy: number,
     campByPeer: Map<string, THREE.Object3D>,
     enclosureByPeer: Map<string, THREE.Mesh>,
     meta?: {
+      homeKey?: string;
       gerLevel: number;
       livestock: {
         sheep: number;
@@ -903,18 +904,14 @@ export class SceneBuilder {
       ringSpan * 2.15 + Math.min(lv, 8) * 0.9 + totalMal * 0.62,
     );
     const enclosureR = yardW * 0.5;
-    const metaKey = `${lv}|${totalMal}|${enclosureR.toFixed(1)}|${s.toFixed(2)}`;
 
-    const lat =
-      REMOTE_VISITOR_CAMP_LATERAL_SPREAD * 1.55 * remoteCampLateralUnit(peerId);
-    const backOff =
-      REMOTE_VISITOR_CAMP_BACK_OFFSET + Math.min(58, yardW * 0.13);
-    const backX = -Math.sin(heroRy) * backOff;
-    const backZ = -Math.cos(heroRy) * backOff;
-    const sideX = Math.cos(heroRy) * lat;
-    const sideZ = -Math.sin(heroRy) * lat;
-    const gx = heroX + backX + sideX;
-    const gz = heroZ + backZ + sideZ;
+    const fromHello = (meta?.homeKey ?? "").trim();
+    const anchorKey = fromHello || peerId;
+    const { x: gx, z: gz } = playerHomeWorldAnchor(anchorKey);
+    const campYaw = 0;
+    const layoutKey = `${lv}|${totalMal}|${enclosureR.toFixed(1)}|${s.toFixed(2)}`;
+    const metaKey = `A|${anchorKey.slice(0, 64)}|${layoutKey}`;
+
     const hy = terrainHeight(gx, gz);
     const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
     const y = hy + gerLift;
@@ -931,7 +928,7 @@ export class SceneBuilder {
         disposeRemoteCampSubtree(existing);
         campByPeer.delete(peerId);
       }
-      this.makeGer(gx, gz, heroRy, s, false, "", container, safeName);
+      this.makeGer(gx, gz, campYaw, s, false, "", container, safeName);
       const created = container.getObjectByName(safeName);
       if (created) {
         created.userData.campMeta = metaKey;
@@ -939,7 +936,7 @@ export class SceneBuilder {
       }
     } else if (existing && existing.parent === container) {
       existing.position.set(gx, y, gz);
-      existing.rotation.y = heroRy;
+      existing.rotation.y = campYaw;
     }
 
     let ring = enclosureByPeer.get(peerId);
@@ -2659,10 +2656,16 @@ export class SceneBuilder {
       maneStrand.castShadow = true;
       g.add(maneStrand);
     }
-    const groundY = terrainHeight(x, z);
-    g.position.set(x, groundY + 0.1, z);
+    const groundY = terrainHeightFeet(x, z, rotY) + 0.1;
+    g.position.set(x, groundY, z);
     g.rotation.y = rotY;
-    g.scale.setScalar(rand(1.12, 1.42) * 1.48);
+    g.scale.setScalar(
+      PROCEDURAL_HORSE_UNIFIED_SCALE *
+        rand(
+          1 - PROCEDURAL_HORSE_SCALE_JITTER,
+          1 + PROCEDURAL_HORSE_SCALE_JITTER,
+        ),
+    );
     g.castShadow = true;
     (attachParent ?? this.scene).add(g);
     if (animate)
@@ -2819,10 +2822,16 @@ export class SceneBuilder {
       foot.castShadow = true;
       g.add(foot);
     });
-    const cground = terrainHeight(x, z);
-    g.position.set(x, cground + 0.12, z);
+    const cground = terrainHeightFeet(x, z, rotY) + 0.12;
+    g.position.set(x, cground, z);
     g.rotation.y = rotY;
-    g.scale.setScalar(rand(1.08, 1.28) * 1.42);
+    g.scale.setScalar(
+      PROCEDURAL_CAMEL_UNIFIED_SCALE *
+        rand(
+          1 - PROCEDURAL_CAMEL_SCALE_JITTER,
+          1 + PROCEDURAL_CAMEL_SCALE_JITTER,
+        ),
+    );
     g.castShadow = true;
     (attachParent ?? this.scene).add(g);
   }

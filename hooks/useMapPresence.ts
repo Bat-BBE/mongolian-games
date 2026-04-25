@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { getApiBaseUrl, getMapPresenceWsUrl } from "@/lib/api";
+import {
+  getApiBaseUrl,
+  getMapPresenceWsUrl,
+  warnIfRealtimeWebSocketLikelyBlocked,
+} from "@/lib/api";
+import { closeWebSocketQuiet } from "@/lib/closeWebSocket";
 
 export type MapPresenceLivestock = {
   sheep: number;
@@ -16,6 +21,11 @@ export type MapPresencePeer = {
   displayName: string;
   /** Алсын баатрын загварын зам (жишээ нь /models/hero-22.fbx). */
   heroModelPath: string;
+  /**
+   * `mapConstants.playerHomeWorldAnchor`-тай нэг key — бүх үзэгч нэг тогтмол
+   * газрын нэгтэй гэрийг нэг харагдуулна.
+   */
+  homeKey: string;
   x: number;
   z: number;
   ry: number;
@@ -68,6 +78,8 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
     ry = Number(row.ry);
   if (![x, z, ry].every(Number.isFinite)) return null;
   const gl = Number(row.gerLevel);
+  const hkr =
+    typeof row.homeKey === "string" ? row.homeKey.slice(0, 200).trim() : "";
   return {
     id: row.id,
     displayName:
@@ -75,6 +87,7 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
     heroModelPath: normalizeHeroPath(
       typeof row.heroModelPath === "string" ? row.heroModelPath : undefined,
     ),
+    homeKey: hkr,
     x,
     z,
     ry,
@@ -85,6 +98,8 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
 
 export function useMapPresence(opts: {
   displayName: string;
+  /** useThree `playerHomeWorldAnchor`-тай ижил утга (email|нэр / guest) */
+  homeKey: string;
   enabled: boolean;
   heroModelPath?: string | null;
   gerLevel?: number;
@@ -105,12 +120,15 @@ export function useMapPresence(opts: {
     opts.livestock ?? { ...ZERO_LS },
   );
   livestockRef.current = opts.livestock ?? { ...ZERO_LS };
+  const homeKeyRef = useRef(opts.homeKey);
+  homeKeyRef.current = opts.homeKey;
 
   const publishPose = useCallback((x: number, z: number, ry: number) => {
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN) return;
     const now = performance.now();
-    if (now - lastPublishRef.current < 260) return;
+    // ~6.5 Гц — гэрийн сүлжээнд ч target илүү ойрхон; клиент дээр гөлрүүлдэг.
+    if (now - lastPublishRef.current < 150) return;
     lastPublishRef.current = now;
     w.send(JSON.stringify({ type: "pose", x, z, ry }));
   }, []);
@@ -121,7 +139,7 @@ export function useMapPresence(opts: {
 
   useEffect(() => {
     if (!opts.enabled) {
-      wsRef.current?.close();
+      closeWebSocketQuiet(wsRef.current);
       wsRef.current = null;
       othersRef.current.clear();
       remotePeersRef.current = [];
@@ -143,12 +161,14 @@ export function useMapPresence(opts: {
           heroModelPath: heroPathRef.current,
           gerLevel: gerLevelRef.current,
           livestock: ls,
+          homeKey: homeKeyRef.current?.trim() || "",
         }),
       );
     };
 
     const connect = () => {
       if (cancelled) return;
+      warnIfRealtimeWebSocketLikelyBlocked();
       const url = getMapPresenceWsUrl();
       const ws = new WebSocket(url);
       wsRef.current = ws;
@@ -237,7 +257,7 @@ export function useMapPresence(opts: {
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      wsRef.current?.close();
+      closeWebSocketQuiet(wsRef.current);
       wsRef.current = null;
       othersRef.current.clear();
       remotePeersRef.current = [];
@@ -257,10 +277,12 @@ export function useMapPresence(opts: {
         heroModelPath: heroPathRef.current,
         gerLevel: Math.max(1, Math.floor(opts.gerLevel ?? 1)),
         livestock: ls,
+        homeKey: homeKeyRef.current?.trim() || "",
       }),
     );
   }, [
     opts.enabled,
+    opts.homeKey,
     opts.heroModelPath,
     opts.displayName,
     opts.gerLevel,

@@ -41,6 +41,21 @@ app.use("/api/game", gameRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/users", usersRouter);
 
+/** HTTP GET-оор /ws/* дуудахад (Upgrade header үгүй) — зөв нь WebSocket upgrade. */
+function wsHttpOnlyHint(_req: express.Request, res: express.Response) {
+  res
+    .status(426)
+    .type("text/plain; charset=utf-8")
+    .send(
+      "WebSocket л (GET + Upgrade: websocket). " +
+        "Proxy: Connection/Upgrade header дамжуулсан уу. " +
+        "Хуудас https бол API wss/https (mixed content). " +
+        "CORS/REST 200 гэсэн ч /ws-ийг тусад нь идэвхжүүлнэ (Railway/Render/Fly WebSockets).",
+    );
+}
+app.get("/ws/map-presence", wsHttpOnlyHint);
+app.get("/ws/match", wsHttpOnlyHint);
+
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
@@ -49,6 +64,10 @@ function upgradePathname(req: IncomingMessage): string {
   const raw = req.url ?? "/";
   const q = raw.indexOf("?");
   return q === -1 ? raw : raw.slice(0, q);
+}
+
+function isWebSocketUpgradeRequest(req: IncomingMessage): boolean {
+  return String(req.headers.upgrade ?? "").toLowerCase() === "websocket";
 }
 
 const matchRooms = new MatchRoomManager();
@@ -61,7 +80,9 @@ const server = createServer(
       req: IncomingMessage,
     ) {
       const p = upgradePathname(req);
-      if (p === "/ws/match" || p === "/ws/map-presence") return true;
+      if (p === "/ws/match" || p === "/ws/map-presence") {
+        return isWebSocketUpgradeRequest(req);
+      }
       return this.listenerCount("upgrade") > 0;
     },
   } as ServerOptions,

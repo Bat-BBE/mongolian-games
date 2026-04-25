@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getApiBaseUrl, getMatchWsUrl } from "@/lib/api";
+import {
+  getApiBaseUrl,
+  getMatchWsUrl,
+  warnIfRealtimeWebSocketLikelyBlocked,
+} from "@/lib/api";
+import { closeWebSocketQuiet } from "@/lib/closeWebSocket";
 
 export type MatchRoomPlayer = {
   id: string;
@@ -127,7 +132,7 @@ export function useMatchRoom(opts: {
   useEffect(() => {
     if (!opts.enabled) {
       pendingJoinOnCodeTakenRef.current = null;
-      wsRef.current?.close();
+      closeWebSocketQuiet(wsRef.current);
       wsRef.current = null;
       setConnected(false);
       setPlayerId(null);
@@ -149,6 +154,7 @@ export function useMatchRoom(opts: {
 
     const connect = () => {
       if (cancelled) return;
+      warnIfRealtimeWebSocketLikelyBlocked();
       const url = getMatchWsUrl();
       const ws = new WebSocket(url);
       wsRef.current = ws;
@@ -293,7 +299,7 @@ export function useMatchRoom(opts: {
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      wsRef.current?.close();
+      closeWebSocketQuiet(wsRef.current);
       wsRef.current = null;
     };
   }, [opts.enabled, opts.gameType, opts.gameSlug, send]);
