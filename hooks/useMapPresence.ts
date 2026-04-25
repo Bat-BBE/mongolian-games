@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { getApiBaseUrl, getMapPresenceWsUrl } from "@/lib/api";
+import {
+  getApiBaseUrl,
+  getMapPresenceWsUrl,
+  warnIfRealtimeWebSocketLikelyBlocked,
+} from "@/lib/api";
 
 export type MapPresenceLivestock = {
   sheep: number;
@@ -149,6 +153,7 @@ export function useMapPresence(opts: {
 
     const connect = () => {
       if (cancelled) return;
+      warnIfRealtimeWebSocketLikelyBlocked();
       const url = getMapPresenceWsUrl();
       const ws = new WebSocket(url);
       wsRef.current = ws;

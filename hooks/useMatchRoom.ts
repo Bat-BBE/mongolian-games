@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getApiBaseUrl, getMatchWsUrl } from "@/lib/api";
+import {
+  getApiBaseUrl,
+  getMatchWsUrl,
+  warnIfRealtimeWebSocketLikelyBlocked,
+} from "@/lib/api";
 
 export type MatchRoomPlayer = {
   id: string;
@@ -149,6 +153,7 @@ export function useMatchRoom(opts: {
 
     const connect = () => {
       if (cancelled) return;
+      warnIfRealtimeWebSocketLikelyBlocked();
       const url = getMatchWsUrl();
       const ws = new WebSocket(url);
       wsRef.current = ws;
