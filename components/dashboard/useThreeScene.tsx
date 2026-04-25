@@ -1125,7 +1125,8 @@ export function useThreeScene({
             if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
           }
           if (klenInput > 0.01) {
-            const baseSpeed = 12 + runS * 10;
+            // World units/sec — өмнө нь 12+10 (хэт хурд, хөл/gazr зөрөх) → илүү нийцтүй хурд.
+            const baseSpeed = 8.5 + runS * 7.5;
             const localDir = new THREE.Vector3(mvx, 0, mvz);
             const camForward = new THREE.Vector3();
             camera.getWorldDirection(camForward);
@@ -1141,7 +1142,7 @@ export function useThreeScene({
               .normalize();
 
             const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
-            const velRate = 16 + runS * 6;
+            const velRate = 12 + runS * 5;
             const velBlend = 1 - Math.exp(-velRate * delta);
             hv.lerp(desiredVel, velBlend);
             rootMove.position.addScaledVector(hv, delta);
@@ -1169,10 +1170,11 @@ export function useThreeScene({
               );
               const targetY = rawG + 0.02;
               const prev = heroGroundYRef.current;
+              // Зөөлөн дагах: -26 нь бага өндөрт хэт хурд → толгой/газар "цохилт"
               const gy =
                 prev == null
                   ? targetY
-                  : prev + (targetY - prev) * (1 - Math.exp(-26 * dt));
+                  : prev + (targetY - prev) * (1 - Math.exp(-14 * dt));
               heroGroundYRef.current = gy;
               rootMove.position.y = gy;
             }

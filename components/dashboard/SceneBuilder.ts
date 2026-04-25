@@ -1536,7 +1536,7 @@ export class SceneBuilder {
     });
   }
 
-  /** Станцын эргэн тойронд нэг багц өвс — buildGrassTufts-тай ижил хаврын өнгө */
+  /** Станц тойрог: жижиг багц — газрын өнгийг биш зөвхөн зүлэг мэт навч (хуучин өнгө) */
   private makeGrassClumpAt(x: number, z: number): void {
     const h = terrainHeight(x, z);
     if (h > 16 || h < -0.6) return;
@@ -1564,8 +1564,8 @@ export class SceneBuilder {
           ? springAlpine
           : springSteppe;
     for (let b = 0; b < bladeCount; b++) {
-      const bx = rand(-0.35, 0.35);
-      const bz = rand(-0.35, 0.35);
+      const bx = rand(-0.3, 0.3);
+      const bz = rand(-0.3, 0.3);
       const blade = new THREE.Mesh(
         new THREE.CylinderGeometry(
           0.02,
@@ -2931,7 +2931,7 @@ export class SceneBuilder {
   }
 
   buildGrassTufts(): void {
-    /** Эрт хаврын шар ногоон — хэт тод биш, бэлчээр дүүрэн */
+    /** Газрын дүрслэлийг хуучин үлдээн, зөвхөн сарнисан багц багц зүлэг (олон нягт нэгдэл биш) */
     const springSteppe = [0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c, 0xa3b08a];
     const springForest = [0x5a6b48, 0x4d5c3c, 0x677a52, 0x5f6d44];
     const springGobi = [0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888];
@@ -2972,8 +2972,7 @@ export class SceneBuilder {
       return m;
     });
 
-    // Grass tufts dominate draw calls; reduce count for smooth map.
-    for (let i = 0; i < 780; i++) {
+    for (let i = 0; i < 720; i++) {
       const x = rand(-200, 115),
         z = rand(-65, 68);
       const h = terrainHeight(x, z);
@@ -2986,10 +2985,10 @@ export class SceneBuilder {
       const bladeCount = isAlpine
         ? randInt(1, 4)
         : isForest
-          ? randInt(5, 11)
+          ? randInt(4, 10)
           : isGobi
-            ? randInt(2, 6)
-            : randInt(5, 12);
+            ? randInt(2, 5)
+            : randInt(4, 9);
       const cylMats = isGobi
         ? matsGobi
         : isForest
@@ -3012,8 +3011,8 @@ export class SceneBuilder {
             ? rand(0.22, 0.62)
             : rand(0.2, 0.55);
       for (let b = 0; b < bladeCount; b++) {
-        const bx = rand(-0.42, 0.42),
-          bz = rand(-0.42, 0.42);
+        const bx = rand(-0.34, 0.34),
+          bz = rand(-0.34, 0.34);
         const ci = randInt(0, cylMats.length - 1);
         if (b % 3 === 0) {
           const blade = new THREE.Mesh(
