@@ -265,7 +265,7 @@ export function MapArea({
     [playerHomeKeyRaw, userEmail],
   );
 
-  const { publishPose, remotePeersRef } = useMapPresence({
+  const { publishPose, publishMapEmote, remotePeersRef } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
     homeKey: presenceHomeKey,
     enabled: !docHidden,
@@ -310,6 +310,7 @@ export function MapArea({
     paused: !!selectedGame || docHidden,
     presencePublishRef,
     remotePeersRef,
+    onLocalMapEmote: publishMapEmote,
   });
 
   useEffect(() => {

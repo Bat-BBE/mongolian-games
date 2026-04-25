@@ -892,7 +892,8 @@ export class SceneBuilder {
     const earlyScale = 0.5 + (step - 1) * 0.095;
     const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
     const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
-    const s = earlyScale * midBoost * highBoost * 1.86 * 0.5;
+    // `buildPlayerHomeGer`‑той ижил s — урьд *0.5 байсан тул бусад тоглогчийн гэр илүү жижиг харагддаг байсан.
+    const s = earlyScale * midBoost * highBoost * 1.86;
 
     const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
     let ringSpan = 12.5;

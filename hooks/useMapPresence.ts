@@ -31,6 +31,10 @@ export type MapPresencePeer = {
   ry: number;
   gerLevel: number;
   livestock: MapPresenceLivestock;
+  /** Сүүлийн эможын төрөл (серверийн whitelist). */
+  emote: string;
+  /** Дахин дарагдсан эсэх — өөрчлөгдөхөд л алинд нь play хийнэ. */
+  emoteGen: number;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -80,6 +84,9 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
   const gl = Number(row.gerLevel);
   const hkr =
     typeof row.homeKey === "string" ? row.homeKey.slice(0, 200).trim() : "";
+  const eg = Number(row.emoteGen);
+  const emoteGen = Number.isFinite(eg) && eg >= 0 ? Math.floor(eg) : 0;
+  const emoteRaw = typeof row.emote === "string" ? row.emote.trim() : "";
   return {
     id: row.id,
     displayName:
@@ -93,6 +100,8 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
     ry,
     gerLevel: Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1,
     livestock: parseLivestockFromRow(row),
+    emote: emoteGen > 0 ? emoteRaw.slice(0, 32) : "",
+    emoteGen,
   };
 }
 
@@ -122,6 +131,7 @@ export function useMapPresence(opts: {
   livestockRef.current = opts.livestock ?? { ...ZERO_LS };
   const homeKeyRef = useRef(opts.homeKey);
   homeKeyRef.current = opts.homeKey;
+  const lastEmoteAtRef = useRef(0);
 
   const publishPose = useCallback((x: number, z: number, ry: number) => {
     const w = wsRef.current;
@@ -131,6 +141,16 @@ export function useMapPresence(opts: {
     if (now - lastPublishRef.current < 150) return;
     lastPublishRef.current = now;
     w.send(JSON.stringify({ type: "pose", x, z, ry }));
+  }, []);
+
+  const publishMapEmote = useCallback((emoteId: string) => {
+    if (!emoteId || emoteId === "idle") return;
+    const w = wsRef.current;
+    if (!w || w.readyState !== WebSocket.OPEN) return;
+    const now = performance.now();
+    if (now - lastEmoteAtRef.current < 400) return;
+    lastEmoteAtRef.current = now;
+    w.send(JSON.stringify({ type: "emote", emote: emoteId.slice(0, 32) }));
   }, []);
 
   const flushList = () => {
@@ -289,5 +309,5 @@ export function useMapPresence(opts: {
     opts.livestock,
   ]);
 
-  return { publishPose, remotePeersRef };
+  return { publishPose, publishMapEmote, remotePeersRef };
 }
