@@ -11,11 +11,11 @@ import {
 import { createPortal } from "react-dom";
 import type { DashStrings } from "./dashboard-strings";
 
-const STORAGE_KEY = "mg-dashboard-intro-v2";
+const STORAGE_KEY = "mg-dashboard-intro-v3";
 
 /**
- * null = гол картыг дэлгэцийн төвд. Дараалал: тавтай морил → баатар → өртөө/тоглоом
- * → гэр/эдийн засаг → газрын зураг → зүүн самбар → дээд самбар
+ * null = гол картыг дэлгэцийн төвд. Дараалал: танилцах → баатар → өртөө/тоглоом
+ * → гэр/оноо → газрын зураг (highlight) → зүүн самбар (highlight) → дээд самбар (highlight)
  */
 const ANCHORS = [
   null,
@@ -266,6 +266,30 @@ export function DashboardIntroTour({
         >
           {titleBody.title}
         </p>
+        <p
+          className="mt-1.5 text-xs font-medium text-sky-300/90"
+          id="dashboard-intro-step-label"
+        >
+          {t.introStepLabels[step]}
+        </p>
+        <div
+          className="mt-3 flex justify-center gap-1.5"
+          role="group"
+          aria-label={`${step + 1} of ${lastStep + 1}`}
+        >
+          {t.introStepLabels.map((_, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className={[
+                "h-2 w-2 rounded-full transition-colors",
+                i === step
+                  ? "bg-sky-400 shadow-[0_0_0_1px_rgba(56,189,248,0.5)]"
+                  : "bg-slate-600/80",
+              ].join(" ")}
+            />
+          ))}
+        </div>
         <p
           id="dashboard-intro-desc"
           className="mt-3 text-sm leading-relaxed text-slate-100/95 whitespace-pre-line sm:text-[15px] sm:leading-[1.55]"

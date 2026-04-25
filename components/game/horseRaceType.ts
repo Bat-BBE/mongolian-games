@@ -15,6 +15,8 @@ export type MatchPhase =
 
 export interface RaceTurnResult {
   turn: Racer;
+  /** In multiplayer, who threw (when set, UI shows a name). */
+  throwerId?: string;
   sides: ShagaiSide[];
   horseCount: number;
   fromPosition: number;

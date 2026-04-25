@@ -22,6 +22,15 @@ interface Props {
   revealHidden: { player: number; robot: number } | null;
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
   sessionGain?: { coins: number; gems: number };
+  /** Online 1v1: first order id = "player" stack, second = "robot" stack in state. */
+  uiMode?: "robot" | "mp";
+  mp?: {
+    myId: string;
+    order: string[];
+    nameById: Record<string, string>;
+  };
+  /** Hiding: true after you sent a commit, until the round is resolved. */
+  commitLocked?: boolean;
 }
 
 type I18n = {
@@ -280,10 +289,14 @@ function PhaseBanner({
   state,
   robotThinking,
   t,
+  mp,
+  language,
 }: {
   state: GuessState;
   robotThinking: boolean;
   t: I18n;
+  mp?: Props["mp"];
+  language: "mn" | "en";
 }) {
   const phase = state.phase;
   let text = "";
@@ -306,8 +319,24 @@ function PhaseBanner({
           ? "#e06050"
           : "#d8c488";
   } else if (phase === "matchOver") {
-    text = state.winner === "player" ? t.youWon : t.youLost;
-    color = state.winner === "player" ? "#60c060" : "#e06050";
+    if (mp && mp.order[0] && mp.order[1]) {
+      const wn =
+        state.winner === "player"
+          ? (mp.nameById[mp.order[0]!] ?? t.playerLabel)
+          : (mp.nameById[mp.order[1]!] ?? t.robotLabel);
+      const mine =
+        (state.winner === "player" && mp.myId === mp.order[0]) ||
+        (state.winner === "robot" && mp.myId === mp.order[1]);
+      text = mine
+        ? t.youWon
+        : language === "en"
+          ? `${wn} wins the match`
+          : `${wn} бүх шагайтай боллоо`;
+      color = mine ? "#60c060" : "#e06050";
+    } else {
+      text = state.winner === "player" ? t.youWon : t.youLost;
+      color = state.winner === "player" ? "#60c060" : "#e06050";
+    }
   }
   return (
     <div
@@ -337,6 +366,8 @@ function PhaseControls({
   onNextRound,
   t,
   language,
+  mp,
+  commitLocked,
 }: {
   state: GuessState;
   robotThinking: boolean;
@@ -346,10 +377,18 @@ function PhaseControls({
   onNextRound: () => void;
   t: I18n;
   language: "mn" | "en";
+  mp?: Props["mp"];
+  commitLocked?: boolean;
 }) {
   const [hidden, setHidden] = useState(0);
   const [guess, setGuess] = useState(0);
-  const playerStack = state.playerStack;
+  const myPile =
+    mp && mp.order[0] && mp.order[1]
+      ? mp.myId === mp.order[0]
+        ? state.playerStack
+        : state.robotStack
+      : state.playerStack;
+  const playerStack = myPile;
   const maxGuess = state.playerStack + state.robotStack;
   const phase: Phase = state.phase;
 
@@ -396,6 +435,26 @@ function PhaseControls({
   }
 
   // phase === "hiding"
+  if (mp && commitLocked) {
+    return (
+      <div
+        style={{
+          padding: "14px 12px",
+          background: "rgba(32,64,32,0.2)",
+          border: "1px solid rgba(96,192,96,0.25)",
+          borderRadius: 8,
+          color: "#90c890",
+          textAlign: "center",
+          fontSize: 12,
+        }}
+      >
+        {language === "en"
+          ? "You locked in — waiting for the other player…"
+          : "Та бэлэн — нөгөө тоглогчийг хүлээгээрэй…"}
+      </div>
+    );
+  }
+
   const clampedHidden = Math.max(0, Math.min(playerStack, hidden));
   const clampedGuess = Math.max(0, Math.min(maxGuess, guess));
 
@@ -431,9 +490,13 @@ function PhaseControls({
           lineHeight: 1.5,
         }}
       >
-        {language === "mn"
-          ? "Нуух тоог сонгоод таамгаа хатуулахад робот шидэлтээ шидэж, нээлт болно."
-          : "Pick how many to hide, enter your guess, then hands open."}
+        {mp
+          ? language === "mn"
+            ? "Нуух, таамгаа баталсны дараа хоёр тал бэлэн болоход нээгдэнэ."
+            : "When both players lock in, hands open and the round is scored."
+          : language === "mn"
+            ? "Нуух тоог сонгоод таамгаа хатуулахад робот шидэлтээ шидэж, нээлт болно."
+            : "Pick how many to hide, enter your guess, then hands open."}
       </div>
     </div>
   );
@@ -755,9 +818,15 @@ export default function ShagaiGuessUI({
   revealHidden,
   rewardEvents = [],
   sessionGain,
+  uiMode = "robot",
+  mp,
+  commitLocked = false,
 }: Props) {
   const t = useI18n();
   const narrowUi = useGameUiNarrow();
+  const isMp = uiMode === "mp" && mp;
+  const p0 = mp ? (mp.nameById[mp.order[0] ?? ""] ?? t.playerLabel) : null;
+  const p1 = mp ? (mp.nameById[mp.order[1] ?? ""] ?? t.robotLabel) : null;
 
   return (
     <>
@@ -816,14 +885,14 @@ export default function ShagaiGuessUI({
               marginTop: 2,
             }}
           >
-            {t.subtitle}
+            {isMp ? (t.language === "en" ? "ONLINE · 2 PLAYERS" : "ONLINE · 2 ТОГЛОГЧ") : t.subtitle}
           </div>
         </div>
 
         <GoldDivider />
 
         <StackBar
-          label={t.yourStack}
+          label={p0 ? `${p0} (${t.playerLabel})` : t.yourStack}
           value={state.playerStack}
           total={TOTAL_SHAGAI}
           color="#60c060"
@@ -831,15 +900,21 @@ export default function ShagaiGuessUI({
           glow="rgba(96,192,96,0.45)"
         />
         <StackBar
-          label={t.robotStack}
+          label={p1 ? `${p1} (${t.robotLabel})` : t.robotStack}
           value={state.robotStack}
           total={TOTAL_SHAGAI}
           color="#e06050"
-          emoji="🤖"
+          emoji={isMp ? "👤" : "🤖"}
           glow="rgba(224,96,80,0.45)"
         />
 
-        <PhaseBanner state={state} robotThinking={robotThinking} t={t} />
+        <PhaseBanner
+          state={state}
+          robotThinking={robotThinking}
+          t={t}
+          mp={mp}
+          language={t.language}
+        />
 
         <PhaseControls
           state={state}
@@ -850,6 +925,8 @@ export default function ShagaiGuessUI({
           onNextRound={onNextRound}
           t={t}
           language={t.language}
+          mp={mp}
+          commitLocked={commitLocked}
         />
 
         {state.lastRound && state.phase !== "hiding" && (

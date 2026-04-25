@@ -186,7 +186,12 @@ export class MapPresenceHub {
         rec.gerLevel =
           Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1;
         rec.livestock = parseLivestock(body);
-        if (rec.last) this.broadcastPeerState(id);
+        // Эхний pose-оос өмнө `last` байхгүй тул бусад нь `snapshot`/`peer_pose`-оор
+        // харагдаагүй байсан. `hello` ирмэгц placeholder байрлал өгч зарлана.
+        if (!rec.last) {
+          rec.last = { x: 0, z: 0, ry: 0 };
+        }
+        this.broadcastPeerState(id);
         return;
       }
 

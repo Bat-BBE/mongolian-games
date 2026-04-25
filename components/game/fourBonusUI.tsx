@@ -27,6 +27,16 @@ interface Props {
   settledSides: (ShagaiSide | null)[];
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
   sessionGain?: { coins: number; gems: number };
+  uiMode?: "robot" | "mp";
+  mp?: {
+    myId: string;
+    nameById: Record<string, string>;
+    order: string[];
+    scores: Record<string, number>;
+    turnPlayerId: string;
+  };
+  mpToastText?: string | null;
+  mpWinnerId?: string | null;
 }
 
 type FourI18n = {
@@ -766,6 +776,10 @@ export default function FourBonesUI({
   settledSides,
   rewardEvents = [],
   sessionGain,
+  uiMode = "robot",
+  mp,
+  mpToastText = null,
+  mpWinnerId = null,
 }: Props) {
   const t = useFourI18n();
   const language = t.language;
@@ -778,16 +792,45 @@ export default function FourBonesUI({
   const mainPanelPad: React.CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : {};
-  const canThrow = state.phase === "idle" || state.phase === "robotResult";
+  const isMyTurnMp =
+    uiMode === "mp" && mp ? mp.turnPlayerId === mp.myId : true;
+  const canThrowBase = state.phase === "idle" || state.phase === "robotResult";
+  const canThrow = canThrowBase && (uiMode !== "mp" || isMyTurnMp);
   const matchOver = state.phase === "matchOver";
-  const playerWinsMatch = matchOver && state.playerScore >= state.robotScore;
+  const playerWinsMatch =
+    matchOver &&
+    (uiMode === "mp" && mp && mpWinnerId
+      ? mpWinnerId === mp.myId
+      : state.playerScore >= state.robotScore);
   const isWinThisRound =
     state.phase === "playerResult" &&
     state.history.length > 0 &&
     state.history[state.history.length - 1].isDorvenBerkh;
 
   const statusLine = (() => {
+    if (uiMode === "mp" && mp && !matchOver) {
+      if (state.phase === "throwing" || state.phase === "settling") {
+        return t.rollingHint;
+      }
+      if (
+        !isMyTurnMp &&
+        (state.phase === "idle" ||
+          state.phase === "playerResult" ||
+          state.phase === "robotResult")
+      ) {
+        return language === "en"
+          ? `Waiting for ${mp.nameById[mp.turnPlayerId] ?? "…"}…`
+          : `${mp.nameById[mp.turnPlayerId] ?? "…"}-ийн ээлж…`;
+      }
+    }
     if (matchOver) {
+      if (uiMode === "mp" && mp && mpWinnerId) {
+        return mpWinnerId === mp.myId
+          ? t.youWonMatch
+          : language === "en"
+            ? `${mp.nameById[mpWinnerId] ?? "?"} won`
+            : `${mp.nameById[mpWinnerId] ?? "?"} яллаа`;
+      }
       return playerWinsMatch ? t.youWonMatch : t.robotWonMatch;
     }
     if (state.phase === "throwing" || state.phase === "settling") {
@@ -805,6 +848,10 @@ export default function FourBonesUI({
       return t.yourTurn(left);
     }
     // idle
+    if (uiMode === "mp" && mp) {
+      const left = Math.max(0, TARGET_SCORE - (mp.scores[mp.myId] ?? 0));
+      return t.yourTurn(left);
+    }
     return t.yourTurn(TARGET_SCORE);
   })();
 
@@ -827,8 +874,19 @@ export default function FourBonesUI({
     scrollbarColor: "rgba(200,160,48,0.35) transparent",
   } as React.CSSProperties;
 
-  const pctPlayer = Math.min(100, (state.playerScore / TARGET_SCORE) * 100);
-  const pctRobot = Math.min(100, (state.robotScore / TARGET_SCORE) * 100);
+  const myScoreForBar =
+    uiMode === "mp" && mp ? mp.scores[mp.myId] ?? 0 : state.playerScore;
+  const otherMax =
+    uiMode === "mp" && mp
+      ? Math.max(
+          0,
+          ...mp.order
+            .filter((id) => id !== mp.myId)
+            .map((id) => mp.scores[id] ?? 0),
+        )
+      : state.robotScore;
+  const pctPlayer = Math.min(100, (myScoreForBar / TARGET_SCORE) * 100);
+  const pctRobot = Math.min(100, (otherMax / TARGET_SCORE) * 100);
 
   return (
     <>
@@ -923,13 +981,13 @@ export default function FourBonesUI({
         >
           <ScoreCell
             label={t.you}
-            value={state.playerScore}
+            value={myScoreForBar}
             color="#60c060"
             pct={pctPlayer}
           />
           <ScoreCell
-            label={t.robot}
-            value={state.robotScore}
+            label={uiMode === "mp" && mp ? (language === "en" ? "BEST (others)" : "Бусад max") : t.robot}
+            value={otherMax}
             color="#e06050"
             pct={pctRobot}
           />
@@ -977,7 +1035,8 @@ export default function FourBonesUI({
           language={language}
         />
 
-        {(state.phase === "robotThinking" ||
+        {uiMode !== "mp" &&
+        (state.phase === "robotThinking" ||
           state.phase === "robotResult" ||
           (state.phase === "matchOver" && state.robotSides)) && (
           <RobotPanel
@@ -1011,7 +1070,7 @@ export default function FourBonesUI({
             }}
           >
             <div style={{ fontSize: 32, marginBottom: 4 }}>
-              {playerWinsMatch ? "🏆" : "🤖"}
+              {playerWinsMatch ? "🏆" : uiMode === "mp" ? "🎮" : "🤖"}
             </div>
             <div
               style={{
@@ -1021,10 +1080,20 @@ export default function FourBonesUI({
                 letterSpacing: 2,
               }}
             >
-              {playerWinsMatch ? t.youWonMatch : t.robotWonMatch}
+              {playerWinsMatch
+                ? t.youWonMatch
+                : uiMode === "mp" && mp && mpWinnerId
+                  ? language === "en"
+                    ? `${mp.nameById[mpWinnerId] ?? "?"} won`
+                    : `${mp.nameById[mpWinnerId] ?? "?"} яллаа`
+                  : t.robotWonMatch}
             </div>
             <div style={{ color: "#aaa", fontSize: 11, marginTop: 4 }}>
-              {state.playerScore} : {state.robotScore}
+              {uiMode === "mp" && mp
+                ? mp.order
+                    .map((id) => `${(mp.nameById[id] || "?").slice(0, 8)}:${mp.scores[id] ?? 0}`)
+                    .join(" · ")
+                : `${state.playerScore} : ${state.robotScore}`}
             </div>
           </div>
         )}
