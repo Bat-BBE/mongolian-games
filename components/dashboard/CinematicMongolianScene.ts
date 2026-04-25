@@ -1,10 +1,3 @@
-/**
- * CINEMATIC MONGOLIAN ENVIRONMENT - COMPLETE INTEGRATION GUIDE
- *
- * Ultra-realistic photorealistic 3D Mongolian open-world environment
- * with professional cinematography, PBR materials, and game-ready optimization
- */
-
 import * as THREE from "three";
 import { PBRMaterialLibrary } from "./PBRMaterialLibrary";
 import { AdvancedTextureManager } from "./AdvancedTextureManager";
@@ -13,10 +6,6 @@ import { DetailedEnvironmentBuilder } from "./DetailedEnvironmentBuilder";
 import { DetailedAnimalModels } from "./DetailedAnimalModels";
 import { DetailedGerBuilder } from "./DetailedGerBuilder";
 
-/**
- * Complete Mongolian Scene Setup
- * Create an ultra-detailed, photorealistic Mongolian landscape
- */
 export class CinematicMongolianScene {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
@@ -29,11 +18,7 @@ export class CinematicMongolianScene {
   private animals: DetailedAnimalModels;
   private gerBuilder: DetailedGerBuilder;
 
-  /**
-   * Initialize the cinematic Mongolian scene
-   */
   constructor(container: HTMLElement) {
-    // Setup basic three.js scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87ceeb);
 
@@ -54,7 +39,6 @@ export class CinematicMongolianScene {
       2000,
     );
 
-    // Initialize managers
     this.pbrMats = new PBRMaterialLibrary();
     this.textures = new AdvancedTextureManager();
     this.cinematic = new CinematicSceneBuilder(
@@ -73,11 +57,7 @@ export class CinematicMongolianScene {
     this.setup();
   }
 
-  /**
-   * Complete scene setup
-   */
   private setup(): void {
-    // Cinematography
     this.setupCinematography();
 
     // Terrain and environment

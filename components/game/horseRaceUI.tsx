@@ -16,6 +16,13 @@ import GameRulesSheet from "./GameRulesSheet";
 import GameRulesFab from "./GameRulesFab";
 import { useState } from "react";
 
+export const HORSE_MP_COLORS = [
+  "#60c060",
+  "#5ab0ff",
+  "#e88a5a",
+  "#c86fe8",
+];
+
 interface Props {
   state: RaceState;
   onThrow: () => void;
@@ -24,6 +31,16 @@ interface Props {
   currentTurn: Racer;
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
   sessionGain?: { coins: number; gems: number };
+  uiMode?: "robot" | "mp";
+  mp?: {
+    myId: string;
+    nameById: Record<string, string>;
+    order: string[];
+    turnPlayerId: string;
+    positions: Record<string, number>;
+  };
+  mpToastText?: string | null;
+  mpWinnerId?: string | null;
 }
 
 type RaceI18n = {
@@ -210,6 +227,112 @@ function GoldDivider() {
           background: "linear-gradient(to left, transparent, #c8a030)",
         }}
       />
+    </div>
+  );
+}
+
+function TrackBarMulti({
+  order,
+  positions,
+  nameById,
+}: {
+  order: string[];
+  positions: Record<string, number>;
+  nameById: Record<string, string>;
+}) {
+  const squares = Array.from({ length: TRACK_LENGTH }, (_, i) => i + 1);
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div
+        style={{
+          position: "relative",
+          minHeight: 32,
+          borderRadius: 10,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(200,160,48,0.22)",
+          padding: "6px 6px 8px",
+        }}
+      >
+        <div style={{ display: "flex", gap: 1 }}>
+          {squares.map((sq) => {
+            const by = order
+              .map((id) => (positions[id] ?? 0) >= sq)
+              .filter(Boolean).length;
+            return (
+              <div
+                key={sq}
+                style={{
+                  flex: 1,
+                  height: 14,
+                  background:
+                    by === 0
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(200,180,100,0.25)",
+                  borderRadius: 2,
+                }}
+                title={String(sq)}
+              />
+            );
+          })}
+        </div>
+        <div
+          style={{
+            display: "grid",
+            marginTop: 8,
+            gap: 6,
+            gridTemplateColumns: `repeat(${Math.min(2, order.length || 1)},1fr)`,
+          }}
+        >
+          {order.map((id, idx) => {
+            const p = positions[id] ?? 0;
+            const pct = Math.min(100, (p / TRACK_LENGTH) * 100);
+            const col = HORSE_MP_COLORS[idx % HORSE_MP_COLORS.length]!;
+            return (
+              <div
+                key={id}
+                style={{
+                  background: col + "14",
+                  border: `1px solid ${col}55`,
+                  borderRadius: 10,
+                  padding: "6px 8px",
+                }}
+              >
+                <div
+                  style={{
+                    color: col,
+                    fontSize: 9,
+                    letterSpacing: 1,
+                    fontWeight: "bold",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {(nameById[id] ?? id).slice(0, 10)} {p}/{TRACK_LENGTH}
+                </div>
+                <div
+                  style={{
+                    marginTop: 4,
+                    height: 4,
+                    background: "rgba(255,255,255,0.05)",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pct}%`,
+                      height: "100%",
+                      background: col,
+                      transition: "width 0.45s",
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -414,10 +537,12 @@ function HistoryList({
   history,
   t,
   language,
+  nameById,
 }: {
   history: RaceState["history"];
   t: RaceI18n;
   language: "mn" | "en";
+  nameById?: Record<string, string>;
 }) {
   if (history.length === 0)
     return (
@@ -458,9 +583,21 @@ function HistoryList({
                 color: r.turn === "robot" ? "#e06050" : "#60c060",
                 letterSpacing: 1,
                 minWidth: 30,
+                maxWidth: 80,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
+              title={
+                r.throwerId && nameById?.[r.throwerId]
+                  ? nameById[r.throwerId]
+                  : undefined
+              }
             >
-              {r.turn === "robot" ? t.robotTag : t.playerTag}
+              {r.throwerId && nameById
+                ? (nameById[r.throwerId] ?? t.playerTag).slice(0, 6)
+                : r.turn === "robot"
+                  ? t.robotTag
+                  : t.playerTag}
             </span>
             <div style={{ display: "flex", gap: 3 }}>
               {r.sides.map((s, j) => (
@@ -498,12 +635,14 @@ function HorseRaceRulesAsideBody({
   state,
   language,
   sessionGain,
+  nameById,
 }: {
   showRulesHeading: boolean;
   t: RaceI18n;
   state: RaceState;
   language: "mn" | "en";
   sessionGain?: { coins: number; gems: number };
+  nameById?: Record<string, string>;
 }) {
   return (
     <>
@@ -640,7 +779,12 @@ function HorseRaceRulesAsideBody({
         {t.historyTitle}
       </div>
       <GoldDivider />
-      <HistoryList history={state.history} t={t} language={language} />
+      <HistoryList
+        history={state.history}
+        t={t}
+        language={language}
+        nameById={nameById}
+      />
 
       {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) && (
         <>
@@ -688,6 +832,10 @@ export default function HorseRaceUI({
   currentTurn,
   rewardEvents = [],
   sessionGain,
+  uiMode = "robot",
+  mp,
+  mpToastText = null,
+  mpWinnerId = null,
 }: Props) {
   const t = useRaceI18n();
   const language = t.language;
@@ -700,16 +848,60 @@ export default function HorseRaceUI({
   const mainPanelPad: React.CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : {};
+  const isMp = uiMode === "mp" && mp;
 
-  const canThrow =
-    (state.phase === "idle" ||
-      state.phase === "playerResult" ||
-      state.phase === "robotResult") &&
-    state.winner === null;
+  const canThrow = isMp
+    ? (state.phase === "idle" || state.phase === "playerResult") &&
+      state.winner === null &&
+      mp!.turnPlayerId === mp!.myId
+    : (state.phase === "idle" ||
+        state.phase === "playerResult" ||
+        state.phase === "robotResult") &&
+      state.winner === null;
   const matchOver = state.phase === "matchOver";
-  const playerWon = matchOver && state.winner === "player";
+  const playerWon = isMp
+    ? matchOver && mpWinnerId === mp?.myId
+    : matchOver && state.winner === "player";
+  const lastHist =
+    state.history.length > 0 ? state.history[state.history.length - 1]! : null;
+  const waitingOther =
+    isMp &&
+    mp &&
+    !matchOver &&
+    state.phase === "idle" &&
+    mp.turnPlayerId !== mp.myId;
 
   const statusLine = (() => {
+    if (isMp) {
+      if (matchOver) {
+        if (mpWinnerId === mp?.myId) return t.youWonMatch;
+        const wn = mpWinnerId
+          ? (mp.nameById[mpWinnerId] ?? "?")
+          : "";
+        return language === "en" ? `${wn} wins!` : `${wn} яллаа!`;
+      }
+      if (state.phase === "throwing" || state.phase === "settling")
+        return t.rollingHint;
+      if (state.phase === "playerResult" && lastHist) {
+        if (lastHist.throwerId === mp?.myId) {
+          return lastHist.horseCount > 0
+            ? t.playerAdvanced(lastHist.horseCount)
+            : t.noMoveThisTurn;
+        }
+        if (lastHist.throwerId) {
+          const wn = mp.nameById[lastHist.throwerId] ?? "?";
+          return language === "en"
+            ? `${wn}: +${lastHist.horseCount} horses`
+            : `${wn}: +${lastHist.horseCount} морь`;
+        }
+      }
+      if (waitingOther) {
+        const w = mp.nameById[mp.turnPlayerId] ?? "…";
+        return language === "en" ? `Waiting: ${w}` : `Ээлж: ${w}`;
+      }
+      const need = Math.max(0, TRACK_LENGTH - (mp.positions[mp.myId] ?? 0));
+      return t.playerTurn(need);
+    }
     if (matchOver) return playerWon ? t.youWonMatch : t.robotWonMatch;
     if (state.phase === "throwing" || state.phase === "settling")
       return t.rollingHint;
@@ -823,17 +1015,42 @@ export default function HorseRaceUI({
           </div>
           {!narrowUi ? (
             <div style={{ color: "#666", fontSize: 8, letterSpacing: 2 }}>
-              {t.subtitle}
+              {isMp
+                ? language === "en"
+                  ? "ONLINE RACE"
+                  : "ONLINE · 2–4"
+                : t.subtitle}
             </div>
           ) : null}
         </div>
 
+        {mpToastText && (
+          <div
+            style={{
+              textAlign: "center",
+              color: "#f0c040",
+              fontSize: 11,
+              marginBottom: 4,
+            }}
+          >
+            {mpToastText}
+          </div>
+        )}
+
         <GoldDivider />
 
-        <TrackBar
-          playerPos={state.playerPosition}
-          robotPos={state.robotPosition}
-        />
+        {isMp && mp ? (
+          <TrackBarMulti
+            order={mp.order}
+            positions={mp.positions}
+            nameById={mp.nameById}
+          />
+        ) : (
+          <TrackBar
+            playerPos={state.playerPosition}
+            robotPos={state.robotPosition}
+          />
+        )}
 
         <div
           style={{
@@ -901,11 +1118,13 @@ export default function HorseRaceUI({
           >
             {state.phase === "throwing" || state.phase === "settling"
               ? t.throwingButton
-              : state.phase === "robotThinking"
+              : isMp && waitingOther
                 ? t.waitingRobot
-                : currentTurn === "robot" && !canThrow
+                : state.phase === "robotThinking"
                   ? t.waitingRobot
-                  : t.throwButton}
+                  : currentTurn === "robot" && !canThrow
+                    ? t.waitingRobot
+                    : t.throwButton}
           </button>
         )}
 
@@ -946,6 +1165,7 @@ export default function HorseRaceUI({
             state={state}
             language={language}
             sessionGain={sessionGain}
+            nameById={isMp ? mp.nameById : undefined}
           />
         </div>
       ) : (
@@ -968,6 +1188,7 @@ export default function HorseRaceUI({
               state={state}
               language={language}
               sessionGain={sessionGain}
+              nameById={isMp ? mp.nameById : undefined}
             />
           </GameRulesSheet>
         </>

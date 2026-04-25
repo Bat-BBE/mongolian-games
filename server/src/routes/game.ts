@@ -194,6 +194,12 @@ function rewardFor(gameSlug: string): {
       };
     case "shagai-guess":
       return { ...base, xp: 20, kp: 9, coins: 18, gems: 0 };
+    case "four-powers":
+      return { ...base, xp: 21, kp: 10, coins: 19, gems: 0 };
+    case "wooden-dice":
+      return { ...base, xp: 19, kp: 9, coins: 18, gems: 0 };
+    case "stone-cairn":
+      return { ...base, xp: 20, kp: 9, coins: 19, gems: 0 };
     case "seven-shagai":
       return { ...base, xp: 22, kp: 10, coins: 19, gems: 0 };
     case "puzzle":

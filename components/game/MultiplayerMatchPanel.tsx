@@ -16,11 +16,8 @@ type Props = {
   mp: MatchRoomControls;
   enabled: boolean;
   supportsSharedBoard: boolean;
-  /** Ижил өртөө + тоглоомын тогтмол код — «Өрөө нээх» эсвэл code_taken бол автоматаар нэгдэнэ. */
   suggestedMatchCode?: string | null;
-  /** Хос ол: өрөөг гар ашиглахгүйгээр автоматаар нэгдэнэ. */
   autoMatchmaking?: boolean;
-  /** Homboroi: 1 тоглогчтой үед роботтой эхлүүлэх товч. */
   homboroiMode?: boolean;
 };
 
@@ -80,12 +77,14 @@ function useStrings() {
       shared: "Shared board",
       soloNote:
         "1–4: take turns racing to 32. Solo: button below, or turn Online off (same rules with bot).",
-      stationRoom: "Public code for this station + game — friends join the same room.",
+      stationRoom:
+        "Public code for this station + game — friends join the same room.",
       autoJoining: "Joining the room…",
       autoHint:
         "If a friend joins, you start together. After 10s alone, a solo board auto-starts (same rules, no bot).",
       homboroiSolo: "Start vs bot (1 player)",
-      homboroiNeedReady: "2–4: all ready → «Start» by host. Solo: use «Start vs bot».",
+      homboroiNeedReady:
+        "2–4: all ready → «Start» by host. Solo: use «Start vs bot».",
     };
   }, [language]);
 }
@@ -110,8 +109,7 @@ export function MultiplayerMatchPanel({
 
   if (!enabled) return null;
 
-  const allReady =
-    mp.players.length >= 2 && mp.players.every((p) => p.ready);
+  const allReady = mp.players.length >= 2 && mp.players.every((p) => p.ready);
   const me = mp.playerId
     ? mp.players.find((p) => p.id === mp.playerId)
     : undefined;
@@ -152,7 +150,9 @@ export function MultiplayerMatchPanel({
         {mp.connected && !mp.roomCode && (
           <>
             {autoMatchmaking ? (
-              <span className="text-[10px] text-amber-200/80">{s.autoJoining}</span>
+              <span className="text-[10px] text-amber-200/80">
+                {s.autoJoining}
+              </span>
             ) : (
               <>
                 <button
