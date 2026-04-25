@@ -14,7 +14,7 @@ const T = {
   reset: "Дахин эхлэх",
   picking: "Ижил талтай хосуудыг дараалан сонгоно уу.",
   pickHint:
-    "Эхлээд нэг шагай сонгоно, замаа зураад, дараа нь ижил талтай хосыг сонгоно, сүүлд нь «Няслах» дарна.",
+    "Нэг дээр дараад ижил талтай (жишээ нь хоёр морь 🐎🐎) нөгөөгөө сонгоно — дараа нь замаа зурж «Няслах».",
   paired: "Нясалсан хосууд",
   wonTitle: "ХОЖЛОО!",
   won: "Бүх хосыг зөв сонгож дуусгалаа — та яллав.",
@@ -23,6 +23,7 @@ const T = {
   lostStuck: "Цааш ижил талтай хос байхгүй боллоо.",
   idleHint:
     "Долоон шагай орхиод, буусан тал бүрт ижил хосуудыг сонгон «Нясална».",
+  winding: "Гарт халхалж байна — удахгүй шиднэ…",
   settling: "Шагайнууд бууж байна…",
   orphanWin: "Нэг шагай үлд — шууд хожлоо!",
   drawHint:
@@ -365,6 +366,22 @@ export default function ShagaiSevenUI({
         </div>
       )}
 
+      {phase === "winding_up" && (
+        <div
+          style={{
+            fontSize: 13,
+            color: "#d4c4a0",
+            marginBottom: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "rgba(200,160,48,0.1)",
+            border: "1px solid rgba(200,160,48,0.25)",
+          }}
+        >
+          {t.winding}
+        </div>
+      )}
+
       {(phase === "throwing" || phase === "settling") && (
         <div style={{ fontSize: 13, color: "#a09888", marginBottom: 10 }}>
           {t.settling}
@@ -501,7 +518,13 @@ export default function ShagaiSevenUI({
       {pairedPairs.length > 0 && (
         <div style={{ fontSize: 12, color: "#8a8278", marginBottom: 8 }}>
           {t.paired}:{" "}
-          {pairedPairs.map(([a, b]) => `#${a + 1}–#${b + 1}`).join(", ")}
+          {pairedPairs
+            .map(([a, b]) => {
+              const sa = settledSides[a];
+              const sym = sa ? SHAGAI_INFO[sa].symbol : "·";
+              return `${sym}#${a + 1}–#${b + 1}`;
+            })
+            .join(", ")}
         </div>
       )}
 

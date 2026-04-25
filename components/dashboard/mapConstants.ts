@@ -308,9 +308,37 @@ export const TERRAIN_D = 10000;
 export const TERRAIN_SEG = 256;
 
 /** 3D map — нарны сүүдрийн texture (2048 = илүү нарийвчлал, 1024 = GPU/VRAM хөнгөвч). */
-export const MAP_PERF_SHADOW_MAP = 1024;
+export const MAP_PERF_SHADOW_MAP = 2048;
 /** Retina: өндөр DPR = fill rate их; бууруулбал илүү тогтвортой FPS. */
-export const MAP_PERF_MAX_DPR = 1.25;
+export const MAP_PERF_MAX_DPR = 1.32;
+
+/**
+ * Газрын 3D `useThreeScene` — нэг мандал. `app/globals.css` дэх `--map-*` өнгөтэй
+ * тааруулсан (2D card / floating UI-той ижил "агаар"). Өөрчлөхөд хоёуланг нь шинэчил.
+ */
+export const MAP_SCENE = {
+  background: 0x92c4e8,
+  fog: 0xb8d0e8,
+  /** Алсаар алгуур арилгаж, тэнгэрийн reverb */
+  fogDensity: 0.00086,
+  ambient: 0xa8b8d8,
+  ambientInt: 0.52,
+  sun: 0xffecd8,
+  sunInt: 2.12,
+  fill: 0xc8dce8,
+  fillInt: 0.4,
+  back: 0xffc878,
+  backInt: 0.3,
+  hemiSky: 0x8ec0e8,
+  hemiGround: 0x6a9a45,
+  hemiInt: 0.52,
+  toneMappingExposure: 1.08,
+} as const;
+
+export const MAP_SCENE_CSS = {
+  sky: "#92c4e8",
+  fog: "#b8d0e8",
+} as const;
 /** Газрын 2D label overlay: React setState-ийг 60Hz бүр дуудахгүй. */
 export const MAP_LABEL_UI_MIN_INTERVAL_MS = 45;
 

@@ -20,6 +20,7 @@ type Peer = {
   id: string;
   displayName: string;
   heroModelPath: string;
+  homeKey: string;
   gerLevel: number;
   livestock: PresenceLivestock;
   ws: WebSocket;
@@ -29,6 +30,7 @@ type Peer = {
 
 const DEFAULT_HERO_PATH = "/models/hero-22.fbx";
 const MAX_HERO_PATH_LEN = 280;
+const MAX_HOME_KEY_LEN = 200;
 
 const POSE_MIN_INTERVAL_MS = 240;
 const MAX_DISPLAY = 36;
@@ -102,6 +104,9 @@ function wirePeerRow(p: Peer): Record<string, unknown> {
     row.z = p.last.z;
     row.ry = p.last.ry;
   }
+  if (p.homeKey) {
+    row.homeKey = p.homeKey;
+  }
   return row;
 }
 
@@ -149,6 +154,7 @@ export class MapPresenceHub {
       id,
       displayName: "Тоглогч",
       heroModelPath: DEFAULT_HERO_PATH,
+      homeKey: "",
       gerLevel: 1,
       livestock: { ...ZERO_LS },
       ws,
@@ -186,7 +192,17 @@ export class MapPresenceHub {
         rec.gerLevel =
           Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1;
         rec.livestock = parseLivestock(body);
-        if (rec.last) this.broadcastPeerState(id);
+        const hkr =
+          typeof body.homeKey === "string"
+            ? body.homeKey.slice(0, MAX_HOME_KEY_LEN).trim()
+            : "";
+        rec.homeKey = hkr;
+        // Эхний pose-оос өмнө `last` байхгүй тул бусад нь `snapshot`/`peer_pose`-оор
+        // харагдаагүй байсан. `hello` ирмэгц placeholder байрлал өгч зарлана.
+        if (!rec.last) {
+          rec.last = { x: 0, z: 0, ry: 0 };
+        }
+        this.broadcastPeerState(id);
         return;
       }
 

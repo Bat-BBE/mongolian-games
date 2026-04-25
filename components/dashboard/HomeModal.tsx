@@ -185,7 +185,7 @@ export function HomeModal({
               </>
             )}
           </p>
-          <div className="flex flex-wrap gap-2 text-sm">
+          <div className="flex flex-wrap gap-2 text-sm text-foreground/95">
             <Chip>🐑 {sheep}</Chip>
             <Chip>🐐 {goat}</Chip>
             <Chip>🐄 {cow}</Chip>
@@ -274,7 +274,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   return (
     <span
       className={cn(
-        "text-xs px-2 py-1 rounded-full border border-primary/20 bg-primary/5",
+        "inline-flex min-h-[1.5rem] items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-sm tabular-nums",
       )}
     >
       {children}

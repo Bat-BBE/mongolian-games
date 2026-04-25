@@ -2,6 +2,8 @@ import type { ShagaiSide } from "./shagaiTargetType";
 
 export type SevenPhase =
   | "idle"
+  /** Товч дарагдсаны дараа, физик шидэлтийн өмнөх богино «халхлах» үе */
+  | "winding_up"
   | "throwing"
   | "settling"
   | "picking"

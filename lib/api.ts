@@ -52,6 +52,28 @@ export function getMapPresenceWsUrl(): string {
   }
 }
 
+/**
+ * Зөвхөн browser дээр дуудна. Хуудас `https:` боловч API `http://` (удалсан host) бол
+ * WebSocket «mixed content»-оор блоклогдоно — оношлоход тусална.
+ */
+export function warnIfRealtimeWebSocketLikelyBlocked(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.protocol !== "https:") return;
+  const base = getApiBaseUrl();
+  if (!base.startsWith("http://")) return;
+  const hostish = base.replace(/^https?:\/\//, "").split("/")[0] ?? "";
+  if (
+    hostish.startsWith("localhost:") ||
+    hostish.startsWith("127.0.0.1:")
+  ) {
+    return;
+  }
+  console.error(
+    "[realtime] Хуудас HTTPS, API HTTP (удалсан host) — браузер ихэвчлэн ws-ийг блоклох. " +
+      "NEXT_PUBLIC_API_URL-ийг https://... (API дээр TLS) болгоно, эсвэл reverse proxy-аар /ws → API wss дамжуулна.",
+  );
+}
+
 export function resolveAssetUrl(raw: unknown): string {
   const s = typeof raw === "string" ? raw.trim() : "";
   if (!s) return "";

@@ -294,12 +294,13 @@ export default function SingleShagai({
     api.velocity.set(0, 0, 0);
     api.angularVelocity.set(0, 0, 0);
 
+    // Давхар шидэлт: жижгээр нь дараалж гараас унах маяг (Дугуй долоо гэх мэт).
     const t = setTimeout(
       () => {
         api.velocity.set(...throwVel);
         api.angularVelocity.set(...throwAngVel);
       },
-      id * 60 + 40,
+      id * 72 + 48,
     );
 
     return () => {

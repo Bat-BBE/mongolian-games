@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Mongolian Games
 
-## Getting Started
+Next.js 16 (фронт) + Express/PostgreSQL/WebSocket (API). Газрын 3D, тоглоом, нэвтэрлт, админ.
 
-First, run the development server:
+## Суулгах
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cd server && npm install && cd ..
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Хөгжүүлэлт
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Фронт: `npm run dev` → [http://localhost:3000](http://localhost:3000)
+- API: `npm run dev:server` (порт 4000) — эсвэл `npm run dev:all` (concurrently)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Root дээр `.env.local` үүсгэж [`.env.example`](./.env.example)-ийг дуурайн бөглөнө.  
+`server/.env` үүсгэж [`server/.env.example`](./server/.env.example) ашиглана (`DATABASE_URL` зайлшгүй).
 
-## Learn More
+## Production checklist
 
-To learn more about Next.js, take a look at the following resources:
+| Зүйл | Тайлбар |
+|------|--------|
+| `NEXT_PUBLIC_API_URL` | Фронт bundle-д орох: **https**-тай API суурь (сүүлд `/` үгүй). |
+| `CORS_ORIGIN` (server) | API дээр фронтын домэйн(үүд) — `https://таны-апп.домэйн` бодитоор. |
+| TLS | Хуудас `https` бол API ч `https` + `wss` (mixed content-аас `lib/api.ts` анхааруулга). |
+| `DATABASE_URL` | PostgreSQL, SSL (жишээ Neon: `?sslmode=require`). |
+| WebSocket | Хост (Railway/Fly/Render) WebSocket-ийг идэвхжүүлсэн, proxy `Upgrade` дамжуулсан. |
+| Firebase | `NEXT_PUBLIC_*` + server дээр Admin JSON / `FIREBASE_DATABASE_URL` (хэрэгтэй бол). |
+| `JWT_SECRET` / `ADMIN_*` | Админ/хамгаалсан endpoint ашиглавал урт, санамсаргүй нууц. |
+| Сурвалж | `npm run build` (фронт), `cd server && npm run build` (API). |
+| `npm run lint` | Код стандарт (төслийн ESLint). |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`npm run build` (root) нь Vercel/сүүлчийн static export биш, Node сервертэй `next start` эсвэл Vercel-д тохирно.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy (екөн)
 
-## Deploy on Vercel
+- **Vercel** (зөвхөн Next) — `NEXT_PUBLIC_*` environment variables. API тусдаа (Fly/Railway) + `NEXT_PUBLIC_API_URL` заана.
+- **Monolith** — Docker эсвэл PaaS: Next + `server` хоёуланг нэг домэйн доор reverse proxy (`/api` → Express, WebSocket path-уудыг дамжуулна).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private project (диплом / дотоод).

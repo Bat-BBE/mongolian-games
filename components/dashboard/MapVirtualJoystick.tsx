@@ -134,16 +134,16 @@ export function MapVirtualJoystick({
         onPointerCancel={onPointerUp}
         className={cn(
           "relative flex h-28 w-28 touch-none items-center justify-center",
-          "rounded-full border-2 border-white/55 bg-white/8 shadow-lg backdrop-blur-md",
+          "map-joystick-base rounded-full border-2 shadow-lg backdrop-blur-md",
           disabled && "pointer-events-none opacity-35",
         )}
       >
         <div
-          className="pointer-events-none absolute inset-[10px] rounded-full border border-white/20 bg-white/[0.1]"
+          className="map-joystick-inner pointer-events-none absolute inset-[10px] rounded-full"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute h-[32%] w-[32%] rounded-full border border-white/55 bg-white/30 shadow-md"
+          className="map-joystick-knob pointer-events-none absolute h-[32%] w-[32%] rounded-full shadow-md"
           style={{
             transform: `translate(${knob.x}px, ${knob.y}px)`,
           }}

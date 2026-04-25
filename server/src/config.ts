@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
 
-/** Railway дээр хоосон string үлдэхээр Zod унадаг — undefined болгоно */
 function emptyToUndefined(v: unknown): unknown {
   if (v === undefined || v === null) return undefined;
   if (typeof v === "string" && v.trim() === "") return undefined;
@@ -9,10 +8,11 @@ function emptyToUndefined(v: unknown): unknown {
 }
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().url(),
-  /** Comma-separated. Dev-д хоёр браузер `localhost` vs `127.0.0.1`-ээр нээвэл нэг нь CORS-оор бүтэхгүй — хоёуланг нь оруулна. */
   CORS_ORIGIN: z
     .string()
     .default("http://localhost:3000,http://127.0.0.1:3000"),

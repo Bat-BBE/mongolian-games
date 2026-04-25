@@ -129,6 +129,89 @@ export function terrainHeight(x: number, z: number): number {
   return Math.max(h, 0.12);
 }
 
+/**
+ * Бариул/огнооны эргэн тойронд `terrainHeight`-ийг max — налуу/овлог дээр хөл газар
+ * шигдэхоос. `ry` = эргэлт (Y), `atan2`‑тай ижил конвенц (x,z) тэнхлэг.
+ */
+export function terrainHeightFeet(
+  x: number,
+  z: number,
+  ry: number,
+  r = 0.38
+): number {
+  const f = (dx: number, dz: number) => terrainHeight(x + dx, z + dz);
+  let m = f(0, 0);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    m = Math.max(m, f(Math.cos(a) * r, Math.sin(a) * r));
+  }
+  const fwx = Math.sin(ry);
+  const fwz = Math.cos(ry);
+  const rtx = -fwz;
+  const rtz = fwx;
+  m = Math.max(
+    m,
+    f(fwx * r, fwz * r),
+    f(-fwx * r, -fwz * r),
+    f(rtx * r, rtz * r),
+    f(-rtx * r, -rtz * r)
+  );
+  m = Math.max(
+    m,
+    f(fwx * r * 0.6 + rtx * r * 0.45, fwz * r * 0.6 + rtz * r * 0.45),
+    f(fwx * r * 0.6 - rtx * r * 0.45, fwz * r * 0.6 - rtz * r * 0.45)
+  );
+  return m;
+}
+
+/**
+ * `SceneBuilder.buildPlayerHomeGer` — `makeFence` овлын `yardW` / `yardD`‑тай **ижил** нэгдэл.
+ * Гэр+хашлаас дугуй биш, тэгш өнцгийн ов: эллипсээр **ойролцоолно**.
+ */
+export function getPlayerHomeYardHalfAxes(gerLevel: number): {
+  halfW: number;
+  halfD: number;
+} {
+  const lv = Math.max(1, Math.min(30, Math.floor(gerLevel)));
+  const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+  let ringSpan = 12.5;
+  if (extraGers > 0) {
+    const ringR = 13.2 + Math.min(lv * 0.45, 10);
+    ringSpan = ringR + 7;
+  }
+  const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
+  const yardD = yardW * 0.86;
+  return { halfW: yardW * 0.5, halfD: yardD * 0.5 };
+}
+
+/**
+ * 3D collisionгүйгээр нэвтэрнэ — гэрийн **овол** дээр (эллипс) хаалтын гадуур түлхэнэ.
+ * Буцах: шинэ x,z + `pushed` (дохио) — илүндээ хөдлөгчийн v бууруулж болно.
+ */
+export function pushOutOfPlayerHomeOval(
+  x: number,
+  z: number,
+  homeX: number,
+  homeZ: number,
+  gerLevel: number,
+): { x: number; z: number; pushed: boolean } {
+  const { halfW, halfD } = getPlayerHomeYardHalfAxes(gerLevel);
+  const pad = 0.95;
+  const a = halfW + pad;
+  const b = halfD + pad;
+  const dx = x - homeX;
+  const dz = z - homeZ;
+  const t = (dx * dx) / (a * a) + (dz * dz) / (b * b);
+  if (t <= 1) {
+    if (t < 1e-10) {
+      return { x: homeX + a * 1.01, z: homeZ, pushed: true };
+    }
+    const s = 1.01 / Math.sqrt(t);
+    return { x: homeX + dx * s, z: homeZ + dz * s, pushed: true };
+  }
+  return { x, z, pushed: false };
+}
+
 export function terrainBiome(
   x: number,
   z: number,
