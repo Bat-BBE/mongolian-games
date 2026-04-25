@@ -31,8 +31,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env (жишээ: .env.example, server/.env.example — git-д оруулна)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+server/.env
 
 # vercel
 .vercel

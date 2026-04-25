@@ -12,8 +12,16 @@ import {
   JOURNEY_ORDER,
   stationWorldXZ,
   playerHomeWorldAnchor,
+  MAP_PERF_MAX_DPR,
+  MAP_PERF_SHADOW_MAP,
+  MAP_SCENE,
 } from "./mapConstants";
-import { terrainBiome, terrainHeight } from "./sceneHelpers";
+import {
+  terrainBiome,
+  terrainHeight,
+  terrainHeightFeet,
+  pushOutOfPlayerHomeOval,
+} from "./sceneHelpers";
 import {
   createHeroAnimator,
   countClipTracksBindingToRig,
@@ -24,6 +32,13 @@ import {
   retargetClipToSkeleton,
   type HeroClips,
 } from "../map3d/heroFbx";
+
+/** Зочны баатрын walk/run — local-тай нэг, cache-ийг урьдчилан дүүргэнэ */
+const MAP_PRESENCE_MOVE_FBX: Parameters<typeof loadHeroClips>[0] = {
+  idle: "/models/standing idle 01.fbx",
+  walk: "/models/standing walk forward.fbx",
+  run: "/models/standing run forward.fbx",
+};
 
 const MAP_EMOTE_CLIP_FILES: Record<string, string> = {
   // wave: "/models/waving-gesture.fbx",
@@ -176,6 +191,8 @@ export function useThreeScene({
     alpha: number;
   }>({ stationId: null, alpha: 0 });
   const orbitCameraDistRef = useRef(120);
+  const homeGerLevelMapRef = useRef(homeGerLevel);
+  homeGerLevelMapRef.current = homeGerLevel;
   const showAllMapLabelsRef = useRef(false);
   const [labelZoomScale, setLabelZoomScale] = useState(1);
   const [showAllMapLabels, setShowAllMapLabels] = useState(false);
@@ -227,8 +244,8 @@ export function useThreeScene({
     const { x: playerHomeX, z: playerHomeZ } = playerHomeWorldAnchor(homeKey);
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x92c4e8);
-    scene.fog = new THREE.FogExp2(0xb8d0e8, 0.00088);
+    scene.background = new THREE.Color(MAP_SCENE.background);
+    scene.fog = new THREE.FogExp2(MAP_SCENE.fog, MAP_SCENE.fogDensity);
 
     const W = container.clientWidth,
       H = container.clientHeight;
@@ -251,10 +268,24 @@ export function useThreeScene({
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.06;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.toneMappingExposure = MAP_SCENE.toneMappingExposure;
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio, MAP_PERF_MAX_DPR),
+    );
     container.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
+
+    const prePresenceMove = () => {
+      void loadHeroClips(MAP_PRESENCE_MOVE_FBX).catch(() => undefined);
+    };
+    {
+      const ric = globalThis.requestIdleCallback;
+      if (typeof ric === "function") {
+        ric(() => prePresenceMove(), { timeout: 2_000 });
+      } else {
+        setTimeout(prePresenceMove, 0);
+      }
+    }
 
     const applyViewportSize = () => {
       const w = container.clientWidth;
@@ -263,7 +294,9 @@ export function useThreeScene({
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      renderer.setPixelRatio(
+        Math.min(window.devicePixelRatio, MAP_PERF_MAX_DPR),
+      );
     };
     const resizeObserver = new ResizeObserver(() => applyViewportSize());
     resizeObserver.observe(container);
@@ -273,14 +306,14 @@ export function useThreeScene({
     const SUN_RADIUS = 280;
     const SUN_HEIGHT_FACTOR = 0.7;
 
-    const sun = new THREE.DirectionalLight(0xffecd8, 2.15);
+    const sun = new THREE.DirectionalLight(MAP_SCENE.sun, MAP_SCENE.sunInt);
     sun.position.set(
       Math.cos(sunInitAngle) * SUN_RADIUS,
       Math.abs(Math.sin(sunInitAngle)) * SUN_RADIUS * SUN_HEIGHT_FACTOR + 20,
       -60,
     );
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(MAP_PERF_SHADOW_MAP, MAP_PERF_SHADOW_MAP);
     sun.shadow.radius = 2.8;
     sun.shadow.bias = -0.00028;
     sun.shadow.normalBias = 0.025;
@@ -292,17 +325,23 @@ export function useThreeScene({
     sun.shadow.camera.bottom = -3200;
     scene.add(sun);
 
-    scene.add(new THREE.AmbientLight(0xa8b8d8, 0.52));
+    scene.add(new THREE.AmbientLight(MAP_SCENE.ambient, MAP_SCENE.ambientInt));
 
-    const fill = new THREE.DirectionalLight(0xc8dce8, 0.38);
+    const fill = new THREE.DirectionalLight(MAP_SCENE.fill, MAP_SCENE.fillInt);
     fill.position.set(-60, 40, -30);
     scene.add(fill);
 
-    const backlight = new THREE.DirectionalLight(0xffc878, 0.28);
+    const backlight = new THREE.DirectionalLight(MAP_SCENE.back, MAP_SCENE.backInt);
     backlight.position.set(15, 10, 100);
     scene.add(backlight);
 
-    scene.add(new THREE.HemisphereLight(0x8ec0e8, 0x6a9a45, 0.52));
+    scene.add(
+      new THREE.HemisphereLight(
+        MAP_SCENE.hemiSky,
+        MAP_SCENE.hemiGround,
+        MAP_SCENE.hemiInt,
+      ),
+    );
 
     const builder = new SceneBuilder(
       scene,
@@ -368,6 +407,10 @@ export function useThreeScene({
         mx.stopAllAction();
       }
       slot.userData.remoteHeroMixer = undefined;
+      (slot.userData as { remoteHeroPlay?: unknown }).remoteHeroPlay =
+        undefined;
+      (slot.userData as { remoteHeroAnimActions?: unknown })
+        .remoteHeroAnimActions = undefined;
       while (slot.children.length > 0) {
         const c = slot.children[0]!;
         slot.remove(c);
@@ -389,6 +432,14 @@ export function useThreeScene({
         }
       });
     }
+
+    type RemotePosSmooth = { x: number; z: number; ry: number };
+    const REMOTE_PEER_POS_RATE = 12;
+    const REMOTE_PEER_ANG_RATE = 15;
+    /** p→sm дагуул: зай = алхалтын дохио (гөлрүүсэн d(sm)/dt нь бага) */
+    const REMOTE_ANIM_GAP_TO_SPEED = REMOTE_PEER_POS_RATE + 6;
+    /** Алхалтын хурд дээр идэвхтэн анимацийг гөлрүүлэх (flicker багасгана) */
+    const REMOTE_ANIM_EMA = 0.2;
 
     function buildRemotePlayerAvatar(id: string): THREE.Group {
       const hue = (hashPeerId(id) % 360) / 360;
@@ -485,6 +536,11 @@ export function useThreeScene({
         run: false,
       },
     };
+    /** Shift-гүй/Shift — нэг кадрт 0/1: камер+хурд "цачигдана" → 0…1-ээр зөөлрүүлнэ */
+    const runIntentSmoothedRef = { current: 0 };
+    const lastLocomotionAnimRef = { current: "" as string };
+    /** `terrainHeightFeet`+зөөлрүүлэлт: телепорт/эхлэлт дээр null болгоно */
+    const heroGroundYRef = { current: null as number | null };
     let disposed = false;
 
     if (heroModelPath && heroModelPath.trim()) {
@@ -600,9 +656,10 @@ export function useThreeScene({
               sx = dh.x;
               sz = dh.z + 3.4;
             }
-            const sy = terrainHeight(sx, sz) + 0.02;
+            const sy = terrainHeightFeet(sx, sz, 0) + 0.02;
             root.position.set(sx, sy, sz);
             root.rotation.y = 0;
+            heroGroundYRef.current = sy;
             play("idle", 0);
             scene.add(root);
           } catch {
@@ -819,9 +876,11 @@ export function useThreeScene({
           sx = dh.x;
           sz = dh.z + 3.4;
         }
-        const sy = terrainHeight(sx, sz) + 0.02;
+        const rhy = Math.atan2(playerHomeX - sx, playerHomeZ - sz);
+        const sy = terrainHeightFeet(sx, sz, rhy) + 0.02;
         root.position.set(sx, sy, sz);
-        root.rotation.y = Math.atan2(playerHomeX - sx, playerHomeZ - sz);
+        root.rotation.y = rhy;
+        heroGroundYRef.current = sy;
         heroEmotePlayingRef.current = false;
         heroPlayRef.current?.("idle", 0.12);
         heroKinematicRef.current.pos.copy(root.position);
@@ -856,12 +915,14 @@ export function useThreeScene({
       if (!door) return;
       const sx = door.x;
       const sz = door.z + 3.4;
-      const sy = terrainHeight(sx, sz) + 0.02;
-      root.position.set(sx, sy, sz);
       const camT = buildCameraTarget(sid);
       const dx = camT.lookAt.x - sx;
       const dz = camT.lookAt.z - sz;
-      root.rotation.y = Math.atan2(dx, dz);
+      const rhy = Math.atan2(dx, dz);
+      const sy = terrainHeightFeet(sx, sz, rhy) + 0.02;
+      root.position.set(sx, sy, sz);
+      root.rotation.y = rhy;
+      heroGroundYRef.current = sy;
       heroEmotePlayingRef.current = false;
       heroPlayRef.current?.("idle", 0.12);
       heroKinematicRef.current.pos.copy(root.position);
@@ -1037,17 +1098,26 @@ export function useThreeScene({
           klenInput = 1;
         }
         const wantsRun = stKeys.run || stick.run;
+        {
+          const runTgt = wantsRun && klenInput > 0.01 ? 1 : 0;
+          const s = runIntentSmoothedRef.current;
+          runIntentSmoothedRef.current = s + (runTgt - s) * (1 - Math.exp(-12 * dt));
+        }
+        const runS = runIntentSmoothedRef.current;
+        const runAnimMode = klenInput > 0.01 && runS > 0.5;
 
         const rootMove = heroRootRef.current;
         const playMove = heroPlayRef.current;
         if (rootMove && playMove) {
           const hv = heroManualVelRef.current;
           if (klenInput <= 0.01) {
+            runIntentSmoothedRef.current *= 1 - Math.min(1, 18 * dt);
+            if (runIntentSmoothedRef.current < 0.02) runIntentSmoothedRef.current = 0;
             hv.multiplyScalar(Math.exp(-20 * delta));
             if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
           }
           if (klenInput > 0.01) {
-            const baseSpeed = wantsRun ? 22 : 12;
+            const baseSpeed = 12 + runS * 10;
             const localDir = new THREE.Vector3(mvx, 0, mvz);
             const camForward = new THREE.Vector3();
             camera.getWorldDirection(camForward);
@@ -1063,13 +1133,41 @@ export function useThreeScene({
               .normalize();
 
             const desiredVel = worldDir.clone().multiplyScalar(baseSpeed);
-            const velBlend = 1 - Math.exp(-(wantsRun ? 22 : 16) * delta);
+            const velRate = 16 + runS * 6;
+            const velBlend = 1 - Math.exp(-velRate * delta);
             hv.lerp(desiredVel, velBlend);
             rootMove.position.addScaledVector(hv, delta);
             rootMove.position.x = clamp(rootMove.position.x, -5600, 5600);
             rootMove.position.z = clamp(rootMove.position.z, -4700, 4700);
-            rootMove.position.y =
-              terrainHeight(rootMove.position.x, rootMove.position.z) + 0.02;
+            {
+              const pushed = pushOutOfPlayerHomeOval(
+                rootMove.position.x,
+                rootMove.position.z,
+                playerHomeX,
+                playerHomeZ,
+                homeGerLevelMapRef.current,
+              );
+              if (pushed.pushed) {
+                rootMove.position.x = pushed.x;
+                rootMove.position.z = pushed.z;
+                hv.multiplyScalar(0.68);
+              }
+            }
+            {
+              const rawG = terrainHeightFeet(
+                rootMove.position.x,
+                rootMove.position.z,
+                rootMove.rotation.y,
+              );
+              const targetY = rawG + 0.02;
+              const prev = heroGroundYRef.current;
+              const gy =
+                prev == null
+                  ? targetY
+                  : prev + (targetY - prev) * (1 - Math.exp(-26 * dt));
+              heroGroundYRef.current = gy;
+              rootMove.position.y = gy;
+            }
 
             const targetYaw = Math.atan2(worldDir.x, worldDir.z);
             let dy = targetYaw - rootMove.rotation.y;
@@ -1078,11 +1176,18 @@ export function useThreeScene({
             rootMove.rotation.y += dy * (1 - Math.exp(-14 * delta));
 
             if (!heroEmotePlayingRef.current) {
-              playMove(wantsRun ? "run" : "walk", 0.12);
+              const wantLoco: "run" | "walk" = runAnimMode ? "run" : "walk";
+              if (wantLoco !== lastLocomotionAnimRef.current) {
+                playMove(wantLoco, 0.12);
+                lastLocomotionAnimRef.current = wantLoco;
+              }
             }
           } else {
             if (!heroEmotePlayingRef.current) {
-              playMove("idle", 0.18);
+              if (lastLocomotionAnimRef.current !== "idle") {
+                playMove("idle", 0.18);
+                lastLocomotionAnimRef.current = "idle";
+              }
             }
           }
 
@@ -1092,6 +1197,8 @@ export function useThreeScene({
         } else {
           heroKinematicRef.current.has = false;
         }
+
+        const runSForCam = runIntentSmoothedRef.current;
 
         let followSmooth = cameraState.isDragging ? 18 : 9;
         const rootCam = heroRootRef.current;
@@ -1110,7 +1217,7 @@ export function useThreeScene({
               p = new THREE.Vector3(tx, eyeY, tz);
               heroCamPivotSmoothedRef.current = p;
             } else {
-              const pivotRate = klenInput > 0.01 ? (wantsRun ? 60 : 50) : 40;
+              const pivotRate = klenInput > 0.01 ? 50 + runSForCam * 10 : 40;
               const a = 1 - Math.exp(-pivotRate * dt);
               p.x += (tx - p.x) * a;
               p.y += (eyeY - p.y) * a;
@@ -1121,7 +1228,7 @@ export function useThreeScene({
             if (klenInput > 0.01) {
               cameraState.currentLook.copy(p);
             }
-            followSmooth = cameraState.isDragging ? 24 : wantsRun ? 55 : 45;
+            followSmooth = cameraState.isDragging ? 24 : 45 + runSForCam * 10;
           }
         }
         const smoothPos = 1 - Math.exp(-followSmooth * dt);
@@ -1255,6 +1362,10 @@ export function useThreeScene({
             const ud = av.userData as {
               remoteHeroPath?: string;
               remoteLoadGen?: number;
+              remotePosSmooth?: RemotePosSmooth;
+              remoteAnimPrevX?: number;
+              remoteAnimPrevZ?: number;
+              remoteAnimSpeedEma?: number;
             };
             const slot = av.getObjectByName("remote_hero_slot") as THREE.Group;
             const fallback = av.getObjectByName(
@@ -1263,6 +1374,9 @@ export function useThreeScene({
             if (ud.remoteHeroPath !== wantPath) {
               ud.remoteHeroPath = wantPath;
               ud.remoteLoadGen = (ud.remoteLoadGen ?? 0) + 1;
+              ud.remoteAnimPrevX = undefined;
+              ud.remoteAnimPrevZ = undefined;
+              ud.remoteAnimSpeedEma = undefined;
               const gen = ud.remoteLoadGen;
               clearRemoteHeroSlot(slot);
               fallback.visible = true;
@@ -1281,6 +1395,24 @@ export function useThreeScene({
                       c.receiveShadow = true;
                     }
                   });
+                  const ext = await loadHeroClips(MAP_PRESENCE_MOVE_FBX);
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  const MIN_MOVE_BONES = 8;
+                  const MIN_WALK_BONES = 5;
+                  const MIN_EMBEDDED_IDLE_BONES = 3;
+                  const retargeted: HeroClips = {};
+                  for (const [name, clip] of Object.entries(ext)) {
+                    if (name === "idle") continue;
+                    const r = retargetClipToSkeleton(clip, root);
+                    const minB =
+                      name === "walk" || name === "run" ? MIN_WALK_BONES : MIN_MOVE_BONES;
+                    if (countClipTracksBindingToRig(r, root) >= minB) {
+                      retargeted[name] = r;
+                    }
+                  }
                   const embeddedIdle = pickClip(embeddedClips, [
                     "idle",
                     "stand",
@@ -1290,29 +1422,51 @@ export function useThreeScene({
                   let idleClip: THREE.AnimationClip | undefined;
                   if (embeddedIdle) {
                     const r = retargetClipToSkeleton(embeddedIdle, root);
-                    if (countClipTracksBindingToRig(r, root) >= 3) {
+                    if (
+                      countClipTracksBindingToRig(r, root) >=
+                      MIN_EMBEDDED_IDLE_BONES
+                    ) {
                       idleClip = r;
                     }
                   }
-                  if (disposed || ud.remoteLoadGen !== gen) {
-                    disposeMeshSubtree(root);
-                    return;
+                  if (!idleClip && ext.idle) {
+                    const r = retargetClipToSkeleton(ext.idle, root);
+                    if (countClipTracksBindingToRig(r, root) >= MIN_MOVE_BONES) {
+                      idleClip = r;
+                    }
                   }
-                  if (idleClip) {
-                    const retargeted: HeroClips = { idle: idleClip };
-                    const { mixer, play } = createHeroAnimator(
-                      root,
-                      retargeted,
-                    );
+                  if (idleClip) retargeted.idle = idleClip;
+                  if (!retargeted.idle) {
                     if (disposed || ud.remoteLoadGen !== gen) {
-                      mixer.stopAllAction();
                       disposeMeshSubtree(root);
                       return;
                     }
-                    remoteHeroMixers.add(mixer);
-                    slot.userData.remoteHeroMixer = mixer;
-                    play("idle", 0);
+                    if (!disposed && ud.remoteLoadGen === gen) {
+                      fallback.visible = true;
+                    }
+                    disposeMeshSubtree(root);
+                    return;
                   }
+                  const { mixer, play, actions } = createHeroAnimator(
+                    root,
+                    retargeted,
+                    { loopNames: ["idle", "walk", "run"] },
+                  );
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    mixer.stopAllAction();
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  remoteHeroMixers.add(mixer);
+                  slot.userData.remoteHeroMixer = mixer;
+                  (
+                    slot.userData as {
+                      remoteHeroPlay?: (n: string, f?: number) => void;
+                      remoteHeroAnimActions?: Map<string, THREE.AnimationAction>;
+                    }
+                  ).remoteHeroPlay = play;
+                  slot.userData.remoteHeroAnimActions = actions;
+                  play("idle", 0);
                   if (disposed || ud.remoteLoadGen !== gen) {
                     const mx = slot.userData.remoteHeroMixer as
                       | THREE.AnimationMixer
@@ -1322,6 +1476,10 @@ export function useThreeScene({
                       mx.stopAllAction();
                       slot.userData.remoteHeroMixer = undefined;
                     }
+                    (slot.userData as { remoteHeroPlay?: (n: string, f?: number) => void }).remoteHeroPlay =
+                      undefined;
+                    (slot.userData as { remoteHeroAnimActions?: unknown }).remoteHeroAnimActions =
+                      undefined;
                     disposeMeshSubtree(root);
                     return;
                   }
@@ -1334,18 +1492,96 @@ export function useThreeScene({
                 }
               })();
             }
-            const ground = terrainHeight(p.x, p.z);
-            av.position.set(p.x, ground + 0.02, p.z);
-            av.rotation.y = p.ry;
+            // Сүлжээ — цэгцгүй, ~4 Гц-ийн throttled pose: шууд set = хоцорсон алхам мэт. Гөлрүүлнэ.
+            let sm = ud.remotePosSmooth;
+            if (!sm) {
+              sm = { x: p.x, z: p.z, ry: p.ry };
+              ud.remotePosSmooth = sm;
+            } else {
+              const tP = 1 - Math.exp(-REMOTE_PEER_POS_RATE * dt);
+              sm.x += (p.x - sm.x) * tP;
+              sm.z += (p.z - sm.z) * tP;
+              let dyr = p.ry - sm.ry;
+              while (dyr > Math.PI) dyr -= Math.PI * 2;
+              while (dyr < -Math.PI) dyr += Math.PI * 2;
+              sm.ry += dyr * (1 - Math.exp(-REMOTE_PEER_ANG_RATE * dt));
+            }
+            const ground = terrainHeightFeet(sm.x, sm.z, sm.ry);
+            av.position.set(sm.x, ground + 0.02, sm.z);
+            av.rotation.y = sm.ry;
+            const rPlay = (
+              slot.userData as {
+                remoteHeroPlay?: (n: string, f?: number) => void;
+              }
+            ).remoteHeroPlay;
+            if (rPlay) {
+              const actMap = (
+                slot.userData as {
+                  remoteHeroAnimActions?: Map<string, THREE.AnimationAction>;
+                }
+              ).remoteHeroAnimActions;
+              if (
+                ud.remoteAnimPrevX === undefined ||
+                ud.remoteAnimPrevZ === undefined
+              ) {
+                ud.remoteAnimPrevX = sm.x;
+                ud.remoteAnimPrevZ = sm.z;
+                rPlay("idle", 0.1);
+                ud.remoteAnimSpeedEma = 0;
+                actMap?.get("idle")?.setEffectiveTimeScale(1);
+              } else {
+                const invDt = dt > 1e-6 ? 1 / dt : 0;
+                const px = ud.remoteAnimPrevX;
+                const pz = ud.remoteAnimPrevZ;
+                const vSmx = (sm.x - px) * invDt;
+                const vSmz = (sm.z - pz) * invDt;
+                ud.remoteAnimPrevX = sm.x;
+                ud.remoteAnimPrevZ = sm.z;
+                const speedFromSm = Math.hypot(vSmx, vSmz);
+                const distToNet = Math.hypot(p.x - sm.x, p.z - sm.z);
+                const speedFromChase = distToNet * REMOTE_ANIM_GAP_TO_SPEED;
+                const speed = Math.max(speedFromSm, speedFromChase);
+                const prevE = ud.remoteAnimSpeedEma ?? 0;
+                const ema =
+                  prevE + (speed - prevE) * REMOTE_ANIM_EMA;
+                ud.remoteAnimSpeedEma = ema;
+                let want: "idle" | "walk" | "run" = "idle";
+                if (ema >= 7.2) want = "run";
+                else if (ema >= 0.3) want = "walk";
+                rPlay(want, 0.1);
+                if (actMap) {
+                  for (const n of ["idle", "walk", "run"] as const) {
+                    const a = actMap.get(n);
+                    if (!a) continue;
+                    if (n === want) {
+                      if (n === "walk") {
+                        a.setEffectiveTimeScale(
+                          clamp(0.62 + ema * 0.085, 0.64, 1.34),
+                        );
+                      } else if (n === "run") {
+                        a.setEffectiveTimeScale(
+                          clamp(0.76 + ema * 0.04, 0.82, 1.45),
+                        );
+                      } else {
+                        a.setEffectiveTimeScale(1);
+                      }
+                    } else {
+                      a.setEffectiveTimeScale(1);
+                    }
+                  }
+                }
+              }
+            }
             builderRef.current?.syncRemoteVisitorCamp(
               remotePeerGroup,
               p.id,
-              p.x,
-              p.z,
-              p.ry,
+              sm.x,
+              sm.z,
+              sm.ry,
               remoteCampById,
               remoteEnclosureById,
               {
+                homeKey: p.homeKey?.trim() || undefined,
                 gerLevel: p.gerLevel ?? 1,
                 livestock: p.livestock ?? {
                   sheep: 0,

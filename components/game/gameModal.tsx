@@ -40,6 +40,7 @@ import { playButtonClick } from "@/lib/uiSounds";
 import { useMatchRoom } from "@/hooks/useMatchRoom";
 import { MultiplayerMatchPanel } from "./MultiplayerMatchPanel";
 import { deriveStationGameMatchCode } from "@/lib/stationMatchCode";
+import { GameModalHowToBanner } from "./gameModalHowToBanner";
 
 interface GameModalProps {
   isOpen: boolean;
@@ -413,6 +414,7 @@ export default function GameModal({
             />
           ) : null}
           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <GameModalHowToBanner gameType={gameType} />
           {gameType === "shagai" && (
             <ShagaiGame
               onComplete={(r, pct) => void submit(r, pct)}

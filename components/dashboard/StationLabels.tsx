@@ -143,7 +143,7 @@ export function StationLabels({
                 className={cn(
                   "relative flex items-center gap-1 rounded-full border backdrop-blur-sm transition-all duration-200 whitespace-nowrap",
                   isPlayerHome &&
-                    "px-2.5 py-1.5 rounded-xl border border-sky-400/85 bg-gradient-to-br from-sky-950/95 via-cyan-950/90 to-slate-950/95 text-sky-50 text-xs shadow-[0_0_24px_rgba(56,189,248,0.35),0_8px_20px_rgba(0,0,0,0.45)] ring-1 ring-sky-400/35 ring-offset-1 ring-offset-black/50",
+                    "map-label-home px-2.5 py-1.5 rounded-xl text-xs",
                   !isPlayerHome && isLocked
                     ? "px-2.5 py-1 text-xs font-semibold bg-zinc-950/80 border-zinc-600/50 text-zinc-500 scale-95 shadow-lg"
                     : !isPlayerHome && isCurrent
@@ -174,8 +174,8 @@ export function StationLabels({
                 )}
                 {isPlayerHome && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
-                    <span className="absolute inset-0 rounded-full bg-sky-400 animate-ping opacity-70" />
-                    <span className="absolute inset-0 rounded-full bg-sky-300" />
+                    <span className="map-home-ping absolute inset-0 rounded-full animate-ping opacity-70" />
+                    <span className="absolute inset-0 rounded-full bg-[color:var(--map-sky)]" />
                   </span>
                 )}
                 {!isPlayerHome && isCurrent && (
@@ -206,10 +206,11 @@ export function StationLabels({
                         {homeTitle}
                       </span>
                       {homeSub ? (
-                        <span
-                          className="text-[9px] font-medium text-sky-200/90 max-w-[200px] leading-snug"
-                          title={homeSub}
-                        >
+                <span
+                  className="text-[9px] font-medium max-w-[200px] leading-snug"
+                  style={{ color: "var(--map-fog)" }}
+                  title={homeSub}
+                >
                           {homeSub}
                         </span>
                       ) : null}
@@ -249,7 +250,7 @@ export function StationLabels({
                   "border-l-[4px] border-r-[4px] border-t-[6px]",
                   "border-l-transparent border-r-transparent",
                   isPlayerHome
-                    ? "border-t-sky-400"
+                    ? "border-t-[color:var(--map-fog)]"
                     : isLocked
                       ? "border-t-zinc-600/60"
                       : isCurrent

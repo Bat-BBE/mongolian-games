@@ -22,6 +22,7 @@ import type { KnockBurst } from "./shagaiSevenKnock";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import InventoryRewardOverlay from "./InventoryRewardOverlay";
+import { playHandPush } from "@/lib/uiSounds";
 
 export type ShagaiSevenGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -118,21 +119,24 @@ const START_POSITIONS: [number, number, number][] = (() => {
   return out;
 })();
 
-function getThrowParams(): {
+function getThrowParams(i: number): {
   vel: [number, number, number];
   angVel: [number, number, number];
 } {
-  const spread = 2.8;
+  const spread = 2.75;
+  const handDirX = (Math.random() - 0.5) * 0.55;
+  const handDirZ = 0.15 + (Math.random() - 0.5) * 0.5;
+  const yImpulse = 5.4 + Math.random() * 4.4;
   return {
     vel: [
-      (Math.random() - 0.5) * spread * 2,
-      6 + Math.random() * 4,
-      (Math.random() - 0.5) * spread * 2,
+      (Math.random() - 0.5) * spread * 2 + handDirX,
+      yImpulse,
+      (Math.random() - 0.5) * spread * 2 + handDirZ,
     ],
     angVel: [
-      (Math.random() - 0.5) * 22,
-      (Math.random() - 0.5) * 18,
-      (Math.random() - 0.5) * 22,
+      (Math.random() - 0.5) * 24 * (1 + i * 0.02),
+      (Math.random() - 0.5) * 19 * (1 + i * 0.015),
+      (Math.random() - 0.5) * 24 * (1 + i * 0.02),
     ],
   };
 }
@@ -213,7 +217,8 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
     ReturnType<typeof getThrowParams>[]
-  >(() => Array.from({ length: SEVEN_COUNT }, () => getThrowParams()));
+  >(() => Array.from({ length: SEVEN_COUNT }, (_, i) => getThrowParams(i)));
+  const windupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>(() =>
     Array.from({ length: SEVEN_COUNT }, () => null),
   );
@@ -283,10 +288,22 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
   } | null>(null);
   const [collectedSides, setCollectedSides] = useState<ShagaiSide[]>([]);
 
+  const clearWindup = useCallback(() => {
+    if (windupTimerRef.current) {
+      clearTimeout(windupTimerRef.current);
+      windupTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearWindup(), [clearWindup]);
+
   const resetRound = useCallback(() => {
+    clearWindup();
     setPhase("idle");
     setIsThrown(false);
-    setThrowParams(Array.from({ length: SEVEN_COUNT }, () => getThrowParams()));
+    setThrowParams(
+      Array.from({ length: SEVEN_COUNT }, (_, i) => getThrowParams(i)),
+    );
     settledRef.current = Array.from({ length: SEVEN_COUNT }, () => null);
     settledCount.current = 0;
     resultSentRef.current = false;
@@ -311,11 +328,13 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
     setTakePick(null);
     completeRef.current = false;
     resetGrants();
-  }, [resetGrants]);
+  }, [resetGrants, clearWindup]);
 
   const startThrow = useCallback(() => {
     resetGrants();
-    setThrowParams(Array.from({ length: SEVEN_COUNT }, () => getThrowParams()));
+    setThrowParams(
+      Array.from({ length: SEVEN_COUNT }, (_, i) => getThrowParams(i)),
+    );
     settledRef.current = Array.from({ length: SEVEN_COUNT }, () => null);
     settledCount.current = 0;
     resultSentRef.current = false;
@@ -346,12 +365,19 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
 
   const handleThrow = useCallback(() => {
     if (phase !== "idle" && phase !== "won" && phase !== "lost") return;
-    startThrow();
-  }, [phase, startThrow]);
+    clearWindup();
+    setPhase("winding_up");
+    playHandPush(0.38);
+    windupTimerRef.current = setTimeout(() => {
+      windupTimerRef.current = null;
+      startThrow();
+    }, 540);
+  }, [phase, startThrow, clearWindup]);
 
   const handleReset = useCallback(() => {
+    clearWindup();
     resetRound();
-  }, [resetRound]);
+  }, [resetRound, clearWindup]);
 
   const onPiecePosition = useCallback(
     (id: number, pos: [number, number, number]) => {
@@ -594,6 +620,7 @@ export default function ShagaiSevenGame({ onComplete }: ShagaiSevenGameProps) {
   const orbitLocked =
     pathPickActive ||
     pathDrawingActive ||
+    phase === "winding_up" ||
     phase === "knock_settling" ||
     collectAnim !== null;
 

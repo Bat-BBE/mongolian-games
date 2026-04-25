@@ -4,6 +4,94 @@
 @tailwind components;
 @tailwind utilities;
 
+/** Газрын full-bleed — 3D той хол суурилсан сүүдэрт дэвсгэр (a11y: текст overlay дээр) */
+.map-area-root {
+  background: linear-gradient(
+    168deg,
+    var(--map-sky) 0%,
+    var(--map-horizon) 42%,
+    oklch(0.2 0.04 70) 100%
+  );
+}
+
+.map-ui-surface {
+  color: var(--map-ui-text);
+  background: var(--map-ui-surface-2);
+  border: 1px solid var(--map-ui-border);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  backdrop-filter: blur(12px);
+}
+
+.map-ui-fab {
+  color: var(--map-ui-text);
+  border: 1px solid var(--map-ui-border-bright);
+  background: color-mix(in srgb, var(--map-ui-surface) 65%, transparent);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px);
+}
+.map-ui-fab:hover {
+  background: color-mix(in srgb, var(--map-ui-surface) 80%, rgba(255, 255, 255, 0.08));
+  border-color: var(--map-ui-border);
+}
+
+.map-ui-ghost-btn {
+  color: var(--map-ui-text);
+  border: 1px solid var(--map-ui-border-subtle);
+  background: rgba(255, 255, 255, 0.08);
+}
+.map-ui-ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--map-ui-border);
+}
+
+.map-joystick-base {
+  border-color: var(--map-ui-border-bright);
+  background: color-mix(in srgb, var(--map-ui-surface) 55%, transparent);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+}
+.map-joystick-inner {
+  border: 1px solid var(--map-ui-border-subtle);
+  background: rgba(255, 255, 255, 0.06);
+}
+.map-joystick-knob {
+  border: 1px solid var(--map-ui-border-bright);
+  background: color-mix(in srgb, var(--map-fog) 40%, white 8%);
+}
+
+.map-station-card :where(p, span).text-muted-foreground,
+.map-station-card .text-muted-foreground {
+  color: var(--map-ui-text-muted);
+}
+.map-station-card h4.text-foreground,
+.map-station-card .text-foreground {
+  color: var(--map-ui-text);
+}
+
+.map-label-home {
+  color: var(--map-ui-text);
+  border-color: var(--map-ui-border-bright);
+  background: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--map-sky) 12%, #0a1020) 0%,
+    var(--map-ui-surface) 100%
+  );
+  box-shadow:
+    0 0 0 1px var(--map-home-ring),
+    0 0 20px color-mix(in srgb, var(--map-sky) 28%, transparent),
+    0 8px 20px rgba(0, 0, 0, 0.4);
+}
+.map-home-ping {
+  background: var(--map-sky);
+}
+
+.map-hud-pill {
+  color: var(--map-ui-text);
+  background: var(--map-ui-surface);
+  border: 1px solid var(--map-ui-border);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 
@@ -93,6 +181,19 @@
   --gold-light:    #EDD98A;
   --gold-pale:     #F5EBCA;
   --gold-dark:     #9A7420;
+  /* Газрын 3D canvas (MAP_SCENE) + floating UI — нэг пастел тэнгэр/манан */
+  --map-sky:       #92c4e8;
+  --map-fog:       #b8d0e8;
+  --map-horizon:   color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
+  --map-ui-border: rgba(130, 185, 220, 0.38);
+  --map-ui-border-subtle: rgba(130, 185, 220, 0.22);
+  --map-ui-border-bright: rgba(190, 220, 245, 0.45);
+  --map-ui-surface: rgba(10, 18, 30, 0.9);
+  --map-ui-surface-2: rgba(12, 24, 40, 0.94);
+  --map-ui-text: rgba(232, 244, 252, 0.97);
+  --map-ui-text-muted: rgba(165, 195, 220, 0.9);
+  --map-overlay-scrim: rgba(5, 10, 18, 0.5);
+  --map-home-ring: rgba(100, 200, 255, 0.42);
   --crimson:       #8B0000;
   --crimson-mid:   #A01515;
   --bg-deep:       #0A0703;
@@ -154,6 +255,20 @@
   --glass-bg:     rgba(8, 6, 4, 0.70);
   --glass-border: rgba(201, 168, 76, 0.16);
   --glass-shadow: 0 8px 40px 0 rgba(0,0,0,0.75);
+
+  /* Газар: гэрэл/3D ижил (өдрийн тэнгэр) */
+  --map-sky:       #92c4e8;
+  --map-fog:       #b8d0e8;
+  --map-horizon:   color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
+  --map-ui-border: rgba(130, 185, 220, 0.38);
+  --map-ui-border-subtle: rgba(130, 185, 220, 0.22);
+  --map-ui-border-bright: rgba(190, 220, 245, 0.45);
+  --map-ui-surface: rgba(10, 18, 30, 0.9);
+  --map-ui-surface-2: rgba(12, 24, 40, 0.94);
+  --map-ui-text: rgba(232, 244, 252, 0.97);
+  --map-ui-text-muted: rgba(165, 195, 220, 0.9);
+  --map-overlay-scrim: rgba(5, 10, 18, 0.5);
+  --map-home-ring: rgba(100, 200, 255, 0.42);
 }
 
 @layer base {
