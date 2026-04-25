@@ -75,6 +75,8 @@ interface UseThreeSceneOptions {
     ((x: number, z: number, ry: number) => void) | null
   >;
   remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
+  /** Бүжгийн сүлжээ — `useMapPresence` publishMapEmote */
+  onLocalMapEmote?: (emoteId: string) => void;
 }
 
 interface CameraTarget {
@@ -181,7 +183,11 @@ export function useThreeScene({
   paused = false,
   presencePublishRef,
   remotePeersRef,
+  onLocalMapEmote,
 }: UseThreeSceneOptions) {
+  const onLocalMapEmoteRef = useRef(onLocalMapEmote);
+  onLocalMapEmoteRef.current = onLocalMapEmote;
+
   const [labelPositions, setLabelPositions] = useState<
     Record<string, LabelPos>
   >({});
@@ -411,6 +417,7 @@ export function useThreeScene({
         undefined;
       (slot.userData as { remoteHeroAnimActions?: unknown })
         .remoteHeroAnimActions = undefined;
+      (slot.userData as { remoteEmoteSt?: unknown }).remoteEmoteSt = undefined;
       while (slot.children.length > 0) {
         const c = slot.children[0]!;
         slot.remove(c);
@@ -647,6 +654,7 @@ export function useThreeScene({
               if (!loadedEmoteSet.has(id)) return;
               heroEmotePlayingRef.current = true;
               heroPlayRef.current(id, 0.22);
+              onLocalMapEmoteRef.current?.(id);
             };
             setMapHeroEmoteIds([...emoteIds]);
             const dh = builder.doorAnchors.get("home");
@@ -1366,6 +1374,7 @@ export function useThreeScene({
               remoteAnimPrevX?: number;
               remoteAnimPrevZ?: number;
               remoteAnimSpeedEma?: number;
+              remoteLastEmoteGen?: number;
             };
             const slot = av.getObjectByName("remote_hero_slot") as THREE.Group;
             const fallback = av.getObjectByName(
@@ -1377,6 +1386,7 @@ export function useThreeScene({
               ud.remoteAnimPrevX = undefined;
               ud.remoteAnimPrevZ = undefined;
               ud.remoteAnimSpeedEma = undefined;
+              ud.remoteLastEmoteGen = undefined;
               const gen = ud.remoteLoadGen;
               clearRemoteHeroSlot(slot);
               fallback.visible = true;
@@ -1447,10 +1457,28 @@ export function useThreeScene({
                     disposeMeshSubtree(root);
                     return;
                   }
+                  const optClips = await loadHeroClipsOptional(MAP_EMOTE_CLIP_FILES);
+                  if (disposed || ud.remoteLoadGen !== gen) {
+                    disposeMeshSubtree(root);
+                    return;
+                  }
+                  const MIN_EMOTE_B = 5;
+                  for (const [name, clip] of Object.entries(optClips)) {
+                    const r = retargetClipToSkeleton(clip, root);
+                    if (countClipTracksBindingToRig(r, root) >= MIN_EMOTE_B) {
+                      retargeted[name] = r;
+                    }
+                  }
+                  const remoteEmoteSt = { active: false };
                   const { mixer, play, actions } = createHeroAnimator(
                     root,
                     retargeted,
-                    { loopNames: ["idle", "walk", "run"] },
+                    {
+                      loopNames: ["idle", "walk", "run"],
+                      onFiniteEnd: () => {
+                        remoteEmoteSt.active = false;
+                      },
+                    },
                   );
                   if (disposed || ud.remoteLoadGen !== gen) {
                     mixer.stopAllAction();
@@ -1466,6 +1494,8 @@ export function useThreeScene({
                     }
                   ).remoteHeroPlay = play;
                   slot.userData.remoteHeroAnimActions = actions;
+                  (slot.userData as { remoteEmoteSt: { active: boolean } }).remoteEmoteSt =
+                    remoteEmoteSt;
                   play("idle", 0);
                   if (disposed || ud.remoteLoadGen !== gen) {
                     const mx = slot.userData.remoteHeroMixer as
@@ -1479,6 +1509,8 @@ export function useThreeScene({
                     (slot.userData as { remoteHeroPlay?: (n: string, f?: number) => void }).remoteHeroPlay =
                       undefined;
                     (slot.userData as { remoteHeroAnimActions?: unknown }).remoteHeroAnimActions =
+                      undefined;
+                    (slot.userData as { remoteEmoteSt?: unknown }).remoteEmoteSt =
                       undefined;
                     disposeMeshSubtree(root);
                     return;
@@ -1514,7 +1546,28 @@ export function useThreeScene({
                 remoteHeroPlay?: (n: string, f?: number) => void;
               }
             ).remoteHeroPlay;
-            if (rPlay) {
+            const remoteEmoteSt = (
+              slot.userData as { remoteEmoteSt?: { active: boolean } }
+            ).remoteEmoteSt;
+            if (p.emoteGen > 0 && p.emote && rPlay) {
+              const am = (
+                slot.userData as {
+                  remoteHeroAnimActions?: Map<string, THREE.AnimationAction>;
+                }
+              ).remoteHeroAnimActions;
+              const have = am?.has(p.emote) ?? false;
+              const lastE = ud.remoteLastEmoteGen;
+              if (lastE === undefined) {
+                ud.remoteLastEmoteGen = p.emoteGen;
+              } else if (p.emoteGen !== lastE) {
+                ud.remoteLastEmoteGen = p.emoteGen;
+                if (p.emote !== "idle" && have) {
+                  if (remoteEmoteSt) remoteEmoteSt.active = true;
+                  rPlay(p.emote, 0.22);
+                }
+              }
+            }
+            if (rPlay && !remoteEmoteSt?.active) {
               const actMap = (
                 slot.userData as {
                   remoteHeroAnimActions?: Map<string, THREE.AnimationAction>;
