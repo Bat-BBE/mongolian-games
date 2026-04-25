@@ -23,9 +23,13 @@ type Peer = {
   homeKey: string;
   gerLevel: number;
   livestock: PresenceLivestock;
+  /** `components/dashboard/useThreeScene` MAP_EMOTE_CLIP_FILES-ийн түлхүүрүүд */
+  emote: string;
+  emoteGen: number;
   ws: WebSocket;
   last: PresencePose | null;
   lastSentServer: number;
+  lastEmoteServer: number;
 };
 
 const DEFAULT_HERO_PATH = "/models/hero-22.fbx";
@@ -33,8 +37,17 @@ const MAX_HERO_PATH_LEN = 280;
 const MAX_HOME_KEY_LEN = 200;
 
 const POSE_MIN_INTERVAL_MS = 240;
+/** Ижил эмож дахин дарах, спам */
+const EMOTE_MIN_INTERVAL_MS = 420;
 const MAX_DISPLAY = 36;
 const CLAMP = 6500;
+
+const ALLOWED_MAP_EMOTES = new Set([
+  "boxing",
+  "booty",
+  "praying",
+  "silly_dance",
+]);
 
 const ZERO_LS: PresenceLivestock = {
   sheep: 0,
@@ -107,6 +120,8 @@ function wirePeerRow(p: Peer): Record<string, unknown> {
   if (p.homeKey) {
     row.homeKey = p.homeKey;
   }
+  row.emote = p.emote;
+  row.emoteGen = p.emoteGen;
   return row;
 }
 
@@ -157,9 +172,12 @@ export class MapPresenceHub {
       homeKey: "",
       gerLevel: 1,
       livestock: { ...ZERO_LS },
+      emote: "",
+      emoteGen: 0,
       ws,
       last: null,
       lastSentServer: 0,
+      lastEmoteServer: 0,
     };
     this.peers.set(id, peer);
 
@@ -216,6 +234,19 @@ export class MapPresenceHub {
         rec.lastSentServer = now;
         const pose = clampPose({ x, z, ry });
         rec.last = pose;
+        this.broadcastPeerState(id);
+        return;
+      }
+
+      if (t === "emote") {
+        const rawEm =
+          typeof body.emote === "string" ? body.emote.slice(0, 32).trim() : "";
+        if (!rawEm || !ALLOWED_MAP_EMOTES.has(rawEm)) return;
+        const now = Date.now();
+        if (now - rec.lastEmoteServer < EMOTE_MIN_INTERVAL_MS) return;
+        rec.lastEmoteServer = now;
+        rec.emote = rawEm;
+        rec.emoteGen += 1;
         this.broadcastPeerState(id);
       }
     });
