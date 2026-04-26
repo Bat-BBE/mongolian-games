@@ -173,7 +173,6 @@ export default function HeroActor({
       plane.receiveShadow = true;
       scene.add(plane);
 
-      // Add character to scene
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;

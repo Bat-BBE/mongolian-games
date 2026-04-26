@@ -33,6 +33,7 @@ import {
 } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 
 const RELAY_CH = "horse_race_mp_v1";
 
@@ -517,16 +518,9 @@ export function HorseRaceOnlineLobby() {
           "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then host starts. 2–4: same track, first to
-          finish wins. 1: race vs bot.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → эзэн «Эхлүүлэх» (2–4). 1: «Роботтой эхлэх».
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

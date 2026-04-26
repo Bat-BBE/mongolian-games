@@ -13,6 +13,7 @@ import {
   LuRotateCcw as IconAgain,
 } from "react-icons/lu";
 import { MATCH_TIME_LIMIT_SEC } from "./memoryMatchType";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 
 type I18n = {
   title: string;
@@ -59,8 +60,7 @@ function useI18n(): I18n {
         progressLabel: "Явц",
         phasePlaying: "Тоглож байна",
         phaseReady: "Бэлэн",
-        mpWaitHint:
-          "Өрөөнд хүлээнэ — найз чинь ирэхэд хамт эхэлнэ. Ганцаараа бол ~10 секундын дараа самбар өөрөө нээгдэнэ.",
+        mpWaitHint: `${ONLINE_LOBBY_INTRO.mn} Найз нэгдэхэд хамт эхэлнэ; ганцаар ~10 с дараа самбар нээгдэнэ.`,
       };
     }
     return {
@@ -84,8 +84,7 @@ function useI18n(): I18n {
       progressLabel: "Progress",
       phasePlaying: "Playing",
       phaseReady: "Ready",
-      mpWaitHint:
-        "Waiting for the room — a friend can join to start together. If you're alone, the board opens in ~10s.",
+      mpWaitHint: `${ONLINE_LOBBY_INTRO.en} If a friend joins, you start together; if you’re alone, the board opens in ~10s.`,
     };
   }, [language]);
 }

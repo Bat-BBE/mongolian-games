@@ -15,6 +15,7 @@ import {
 } from "./fourPowersType";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 
 const RELAY = "four_powers_mp_v1";
 
@@ -65,18 +66,9 @@ export function FourPowersOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then host starts. 2–4 players; extra seats
-          are bots. First to 7 points wins. Turn off Online to play alone vs
-          bots.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд бэлэн → эзэн «Эхлүүлэх». 2–4 тоглогч; сул байрлалд
-          бот. 7 оноо — ялалт. Ганцаар: Online унтраана.
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

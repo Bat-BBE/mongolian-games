@@ -15,6 +15,7 @@ import {
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 import { useApp } from "@/components/AppContext";
 
 const RELAY_CH = "stone_mp_v1";
@@ -135,17 +136,9 @@ export function StoneGameOnlineLobby() {
         background: "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then the host starts. Two players: PvP. Alone:
-          «Start vs bot».
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → эзэн «Эхлүүлэх» (2 хүн). 1-ээр: «Роботтой
-          эхлэх».
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

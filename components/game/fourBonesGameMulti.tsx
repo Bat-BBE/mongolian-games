@@ -32,6 +32,7 @@ import {
 } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 
 const RELAY_CH = "four_bones_mp_v1";
 
@@ -316,16 +317,9 @@ export function FourBonesOnlineLobby() {
           "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then the host starts. 2–4: turn order to 30 pts.
-          Alone: start vs bot.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → эзэн «Эхлүүлэх» (2–4). 1: «Роботтой эхлэх».
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

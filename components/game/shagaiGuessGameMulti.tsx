@@ -18,6 +18,7 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 
 const RELAY_CH = "shagai_guess_mp_v1";
 
@@ -94,17 +95,9 @@ export function ShagaiGuessOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then host starts. Two players: same rules as
-          local. 1: play vs the robot in solo mode.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → эзэн «Эхлүүлэх» (2 хүн). 1-ээр ганцаарчлах
-          (роботтой) боломжтой.
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

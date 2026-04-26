@@ -5,7 +5,10 @@ import { useApp } from "@/components/AppContext";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { makeRng, rollTriple, ROUNDS_TO_WIN, sum3 } from "./woodenDiceType";
+import { TripleDiceReadout } from "./woodenDiceReadout";
 import { WoodenDiceSceneCanvas } from "./woodenDiceScene";
+import { playWoodenDiceRoll } from "@/lib/uiSounds";
+import { GameResultEndOverlay } from "./GameResultEndOverlay";
 
 type T = [number, number, number];
 
@@ -24,6 +27,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
   const [lb, setLb] = useState<T | null>(null);
   const [spin, setSpin] = useState(false);
   const [done, setDone] = useState(false);
+  const [outcome, setOutcome] = useState<"win" | "lose" | null>(null);
   const seed = useRef(Math.floor(Math.random() * 0x7fffffff) | 0);
   const completeOnce = useRef(false);
 
@@ -31,6 +35,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
     if (done) return;
     if (sP >= ROUNDS_TO_WIN) {
       setDone(true);
+      setOutcome("win");
       if (!completeOnce.current) {
         completeOnce.current = true;
         grant({ coins: STONE_ROUND_COINS });
@@ -40,6 +45,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
     }
     if (sB >= ROUNDS_TO_WIN) {
       setDone(true);
+      setOutcome("lose");
       if (!completeOnce.current) {
         completeOnce.current = true;
         onComplete?.(
@@ -52,6 +58,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
 
   const runRound = useCallback(() => {
     if (done || spin) return;
+    playWoodenDiceRoll();
     setSpin(true);
     setLa(null);
     setLb(null);
@@ -72,9 +79,22 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
     }, 1500);
   }, [done, round, spin]);
 
+  const n = ROUNDS_TO_WIN;
+  const winTitle =
+    loc === "mn" ? `🎉 Яллаа — эхний ${n} оноо` : `🎉 You won — first to ${n}`;
+  const loseTitle = loc === "mn" ? "⏱ Хожигдлоо" : "⏱ You lost";
+  const subWin =
+    loc === "mn"
+      ? "Тоглолт дууслаа. Модал удахгүй хаагдана."
+      : "Match finished. The window will close in a moment.";
+  const subLose =
+    loc === "mn"
+      ? "Өрсөлдөгч түрүүллээ. Модал удахгүй хаагдана."
+      : "Your opponent won. The window will close in a moment.";
+
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-col"
+      className="relative flex h-full min-h-0 w-full flex-col"
       style={{ background: "#080604" }}
     >
       <div className="shrink-0 px-3 py-1 text-center">
@@ -86,8 +106,8 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
         </h2>
         <p className="text-[10px] text-amber-100/88">
           {loc === "mn"
-            ? "3 шоо нэг удаа: таны 3-ын нийлбэр > эсрэгийх бол тэр раунд таны 1 оноо. 5 ийм раунд = ялалт."
-            : "Three dice at once: if your sum of three is higher, you win that round. First to 5 round-wins takes the match."}
+            ? "3 шоо нэг удаа. Зүүн/баруун: таны / өрсөлдөгчийн 3 + нийлбэр. Төвд: 3D. Доор: шидэх. 5 раунд."
+            : "3 dice. Left & right: your/foe faces + total. Center: 3D. Roll at bottom. First to 5."}
         </p>
         <details
           className="mx-auto mt-1 max-w-sm rounded border border-amber-500/20 bg-black/25 px-2 py-1 text-left"
@@ -104,8 +124,8 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
             </li>
             <li>
               {loc === "mn"
-                ? "3D зөвхөн хөдөлгөөн; оноо нь зөвхөн 1–6-ын гурвын нийлбэр (3–18)."
-                : "3D is just visuals; the game only compares the two triples of 1–6 (sums 3–18)."}
+                ? "3D нь нүдтэй: тогтсоноор дээд тал нь шидэлтийн 1…6-ын нэг. Доор: ижил 3-ын нийлбэр, нэвт (3–18)."
+                : "3D dice have pips; at rest, the top face is your roll, matching the readout. Totals compare the two 3-dice sums (3–18)."}
             </li>
             <li>
               {loc === "mn"
@@ -123,26 +143,41 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
           </span>
         </div>
       </div>
-      <div className="relative min-h-0 w-full flex-1">
-        <WoodenDiceSceneCanvas spin={spin} />
-        <div className="pointer-events-none absolute inset-0 flex items-end justify-center gap-8 pb-2 sm:pb-3">
-          <div className="w-20 text-center">
-            <p className="text-[9px] uppercase text-slate-500">
-              {loc === "mn" ? "Та" : "You"}
-            </p>
-            <p className="text-2xl font-bold text-sky-200 tabular-nums">
-              {la ? sum3(la) : "—"}
-            </p>
-            <p className="text-[9px] text-slate-600">{la ? la.join(" · ") : ""}</p>
+      <div className="flex min-h-0 w-full flex-1 flex-col">
+        <div
+          className="flex min-h-0 flex-1 flex-row items-stretch gap-0.5 px-0.5 sm:gap-1.5 sm:px-1"
+          style={{ minHeight: "clamp(11rem, 28vh, 100%)" }}
+        >
+          <div className="flex w-[28%] max-w-[6.5rem] min-w-0 shrink-0 sm:max-w-[7.5rem]">
+            <TripleDiceReadout
+              triple={la}
+              label={loc === "mn" ? "Та" : "You"}
+              sumLabel={loc === "mn" ? "Нийлбэр" : "Total"}
+              sum={spin || !la ? null : sum3(la)}
+              dieLabels={["1", "2", "3"]}
+              tone="sky"
+              spinning={spin}
+              compact
+            />
           </div>
-          <div className="w-20 text-center">
-            <p className="text-[9px] uppercase text-slate-500">
-              {loc === "mn" ? "Өрсөлдөгч" : "Foe"}
-            </p>
-            <p className="text-2xl font-bold text-rose-200/95 tabular-nums">
-              {lb ? sum3(lb) : "—"}
-            </p>
-            <p className="text-[9px] text-slate-600">{lb ? lb.join(" · ") : ""}</p>
+          <div className="min-h-0 min-w-0 flex-1">
+            <WoodenDiceSceneCanvas
+              spin={spin}
+              leftTriple={la ?? [1, 1, 1]}
+              rightTriple={lb ?? [1, 1, 1]}
+            />
+          </div>
+          <div className="flex w-[28%] max-w-[6.5rem] min-w-0 shrink-0 sm:max-w-[7.5rem]">
+            <TripleDiceReadout
+              triple={lb}
+              label={loc === "mn" ? "Өрсөлдөгч" : "Foe"}
+              sumLabel={loc === "mn" ? "Нийлбэр" : "Total"}
+              sum={spin || !lb ? null : sum3(lb)}
+              dieLabels={["1", "2", "3"]}
+              tone="rose"
+              spinning={spin}
+              compact
+            />
           </div>
         </div>
       </div>
@@ -158,6 +193,14 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
           </button>
         </div>
       )}
+
+      <GameResultEndOverlay
+        outcome={outcome}
+        winTitle={winTitle}
+        loseTitle={loseTitle}
+        subWin={subWin}
+        subLose={subLose}
+      />
     </div>
   );
 }

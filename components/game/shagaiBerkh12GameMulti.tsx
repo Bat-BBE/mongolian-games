@@ -30,6 +30,7 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 import { Berkh12GameScene, PhysicsFloor } from "./shagaiBerkh12Game";
 
 const REL = "berkh_12_mp_v1";
@@ -84,17 +85,9 @@ export function ShagaiBerkh12OnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — set Ready, then the host starts. 2–4 players, 12
-          shagai per throw. Host is the first to throw.
-        </span>
-      ) : (
-        <span>
-          Өрөө — бүгд бэлэн, эзэн эхлүүлнэ. 2–4 тоглогч, нэг удаа 12 шагай. Эзэн
-          нь эхнийх.
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }

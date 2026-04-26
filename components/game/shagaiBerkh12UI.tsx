@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type CSSProperties } from "react";
 import { useApp } from "@/components/AppContext";
 import {
   BERKH12_MAX_TURNS,
@@ -8,7 +9,21 @@ import {
 } from "./shagaiBerkh12Type";
 import type { ShagaiSide } from "./shagai";
 import { SHAgAI_SIDES } from "./shagai";
-import type { Berkh12Mode, Berkh12Phase, LocalPlayerCount } from "./shagaiBerkh12Type";
+import type {
+  Berkh12Mode,
+  Berkh12Phase,
+  LocalPlayerCount,
+} from "./shagaiBerkh12Type";
+import {
+  SHAGAI_GAME_PANEL_BASE,
+  gamePanelLeftDesktop,
+  gamePanelPlayNarrowBottom,
+  gamePanelRightDesktop,
+} from "./gamePanelLayout";
+import { useGameUiNarrow } from "./useGameUiNarrow";
+import GameRulesFab from "./GameRulesFab";
+import GameRulesSheet from "./GameRulesSheet";
+import { playButtonClick } from "@/lib/uiSounds";
 
 type Props = {
   phase: Berkh12Phase;
@@ -30,7 +45,32 @@ type Props = {
   winner: number | null;
   nameLabels: string[];
   lockMode?: boolean;
+  hideModeToggle?: boolean;
 };
+
+type TRules = {
+  r1: string;
+  r2: string;
+  r3: string;
+  r4: string;
+  r5: string;
+  r6: string;
+  r7online: string;
+};
+
+function berkhRulesList(t: TRules, lockMode: boolean) {
+  return (
+    <ol className="list-decimal space-y-1.5 pl-4 text-[10px] leading-relaxed text-zinc-300">
+      <li>{t.r1}</li>
+      <li>{t.r2}</li>
+      <li>{t.r3}</li>
+      <li>{t.r4}</li>
+      <li>{t.r5}</li>
+      <li>{t.r6}</li>
+      {lockMode ? <li className="text-amber-200/90">{t.r7online}</li> : null}
+    </ol>
+  );
+}
 
 export default function ShagaiBerkh12UI({
   phase,
@@ -52,36 +92,44 @@ export default function ShagaiBerkh12UI({
   winner,
   nameLabels,
   lockMode = false,
+  hideModeToggle = false,
 }: Props) {
   const { language } = useApp();
   const isEn = language === "en";
+  const narrowUi = useGameUiNarrow();
+  const [rulesOpen, setRulesOpen] = useState(false);
+
   const t = {
     title: isEn ? "12 Berkh (shagai party)" : "12 бэрх (шагайн наадгай)",
+    subtitle: isEn
+      ? "12 bones · pot & piles · sunwise"
+      : "12 шагай · төв ба овоо · нар зөв",
     lead: isEn
-      ? `Sunwise · ${BERKH12_PIECE_COUNT} shagai once · pot = ${BERKH12_TOTAL_MORIES} 🐴 · your pile is what you can spend on camels.`
-      : `Нар зөв ээлж · нэг удаа ${BERKH12_PIECE_COUNT} шагай · төв = ${BERKH12_TOTAL_MORIES} морь · таныхыг тэмээг төлнө.`,
-    rules: isEn ? "How it works" : "Дүрмийн товчоо",
+      ? `Throw all ${BERKH12_PIECE_COUNT} at once, sunwise. The pot holds up to ${BERKH12_TOTAL_MORIES} mories; your column is what you can still pay to others for camels.`
+      : `Нар зөв нэг удаа ${BERKH12_PIECE_COUNT} шагай. Төвд нийт ${BERKH12_TOTAL_MORIES} морь; таны багананд байгаа нь тэмээ төлж таарах нөөц.`,
+    rules: isEn ? "Rules" : "Дүрэм",
+    rulesAside: isEn ? "Rules" : "Дүрэм",
     r1: isEn
-      ? "Everyone starts with 0; all mories sit in the «Pot» in the middle."
-      : "Эхэнд бүгд 0, бүх морь «Төвд» (хоорондын сан) бүгд нэгт байна.",
+      ? "Everyone starts with 0; all mories sit in the pot in the middle at first."
+      : "Эхлээд бүгд 0, бүх морь төвд (хоорондын сан).",
     r2: isEn
-      ? "On your turn, throw all 12 bones. Count how many land as horse, and how many as camel; others (sheep/goat) are neutral here."
-      : "Ээлжтэйд 12 шагайг зэрэг чулуул. Хэд морь, хэд тэмээ гарсныг нэгт — хонь/ямаа энэ дүрмэнд тоологдохгүй.",
+      ? "On your turn, all 12 bones are thrown. Count how many are horse, how many camel; sheep/goat are neutral in this table."
+      : "Ээлжтэй: 12 шагайг зэрэг. Морь, тэмээг нэгт — хонь/ямаа энэ дүрмэнд тооцохгүй.",
     r3: isEn
-      ? "Horses: take that many mories from the pot into your pile (cannot take more than the pot has)."
-      : "Морь: тэр олоноороо төвөөс хувиндаа нэмж авна (төвд байгаа хэмжээгээр).",
+      ? "Horses: take that many mories from the pot into your pile, up to what the pot has."
+      : "Морь: тэр олоноороо төвөөс өөрт нэмж авах (төвд элсэх дээд хязгаар).",
     r4: isEn
-      ? "Camels: you must pay 1 mory (from your pile) to opponents, one at a time, counter-sun: previous player, then the one before that, and so on."
-      : "Тэмээ: өөрийнхөөс 1, 1-р сөрөгдүүдтэй «эсрэг нар» — эхлээд өмнөх, дараа нь түүнээс зүүн, гэх мэт.",
+      ? "Camels: from your own pile, pay 1 mory to each other player in counter-sun order—previous seat first, and so on."
+      : "Тэмээ: өөрийнхөөс 1, 1-аар бусад сөрөгдүүдэд, эсрэг нарын дараалалаар төлнө.",
     r5: isEn
-      ? "If you can’t pay all camel costs (not enough mories in your pile), you are out; your mories return to the pot for others."
-      : "Төлөх морь хүрэлцэхгүй бол тоглогч хасагдна, үлдсэн нь төвд буцна.",
+      ? "If you cannot pay all required camel mories, you are eliminated; your mories return to the pot."
+      : "Төлбөр хүрэлцэхгүй бол тоглогч хасагдна, морь нь төвд очиж нийлүүлнэ.",
     r6: isEn
-      ? `Win: collect all ${BERKH12_TOTAL_MORIES}, or be the last player left, or, after many rounds (cap ${BERKH12_MAX_TURNS}), whoever holds the most mories.`
-      : `Хожих: ${BERKH12_TOTAL_MORIES}-ыг нэгт эсвэл сүүлд ганцаараа эсвэл олон удаа (${BERKH12_MAX_TURNS} дээш) — хамгийн олон морьтой нь (панелын нөхцөл).`,
+      ? `Win: hold all ${BERKH12_TOTAL_MORIES} mories, be last active, or after a long run (turn cap ${BERKH12_MAX_TURNS}), the largest pile wins per the in-panel rule.`
+      : `Хожих: ${BERKH12_TOTAL_MORIES}-ыг нэгт, эсвэл сүүлд идэвхтэй, эсвэл олон ээлж (${BERKH12_MAX_TURNS}) — хамгийн олонтой (доорх нөхцөл).`,
     r7online: isEn
-      ? "Online: use the top «Online» room, Ready, then the host starts; names follow host order in the list."
-      : "Онлайн: дээд товчоор өрөө, бэлэн — эзэн тоглолт эхлүүлнэ; нэрс өргийн дараалалд.",
+      ? "Online: top bar → room → Ready, host starts. Seat order in the list = play order, same as Homboroi (Shagai Shooting) online."
+      : "Онлайн: дээд баганаар «Online» → өрөө, бэлэн, эзэн эхлүүлнэ. Нэрийн дараалал=суудлын нар, Хомборойтой ижилхэн.",
     throw: isEn ? "Throw" : "Орхих",
     yourTurn: isEn ? "Your turn" : "Таны ээлж",
     p: isEn ? "P" : "Т",
@@ -93,28 +141,48 @@ export default function ShagaiBerkh12UI({
     out: isEn ? "Out" : "Хасагдсан",
     local: isEn ? "2–4 local" : "2–4 нэг дэлгэц",
     cpu: isEn ? "vs computer" : "Роботтой",
+    soloRoomNote: isEn
+      ? "No other person in the online room — you play vs the computer (like Homboroi when alone)."
+      : "Онлайн өрөөнд өөр тоглогчгүй — Хомборойтой ижил роботтой тоглоно.",
   };
 
-  return (
-    <div
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-10 max-h-[48%] min-h-0 overflow-y-auto border-t border-amber-500/20 bg-zinc-950/92 px-3 py-2.5 text-amber-50 sm:px-4"
-      style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
-    >
+  const mainChrome = narrowUi
+    ? { ...SHAGAI_GAME_PANEL_BASE, ...gamePanelPlayNarrowBottom() }
+    : { ...SHAGAI_GAME_PANEL_BASE, ...gamePanelLeftDesktop(300) };
+  const mainPad: CSSProperties = narrowUi
+    ? { padding: "10px 12px 12px" }
+    : { padding: "16px" };
+  const rightChrome = {
+    ...SHAGAI_GAME_PANEL_BASE,
+    ...gamePanelRightDesktop(280),
+  };
+  const rulesFabLabel = isEn ? "Rules" : "Дүрэм";
+
+  const playBlock = (
+    <>
       {showElimToast ? (
-        <p className="mb-1 rounded border border-rose-500/40 bg-rose-950/50 px-2 py-0.5 text-center text-xs text-rose-200">
+        <p className="mb-1.5 rounded border border-rose-500/40 bg-rose-950/50 px-2 py-0.5 text-center text-xs text-rose-200">
           {showElimToast}
         </p>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-sm font-bold text-amber-200 sm:text-base">
-          {t.title}
-        </h2>
-        {!lockMode ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-[10px] sm:text-xs">
+        <div>
+          <h2
+            className="font-display text-sm font-bold text-amber-200"
+            style={{ textShadow: "0 0 12px rgba(200,160,48,0.2)" }}
+          >
+            {t.title}
+          </h2>
+          <p className="text-[8px] text-zinc-500">{t.subtitle}</p>
+        </div>
+        {!lockMode && !hideModeToggle ? (
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
             <button
               type="button"
               className={`rounded border px-1.5 py-0.5 ${
-                mode === "local" ? "border-amber-500/50 bg-amber-950/60" : "border-zinc-600"
+                mode === "local"
+                  ? "border-amber-500/50 bg-amber-950/60"
+                  : "border-zinc-600"
               }`}
               onClick={() => onModeChange("local")}
             >
@@ -123,7 +191,9 @@ export default function ShagaiBerkh12UI({
             <button
               type="button"
               className={`rounded border px-1.5 py-0.5 ${
-                mode === "vsCpu" ? "border-amber-500/50 bg-amber-950/60" : "border-zinc-600"
+                mode === "vsCpu"
+                  ? "border-amber-500/50 bg-amber-950/60"
+                  : "border-zinc-600"
               }`}
               onClick={() => onModeChange("vsCpu")}
             >
@@ -132,30 +202,21 @@ export default function ShagaiBerkh12UI({
           </div>
         ) : null}
       </div>
-      <p className="mt-0.5 text-[10px] leading-snug text-amber-100/85">
+      {hideModeToggle && !lockMode ? (
+        <p className="mb-1.5 rounded border border-sky-500/20 bg-sky-950/20 px-2 py-1 text-[9px] leading-snug text-sky-100/90">
+          {t.soloRoomNote}
+        </p>
+      ) : null}
+      {lockMode ? (
+        <p className="mt-1.5 rounded border border-amber-500/20 bg-amber-950/25 px-2 py-1 text-[9px] leading-snug text-amber-100/95">
+          {t.r7online}
+        </p>
+      ) : null}
+      <p className="mt-1.5 text-[10px] leading-snug text-amber-100/90">
         {t.lead}
       </p>
-      <details
-        className="mt-1.5 rounded-md border border-zinc-700/90 bg-zinc-900/60 px-2 py-1.5"
-        open
-      >
-        <summary className="cursor-pointer list-none text-[10px] font-semibold text-amber-200/90 [&::-webkit-details-marker]:hidden">
-          <span className="underline decoration-amber-500/50 underline-offset-2">
-            {t.rules}
-          </span>
-        </summary>
-        <ol className="mt-2 list-decimal space-y-1.5 pl-4 text-[10px] leading-relaxed text-zinc-300">
-          <li>{t.r1}</li>
-          <li>{t.r2}</li>
-          <li>{t.r3}</li>
-          <li>{t.r4}</li>
-          <li>{t.r5}</li>
-          <li>{t.r6}</li>
-          {lockMode ? <li className="text-amber-200/90">{t.r7online}</li> : null}
-        </ol>
-      </details>
 
-      {!lockMode && mode === "local" ? (
+      {!lockMode && !hideModeToggle && mode === "local" ? (
         <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px]">
           <span className="text-zinc-500">{isEn ? "Players" : "Тоглогч"}:</span>
           {([2, 3, 4] as const).map((c) => (
@@ -185,11 +246,11 @@ export default function ShagaiBerkh12UI({
           </div>
           <p className="mt-0.5 text-[8px] leading-tight text-zinc-500">
             {isEn
-              ? "Shared bank. Your column = mories you can pay out for camels."
-              : "Нийтийн сан. Таны багана = тэмээнд төлж чадах морь."}
+              ? "Shared bank. Your column = mories you can use to pay for camels."
+              : "Нийтийн сан. Таны багана = тэмээ төлж чадах нөөц."}
           </p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid max-w-[12rem] grid-cols-2 gap-1.5 sm:max-w-none sm:grid-cols-4">
           {mories.slice(0, playerCount).map((m, i) => {
             return (
               <div
@@ -261,6 +322,60 @@ export default function ShagaiBerkh12UI({
           )}
         </div>
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      <div
+        className="shagai-b12-main-panel"
+        style={{ ...mainChrome, ...mainPad }}
+      >
+        {playBlock}
+      </div>
+
+      {!narrowUi ? (
+        <div
+          className="shagai-b12-right-panel"
+          style={{ ...rightChrome, padding: "14px 14px 12px" }}
+        >
+          <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-amber-400/95">
+            {t.rulesAside}
+          </p>
+          <div className="mt-2 border-t border-amber-500/15 pt-2">
+            {berkhRulesList(t, lockMode)}
+          </div>
+        </div>
+      ) : null}
+
+      {narrowUi ? (
+        <>
+          <GameRulesFab
+            label={rulesFabLabel}
+            onClick={() => {
+              playButtonClick();
+              setRulesOpen(true);
+            }}
+          />
+          <GameRulesSheet
+            open={rulesOpen}
+            onClose={() => setRulesOpen(false)}
+            title={t.rules}
+          >
+            {berkhRulesList(t, lockMode)}
+          </GameRulesSheet>
+        </>
+      ) : null}
+
+      <style>{`
+        .shagai-b12-main-panel::-webkit-scrollbar,
+        .shagai-b12-right-panel::-webkit-scrollbar { width: 6px; }
+        .shagai-b12-main-panel::-webkit-scrollbar-thumb,
+        .shagai-b12-right-panel::-webkit-scrollbar-thumb {
+          background: rgba(200,160,48,0.35);
+          border-radius: 3px;
+        }
+      `}</style>
+    </>
   );
 }

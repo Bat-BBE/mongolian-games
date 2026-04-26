@@ -2,6 +2,26 @@ import type { CSSProperties } from "react";
 
 const abs: CSSProperties = { position: "absolute" };
 
+/** Shagai Shooting/12/бэрх — зөвхөн зураасан панелын нийтлэг хүрээ. */
+export const SHAGAI_GAME_PANEL_BASE: CSSProperties = {
+  position: "absolute",
+  background: "rgba(6,4,2,0.90)",
+  border: "1px solid rgba(200,160,48,0.28)",
+  borderRadius: 16,
+  padding: "14px 14px 12px",
+  backdropFilter: "blur(16px)",
+  boxShadow: "0 8px 40px rgba(0,0,0,0.7)",
+  fontFamily:
+    "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+  color: "white",
+  zIndex: 10,
+  maxHeight: "calc(100% - 48px)",
+  overflowY: "auto",
+  overflowX: "hidden",
+  scrollbarWidth: "thin",
+  pointerEvents: "auto",
+} as const;
+
 /** Desktop: primary (left) gameplay panel. */
 export function gamePanelLeftDesktop(widthPx: number): CSSProperties {
   return { ...abs, top: 24, left: 24, width: widthPx };

@@ -15,6 +15,7 @@ import ShagaiTwelveUI from "./shagaiTwelveUI";
 import {
   TWELVE_TARGET,
   countHorses,
+  getRequiredPickAfterThrows,
   isTwelveGameOver,
   type ShagaiSide,
   type TwelvePhase,
@@ -25,6 +26,7 @@ import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { getShagaiThrowParams } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
 import { PhysicsFloor, ShagaiTwelveGameScene } from "./shagaiTwelveGame";
 
 const REL = "twelve_shagai_mp_v1";
@@ -41,6 +43,8 @@ type T12Relay = {
   lastHorses: number;
   matchOver: boolean;
   winnerId: string | null;
+  /** Тоглолт дууссан шидэлтийн нийт тоо (энэ шидэлтийг оруулсны дараа). */
+  matchThrowN: number;
 };
 
 function parseR(x: unknown): T12Relay | null {
@@ -50,6 +54,7 @@ function parseR(x: unknown): T12Relay | null {
   if (typeof o.throwerId !== "string" || !Array.isArray(o.sides)) return null;
   if (o.n !== 2 && o.n !== 3 && o.n !== 4) return null;
   if (typeof o.s0 !== "number" || typeof o.s1 !== "number") return null;
+  if (typeof o.matchThrowN !== "number" || o.matchThrowN < 1) return null;
   return o;
 }
 
@@ -70,18 +75,9 @@ export function ShagaiTwelveOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          Room: Ready, then the host starts the match. Two players, alternating
-          throws (2–4 shagai), first to {TWELVE_TARGET} horse points wins. Left
-          = host.
-        </span>
-      ) : (
-        <span>
-          Өрөө: бүгд «Бэлэн» → эзэн тоглолт эхлүүлнэ. 2 тоглогч, ээлжлэн
-          2–4 шагай, {TWELVE_TARGET} морины оноо. Зүүн=эзэн.
-        </span>
-      )}
+      <span>
+        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      </span>
     </div>
   );
 }
@@ -98,10 +94,10 @@ export default function ShagaiTwelveGameMulti({
     [mp.players],
   );
   const name0 = order[0]
-    ? mp.players.find((p) => p.id === order[0])?.displayName ?? "?"
+    ? (mp.players.find((p) => p.id === order[0])?.displayName ?? "?")
     : "?";
   const name1 = order[1]
-    ? mp.players.find((p) => p.id === order[1])?.displayName ?? "?"
+    ? (mp.players.find((p) => p.id === order[1])?.displayName ?? "?")
     : "?";
 
   const { grant, resetGrants } = useInventoryGrant();
@@ -117,13 +113,21 @@ export default function ShagaiTwelveGameMulti({
     [0, 1, 2, 3].map(() => getShagaiThrowParams()),
   );
   const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>([
-    null, null, null, null,
+    null,
+    null,
+    null,
+    null,
   ]);
   const [lastSides, setLastSides] = useState<(ShagaiSide | null)[]>([
-    null, null, null, null,
+    null,
+    null,
+    null,
+    null,
   ]);
   const [lastHorses, setLastHorses] = useState(0);
+  const [throwsDone, setThrowsDone] = useState(0);
   const [winnerSlot, setWinnerSlot] = useState<0 | 1 | null>(null);
+  const matchThrowsRef = useRef(0);
   const scoresRef = useRef(scores);
   useEffect(() => {
     scoresRef.current = scores;
@@ -173,6 +177,8 @@ export default function ShagaiTwelveGameMulti({
     setIsThrown(false);
     setLastSides([null, null, null, null]);
     setLastHorses(0);
+    setThrowsDone(0);
+    matchThrowsRef.current = 0;
     setWinnerSlot(null);
     setThrowParams([0, 1, 2, 3].map(() => getShagaiThrowParams()));
     resetGrants();
@@ -222,6 +228,11 @@ export default function ShagaiTwelveGameMulti({
       nRef.current = p.n;
       setLastSides(last4);
       setLastHorses(p.lastHorses);
+      setThrowsDone(p.matchThrowN);
+      matchThrowsRef.current = p.matchThrowN;
+      if (!p.matchOver) {
+        setPick(getRequiredPickAfterThrows(p.matchThrowN));
+      }
       setScores([p.s0, p.s1] as [number, number]);
       setSettledSides([...last4] as (ShagaiSide | null)[]);
       setIsThrown(true);
@@ -229,8 +240,7 @@ export default function ShagaiTwelveGameMulti({
       if (p.matchOver) {
         setPhase("matchOver");
         const ord = orderRef.current;
-        const ws =
-          p.winnerId === ord[0] ? 0 : p.winnerId === ord[1] ? 1 : null;
+        const ws = p.winnerId === ord[0] ? 0 : p.winnerId === ord[1] ? 1 : null;
         setWinnerSlot(ws);
         setTurnPlayerId(p.winnerId ?? p.throwerId);
         if (!completeOnce.current) {
@@ -242,10 +252,7 @@ export default function ShagaiTwelveGameMulti({
             w ? "win" : "lose",
             w
               ? 100
-              : Math.min(
-                  100,
-                  Math.round((myScore / TWELVE_TARGET) * 100),
-                ),
+              : Math.min(100, Math.round((myScore / TWELVE_TARGET) * 100)),
           );
         }
         return;
@@ -253,9 +260,7 @@ export default function ShagaiTwelveGameMulti({
 
       setPhase("result");
       setTurnPlayerId(p.nextTurnPlayerId);
-      setTurnSlot(
-        p.nextTurnPlayerId === orderRef.current[0] ? 0 : 1,
-      );
+      setTurnSlot(p.nextTurnPlayerId === orderRef.current[0] ? 0 : 1);
       if (applyTimer.current) clearTimeout(applyTimer.current);
       const gen = appliedV.current;
       applyTimer.current = setTimeout(() => {
@@ -284,6 +289,9 @@ export default function ShagaiTwelveGameMulti({
       const g = syncGen.current;
       window.setTimeout(() => {
         if (g !== syncGen.current) return;
+        if (num !== getRequiredPickAfterThrows(matchThrowsRef.current)) {
+          return;
+        }
         const raw = settledRef.current.slice(0, num);
         const sides = raw.filter((s): s is ShagaiSide => s != null);
         const horses = countHorses(sides);
@@ -307,6 +315,7 @@ export default function ShagaiTwelveGameMulti({
 
         sendV.current += 1;
         const v = sendV.current;
+        const matchThrowN = matchThrowsRef.current + 1;
         const pay: T12Relay = {
           kind: "t12",
           v,
@@ -319,6 +328,7 @@ export default function ShagaiTwelveGameMulti({
           lastHorses: horses,
           matchOver: o.over,
           winnerId: o.over ? (winnerId ?? tId) : null,
+          matchThrowN,
         };
         sendRelay(REL, pay);
         applyPayload(pay);
@@ -344,6 +354,8 @@ export default function ShagaiTwelveGameMulti({
 
   const onThrow = useCallback(() => {
     if (!canThrow) return;
+    const need = getRequiredPickAfterThrows(matchThrowsRef.current);
+    if (pick !== need) return;
     startThrow(myId, pick);
   }, [canThrow, myId, pick, startThrow]);
 
@@ -407,11 +419,11 @@ export default function ShagaiTwelveGameMulti({
         turn={turnSlot}
         pick={pick}
         onPick={setPick}
+        matchCompletedThrows={throwsDone}
         scores={scores}
         canThrow={canThrow}
         onThrow={onThrow}
         onReset={resetForNewMatch}
-        onModeChange={() => {}}
         lastSides={lastSides}
         lastHorses={lastHorses}
         winner={winnerSlot}

@@ -9,9 +9,9 @@ import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import ShagaiTwelveUI from "./shagaiTwelveUI";
 import {
   countHorses,
+  getRequiredPickAfterThrows,
   isTwelveGameOver,
   type ShagaiSide,
-  type TwelveMode,
   type TwelvePhase,
   type TwelvePick,
 } from "./shagaiTwelveType";
@@ -143,15 +143,18 @@ export { PhysicsFloor };
 
 export type ShagaiTwelveGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+  /**
+   * `Online` нээлээ гэхдээ өрөөнд 2+ хүнгүй: автомаар «роботтой», сонголтыг нуух (хөдөлмөрөөр шиг).
+   */
+  autoPlayVsBotWhenSoloInRoom?: boolean;
 };
 
-function randomPick(): TwelvePick {
-  return ([2, 3, 4] as const)[Math.floor(Math.random() * 3)]!;
-}
-
-export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) {
+export default function ShagaiTwelveGame({
+  onComplete,
+  autoPlayVsBotWhenSoloInRoom = false,
+}: ShagaiTwelveGameProps) {
   const { grant, resetGrants } = useInventoryGrant();
-  const [mode, setMode] = useState<TwelveMode>("local2");
+  const [matchCompleted, setMatchCompleted] = useState(0);
   const [phase, setPhase] = useState<TwelvePhase>("idle");
   const [turn, setTurn] = useState<0 | 1>(0);
   const [pick, setPick] = useState<TwelvePick>(4);
@@ -172,7 +175,7 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
 
   const turnRef = useRef<0 | 1>(0);
   const nRef = useRef<TwelvePick>(4);
-  const modeRef = useRef(mode);
+  const matchCompletedRef = useRef(0);
   const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
   const settledCount = useRef(0);
   const resultDone = useRef(false);
@@ -186,18 +189,21 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
     nRef.current = nThrow;
   }, [nThrow]);
   useEffect(() => {
-    modeRef.current = mode;
-  }, [mode]);
+    matchCompletedRef.current = matchCompleted;
+  }, [matchCompleted]);
+
+  useEffect(() => {
+    if (phase === "matchOver" || phase === "throwing" || phase === "settling")
+      return;
+    const req = getRequiredPickAfterThrows(matchCompleted);
+    setPick((p) => (p === req ? p : req));
+  }, [matchCompleted, phase]);
 
   useEffect(() => {
     if (phase !== "matchOver" || winner == null || completeOnce.current) return;
     completeOnce.current = true;
-    if (mode === "vsCpu") {
-      onComplete?.(winner === 0 ? "win" : "lose", winner === 0 ? 100 : 0);
-    } else {
-      onComplete?.("win", 100);
-    }
-  }, [phase, winner, mode, onComplete]);
+    onComplete?.(winner === 0 ? "win" : "lose", winner === 0 ? 100 : 0);
+  }, [phase, winner, onComplete]);
 
   const startThrow = useCallback((forTurn: 0 | 1, num: TwelvePick) => {
     const g = ++syncGen.current;
@@ -222,6 +228,11 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
   const finishAndAdvance = useCallback(
     (horses: number, sides: ShagaiSide[]) => {
       if (horses > 0) grant({ coins: STONE_ROUND_COINS });
+      setMatchCompleted((c) => {
+        const n = c + 1;
+        matchCompletedRef.current = n;
+        return n;
+      });
       const last4: (ShagaiSide | null)[] = [null, null, null, null];
       for (let i = 0; i < sides.length; i++) {
         last4[i] = sides[i] ?? null;
@@ -241,7 +252,7 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
           setPhase("result");
           const next: 0 | 1 = t0 === 0 ? 1 : 0;
           setTurn(next);
-          if (modeRef.current === "vsCpu" && next === 1) {
+          if (next === 1) {
             setPhase("cpuWait");
           }
         }
@@ -274,26 +285,28 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
     [finishAndAdvance],
   );
 
-  // CPU: ээлж ирэхэд random 2–4, дараа нь шидэх
+  // CPU: ээлж — лимитоор сонгосон n
   useEffect(() => {
-    if (mode !== "vsCpu" || phase !== "cpuWait") return;
+    if (phase !== "cpuWait") return;
     const t = window.setTimeout(() => {
-      const n = randomPick();
+      const n = getRequiredPickAfterThrows(matchCompletedRef.current);
       setPick(n);
       startThrow(1, n);
     }, 900);
     return () => clearTimeout(t);
-  }, [mode, phase, startThrow]);
+  }, [phase, startThrow]);
 
   const canHumanThrow =
     phase !== "matchOver" &&
     (phase === "idle" || phase === "result") &&
-    (mode === "vsCpu" ? turn === 0 : true);
+    turn === 0;
 
   const onThrow = useCallback(() => {
     if (!canHumanThrow) return;
-    startThrow(turn, pick);
-  }, [canHumanThrow, pick, startThrow, turn]);
+    const req = getRequiredPickAfterThrows(matchCompleted);
+    if (pick !== req) return;
+    startThrow(0, pick);
+  }, [canHumanThrow, matchCompleted, pick, startThrow, turn]);
 
   const onReset = useCallback(() => {
     syncGen.current += 1;
@@ -311,13 +324,10 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
     setWinner(null);
     resultDone.current = false;
     completeOnce.current = false;
+    setMatchCompleted(0);
+    matchCompletedRef.current = 0;
     resetGrants();
   }, [resetGrants]);
-
-  const onModeChange = (m: TwelveMode) => {
-    setMode(m);
-    onReset();
-  };
 
   return (
     <div
@@ -371,18 +381,19 @@ export default function ShagaiTwelveGame({ onComplete }: ShagaiTwelveGameProps) 
       </Canvas>
       <ShagaiTwelveUI
         phase={phase}
-        mode={mode}
+        mode="vsCpu"
         turn={turn}
         pick={pick}
         onPick={setPick}
+        matchCompletedThrows={matchCompleted}
         scores={scores}
         canThrow={canHumanThrow}
         onThrow={onThrow}
         onReset={onReset}
-        onModeChange={onModeChange}
         lastSides={lastSides}
         lastHorses={lastHorses}
         winner={winner}
+        showSoloOnlineNote={autoPlayVsBotWhenSoloInRoom}
       />
     </div>
   );

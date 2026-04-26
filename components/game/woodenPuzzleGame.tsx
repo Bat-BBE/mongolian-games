@@ -78,9 +78,10 @@ function useWoodenPuzzleUi(): WoodenUi & { lang: "mn" | "en" } {
         orderHeader: "Дараалал (заавал):",
         instructions: (
           <span>
-            Хэсгийг дарж сонгоно → чирнэ. Бусад хэсгийг түр хөдөлгөж болно, гэхдээ{" "}
-            <strong>түгжих</strong> нь зөвхөн дээрх дарааллаар. Түгжихийн тулд зорилтот алтлаг
-            дугуй руу ойртуулаад <strong>гар тавина</strong> (хулганы товчийг тавих).
+            Хэсгийг дарж сонгоно → чирнэ. Бусад хэсгийг түр хөдөлгөж болно,
+            гэхдээ <strong>түгжих</strong> нь зөвхөн дээрх дарааллаар. Түгжихийн
+            тулд зорилтот алтлаг дугуй руу ойртуулаад{" "}
+            <strong>гар тавина</strong> (хулганы товчийг тавих).
           </span>
         ),
         qeHint: "Q / E — нарийвчлан эргүүлэх",
@@ -90,9 +91,10 @@ function useWoodenPuzzleUi(): WoodenUi & { lang: "mn" | "en" } {
         guideAbout: "ТОГЛООМЫН ТУХАЙ",
         guideIntro: (level: PuzzleLevel) => (
           <p style={{ margin: 0 }}>
-            <strong style={{ color: "#c8a030" }}>Модон оньс</strong> — {level.pieces.length}{" "}
-            хэсгийг зорилтот байрлал, эргэлтээр <strong>нэг бүтэц</strong> болгоно (хажуу, давхар,
-            өөр өнцөг). <strong>Дараагийг</strong> түгжихийн өмнөх нь түгжигдсэн байх ёстой.
+            <strong style={{ color: "#c8a030" }}>Модон оньс</strong> —{" "}
+            {level.pieces.length} хэсгийг зорилтот байрлал, эргэлтээр{" "}
+            <strong>нэг бүтэц</strong> болгоно (хажуу, давхар, өөр өнцөг).{" "}
+            <strong>Дараагийг</strong> түгжихийн өмнөх нь түгжигдсэн байх ёстой.
           </p>
         ),
         guideOrderLabel: "Дараалал",
@@ -124,9 +126,10 @@ function useWoodenPuzzleUi(): WoodenUi & { lang: "mn" | "en" } {
       guideAbout: "ABOUT THE GAME",
       guideIntro: (level: PuzzleLevel) => (
         <p style={{ margin: 0 }}>
-          <strong style={{ color: "#c8a030" }}>{level.titleEn}</strong> — {level.pieces.length}{" "}
-          pieces into one structure by position and rotation (side, stack, angles). The{" "}
-          <strong>previous</strong> piece must be locked before the next.
+          <strong style={{ color: "#c8a030" }}>{level.titleEn}</strong> —{" "}
+          {level.pieces.length} pieces into one structure by position and
+          rotation (side, stack, angles). The <strong>previous</strong> piece
+          must be locked before the next.
         </p>
       ),
       guideOrderLabel: "Order",
@@ -431,9 +434,7 @@ function PuzzleScene({
         }
         const snapped = trySnapPiece(cur, idsFromPrev);
         if (snapped) {
-          return prev.map((x) =>
-            x.def.id === d.id ? snapped : x,
-          );
+          return prev.map((x) => (x.def.id === d.id ? snapped : x));
         }
 
         return prev;
@@ -458,7 +459,10 @@ function PuzzleScene({
     trySnapPiece,
   ]);
 
-  const handlePointerDown = (piece: PieceRuntime, e: ThreeEvent<PointerEvent>) => {
+  const handlePointerDown = (
+    piece: PieceRuntime,
+    e: ThreeEvent<PointerEvent>,
+  ) => {
     if (frozen || phase !== "playing" || piece.locked) return;
     playButtonClick();
     setSelectedId(piece.def.id);
@@ -517,7 +521,9 @@ function PuzzleScene({
             position={[tx, 0.018, tz]}
             renderOrder={-2}
           >
-            <ringGeometry args={[isNext ? 0.1 : 0.07, isNext ? 0.28 : 0.18, 48]} />
+            <ringGeometry
+              args={[isNext ? 0.1 : 0.07, isNext ? 0.28 : 0.18, 48]}
+            />
             <meshStandardMaterial
               color={isNext ? "#f0c040" : p.def.color}
               transparent
@@ -593,7 +599,9 @@ function PuzzleScene({
   );
 }
 
-export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) {
+export default function WoodenPuzzleGame({
+  onComplete,
+}: WoodenPuzzleGameProps) {
   const { rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const level = ALL_LEVELS[0];
   const snapDistance = level.snapDistance ?? SNAP_DISTANCE;
@@ -726,7 +734,7 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
         style={{
           position: "absolute",
           left: 16,
-          top: 56,
+          top: 10,
           maxWidth: 280,
           padding: "12px 14px",
           borderRadius: 12,
@@ -751,8 +759,8 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
           {ui.gameTitle}
         </div>
         <div style={{ fontSize: 10, color: "#7a6a58", marginBottom: 10 }}>
-          {ui.lang === "mn" ? level.titleMn : level.titleEn} — {level.pieces.length}{" "}
-          {ui.piecesWord}
+          {ui.lang === "mn" ? level.titleMn : level.titleEn} —{" "}
+          {level.pieces.length} {ui.piecesWord}
         </div>
 
         <div
@@ -770,13 +778,15 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
           {nextActivePiece ? (
             ui.lang === "mn" ? (
               <div style={{ fontSize: 12, color: "#f0e0c8", lineHeight: 1.35 }}>
-                <strong>{nextActivePiece.def.labelMn}</strong> ({nextActivePiece.def.id}) — шугам ба шар дугуй руу ойртуулна. Ногоон сүүлт гарвал{" "}
-                <strong>гар тавихад</strong> түгжигдэнэ.
+                <strong>{nextActivePiece.def.labelMn}</strong> (
+                {nextActivePiece.def.id}) — шугам ба шар дугуй руу ойртуулна.
+                Ногоон сүүлт гарвал <strong>гар тавихад</strong> түгжигдэнэ.
               </div>
             ) : (
               <div style={{ fontSize: 11, color: "#a8a0a8", lineHeight: 1.35 }}>
-                <strong>{nextActivePiece.def.labelEn}</strong> ({nextActivePiece.def.id}) — move toward the gold ring; when the green preview appears,{" "}
-                <strong>release mouse</strong> to lock.
+                <strong>{nextActivePiece.def.labelEn}</strong> (
+                {nextActivePiece.def.id}) — move toward the gold ring; when the
+                green preview appears, <strong>release mouse</strong> to lock.
               </div>
             )
           ) : (
@@ -794,14 +804,14 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
             }}
           >
             {level.pieces
-              .map((p, i) =>
-                `${i + 1}. ${pieceLabel(p, ui.lang)}`,
-              )
+              .map((p, i) => `${i + 1}. ${pieceLabel(p, ui.lang)}`)
               .join(" → ")}
           </div>
         </div>
 
-        <div style={{ margin: "0 0 8px", color: "#9a8a78", fontSize: 11 }}>{ui.instructions}</div>
+        <div style={{ margin: "0 0 8px", color: "#9a8a78", fontSize: 11 }}>
+          {ui.instructions}
+        </div>
         <details
           open
           style={{
@@ -860,7 +870,9 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
             ↻ +10°
           </button>
         </div>
-        <div style={{ marginTop: 8, fontSize: 10, color: "#666" }}>{ui.qeHint}</div>
+        <div style={{ marginTop: 8, fontSize: 10, color: "#666" }}>
+          {ui.qeHint}
+        </div>
       </div>
 
       <WoodenGuidePanel level={level} lockedIds={lockedIds} ui={ui} />
@@ -887,15 +899,17 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
           }}
         >
           <span style={{ color: ui.lang === "mn" ? "#d8c8b8" : "#a8a0a8" }}>
-            <span style={{ color: "#c8a030" }}>→ </span>
-            «{pieceLabel(nextActivePiece.def, ui.lang)}» —
+            <span style={{ color: "#c8a030" }}>→ </span>«
+            {pieceLabel(nextActivePiece.def, ui.lang)}» —
             {ui.lang === "mn" ? (
               <>
-                шугам ба шар дугуй руу ойртуулна. Ногоон сүүлт гарвал <strong>гар тавихад</strong> түгжигдэнэ.
+                шугам ба шар дугуй руу ойртуулна. Ногоон сүүлт гарвал{" "}
+                <strong>гар тавихад</strong> түгжигдэнэ.
               </>
             ) : (
               <>
-                follow the line to the gold ring; when the green ghost shows, <strong>release</strong> to lock.
+                follow the line to the gold ring; when the green ghost shows,{" "}
+                <strong>release</strong> to lock.
               </>
             )}
             {bottomBarExtraHint(nextActivePiece.def.id, ui.lang)}
@@ -934,7 +948,14 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
             >
               {ui.winTitle}
             </div>
-            <p style={{ color: "#8a7a68", fontSize: 12, marginTop: 10, marginBottom: 0 }}>
+            <p
+              style={{
+                color: "#8a7a68",
+                fontSize: 12,
+                marginTop: 10,
+                marginBottom: 0,
+              }}
+            >
               {ui.winSub}
             </p>
             <button
@@ -979,7 +1000,7 @@ function WoodenGuidePanel({
       style={{
         position: "absolute",
         right: 16,
-        top: 56,
+        top: 10,
         width: "min(300px, calc(100vw - 32px))",
         maxHeight: "calc(100% - 72px)",
         overflowY: "auto",
@@ -1005,7 +1026,9 @@ function WoodenGuidePanel({
       >
         {ui.guideAbout}
       </div>
-      <div style={{ margin: "0 0 10px", color: "#9a9088" }}>{ui.guideIntro(level)}</div>
+      <div style={{ margin: "0 0 10px", color: "#9a9088" }}>
+        {ui.guideIntro(level)}
+      </div>
       <div
         style={{
           fontSize: 10,
@@ -1016,10 +1039,10 @@ function WoodenGuidePanel({
           borderRadius: 8,
         }}
       >
-        <div style={{ color: "#a89880", marginBottom: 4 }}>{ui.guideOrderLabel}</div>
-        <div>
-          {level.pieces.map((p) => pieceLabel(p, ui.lang)).join(" → ")}
+        <div style={{ color: "#a89880", marginBottom: 4 }}>
+          {ui.guideOrderLabel}
         </div>
+        <div>{level.pieces.map((p) => pieceLabel(p, ui.lang)).join(" → ")}</div>
       </div>
       <div style={{ color: "#a89880", marginBottom: 6, fontSize: 10 }}>
         {ui.guideTargetShape}
@@ -1030,10 +1053,12 @@ function WoodenGuidePanel({
           const req =
             def.requires.length === 0
               ? "—"
-              : def.requires.map((id) => {
-                  const p = level.pieces.find((x) => x.id === id);
-                  return p ? pieceLabel(p, ui.lang) : id;
-                }).join(", ");
+              : def.requires
+                  .map((id) => {
+                    const p = level.pieces.find((x) => x.id === id);
+                    return p ? pieceLabel(p, ui.lang) : id;
+                  })
+                  .join(", ");
           const deg = Math.round((def.targetRotY * 180) / Math.PI);
           return (
             <div

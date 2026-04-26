@@ -124,6 +124,8 @@ function labelFor(mode: Berkh12Mode, i: number, isMn: boolean): string {
 
 export type ShagaiBerkh12GameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
+  /** Online on, room <2 people: auto «роботтой», сонголт нуугдна. */
+  autoPlayVsBotWhenSoloInRoom?: boolean;
 };
 
 export { Berkh12GameScene, ThrowMat, POS12, PhysicsFloor };
@@ -135,12 +137,18 @@ function plate12(s: ShagaiSide[]): (ShagaiSide | null)[] {
   return Array.from({ length: 12 }, (_, i) => s[i] ?? null) as (ShagaiSide | null)[];
 }
 
-export default function ShagaiBerkh12Game({ onComplete }: ShagaiBerkh12GameProps) {
+export default function ShagaiBerkh12Game({
+  onComplete,
+  autoPlayVsBotWhenSoloInRoom = false,
+}: ShagaiBerkh12GameProps) {
   const { language } = useApp();
   const isMn = language === "mn";
   const { grant, resetGrants } = useInventoryGrant();
 
-  const [mode, setMode] = useState<Berkh12Mode>("local");
+  const [mode, setMode] = useState<Berkh12Mode>(() =>
+    autoPlayVsBotWhenSoloInRoom ? "vsCpu" : "local",
+  );
+  const wasAutoSolo = useRef(false);
   const [playerCount, setPlayerCount] = useState<LocalPlayerCount>(2);
   const [phase, setPhase] = useState<Berkh12Phase>("idle");
   const [turn, setTurn] = useState(0);
@@ -412,7 +420,11 @@ export default function ShagaiBerkh12Game({ onComplete }: ShagaiBerkh12GameProps
 
   const onReset = useCallback(
     (nOverride?: number) => {
-      const n = nOverride ?? nPlayers;
+      const n = (nOverride != null ? nOverride : nPlayers) as LocalPlayerCount;
+      nPlayersRef.current = n;
+      if (nOverride != null) {
+        setPlayerCount(n);
+      }
       syncGen.current += 1;
       completeOnce.current = false;
       setPhase("idle");
@@ -441,6 +453,17 @@ export default function ShagaiBerkh12Game({ onComplete }: ShagaiBerkh12GameProps
     },
     [nPlayers, resetGrants],
   );
+
+  useEffect(() => {
+    if (!autoPlayVsBotWhenSoloInRoom) {
+      wasAutoSolo.current = false;
+      return;
+    }
+    if (wasAutoSolo.current) return;
+    wasAutoSolo.current = true;
+    setMode("vsCpu");
+    onReset(2);
+  }, [autoPlayVsBotWhenSoloInRoom, onReset]);
 
   return (
     <div
@@ -506,10 +529,8 @@ export default function ShagaiBerkh12Game({ onComplete }: ShagaiBerkh12GameProps
           setMode(m);
           onReset();
         }}
-        onPlayerCountChange={(c) => {
-          setPlayerCount(c);
-          onReset(c);
-        }}
+        onPlayerCountChange={onReset}
+        hideModeToggle={autoPlayVsBotWhenSoloInRoom}
         lastSides={lastSides}
         lastHorses={lastHorses}
         lastCamels={lastCamels}
