@@ -802,6 +802,46 @@ export default function WoodenPuzzleGame({ onComplete }: WoodenPuzzleGameProps) 
         </div>
 
         <div style={{ margin: "0 0 8px", color: "#9a8a78", fontSize: 11 }}>{ui.instructions}</div>
+        <details
+          open
+          style={{
+            margin: "0 0 10px",
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid rgba(120, 180, 220, 0.2)",
+            background: "rgba(0,0,0,0.2)",
+            fontSize: 10,
+            color: "#8a8a78",
+            lineHeight: 1.45,
+          }}
+        >
+          <summary
+            style={{
+              cursor: "pointer",
+              fontWeight: 600,
+              color: "rgba(200, 210, 180, 0.95)",
+            }}
+          >
+            {ui.lang === "mn" ? "Дүрмийн товчоо" : "How to play (short)"}
+          </summary>
+          <ul style={{ margin: "8px 0 0", paddingLeft: 18, listStyle: "disc" }}>
+            <li>
+              {ui.lang === "mn"
+                ? "Зүүн панелд: жагсаалтын дараалал (зайлшгүй). «Дараагийн алхам»-аар нэг нэгээр: шар дугуйд ойртоод гар тавьж л түгжинэ."
+                : "Left panel: the listed order is mandatory. One lock at a time—only the highlighted “next” piece can be locked, then the following one."}
+            </li>
+            <li>
+              {ui.lang === "mn"
+                ? "Олоноор чирж болно; ногоон сүүл + шар дугуй тойруулга дээрх алхам дуусаад гар тавих = түгжинэ. Q / E = нарийвчлалтай эргэлт."
+                : "You can drag any piece to clear space, but you lock by releasing on the green preview at the gold ring. Q / E: fine Y rotation."}
+            </li>
+            <li>
+              {ui.lang === "mn"
+                ? "Зорилтот хэлбэр, сүлжээ, өнцөг — баруун дээд «Тоглоомын тухай»-д."
+                : "Target view, part graph, and angles: open the “About” (guide) panel in the top-right."}
+            </li>
+          </ul>
+        </details>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             type="button"

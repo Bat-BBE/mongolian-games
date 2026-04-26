@@ -114,11 +114,41 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
         </h2>
-        <p className="mt-1 text-[11px] leading-snug text-slate-400 sm:text-xs">
+        <p className="mt-1 text-[11px] leading-snug text-amber-100/90 sm:text-xs">
           {lang === "mn"
-            ? "Морь → тэмээ → үхэр → хонь → морь. Эхлээд 7 оноо хүргэгч ялна. Та ногоон суудал (Та)."
-            : "Horse beats camel, camel ox, ox sheep, sheep horse. First to 7 points wins. You are the green seat."}
+            ? "Морь → тэмээ → үхэр → хонь → морь. 4 сонголтын дараа оноо нэмнэ. 7-ыг ганцаараа (Та) хамгийн түрүүнд хүрсэн нь — ялалт."
+            : "A 4-way cycle, then the round is scored. First seat to 7 all alone (you, green) wins. If two or more are tied for first at 7, play continues until one is ahead."}
         </p>
+        <details
+          className="mx-auto mt-1.5 max-w-lg rounded border border-white/10 bg-black/20 px-2 py-1 text-left"
+          open
+        >
+          <summary className="cursor-pointer text-[10px] font-semibold text-amber-200/90">
+            {lang === "mn" ? "Оноо яаж нэмэгддэг (товч)" : "How points add (brief)"}
+          </summary>
+          <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[9px] text-slate-400">
+            <li>
+              {lang === "mn"
+                ? "4 нь бүгд ижил, эсвэл дөрвөдөө төрлөөс нэг бүр (морь…хонь) сонгогдвол — 0. Үлдсэн: 2+2 эсвэл 3+1."
+                : "All the same, or all four different: 0. Otherwise a 2+2 or 3+1 split; see below."}
+            </li>
+            <li>
+              {lang === "mn"
+                ? "2+2: дугуйн дагуу ялсан 2 = тус бүр 2, ялагдсан 2 = 0."
+                : "2+2: the two on the side that wins the 4-way matchup get +2 each; the other two get 0."}
+            </li>
+            <li>
+              {lang === "mn"
+                ? "3+1: 1-ийн сонгогдол 3-ын сонгогдлыг дугуйд даравлаас +3; эс 3-ын 3-ын = тус бүр +1."
+                : "3+1: if the lone power beats the triple in the ring, that seat gets +3, else each of the three gets +1."}
+            </li>
+            <li>
+              {lang === "mn"
+                ? "Онлайн: дээд өрөө, 4 багананд тус бүр оноо."
+                : "Online: room in the top bar; four score columns, one per seat."}
+            </li>
+          </ul>
+        </details>
         <p className="mt-1 font-mono text-[10px] text-slate-500">
           {lang === "mn" ? "Өнгө" : "Round"} {round} · {lang === "mn" ? "зорилго" : "goal"}{" "}
           {WIN_SCORE}

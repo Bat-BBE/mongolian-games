@@ -134,6 +134,8 @@ export interface DashStrings {
   mapGuideHide: string;
   /** Map: help button label (short) */
   mapGuideShow: string;
+  /** Map: world tidbit near small POI markers (not a station) */
+  mapWorldPoiBadge: string;
   /** Map: emote menu — accessibility (icon-only) */
   mapHeroEmoteMenuAria: string;
   mapHeroEmoteIdleAria: string;
@@ -673,11 +675,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Газрын зурагнаас өртөө сонгоод «Очих» дээр дарахад тэнд очих болно. Эсвэл баатараа удирдаж явах боломжтой. Өртөөн дээр очиход тоглоом нээгдэнэ.",
     mapGuideTitle: "Юу хийх вэ?",
     mapGuideStep1: "WASD / сум — явна. Өртөө → «Очих» — шууд очно.",
-    mapGuideStep2:
-      "Хаалга дээр тэмдэг дарна — тоглоом. (7 хоногт тоглоом бүрт 2 удаа.)",
+    mapGuideStep2: "Өртөө руу ойртвол хаалганы тэмдэг — тоглоом нээгдэнэ.",
     mapGuideStep3: "Гэр, оноо: зүүн самбар, «Миний гэр».",
     mapGuideHide: "Хаах",
     mapGuideShow: "Заавар",
+    mapWorldPoiBadge: "Газрын сонин",
     mapHeroEmoteMenuAria: "Баатарын дохио сонгох",
     mapHeroEmoteIdleAria: "Зогсолт",
     mapHeroEmoteWaveAria: "Дохих",
@@ -1214,11 +1216,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Pick a station on the map and use Go there. Stand by the door to open games.",
     mapGuideTitle: "What to do",
     mapGuideStep1: "WASD / arrows — walk. Station → Go there — fast travel.",
-    mapGuideStep2:
-      "At the door, tap the marker — games (2 plays / game / 7 days).",
+    mapGuideStep2: "Approach a station — the door prompt opens the games there.",
     mapGuideStep3: "Ger & stats: left sidebar, My home.",
     mapGuideHide: "Close",
     mapGuideShow: "Help",
+    mapWorldPoiBadge: "Along the way",
     mapHeroEmoteMenuAria: "Choose hero gesture",
     mapHeroEmoteIdleAria: "Idle stance",
     mapHeroEmoteWaveAria: "Wave",

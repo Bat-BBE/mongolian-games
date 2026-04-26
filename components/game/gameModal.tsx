@@ -1,7 +1,7 @@
 "use client";
 
 import { LuUsers as IconUsers, LuX as X } from "react-icons/lu";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import ShagaiGame from "./shagaiGame";
 import StoneGame from "./stoneGame";
@@ -19,6 +19,15 @@ import ShagaiGuessGameMulti, {
   ShagaiGuessOnlineLobby,
 } from "./shagaiGuessGameMulti";
 import ShagaiSevenGame from "./shagaiSevenGame";
+import ShagaiTwelveGame from "./shagaiTwelveGame";
+import ShagaiTwelveGameMulti, {
+  ShagaiTwelveOnlineLobby,
+} from "./shagaiTwelveGameMulti";
+import ShagaiBerkh12Game from "./shagaiBerkh12Game";
+import ShagaiBerkh12GameMulti, {
+  ShagaiBerkh12OnlineLobby,
+} from "./shagaiBerkh12GameMulti";
+import type { LocalPlayerCount } from "./shagaiBerkh12Type";
 import FourPowersGame from "./fourPowersGame";
 import FourPowersGameMulti, {
   FourPowersOnlineLobby,
@@ -41,6 +50,7 @@ import { useMatchRoom } from "@/hooks/useMatchRoom";
 import { MultiplayerMatchPanel } from "./MultiplayerMatchPanel";
 import { deriveStationGameMatchCode } from "@/lib/stationMatchCode";
 import { GameModalHowToBanner } from "./gameModalHowToBanner";
+import { useApp } from "@/components/AppContext";
 
 interface GameModalProps {
   isOpen: boolean;
@@ -50,6 +60,11 @@ interface GameModalProps {
   stationSlug: string;
   gameSlug: string;
   onCompleted?: (result: "win" | "lose") => void;
+  /**
+   * Өртөөний 7 хоногийн 2 тоглолт — 0 бол тоглолт эхлүүлэхгүй.
+   * undefined: шалгалтгүй (жиш. нүүр "freeplay").
+   */
+  weeklyPlaysRemaining?: number;
 }
 
 export default function GameModal({
@@ -60,8 +75,13 @@ export default function GameModal({
   stationSlug,
   gameSlug,
   onCompleted,
+  weeklyPlaysRemaining,
 }: GameModalProps) {
+  const { language } = useApp();
   const [multiplayerOn, setMultiplayerOn] = useState(false);
+  const postPlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const matchJoinRequestedRef = useRef(false);
   const autoMultiStartSentRef = useRef(false);
   const soloFallbackStartSentRef = useRef(false);
@@ -78,7 +98,9 @@ export default function GameModal({
             gameType === "four-powers" ||
             gameType === "wooden-dice" ||
             gameType === "stone-cairn" ||
-            gameType === "shagai-guess"))),
+            gameType === "shagai-guess" ||
+            gameType === "twelve-shagai" ||
+            gameType === "berkh-12-shagai"))),
     gameType,
     gameSlug,
     displayName: playerName,
@@ -86,11 +108,14 @@ export default function GameModal({
       gameType === "stone-guess" ||
       gameType === "shagai-guess" ||
       gameType === "wooden-dice" ||
-      gameType === "stone-cairn"
+      gameType === "stone-cairn" ||
+      gameType === "twelve-shagai"
         ? 2
         : gameType === "shagai" ||
             gameType === "four-bones" ||
-            gameType === "horse-race" || gameType === "four-powers"
+            gameType === "horse-race" ||
+            gameType === "four-powers" ||
+            gameType === "berkh-12-shagai"
           ? 4
           : undefined,
   });
@@ -214,6 +239,14 @@ export default function GameModal({
   }, [isOpen, onClose]);
 
   useEffect(() => {
+    if (isOpen) return;
+    if (postPlayCloseTimerRef.current) {
+      clearTimeout(postPlayCloseTimerRef.current);
+      postPlayCloseTimerRef.current = null;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     const usesShagaiModel = new Set([
       "shagai",
@@ -221,12 +254,46 @@ export default function GameModal({
       "horse-race",
       "shagai-guess",
       "seven-shagai",
+      "twelve-shagai",
+      "berkh-12-shagai",
     ]);
     if (!usesShagaiModel.has(gameType)) return;
     void useGLTF.preload("/models/shagai_model.glb");
   }, [isOpen, gameType]);
 
   if (!isOpen) return null;
+
+  if (weeklyPlaysRemaining === 0) {
+    const isMn = language === "mn";
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)" }}
+        onClick={onClose}
+      >
+        <div
+          className="max-w-md rounded-2xl border border-amber-500/30 bg-zinc-950/95 p-6 text-center shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-2xl font-bold text-amber-200">
+            {isMn ? "7 хоногийн тоглолт дууссан" : "Weekly plays used up"}
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-amber-100/80">
+            {isMn
+              ? `«${gameName}»-ыг энэ өртөөнд сүүлийн 7 хоногт 2 удаа тоглосон. Дараагийн тоглолт хуанлийн 7 хоног шинээр эхлэхэд сэргэнэ.`
+              : `You've played this game 2 times in the last 7 days at this station. The limit resets on a rolling 7-day window.`}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-5 w-full rounded-lg border border-amber-500/40 bg-amber-950/50 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-900/40"
+          >
+            {isMn ? "Хаах" : "Close"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const mpSharedBoard = gameType === "puzzle";
   const stoneLobbyBlock =
@@ -299,22 +366,63 @@ export default function GameModal({
     gameType === "stone-cairn" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
+  const twelveShagaiLobbyBlock =
+    multiplayerOn &&
+    gameType === "twelve-shagai" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const twelveShagaiHumanMp =
+    multiplayerOn &&
+    gameType === "twelve-shagai" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const berkh12PlayerCount: LocalPlayerCount = useMemo(() => {
+    const n = mp.players.length;
+    if (n >= 4) return 4;
+    if (n === 3) return 3;
+    return 2;
+  }, [mp.players.length]);
+  const berkh12LobbyBlock =
+    multiplayerOn &&
+    gameType === "berkh-12-shagai" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const berkh12HumanMp =
+    multiplayerOn &&
+    gameType === "berkh-12-shagai" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
   const puzzleMpActive = mpSharedBoard && multiplayerOn;
   const mpBlocksSoloStart =
     puzzleMpActive &&
     !(mp.roomStatus === "playing" && mp.matchSeed != null);
 
-  async function submit(result: "win" | "lose", progressPct?: number) {
+  const POST_PLAY_CLOSE_MS = 2000;
+
+  function submit(result: "win" | "lose", progressPct?: number) {
+    if (postPlayCloseTimerRef.current) {
+      clearTimeout(postPlayCloseTimerRef.current);
+    }
     const saved = loadPlayer();
-    if (!saved?.name) return;
-    await completeGame({
-      email: saved.name,
-      stationSlug,
-      gameSlug,
-      result,
-      progressPct,
-    });
-    onCompleted?.(result);
+    if (saved?.name) {
+      void (async () => {
+        try {
+          await completeGame({
+            email: saved.name,
+            stationSlug,
+            gameSlug,
+            result,
+            progressPct,
+          });
+        } catch (e) {
+          console.error("completeGame", e);
+        }
+      })();
+    }
+    postPlayCloseTimerRef.current = setTimeout(() => {
+      postPlayCloseTimerRef.current = null;
+      onCompleted?.(result);
+    }, POST_PLAY_CLOSE_MS);
   }
 
   return (
@@ -409,7 +517,9 @@ export default function GameModal({
                 gameType === "shagai-guess" ||
                 gameType === "four-powers" ||
                 gameType === "wooden-dice" ||
-                gameType === "stone-cairn"
+                gameType === "stone-cairn" ||
+                gameType === "twelve-shagai" ||
+                gameType === "berkh-12-shagai"
               }
             />
           ) : null}
@@ -558,6 +668,47 @@ export default function GameModal({
           {gameType === "seven-shagai" && (
             <ShagaiSevenGame onComplete={(r, pct) => void submit(r, pct)} />
           )}
+          {gameType === "twelve-shagai" && twelveShagaiLobbyBlock && (
+            <ShagaiTwelveOnlineLobby />
+          )}
+          {gameType === "twelve-shagai" &&
+            !twelveShagaiLobbyBlock &&
+            twelveShagaiHumanMp && (
+              <ShagaiTwelveGameMulti
+                onComplete={(r, pct) => void submit(r, pct)}
+                mp={mp}
+                lastPeerRelay={mp.lastPeerRelay}
+                sendRelay={mp.sendRelay}
+              />
+            )}
+          {gameType === "twelve-shagai" &&
+            !twelveShagaiLobbyBlock &&
+            !twelveShagaiHumanMp && (
+              <ShagaiTwelveGame
+                onComplete={(r, pct) => void submit(r, pct)}
+              />
+            )}
+          {gameType === "berkh-12-shagai" && berkh12LobbyBlock && (
+            <ShagaiBerkh12OnlineLobby />
+          )}
+          {gameType === "berkh-12-shagai" &&
+            !berkh12LobbyBlock &&
+            berkh12HumanMp && (
+              <ShagaiBerkh12GameMulti
+                onComplete={(r, pct) => void submit(r, pct)}
+                mp={mp}
+                lastPeerRelay={mp.lastPeerRelay}
+                sendRelay={mp.sendRelay}
+                playerCount={berkh12PlayerCount}
+              />
+            )}
+          {gameType === "berkh-12-shagai" &&
+            !berkh12LobbyBlock &&
+            !berkh12HumanMp && (
+              <ShagaiBerkh12Game
+                onComplete={(r, pct) => void submit(r, pct)}
+              />
+            )}
           {gameType === "uichuur" && <ComingSoon name="Үйчүүр" />}
           {gameType === "khorol" && <KhorolGame />}
           {gameType === "puzzle" && (

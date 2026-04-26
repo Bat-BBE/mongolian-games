@@ -84,11 +84,36 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
         >
           {loc === "mn" ? "Модон шоо" : "Wooden dice duel"}
         </h2>
-        <p className="text-[10px] text-slate-500">
+        <p className="text-[10px] text-amber-100/88">
           {loc === "mn"
-            ? "Мод, ноосон дэвсгэр. Гурван шоо — нийлбэрээр уралдана. 5 оноо."
-            : "Felt, carved wood. Three dice; higher total wins the round. First to 5."}
+            ? "3 шоо нэг удаа: таны 3-ын нийлбэр > эсрэгийх бол тэр раунд таны 1 оноо. 5 ийм раунд = ялалт."
+            : "Three dice at once: if your sum of three is higher, you win that round. First to 5 round-wins takes the match."}
         </p>
+        <details
+          className="mx-auto mt-1 max-w-sm rounded border border-amber-500/20 bg-black/25 px-2 py-1 text-left"
+          open
+        >
+          <summary className="cursor-pointer text-[10px] font-semibold text-amber-200/90">
+            {loc === "mn" ? "Дүрмийн товчоо" : "How it works"}
+          </summary>
+          <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[9px] text-slate-400">
+            <li>
+              {loc === "mn"
+                ? "Нийлбэр тэнцвэртэй → энэ раунд хоёр талд оноо нэмэгдэхгүй."
+                : "If both totals tie, neither side gets a point that round."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "3D зөвхөн хөдөлгөөн; оноо нь зөвхөн 1–6-ын гурвын нийлбэр (3–18)."
+                : "3D is just visuals; the game only compares the two triples of 1–6 (sums 3–18)."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "2 тоглогч: Online — дээд товч, зүүн эзэн, баруун зочин."
+                : "2p online: top bar room; host = left, guest = right as labeled."}
+            </li>
+          </ul>
+        </details>
         <div className="mt-1 flex justify-center gap-4 font-mono text-xs text-amber-200/90">
           <span>
             {loc === "mn" ? "Та" : "You"}: {sP}

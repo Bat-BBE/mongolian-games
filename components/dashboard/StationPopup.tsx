@@ -2,6 +2,7 @@
 
 import { LuX as X, LuStar as Star } from "react-icons/lu";
 import { cn } from "@/lib/utils";
+import { StationImageOrIcon } from "./StationImageOrIcon";
 import type { UrtuuStation } from "./UrtuuNode";
 import {
   gameWeeklyPlaysRemaining,
@@ -114,23 +115,12 @@ export function StationPopup({
         </button>
 
         <div className="flex shrink-0 items-start gap-3 border-b border-white/10 p-3 pr-10">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 text-2xl"
-            style={{
-              background:
-                "color-mix(in oklch, var(--primary) 12%, transparent)",
-            }}
-          >
-            {station.imageUrl ? (
-              <img
-                src={station.imageUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span>{station.icon?.trim() || "📍"}</span>
-            )}
-          </div>
+          <StationImageOrIcon
+            size="popup"
+            imageUrl={station.imageUrl}
+            icon={station.icon?.trim() || "📍"}
+            alt={station.name}
+          />
           <div className="min-w-0 flex-1 pt-0.5">
             <h4 className="font-display text-base font-semibold leading-tight tracking-wide text-foreground">
               {station.name}
@@ -224,7 +214,7 @@ export function StationPopup({
               const statusText = progressionLocked
                 ? lockedHint
                 : gameRem <= 0
-                  ? "Лимит"
+                  ? "2/2 — 7 хоног"
                   : isDone
                     ? doneHint
                     : lockedHint;

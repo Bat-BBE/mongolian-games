@@ -21,7 +21,34 @@ export const SHAGAI_HORSE_RACE_THROW_START_POSITIONS: [number, number, number][]
     z + HORSE_RACE_THROW_Z_OFFSET,
   ]);
 
-/** spread = 2.5 — анхны 2.2-той харьцуулахад дөрвөн бэрхтэй нэгэн адил */
+const HR = SHAGAI_HORSE_RACE_THROW_START_POSITIONS;
+/** 12 жил: 2–4 шагайн шидэлт — байрлал (морин уралдааны зурвас) */
+export function getTwelveThrowStartPositions(
+  n: 2 | 3 | 4,
+): [number, number, number][] {
+  if (n === 2) return [HR[0]!, HR[2]!];
+  if (n === 3) return [HR[0]!, HR[1]!, HR[2]!];
+  return [HR[0]!, HR[1]!, HR[2]!, HR[3]!];
+}
+
+const BERKH12 = SHAGAI_HORSE_RACE_THROW_START_POSITIONS;
+/** 12 бэрх: 12 шагай — 3×4 сүлжээ (морин уралдааны шидэлтийн бүс). */
+export function getBerkhTwelveThrowStartPositions(): [number, number, number][] {
+  const out: [number, number, number][] = [];
+  for (let row = 0; row < 3; row++) {
+    for (let c = 0; c < 4; c++) {
+      const base = BERKH12[c] ?? BERKH12[0]!;
+      out.push([
+        base[0] + (c - 1.5) * 0.35,
+        base[1] + row * 0.2,
+        base[2] - row * 0.48,
+      ] as [number, number, number]);
+    }
+  }
+  return out;
+}
+
+/** spread = 2.5 — анхны 2.2-той харьцuuлахад дөрвөн бэрхтэй нэгэн адил */
 export function getShagaiThrowParams(): {
   vel: [number, number, number];
   angVel: [number, number, number];

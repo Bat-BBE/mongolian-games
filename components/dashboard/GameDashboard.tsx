@@ -423,6 +423,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
 
         <MapArea
           t={t}
+          lang={lang}
           userEmail={userEmail}
           playerDisplayName={player.name}
           homeGerLevel={player.homeGerLevel ?? 1}
@@ -437,6 +438,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           stationGameVisits={player.stationGameVisits}
           onGameCompleted={() => setGameReloadTick((n) => n + 1)}
           onOpenHome={() => setHomeOpen(true)}
+          homeModalOpen={homeOpen}
           onRegisterFlyHome={(fn) => {
             flyHomeRef.current = fn;
           }}

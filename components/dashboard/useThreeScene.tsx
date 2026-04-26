@@ -16,6 +16,7 @@ import {
   MAP_PERF_SHADOW_MAP,
   MAP_SCENE,
 } from "./mapConstants";
+import { MAP_WORLD_POIS } from "./mapWorldPoi";
 import {
   terrainBiome,
   terrainHeight,
@@ -199,6 +200,8 @@ export function useThreeScene({
   const orbitCameraDistRef = useRef(120);
   const homeGerLevelMapRef = useRef(homeGerLevel);
   homeGerLevelMapRef.current = homeGerLevel;
+  const homeLivestockMapRef = useRef(homeLivestock);
+  homeLivestockMapRef.current = homeLivestock;
   const showAllMapLabelsRef = useRef(false);
   const [labelZoomScale, setLabelZoomScale] = useState(1);
   const [showAllMapLabels, setShowAllMapLabels] = useState(false);
@@ -209,6 +212,14 @@ export function useThreeScene({
     stationId: string | null;
     alpha: number;
   }>({ stationId: null, alpha: -1 });
+  const [worldPoiUi, setWorldPoiUi] = useState<{
+    id: string;
+    alpha: number;
+  } | null>(null);
+  const worldPoiUiThrottleRef = useRef<{
+    id: string;
+    alpha: number;
+  } | null>(null);
 
   const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
   const builderRef = useRef<SceneBuilder | null>(null);
@@ -371,13 +382,18 @@ export function useThreeScene({
     builder.buildRocks();
     builder.buildRoads(stations);
     builder.buildStationGers(stations);
+    const worldPoiForBuilder = MAP_WORLD_POIS.map((p) => {
+      const w = stationWorldXZ(p.wx, p.wz);
+      return { id: p.id, x: w.x, z: w.z };
+    });
+    builder.buildWorldPoiMarkers(worldPoiForBuilder);
     builder.buildGerCamps();
     builder.buildNomadDetails();
     builder.buildHorses();
     builder.buildCamels();
     builder.buildClouds();
     builder.buildBirds();
-    builder.buildPlayerHomeGer(homeGerLevel);
+    builder.buildPlayerHomeGer(homeGerLevel, homeLivestock);
     builder.buildPlayerLivestockNearHome(homeLivestock);
 
     const remotePeerGroup = new THREE.Group();
@@ -385,7 +401,6 @@ export function useThreeScene({
     scene.add(remotePeerGroup);
     const remoteAvatarById = new Map<string, THREE.Group>();
     const remoteCampById = new Map<string, THREE.Object3D>();
-    const remoteEnclosureById = new Map<string, THREE.Mesh>();
     const remoteHeroMixers = new Set<THREE.AnimationMixer>();
     const hashPeerId = (id: string): number => {
       let h = 0;
@@ -1016,17 +1031,6 @@ export function useThreeScene({
         lastTouchDist = d;
       }
     };
-    const onDoubleClick = () => {
-      const t = buildCameraTarget(currentIdRef.current);
-      cameraState.targetLook.copy(t.lookAt);
-      cameraState.targetDist = t.distance;
-      cameraState.targetPhi = t.phi;
-      cameraState.targetTheta = t.theta;
-      cameraState.thetaVel = 0;
-      cameraState.phiVel = 0;
-      cameraState.distVel = 0;
-      cancelIntro();
-    };
     const onTouchEnd = () => {
       cameraState.isDragging = false;
     };
@@ -1042,7 +1046,6 @@ export function useThreeScene({
       passive: true,
     });
     renderer.domElement.addEventListener("touchend", onTouchEnd);
-    renderer.domElement.addEventListener("dblclick", onDoubleClick);
     renderer.domElement.addEventListener("pointerdown", onPointerDown);
     renderer.domElement.addEventListener("pointerup", onPointerUp);
     const onWindowBlur = () => {
@@ -1155,6 +1158,7 @@ export function useThreeScene({
                 playerHomeX,
                 playerHomeZ,
                 homeGerLevelMapRef.current,
+                homeLivestockMapRef.current ?? null,
               );
               if (pushed.pushed) {
                 rootMove.position.x = pushed.x;
@@ -1634,7 +1638,6 @@ export function useThreeScene({
               sm.z,
               sm.ry,
               remoteCampById,
-              remoteEnclosureById,
               {
                 homeKey: p.homeKey?.trim() || undefined,
                 gerLevel: p.gerLevel ?? 1,
@@ -1659,15 +1662,6 @@ export function useThreeScene({
                 disposeMeshSubtree(camp);
                 remoteCampById.delete(pid);
               }
-              const enc = remoteEnclosureById.get(pid);
-              if (enc) {
-                remotePeerGroup.remove(enc);
-                enc.geometry.dispose();
-                const m = enc.material;
-                if (Array.isArray(m)) m.forEach((x) => x.dispose());
-                else m.dispose();
-                remoteEnclosureById.delete(pid);
-              }
             }
           }
         }
@@ -1685,9 +1679,13 @@ export function useThreeScene({
           return;
         }
 
+        /** Бүх өртөө — хаалганы энгийн ойртлын дүрс */
         const INNER_R = 58;
+        /** Тоглогчийн гэр: ижил «ойртсон» мэдрэмж өгөхийн тулд трохи том (бусдаар ижил механик) */
+        const HOME_INNER_R = 78;
         const OUTER_R = 228;
         const INNER_R2 = INNER_R * INNER_R;
+        const HOME_INNER_R2 = HOME_INNER_R * HOME_INNER_R;
         const OUTER_R2 = OUTER_R * OUTER_R;
 
         let nearestId: string | null = null;
@@ -1704,16 +1702,25 @@ export function useThreeScene({
 
         const dist = Math.sqrt(bestD2);
         const innerId =
-          nearestId != null && bestD2 <= INNER_R2 ? nearestId : null;
+          nearestId != null &&
+          (bestD2 <= INNER_R2 ||
+            (nearestId === "home" && bestD2 <= HOME_INNER_R2))
+            ? nearestId
+            : null;
         const labelId =
           nearestId != null && bestD2 <= OUTER_R2 ? nearestId : null;
         let approachAlpha = 0;
         if (labelId != null && nearestId != null) {
-          if (bestD2 <= INNER_R2) approachAlpha = 1;
+          const innerFade =
+            nearestId === "home" ? HOME_INNER_R : INNER_R;
+          const atFull =
+            bestD2 <= INNER_R2 ||
+            (nearestId === "home" && bestD2 <= HOME_INNER_R2);
+          if (atFull) approachAlpha = 1;
           else {
             approachAlpha = Math.max(
               0,
-              Math.min(1, (OUTER_R - dist) / (OUTER_R - INNER_R)),
+              Math.min(1, (OUTER_R - dist) / (OUTER_R - innerFade)),
             );
           }
         }
@@ -1734,6 +1741,52 @@ export function useThreeScene({
           };
           setLabelUi({ stationId: labelId, alpha: approachAlpha });
         }
+
+        const W_INNER = 50;
+        const W_OUTER = 155;
+        const W_IN2 = W_INNER * W_INNER;
+        const W_OUT2 = W_OUTER * W_OUTER;
+
+        if (innerId != null) {
+          if (worldPoiUiThrottleRef.current != null) {
+            worldPoiUiThrottleRef.current = null;
+            setWorldPoiUi(null);
+          }
+        } else {
+          let wBestD2 = Infinity;
+          let wBestId: string | null = null;
+          for (const w of worldPoiForBuilder) {
+            const dxw = root.position.x - w.x;
+            const dzw = root.position.z - w.z;
+            const wd2 = dxw * dxw + dzw * dzw;
+            if (wd2 < wBestD2) {
+              wBestD2 = wd2;
+              wBestId = w.id;
+            }
+          }
+          const wDist = Math.sqrt(wBestD2);
+          let wCur: { id: string; alpha: number } | null = null;
+          if (wBestId != null && wBestD2 < W_OUT2) {
+            let wAlpha = 0;
+            if (wBestD2 <= W_IN2) wAlpha = 1;
+            else
+              wAlpha = Math.max(
+                0,
+                Math.min(1, (W_OUTER - wDist) / (W_OUTER - W_INNER)),
+              );
+            if (wAlpha > 0.04) wCur = { id: wBestId, alpha: wAlpha };
+          }
+          const wth0 = worldPoiUiThrottleRef.current;
+          if (
+            (wCur == null && wth0 != null) ||
+            (wCur != null &&
+              (wth0?.id !== wCur.id ||
+                Math.abs((wth0?.alpha ?? 0) - wCur.alpha) > 0.035))
+          ) {
+            worldPoiUiThrottleRef.current = wCur;
+            setWorldPoiUi(wCur);
+          }
+        }
       },
     });
 
@@ -1751,14 +1804,6 @@ export function useThreeScene({
         disposeMeshSubtree(camp);
       }
       remoteCampById.clear();
-      for (const [, enc] of remoteEnclosureById) {
-        remotePeerGroup.remove(enc);
-        enc.geometry.dispose();
-        const m = enc.material;
-        if (Array.isArray(m)) m.forEach((x) => x.dispose());
-        else m.dispose();
-      }
-      remoteEnclosureById.clear();
       for (const [, grp] of remoteAvatarById) {
         remotePeerGroup.remove(grp);
         disposeRemoteAvatar(grp);
@@ -1780,7 +1825,6 @@ export function useThreeScene({
       renderer.domElement.removeEventListener("touchstart", onTouchStart);
       renderer.domElement.removeEventListener("touchmove", onTouchMove);
       renderer.domElement.removeEventListener("touchend", onTouchEnd);
-      renderer.domElement.removeEventListener("dblclick", onDoubleClick);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("keydown", onKeyDown);
@@ -1805,9 +1849,9 @@ export function useThreeScene({
 
   const homeGerLevelKey = String(homeGerLevel);
   useEffect(() => {
-    builderRef.current?.buildPlayerHomeGer(homeGerLevel);
+    builderRef.current?.buildPlayerHomeGer(homeGerLevel, homeLivestock);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeGerLevelKey]);
+  }, [homeGerLevelKey, homeLivestockKey]);
 
   const flyToStation = useCallback((id: string, snap?: boolean) => {
     flyToStationRef.current?.(id, snap);
@@ -1841,5 +1885,6 @@ export function useThreeScene({
     mapHeroEmoteIds,
     playMapHeroEmote,
     mapVirtualStickRef,
+    worldPoiUi,
   };
 }

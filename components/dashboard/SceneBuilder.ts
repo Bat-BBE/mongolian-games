@@ -9,6 +9,8 @@ import {
   terrainBiome,
   pseudoNoise2D,
   smoothstep,
+  getPlayerHomeYardHalfAxes,
+  type HomeLivestockForFence,
 } from "./sceneHelpers";
 import {
   STATION_CONFIGS,
@@ -63,10 +65,10 @@ function distPointSegment2D(
 const STATION_MAIN_GER_SCALE = 3.2;
 const STATION_SATELLITE_GER_SCALE_MIN = 1.68;
 const STATION_SATELLITE_GER_SCALE_MAX = 1.98;
-/** urtuunuus hol bairluulah mod, chuluu, rock */
-const STATION_CENTER_CLEAR = 62;
+/** Төвийн гол гэр/хаалганаас сүрийн мөхлөг, мод — илүү агаартай (далд хэмжээс өөрчлөгдөхгүй). */
+const STATION_CENTER_CLEAR = 66;
 /** ub-bogdiin urtuu hol bairluulah */
-const STATION_CENTER_CLEAR_ULAANBAATAR = 74;
+const STATION_CENTER_CLEAR_ULAANBAATAR = 78;
 
 /**
  * Процедурын морь, тэмээг **гэрийн ойролцоо** болон world map-ийн **ижил** нэг
@@ -862,7 +864,6 @@ export class SceneBuilder {
     _heroZ: number,
     _heroRy: number,
     campByPeer: Map<string, THREE.Object3D>,
-    enclosureByPeer: Map<string, THREE.Mesh>,
     meta?: {
       homeKey?: string;
       gerLevel: number;
@@ -877,45 +878,23 @@ export class SceneBuilder {
   ): void {
     const safeName = `remote_visit_camp_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
     const lv = Math.max(1, Math.min(30, Math.floor(meta?.gerLevel ?? 1)));
-    const ls = meta?.livestock;
-    const sheepN = Math.max(0, Math.min(99, Math.floor(ls?.sheep ?? 0)));
-    const goatN = Math.max(0, Math.min(99, Math.floor(ls?.goat ?? 0)));
-    const cowN = Math.max(0, Math.min(99, Math.floor(ls?.cow ?? 0)));
-    const horseN = Math.max(0, Math.min(99, Math.floor(ls?.horse ?? 0)));
-    const camelN = Math.max(0, Math.min(99, Math.floor(ls?.camel ?? 0)));
-    const totalMal = Math.min(
-      160,
-      sheepN + goatN + cowN + horseN + camelN,
-    );
 
     const step = Math.min(lv, 5);
     const earlyScale = 0.5 + (step - 1) * 0.095;
     const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
     const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
-    // `buildPlayerHomeGer`‑той ижил s — урьд *0.5 байсан тул бусад тоглогчийн гэр илүү жижиг харагддаг байсан.
     const s = earlyScale * midBoost * highBoost * 1.86;
 
-    const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
-    let ringSpan = 12.5;
-    if (extraGers > 0) {
-      ringSpan = 13.2 + Math.min(lv * 0.45, 10) + 7;
-    }
-    const yardW = Math.max(
-      34,
-      ringSpan * 2.15 + Math.min(lv, 8) * 0.9 + totalMal * 0.62,
-    );
-    const enclosureR = yardW * 0.5;
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, meta?.livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
 
     const fromHello = (meta?.homeKey ?? "").trim();
     const anchorKey = fromHello || peerId;
     const { x: gx, z: gz } = playerHomeWorldAnchor(anchorKey);
     const campYaw = 0;
-    const layoutKey = `${lv}|${totalMal}|${enclosureR.toFixed(1)}|${s.toFixed(2)}`;
-    const metaKey = `A|${anchorKey.slice(0, 64)}|${layoutKey}`;
-
-    const hy = terrainHeight(gx, gz);
-    const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
-    const y = hy + gerLift;
+    const layoutKey = `${lv}|${yardW.toFixed(1)}|${yardD.toFixed(1)}|${s.toFixed(2)}`;
+    const metaKey = `B|${anchorKey.slice(0, 64)}|${layoutKey}`;
 
     const existing = campByPeer.get(peerId);
     const needsRebuild =
@@ -929,44 +908,14 @@ export class SceneBuilder {
         disposeRemoteCampSubtree(existing);
         campByPeer.delete(peerId);
       }
-      this.makeGer(gx, gz, campYaw, s, false, "", container, safeName);
-      const created = container.getObjectByName(safeName);
-      if (created) {
-        created.userData.campMeta = metaKey;
-        campByPeer.set(peerId, created);
-      }
-    } else if (existing && existing.parent === container) {
-      existing.position.set(gx, y, gz);
-      existing.rotation.y = campYaw;
+      const campRoot = new THREE.Group();
+      campRoot.name = safeName;
+      campRoot.userData.campMeta = metaKey;
+      container.add(campRoot);
+      this.makeGer(gx, gz, campYaw, s, false, "", campRoot, `${safeName}_ger`);
+      this.makeFence(gx, gz, yardW, yardD, 0, false, campRoot);
+      campByPeer.set(peerId, campRoot);
     }
-
-    let ring = enclosureByPeer.get(peerId);
-    if (!ring || (ring.userData.campMeta as string | undefined) !== metaKey) {
-      if (ring) {
-        container.remove(ring);
-        ring.geometry.dispose();
-        (ring.material as THREE.Material).dispose();
-        enclosureByPeer.delete(peerId);
-      }
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x6e5a42,
-        transparent: true,
-        opacity: 0.4,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-      ring = new THREE.Mesh(
-        new THREE.RingGeometry(enclosureR * 0.87, enclosureR, 64),
-        mat,
-      );
-      ring.name = `remote_enc_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
-      ring.rotation.x = -Math.PI / 2;
-      ring.userData.campMeta = metaKey;
-      enclosureByPeer.set(peerId, ring);
-      container.add(ring);
-    }
-    const rHy = terrainHeight(gx, gz) + 0.26;
-    ring.position.set(gx, rHy, gz);
   }
 
   private makeFence(
@@ -1176,7 +1125,10 @@ export class SceneBuilder {
     }
   }
 
-  buildPlayerHomeGer(gerLevel = 1): void {
+  buildPlayerHomeGer(
+    gerLevel = 1,
+    livestock: HomeLivestockForFence = null,
+  ): void {
     const prev = this.scene.getObjectByName("playerHomeGer");
     if (prev) this.scene.remove(prev);
 
@@ -1217,8 +1169,9 @@ export class SceneBuilder {
         );
       }
     }
-    const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
-    const yardD = yardW * 0.86;
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
     this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
@@ -1380,6 +1333,67 @@ export class SceneBuilder {
         root,
       );
     }
+  }
+
+  /**
+   * Газрын сонин цэг — өртөөний тэмдэг биш, жижиг овоо/чулуун тэмдэг.
+   * `x, z` нь `stationWorldXZ`-аас (азотын өндөр: terrain).
+   */
+  buildWorldPoiMarkers(
+    pois: { id: string; x: number; z: number }[],
+  ): void {
+    const prev = this.scene.getObjectByName("worldPoiMarkers");
+    if (prev) {
+      prev.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry?.dispose();
+          const mat = o.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
+        }
+      });
+      this.scene.remove(prev);
+    }
+    if (pois.length === 0) return;
+    const root = new THREE.Group();
+    root.name = "worldPoiMarkers";
+    for (const p of pois) {
+      const y = terrainHeight(p.x, p.z);
+      if (y > 85) continue;
+      const g = new THREE.Group();
+      g.name = `world_poi_${p.id}`;
+      const base = new THREE.Mesh(
+        new THREE.ConeGeometry(0.65, 0.95, 5),
+        mkMat(0x6a5340, 0.9),
+      );
+      base.position.y = 0.48;
+      const mid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.48, 0.7, 6),
+        mkMat(0x8a7048, 0.88),
+      );
+      mid.position.y = 1.05;
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 7, 5),
+        mkMat(0xc9a86c, 0.85),
+      );
+      cap.position.y = 1.52;
+      g.add(base, mid, cap);
+      g.position.set(p.x, y - 0.02, p.z);
+      g.rotation.y = rand(0, Math.PI * 2);
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.9, 0.06, 5, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0x9acd32,
+          transparent: true,
+          opacity: 0.32,
+        }),
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.04;
+      g.add(rim);
+      root.add(g);
+    }
+    this.scene.add(root);
   }
 
   buildGerCamps(): void {
@@ -1681,7 +1695,10 @@ export class SceneBuilder {
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const r = rand(radius * 0.3, radius);
+      const r = rand(
+        Math.max(radius * 0.36, innerClear * 0.9),
+        radius * 0.95,
+      );
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       if (Math.hypot(x - cx, z - cz) < innerClear) continue;
@@ -1780,30 +1797,30 @@ export class SceneBuilder {
     const smin = p.treeScaleMin ?? 0.45;
     const smax = p.treeScaleMax ?? 1.05;
     if (p.trees && p.trees > 0) {
-      const nt = Math.max(0, Math.floor(p.trees * 0.35));
+      const nt = Math.max(0, Math.floor(p.trees * 0.52));
       if (nt > 0)
         this.scatterPeripheryTrees(cx, cz, nt, tr, smin, smax, centerClear);
     }
 
     if (p.decorGers && p.decorGers > 0) {
-      const nd = Math.max(0, Math.round(p.decorGers * 0.38));
+      const nd = Math.max(0, Math.round(p.decorGers * 0.6));
       if (nd > 0)
         this.scatterPeripheryDecorGers(
           cx,
           cz,
           nd,
           p.gerRadius ?? 32,
-          stationId === "ulaanbaatar" ? 46 : 15,
+          stationId === "ulaanbaatar" ? 48 : 19,
         );
     }
 
     if (p.camels && p.camels > 0) {
-      const nc = Math.max(0, Math.floor(p.camels * 0.3));
+      const nc = Math.max(0, Math.floor(p.camels * 0.45));
       if (nc > 0) this.scatterPeripheryCamels(cx, cz, nc, p.camelRadius ?? 48);
     }
 
     if (p.horses && p.horses > 0) {
-      const nh = Math.max(0, Math.floor(p.horses * 0.28));
+      const nh = Math.max(0, Math.floor(p.horses * 0.42));
       if (nh > 0) this.scatterPeripheryHorses(cx, cz, nh, p.horseRadius ?? 44);
     }
 
@@ -1811,7 +1828,7 @@ export class SceneBuilder {
       this.scatterPeripheryRocks(
         cx,
         cz,
-        Math.max(0, Math.floor(p.rocks * 0.45)),
+        Math.max(0, Math.floor(p.rocks * 0.6)),
         p.rockRadius ?? 30,
         centerClear,
       );
@@ -1823,7 +1840,7 @@ export class SceneBuilder {
       this.scatterGrassClumps(
         cx,
         cz,
-        Math.max(0, Math.floor(p.grassClumps * 0.45)),
+        Math.max(0, Math.floor(p.grassClumps * 0.62)),
         p.grassRadius ?? 34,
       );
 
@@ -1831,7 +1848,7 @@ export class SceneBuilder {
       this.scatterPeripheryReeds(
         cx,
         cz,
-        Math.max(0, Math.floor(p.reedPatches * 0.4)),
+        Math.max(0, Math.floor(p.reedPatches * 0.55)),
         p.reedRadius ?? 36,
       );
   }
@@ -1841,9 +1858,11 @@ export class SceneBuilder {
     const ringSeed = stationId
       .split("")
       .reduce((a, c) => a + c.charCodeAt(0), 0);
-    const ringR = 28.5 + (ringSeed % 5) * 0.45;
-    for (let i = 0; i < 10; i++) {
-      const ang = (i / 10) * Math.PI * 2 + rand(-0.04, 0.04);
+    /** Тойргийн илүү сийрэг зай: жижиг гэрүүд нэгнээсээ болон төв гэрээр арай хол. */
+    const ringR = 31.0 + (ringSeed % 6) * 0.48;
+    const nSat = 12;
+    for (let i = 0; i < nSat; i++) {
+      const ang = (i / nSat) * Math.PI * 2 + rand(-0.05, 0.05);
       const gx = x + Math.cos(ang) * ringR;
       const gz = z + Math.sin(ang) * ringR;
       this.makeGer(
@@ -1865,7 +1884,7 @@ export class SceneBuilder {
       true,
       stationId,
     );
-    const fenceHalf = ringR + 12.5;
+    const fenceHalf = ringR + 14.8;
     this.makeFence(
       x,
       z,

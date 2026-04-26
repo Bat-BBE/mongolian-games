@@ -202,6 +202,10 @@ function rewardFor(gameSlug: string): {
       return { ...base, xp: 20, kp: 9, coins: 19, gems: 0 };
     case "seven-shagai":
       return { ...base, xp: 22, kp: 10, coins: 19, gems: 0 };
+    case "twelve-shagai":
+      return { ...base, xp: 22, kp: 10, coins: 20, gems: 0 };
+    case "berkh-12-shagai":
+      return { ...base, xp: 23, kp: 10, coins: 21, gems: 0 };
     case "puzzle":
       return { ...base, xp: 16, kp: 7, coins: 14, gems: 0 };
     case "modon-onis":

@@ -150,11 +150,36 @@ export default function StoneCairnMemoryGame({
         >
           {loc === "mn" ? "Чулуун овоо" : "Stone cairn memory"}
         </h2>
-        <p className="text-[10px] leading-relaxed text-slate-500">
+        <p className="text-[10px] leading-relaxed text-amber-100/88">
           {loc === "mn"
-            ? "Талд хумисан 5 чулуу. Дарааллыг санаад дар — алхам бүрийн дараа нэг чулуу нэмнэ. 10 дараалал."
-            : "Five cairn stones. Watch, then repeat the pattern—each level adds a step. Clear 10 steps to win."}
+            ? "5 товч (1–5): дараалал гялс гарна → та ижил дарааллаар дар. Алхам бүр нэг оноо нэмнэ. 10 зөв алхам = ялалт."
+            : "Five buttons (1–5): watch the flash, then tap the same order. Each success adds a new step. A full 10-step run with no error = win."}
         </p>
+        <details
+          className="mx-auto mt-1.5 max-w-md rounded border border-sky-500/25 bg-black/30 px-2 py-1 text-left"
+          open
+        >
+          <summary className="cursor-pointer text-[10px] font-semibold text-sky-200/90">
+            {loc === "mn" ? "Дүрмийн дэлгэрэнгүй" : "Full rules (short)"}
+          </summary>
+          <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[9px] leading-relaxed text-slate-400">
+            <li>
+              {loc === "mn"
+                ? "«Харагдах» үед зөвхөн ажиглана; «Оруулах» үед 1–5-ыг дараалалд дарна."
+                : "During “show”, only watch. During “input”, tap 1–5 in order."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "Нэг буруу даралт = тоглолт дуусна. Оноо: хамгийн сайн дарааллын урт (тоглолт дууссаны дараа)."
+                : "One wrong tap = run ends. Your “best” length is how far you got before a mistake (see end message)."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "2 тоглогч онлайн: өрөө, эзэн — зүүн; нэгдсэн дүрмээр оноо тэмдэглэнэ."
+                : "2p online: room, host = left; scores follow the match panel there."}
+            </li>
+          </ol>
+        </details>
         <p className="mt-0.5 text-[10px] text-amber-200/60">{message}</p>
       </div>
       <div className="relative min-h-0 w-full flex-1">

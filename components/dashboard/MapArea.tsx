@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMapPresence } from "@/hooks/useMapPresence";
 import { cn } from "@/lib/utils";
-import type { DashStrings } from "./dashboard-strings";
+import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { MapStationGamePreview } from "@/lib/api";
 import type { UrtuuStation } from "./UrtuuNode";
 import { StationPopup } from "./StationPopup";
 import { useThreeScene } from "./useThreeScene";
 import { StationLabels } from "./StationLabels";
-import { STATION_CONFIGS } from "./mapConstants";
+import { gameWeeklyPlaysRemaining, STATION_CONFIGS } from "./mapConstants";
+import { getMapWorldPoiById } from "./mapWorldPoi";
 import GameModal from "@/components/game/gameModal";
 import { resolveAssetUrl } from "@/lib/api";
 import {
@@ -38,6 +39,7 @@ const MAP_LANDSCAPE_HINT_DISMISSED_KEY = "mapLandscapeHintDismissed";
 
 interface MapAreaProps {
   t: DashStrings;
+  lang: DashLang;
   userEmail: string;
   playerDisplayName: string;
   homeGerLevel?: number;
@@ -68,12 +70,15 @@ interface MapAreaProps {
   heroModelPath?: string | null;
   onGameCompleted?: () => void;
   onOpenHome?: () => void;
+  /** Хаагдсаныг мэдэх — гэрт зогсож байхад дахиж автоматаар нээхгүй */
+  homeModalOpen?: boolean;
   onRegisterFlyHome?: (fly: () => void) => void;
   onHeroAtStationChange?: (stationId: string | null) => void;
 }
 
 export function MapArea({
   t,
+  lang,
   userEmail,
   playerDisplayName,
   homeGerLevel = 1,
@@ -86,6 +91,7 @@ export function MapArea({
   heroModelPath,
   onGameCompleted,
   onOpenHome,
+  homeModalOpen = false,
   onRegisterFlyHome,
   onHeroAtStationChange,
 }: MapAreaProps) {
@@ -140,6 +146,9 @@ export function MapArea({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const dismissedStationRef = useRef<string | null>(null);
+  const dismissedHomeRef = useRef(false);
+  const autoOpenedHomeThisVisitRef = useRef(false);
+  const prevHomeModalOpenRef = useRef(!!homeModalOpen);
   const [selectedGame, setSelectedGame] = useState<{
     type: string;
     name: string;
@@ -294,6 +303,7 @@ export function MapArea({
     mapHeroEmoteIds,
     playMapHeroEmote,
     mapVirtualStickRef,
+    worldPoiUi,
   } = useThreeScene({
     containerRef: canvasRef,
     stations,
@@ -331,6 +341,26 @@ export function MapArea({
     setSelectedId(heroAtStationId);
   }, [heroAtStationId]);
 
+  useEffect(() => {
+    const was = prevHomeModalOpenRef.current;
+    prevHomeModalOpenRef.current = !!homeModalOpen;
+    if (heroAtStationId === "home" && was && !homeModalOpen) {
+      dismissedHomeRef.current = true;
+    }
+  }, [homeModalOpen, heroAtStationId]);
+
+  useEffect(() => {
+    if (heroAtStationId !== "home") {
+      dismissedHomeRef.current = false;
+      autoOpenedHomeThisVisitRef.current = false;
+      return;
+    }
+    if (dismissedHomeRef.current) return;
+    if (autoOpenedHomeThisVisitRef.current) return;
+    autoOpenedHomeThisVisitRef.current = true;
+    onOpenHome?.();
+  }, [heroAtStationId, onOpenHome]);
+
   const mapEmoteIconById: Record<string, IconType> = {
     wave: LuHand,
     greet: LuSmile,
@@ -342,6 +372,18 @@ export function MapArea({
     praying: LuBookOpen,
     silly_dance: LuGhost,
   };
+
+  const worldPoiTidbit = useMemo(() => {
+    if (!worldPoiUi) return null;
+    const row = getMapWorldPoiById(worldPoiUi.id);
+    if (!row) return null;
+    return {
+      title: lang === "mn" ? row.titleMn : row.titleEn,
+      fact: lang === "mn" ? row.factMn : row.factEn,
+      icon: row.icon,
+      alpha: worldPoiUi.alpha,
+    };
+  }, [worldPoiUi, lang]);
 
   function mapEmoteAria(id: string): string {
     switch (id) {
@@ -480,6 +522,43 @@ export function MapArea({
         </>
       ) : null}
 
+      {worldPoiTidbit &&
+        !selectedGame &&
+        !selectedStation &&
+        !showMapLandscapeHint && (
+          <div
+            role="status"
+            className="pointer-events-none absolute z-[55] max-w-[min(calc(100%-1.5rem),20rem)] rounded-xl border border-white/15 map-ui-surface py-2.5 pl-3 pr-2.5 shadow-lg backdrop-blur-sm"
+            style={{
+              left: "max(0.75rem, env(safe-area-inset-left, 0px))",
+              bottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))",
+              opacity: Math.max(0, Math.min(1, worldPoiTidbit.alpha * 0.95 + 0.05)),
+            }}
+          >
+            <p
+              className="text-[0.6rem] font-semibold uppercase tracking-wide"
+              style={{ color: "var(--map-ui-text-muted)" }}
+            >
+              {t.mapWorldPoiBadge}
+            </p>
+            <p
+              className="mt-0.5 flex items-baseline gap-1.5 text-sm font-semibold leading-snug"
+              style={{ color: "var(--map-ui-text)" }}
+            >
+              <span className="text-base" aria-hidden>
+                {worldPoiTidbit.icon}
+              </span>
+              <span className="min-w-0">{worldPoiTidbit.title}</span>
+            </p>
+            <p
+              className="mt-1.5 text-[12px] leading-relaxed"
+              style={{ color: "var(--map-ui-text)" }}
+            >
+              {worldPoiTidbit.fact}
+            </p>
+          </div>
+        )}
+
       <StationLabels
         stations={stationsForLabels}
         labelPositions={labelPositions}
@@ -542,6 +621,11 @@ export function MapArea({
           gameName={selectedGame.name}
           stationSlug={selectedGame.stationSlug}
           gameSlug={selectedGame.gameSlug}
+          weeklyPlaysRemaining={gameWeeklyPlaysRemaining(
+            selectedGame.stationSlug,
+            selectedGame.gameSlug,
+            stationGameVisits,
+          )}
           onCompleted={(r) => {
             if (r === "win") onGameCompleted?.();
             setSelectedGame(null);

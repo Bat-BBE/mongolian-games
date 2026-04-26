@@ -129,7 +129,6 @@ export default function HeroActor({
       controls.target.set(0, 0, 0);
       controlsRef.current = controls;
 
-      // Add lights
       const ambientLight = new THREE.AmbientLight(0x404060);
       scene.add(ambientLight);
 
@@ -156,7 +155,6 @@ export default function HeroActor({
       backLight.position.set(0, 2, -10);
       scene.add(backLight);
 
-      // Add ground grid and floor
       const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0x444444);
       gridHelper.position.y = -1;
       scene.add(gridHelper);
