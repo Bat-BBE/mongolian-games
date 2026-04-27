@@ -40,10 +40,10 @@ const HOW: Record<string, { mn: string[]; en: string[] }> = {
 
   puzzle: {
     mn: [
-      "Та хамт эсвэл ганцаараа оньс тоглох боломжтой бөгөөд 10 секундэд ганцаарчилсан горим руу шилжинэ. Тоглоход автоматаар өрөөнд орж, бүх тоглогч ижил самбарыг бодит цагт харна.",
+      "4x4 харьцаатай 16-н ширхэг картыг нээж хосуудыг олно. 4н ижил хос байгаа ч түүний зөвхөн 2н хоорондоо хос байна гэдгийг санаарай.",
     ],
     en: [
-      "You can play together or solo, switching to solo after 10 seconds. The game auto-joins a room where all players see the same board in real time.",
+      "Flip over 16 cards arranged in a 4x4 grid and find matching pairs. Although there are 4 identical cards, only 2 of them form a valid pair.",
     ],
   },
 
@@ -58,26 +58,28 @@ const HOW: Record<string, { mn: string[]; en: string[] }> = {
 
   "seven-shagai": {
     mn: [
-      "Тоглоомын дүрэм болон алхмуудыг дэлгэцийн панелаас шууд харж дагана.",
+      "Долоон шагайг ижил тал буусан байгаа хосуудын хооронд нясалж нэгийг сонгож авна. Нэг шагай үлдэхэд та хожих болно.",
     ],
-    en: ["Follow the rules and steps shown in the game panel."],
+    en: [
+      "Flick one of the shagai between pairs that have landed on the same side. Continue until only one shagai remains — then you win.",
+    ],
   },
 
   "twelve-shagai": {
     mn: [
-      "Эхэнд 4 шагайгаар 4 удаа, дараа нь 3 шагайгаар 3 удаа, үргэлжлүүлэн 2 шагайгаар шидэж оноо авна. Морь тал бүр 1 оноо бөгөөд хамгийн түрүүнд 12 хүрсэн тоглогч ялна, тоглоом ганцаар эсвэл онлайнаар автоматаар явагдана.",
+      "4 шагайгаар 4 удаа, 3 шагайгаар 3 удаа, бусад үед 2 шагайгаар шидэж оноо авна. Морь буувал 1 оноо бөгөөд хамгийн түрүүнд 12 хүрсэн тоглогч ялна.",
     ],
     en: [
-      "You throw 4 shagai for 4 rounds, then 3 for 3 rounds, and continue with 2 shagai. Each horse side gives 1 point, and the first to reach 12 wins, with solo or online handled automatically.",
+      "You throw 4 shagai for 4 rounds, then 3 for 3 rounds, and continue with 2 shagai. Each horse side gives 1 point, and the first to reach 12 wins.",
     ],
   },
 
   "berkh-12-shagai": {
     mn: [
-      "2–4 тоглогч 12 шагайг зэрэг шидэж морь аван, тэмээгээр төлбөр хийдэг бөгөөд бүх 48 оноог цуглуулсан нь ялна.",
+      "2–4 тоглогч 12 шагайг зэрэг шиднэ. Морь буувал оноо авч, тэмээгээр төлбөр хийнэ. Нийт 48 оноог бүрдүүлсэн тоглогч ялна.",
     ],
     en: [
-      "2–4 players throw 12 shagai, gaining horses and paying with camels, and the player who collects all 48 wins.",
+      "2–4 players throw 12 shagai at once. Horses earn points, while camels are used for payment. The first player to collect all 48 points wins.",
     ],
   },
 
@@ -104,8 +106,8 @@ const HOW: Record<string, { mn: string[]; en: string[] }> = {
   },
 
   "horse-race": {
-    mn: ["Оноогоо нэмсээр хамгийн түрүүнд 32 хүрсэн нь ялна."],
-    en: ["Increase your score and be the first to reach 32 to win."],
+    mn: ["Оноогоо нэмсээр хамгийн түрүүнд барианд хүрсэн нь ялна."],
+    en: ["Increase your score and be the first to reach 20 to win."],
   },
 
   "four-powers": {
@@ -119,7 +121,7 @@ const HOW: Record<string, { mn: string[]; en: string[] }> = {
 
   "wooden-dice": {
     mn: [
-      "Гурван шооны нийлбэрийг харьцуулж их оноотой нь раунд хожин, хамгийн түрүүнд 5 ялалт авсан нь тоглолтыг авна.",
+      "Гурван шооны нийлбэрийг харьцуулж их оноотой нь раунд хожин, хамгийн түрүүнд 5 ялалт авсан нь ялна.",
     ],
     en: [
       "Compare the sum of three dice each round, and the higher score wins the round, with the first to 5 wins taking the match.",
