@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MatchRoomPlayer, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { MATCH_ROOM_CHAT_RELAY_CHANNEL } from "@/lib/matchRoomRelayChannels";
 import { playButtonClick } from "@/lib/uiSounds";
+import { playChatReceiveMicro, playChatSendMicro } from "@/lib/uiSounds";
 import { GAME_TEXT_META, GAME_UI_FONT_FAMILY } from "./gameUiTheme";
 
 const MAX_CHARS = 280;
@@ -15,18 +16,25 @@ type ChatLine = {
   id: string;
   fromPlayerId: string;
   text: string;
+  sentAt: number;
 };
 
 type Lang = "mn" | "en";
 
-function parseChatPayload(payload: unknown): string | null {
+function parseChatPayload(
+  payload: unknown,
+): { text: string; sentAt: number } | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload))
     return null;
-  const t = (payload as Record<string, unknown>).text;
+  const obj = payload as Record<string, unknown>;
+  const t = obj.text;
   if (typeof t !== "string") return null;
   const s = t.replace(/\s+/g, " ").trim();
   if (!s) return null;
-  return s.slice(0, MAX_CHARS);
+  const tsRaw = obj.sentAt;
+  const sentAt =
+    typeof tsRaw === "number" && Number.isFinite(tsRaw) ? tsRaw : Date.now();
+  return { text: s.slice(0, MAX_CHARS), sentAt };
 }
 
 type Props = {
@@ -55,6 +63,13 @@ export default function MatchRoomChatFab({
   const listRef = useRef<HTMLDivElement>(null);
   const seenRelayIdRef = useRef<Set<number>>(new Set());
 
+  const formatClock = (ts: number) =>
+    new Date(ts).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
   useEffect(() => {
     seenRelayIdRef.current = new Set();
     setLines([]);
@@ -69,17 +84,21 @@ export default function MatchRoomChatFab({
       return;
     if (seenRelayIdRef.current.has(lastPeerRelay.id)) return;
     seenRelayIdRef.current.add(lastPeerRelay.id);
-    const text = parseChatPayload(lastPeerRelay.payload);
-    if (!text) return;
+    const parsed = parseChatPayload(lastPeerRelay.payload);
+    if (!parsed) return;
+    if (!playerId || lastPeerRelay.from !== playerId) {
+      playChatReceiveMicro(0.2);
+    }
     setLines((prev) => [
       ...prev,
       {
         id: `r-${lastPeerRelay.id}`,
         fromPlayerId: lastPeerRelay.from,
-        text,
+        text: parsed.text,
+        sentAt: parsed.sentAt,
       },
     ]);
-  }, [lastPeerRelay]);
+  }, [lastPeerRelay, playerId]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,14 +120,17 @@ export default function MatchRoomChatFab({
     const text = draft.replace(/\s+/g, " ").trim();
     if (!text || !playerId) return;
     const clipped = text.slice(0, MAX_CHARS);
+    const sentAt = Date.now();
+    playChatSendMicro(0.22);
     playButtonClick();
-    sendRelay(MATCH_ROOM_CHAT_RELAY_CHANNEL, { text: clipped });
+    sendRelay(MATCH_ROOM_CHAT_RELAY_CHANNEL, { text: clipped, sentAt });
     setLines((prev) => [
       ...prev,
       {
         id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         fromPlayerId: playerId,
         text: clipped,
+        sentAt,
       },
     ]);
     setDraft("");
@@ -129,7 +151,7 @@ export default function MatchRoomChatFab({
           right: "max(10px, env(safe-area-inset-right))",
           zIndex: 12,
         }}
-        aria-label={isMn ? "Өрөөний чат" : "Room chat"}
+        aria-label={isMn ? "Чат" : "Chat"}
         title={isMn ? "Чат" : "Chat"}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -159,7 +181,7 @@ export default function MatchRoomChatFab({
                 id="match-room-chat-title"
                 className="min-w-0 flex-1 truncate text-left font-[family-name:var(--font-inter)] text-sm font-semibold tracking-tight text-zinc-200"
               >
-                {isMn ? "Өрөөний чат" : "Room chat"}
+                {isMn ? "Чат" : "Chat"}
               </h2>
               <button
                 type="button"
@@ -178,20 +200,42 @@ export default function MatchRoomChatFab({
               {lines.length === 0 ? (
                 <p className="text-center text-sm text-zinc-500">
                   {isMn
-                    ? "Өрөөнд байгаа тоглогчидтой энд мессеж бичнэ үү."
+                    ? "Өрөөнд байгаа тоглогчидтой харилцах боломжтой."
                     : "Messages are visible to everyone in this room."}
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2.5">
-                  {lines.map((ln) => (
-                    <li key={ln.id} className="text-sm leading-snug">
-                      <span className="font-semibold text-sky-200/90">
-                        {displayFor(ln.fromPlayerId)}
-                      </span>
-                      <span className="text-zinc-500"> · </span>
-                      <span className="text-zinc-100">{ln.text}</span>
-                    </li>
-                  ))}
+                  {lines.map((ln) => {
+                    const isMe = Boolean(
+                      playerId && ln.fromPlayerId === playerId,
+                    );
+                    return (
+                      <li
+                        key={ln.id}
+                        className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[78%] rounded-2xl border px-3.5 py-2.5 text-sm leading-snug shadow-sm ${
+                            isMe
+                              ? "border-emerald-400/35 bg-emerald-900/25 text-zinc-100"
+                              : "border-sky-400/25 bg-sky-950/25 text-zinc-100"
+                          }`}
+                        >
+                          <p
+                            className={`mb-0.5 text-[11px] font-semibold ${
+                              isMe ? "text-emerald-200/95" : "text-sky-200/90"
+                            }`}
+                          >
+                            {displayFor(ln.fromPlayerId)}
+                          </p>
+                          <p>{ln.text}</p>
+                          <p className="mt-1 text-right text-[10px] text-zinc-400/85">
+                            {formatClock(ln.sentAt)}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>
@@ -222,9 +266,7 @@ export default function MatchRoomChatFab({
                   <SendIcon size={18} aria-hidden />
                 </button>
               </div>
-              <p
-                className={`mt-1 text-right ${GAME_TEXT_META} text-zinc-600`}
-              >
+              <p className={`mt-1 text-right ${GAME_TEXT_META} text-zinc-600`}>
                 {draft.length}/{MAX_CHARS}
               </p>
             </div>

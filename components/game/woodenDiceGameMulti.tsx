@@ -215,8 +215,8 @@ export default function WoodenDiceGameMulti({
         </h2>
         <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
-            ? "2 тоглогч · зүүн эзэн, баруун зочин. Талууд: нүд + нийлбэр. Төв: 3D. Доор эзэн шиднэ."
-            : "Host left, guest right. Side panels: pips + total. Center: 3D. Host rolls at bottom."}
+            ? "2 тоглогч: 3 шоо шидээд нийлбэрээр өрсөлдөнө. Түрүүлж 5 оноо авсан нь ялна."
+            : "2 players: roll 3 dice and compare sums. First to 5 points wins."}
         </p>
         <div className="mt-1 flex justify-center gap-4 font-mono text-xs text-amber-200/90">
           <span>
@@ -273,7 +273,7 @@ export default function WoodenDiceGameMulti({
             disabled={spin}
             className={GAME_CTA_PRIMARY}
           >
-            {loc === "mn" ? "Өнгө шидэх" : "Roll round"}
+            {loc === "mn" ? "Шоо шидэх" : "Roll dice"}
           </button>
         </div>
       )}

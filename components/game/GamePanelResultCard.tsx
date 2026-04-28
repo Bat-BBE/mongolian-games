@@ -5,9 +5,6 @@ import { LuFrown as Frown } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 import { GAME_UI_FONT_FAMILY } from "./gameUiTheme";
 
-/**
- * Хажуугийн панел доторх ялалт/хожигдол — `GameResultEndOverlay`-той ижил өнгө, товч хэмжээ.
- */
 export function GamePanelResultCard({
   variant,
   title,
@@ -36,11 +33,17 @@ export function GamePanelResultCard({
       <div
         className={cn(
           "mx-auto mb-1.5 flex h-9 w-9 items-center justify-center rounded-full",
-          won ? "bg-emerald-500/20 text-emerald-200" : "bg-rose-500/15 text-rose-200",
+          won
+            ? "bg-emerald-500/20 text-emerald-200"
+            : "bg-rose-500/15 text-rose-200",
         )}
         aria-hidden
       >
-        {won ? <PartyPopper className="size-[18px]" /> : <Frown className="size-[18px]" />}
+        {won ? (
+          <PartyPopper className="size-[18px]" />
+        ) : (
+          <Frown className="size-[18px]" />
+        )}
       </div>
       <p
         className={cn(

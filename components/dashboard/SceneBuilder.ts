@@ -78,6 +78,8 @@ const PROCEDURAL_HORSE_UNIFIED_SCALE = 1.27 * 1.48; // old median
 const PROCEDURAL_HORSE_SCALE_JITTER = 0.02;
 const PROCEDURAL_CAMEL_UNIFIED_SCALE = 1.18 * 1.42; // old median
 const PROCEDURAL_CAMEL_SCALE_JITTER = 0.02;
+const MAP_CLOUD_COUNT = 16;
+const MAP_BIRD_COUNT = 14;
 
 type StationPeripheryPreset = {
   trees?: number;
@@ -102,246 +104,268 @@ type StationPeripheryPreset = {
 
 const STATION_PERIPHERY: Record<string, StationPeripheryPreset> = {
   ulaanbaatar: {
-    trees: 8,
-    treeRadius: 64,
-    grassClumps: 10,
-    grassRadius: 60,
-    rocks: 3,
-    rockRadius: 58,
+    trees: 5,
+    treeRadius: 60,
+    decorGers: 2,
+    gerRadius: 44,
+    grassClumps: 8,
+    grassRadius: 56,
+    rocks: 2,
+    rockRadius: 52,
+    ovoos: 1,
+    ovooRadius: 46,
   },
   zuunmod: {
+    trees: 20,
+    treeRadius: 38,
+    decorGers: 5,
+    gerRadius: 32,
+    ovoos: 2,
+    ovooRadius: 26,
+    grassClumps: 24,
+    grassRadius: 36,
+  },
+  terelj: {
+    trees: 30,
+    treeRadius: 44,
+    rocks: 16,
+    rockRadius: 36,
+    horses: 3,
+    horseRadius: 30,
+    grassClumps: 22,
+    grassRadius: 38,
+  },
+  nalaikh: {
+    rocks: 30,
+    rockRadius: 34,
+    trees: 12,
+    treeRadius: 30,
+    ovoos: 2,
+    ovooRadius: 22,
+    grassClumps: 8,
+    grassRadius: 28,
+  },
+  kharakhorum: {
+    decorGers: 8,
+    gerRadius: 36,
+    trees: 18,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 34,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  arvaikheer: {
+    decorGers: 7,
+    gerRadius: 34,
+    horses: 9,
+    horseRadius: 38,
+    grassClumps: 34,
+    grassRadius: 42,
+    ovoos: 2,
+    ovooRadius: 28,
+  },
+  orkhon_river: {
+    trees: 20,
+    treeRadius: 38,
+    reedPatches: 30,
+    reedRadius: 40,
+    horses: 4,
+    horseRadius: 32,
+    grassClumps: 20,
+    grassRadius: 34,
+  },
+  mandalgovi: {
+    camels: 10,
+    camelRadius: 40,
+    decorGers: 4,
+    gerRadius: 30,
+    rocks: 12,
+    rockRadius: 34,
+    grassClumps: 10,
+    grassRadius: 30,
+    ovoos: 1,
+    ovooRadius: 24,
+  },
+  darkhan: {
+    trees: 32,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 32,
+    grassClumps: 26,
+    grassRadius: 38,
+    decorGers: 3,
+    gerRadius: 28,
+  },
+  erdenet: {
     trees: 22,
     treeRadius: 36,
     decorGers: 4,
     gerRadius: 28,
     ovoos: 2,
     ovooRadius: 22,
-    grassClumps: 18,
-    grassRadius: 30,
-  },
-  terelj: {
-    trees: 32,
-    treeRadius: 40,
-    rocks: 14,
-    rockRadius: 32,
-    horses: 3,
-    horseRadius: 26,
-    grassClumps: 24,
-    grassRadius: 34,
-  },
-  nalaikh: {
-    rocks: 28,
-    rockRadius: 30,
-    trees: 10,
-    treeRadius: 24,
-    ovoos: 1,
-    ovooRadius: 14,
-  },
-  kharakhorum: {
-    decorGers: 7,
-    gerRadius: 32,
-    trees: 14,
-    treeRadius: 38,
-    horses: 5,
-    horseRadius: 30,
-    ovoos: 2,
-    ovooRadius: 26,
     grassClumps: 20,
-    grassRadius: 36,
-  },
-  arvaikheer: {
-    decorGers: 6,
-    gerRadius: 34,
-    horses: 8,
-    horseRadius: 36,
-    grassClumps: 45,
-    grassRadius: 40,
-    ovoos: 2,
-    ovooRadius: 28,
-  },
-  orkhon_river: {
-    trees: 18,
-    treeRadius: 34,
-    reedPatches: 36,
-    reedRadius: 38,
-    horses: 4,
-    horseRadius: 28,
-    grassClumps: 22,
     grassRadius: 32,
-  },
-  mandalgovi: {
-    camels: 8,
-    camelRadius: 36,
-    decorGers: 3,
-    gerRadius: 26,
-    rocks: 14,
-    rockRadius: 32,
-    grassClumps: 14,
-    grassRadius: 30,
-  },
-  darkhan: {
-    trees: 34,
-    treeRadius: 38,
-    horses: 5,
-    horseRadius: 30,
-    grassClumps: 28,
-    grassRadius: 36,
-  },
-  erdenet: {
-    trees: 20,
-    treeRadius: 34,
-    decorGers: 3,
-    gerRadius: 24,
-    ovoos: 1,
-    ovooRadius: 18,
-    grassClumps: 18,
-    grassRadius: 28,
   },
   sukhbaatar: {
-    trees: 26,
-    treeRadius: 40,
-    rocks: 8,
-    rockRadius: 30,
-    grassClumps: 24,
-    grassRadius: 34,
+    trees: 24,
+    treeRadius: 42,
+    rocks: 10,
+    rockRadius: 34,
+    grassClumps: 22,
+    grassRadius: 36,
+    reedPatches: 8,
+    reedRadius: 30,
   },
   moron: {
-    trees: 22,
-    treeRadius: 36,
-    horses: 5,
-    horseRadius: 32,
-    reedPatches: 14,
-    reedRadius: 28,
-    grassClumps: 20,
-    grassRadius: 32,
-  },
-  khatgal: {
-    trees: 30,
-    treeRadius: 38,
-    rocks: 10,
-    rockRadius: 28,
-    reedPatches: 18,
-    reedRadius: 32,
-    grassClumps: 22,
-    grassRadius: 34,
-  },
-  uliastai: {
-    rocks: 16,
-    rockRadius: 34,
-    trees: 12,
-    treeRadius: 30,
-    ovoos: 2,
-    ovooRadius: 24,
-    grassClumps: 14,
-    grassRadius: 28,
-  },
-  bayankhongor: {
-    trees: 18,
-    treeRadius: 34,
-    rocks: 10,
-    rockRadius: 28,
-    horses: 4,
-    horseRadius: 30,
-    grassClumps: 20,
-    grassRadius: 32,
-  },
-  altai: {
-    rocks: 22,
-    rockRadius: 36,
-    trees: 10,
-    treeRadius: 32,
-    camels: 3,
-    camelRadius: 28,
-    ovoos: 1,
-    ovooRadius: 20,
-  },
-  khovd: {
-    trees: 16,
-    treeRadius: 34,
-    decorGers: 4,
-    gerRadius: 28,
-    camels: 4,
-    camelRadius: 30,
-    grassClumps: 18,
-    grassRadius: 32,
-  },
-  ulaangom: {
     trees: 24,
-    treeRadius: 38,
-    rocks: 12,
-    rockRadius: 32,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 34,
     reedPatches: 16,
     reedRadius: 34,
+    grassClumps: 22,
+    grassRadius: 36,
+  },
+  khatgal: {
+    trees: 28,
+    treeRadius: 42,
+    rocks: 12,
+    rockRadius: 34,
+    reedPatches: 20,
+    reedRadius: 36,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  uliastai: {
+    rocks: 18,
+    rockRadius: 38,
+    trees: 14,
+    treeRadius: 34,
+    ovoos: 3,
+    ovooRadius: 28,
+    grassClumps: 16,
+    grassRadius: 32,
+  },
+  bayankhongor: {
+    trees: 20,
+    treeRadius: 36,
+    rocks: 12,
+    rockRadius: 32,
+    horses: 4,
+    horseRadius: 34,
+    grassClumps: 22,
+    grassRadius: 34,
+    reedPatches: 8,
+    reedRadius: 30,
+  },
+  altai: {
+    rocks: 24,
+    rockRadius: 40,
+    trees: 12,
+    treeRadius: 36,
+    camels: 4,
+    camelRadius: 32,
+    ovoos: 2,
+    ovooRadius: 24,
+    grassClumps: 10,
+    grassRadius: 30,
+  },
+  khovd: {
+    trees: 18,
+    treeRadius: 36,
+    decorGers: 5,
+    gerRadius: 32,
+    camels: 4,
+    camelRadius: 34,
     grassClumps: 20,
     grassRadius: 34,
   },
+  ulaangom: {
+    trees: 22,
+    treeRadius: 42,
+    rocks: 14,
+    rockRadius: 36,
+    reedPatches: 18,
+    reedRadius: 38,
+    grassClumps: 22,
+    grassRadius: 38,
+  },
   ondorhaan: {
-    trees: 26,
-    treeRadius: 36,
-    rocks: 16,
-    rockRadius: 34,
-    ovoos: 2,
-    ovooRadius: 26,
-    grassClumps: 18,
-    grassRadius: 32,
+    trees: 24,
+    treeRadius: 40,
+    rocks: 18,
+    rockRadius: 38,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 20,
+    grassRadius: 36,
   },
   kherlenbayan: {
+    decorGers: 8,
+    gerRadius: 38,
+    horses: 12,
+    horseRadius: 42,
+    grassClumps: 34,
+    grassRadius: 44,
+    ovoos: 3,
+    ovooRadius: 34,
+  },
+  choibalsan: {
+    horses: 14,
+    horseRadius: 44,
+    decorGers: 7,
+    gerRadius: 38,
+    grassClumps: 32,
+    grassRadius: 42,
+    ovoos: 3,
+    ovooRadius: 34,
+  },
+  baruun_urt: {
     decorGers: 7,
     gerRadius: 36,
-    horses: 10,
+    camels: 5,
+    camelRadius: 36,
+    horses: 7,
     horseRadius: 38,
-    grassClumps: 40,
-    grassRadius: 42,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  dalanzadgad: {
+    camels: 16,
+    camelRadius: 46,
+    rocks: 14,
+    rockRadius: 42,
+    grassClumps: 8,
+    grassRadius: 34,
     ovoos: 2,
     ovooRadius: 30,
   },
-  choibalsan: {
-    horses: 12,
-    horseRadius: 40,
-    decorGers: 6,
-    gerRadius: 36,
-    grassClumps: 38,
-    grassRadius: 40,
-    ovoos: 2,
-    ovooRadius: 32,
-  },
-  baruun_urt: {
-    decorGers: 6,
-    gerRadius: 34,
-    camels: 4,
-    camelRadius: 32,
-    horses: 6,
-    horseRadius: 34,
-    grassClumps: 28,
-    grassRadius: 36,
-  },
-  dalanzadgad: {
-    camels: 14,
-    camelRadius: 42,
-    rocks: 12,
-    rockRadius: 38,
-    grassClumps: 12,
-    grassRadius: 36,
-  },
   sainshand: {
-    camels: 8,
-    camelRadius: 36,
-    decorGers: 3,
-    gerRadius: 28,
-    rocks: 10,
-    rockRadius: 32,
-    grassClumps: 16,
+    camels: 10,
+    camelRadius: 40,
+    decorGers: 4,
+    gerRadius: 30,
+    rocks: 12,
+    rockRadius: 36,
+    grassClumps: 12,
     grassRadius: 34,
+    ovoos: 1,
+    ovooRadius: 24,
   },
   zamiin_uud: {
-    rocks: 26,
-    rockRadius: 38,
-    camels: 4,
-    camelRadius: 32,
-    trees: 8,
-    treeRadius: 28,
-    ovoos: 2,
-    ovooRadius: 26,
+    rocks: 28,
+    rockRadius: 42,
+    camels: 6,
+    camelRadius: 36,
+    trees: 6,
+    treeRadius: 30,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 6,
+    grassRadius: 28,
   },
 };
 
@@ -1059,8 +1083,11 @@ export class SceneBuilder {
     const seed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
 
     if (kind === "palace") {
-      const nGers = 12 + (seed % 9);
-      const ringR = 32 + (seed % 4) * 0.55;
+      const isUlaanbaatar = stationId === "ulaanbaatar";
+      const nGers = isUlaanbaatar ? 9 : 12 + (seed % 9);
+      const ringR = isUlaanbaatar
+        ? 28 + (seed % 3) * 0.45
+        : 32 + (seed % 4) * 0.55;
       for (let i = 0; i < nGers; i++) {
         const ang = (i / nGers) * Math.PI * 2 + rand(-0.03, 0.03);
         this.makeGer(
@@ -1074,14 +1101,14 @@ export class SceneBuilder {
           false,
         );
       }
-      const fw = 92;
-      const fd = 78;
+      const fw = isUlaanbaatar ? 80 : 92;
+      const fd = isUlaanbaatar ? 68 : 78;
       this.makeFence(x, z, fw, fd, rand(0, Math.PI * 0.1), true);
       const fh = Math.max(fw, fd) * 0.5;
-      const nMini = 11 + (seed % 6);
+      const nMini = isUlaanbaatar ? 7 : 11 + (seed % 6);
       for (let i = 0; i < nMini; i++) {
         const ang = (i / nMini) * Math.PI * 2 + rand(-0.14, 0.14);
-        const rad = fh + rand(10, 28);
+        const rad = fh + rand(isUlaanbaatar ? 12 : 10, isUlaanbaatar ? 20 : 28);
         this.makeMiniSumTemple(
           x + Math.cos(ang) * rad,
           z + Math.sin(ang) * rad,
@@ -2657,22 +2684,41 @@ export class SceneBuilder {
       legGroups.push(lg);
     });
     (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups = legGroups;
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.82, 10), dk);
-    tail.position.set(-0.56, 0.95, 0);
-    tail.rotation.z = 1.35;
-    tail.castShadow = true;
-    g.add(tail);
-    for (let m = 0; m < 5; m++) {
+    // Tail: segmented + tuft for clearer horse silhouette.
+    const tailRoot = new THREE.Group();
+    tailRoot.position.set(-0.56, 1.0, 0);
+    tailRoot.rotation.z = 1.25;
+    const tailBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.034, 0.36, 8),
+      hm,
+    );
+    tailBase.position.y = -0.17;
+    tailBase.castShadow = true;
+    tailRoot.add(tailBase);
+    const tailMid = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.026, 0.34, 8),
+      dk,
+    );
+    tailMid.position.y = -0.43;
+    tailMid.castShadow = true;
+    tailRoot.add(tailMid);
+    const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.36, 9), dk);
+    tailTip.position.y = -0.73;
+    tailTip.rotation.z = 0.04;
+    tailTip.castShadow = true;
+    tailRoot.add(tailTip);
+    g.add(tailRoot);
+    for (let m = 0; m < 7; m++) {
       const maneStrand = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.028, 0.04, 0.22 + m * 0.04, 6),
+        new THREE.CylinderGeometry(0.026, 0.038, 0.2 + m * 0.04, 6),
         dk,
       );
       maneStrand.position.set(
-        0.32 + m * 0.04,
-        1.18 + m * 0.05,
-        (m % 2 === 0 ? 1 : -1) * 0.06,
+        0.26 + m * 0.045,
+        1.16 + m * 0.045,
+        (m % 2 === 0 ? 1 : -1) * 0.07,
       );
-      maneStrand.rotation.z = -0.42 - m * 0.05;
+      maneStrand.rotation.z = -0.5 - m * 0.045;
       maneStrand.castShadow = true;
       g.add(maneStrand);
     }
@@ -2873,9 +2919,9 @@ export class SceneBuilder {
 
   buildClouds(): void {
     // Clouds are heavy (many meshes). Keep count modest for performance.
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < MAP_CLOUD_COUNT; i++) {
       const cg = new THREE.Group();
-      const puffN = randInt(4, 11);
+      const puffN = randInt(3, 8);
       for (let p = 0; p < puffN; p++) {
         const cs = rand(2.5, 8);
         const cm = new THREE.Mesh(
@@ -2914,7 +2960,7 @@ export class SceneBuilder {
   }
 
   buildBirds(): void {
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < MAP_BIRD_COUNT; i++) {
       const pivot = new THREE.Group();
       const bx = rand(-1, 1) > 0 ? rand(-290, 290) : rand(-220, 220);
       const bz = rand(-1, 1) > 0 ? rand(-240, 240) : rand(-180, 180);

@@ -11,8 +11,6 @@ import { playWoodenDiceRoll } from "@/lib/uiSounds";
 import { GameResultEndOverlay } from "./GameResultEndOverlay";
 import {
   GAME_CTA_PRIMARY,
-  GAME_RULES_UL_CLASS,
-  GAME_TEXT_BODY,
   GAME_TEXT_LEAD,
 } from "./gameUiTheme";
 
@@ -112,37 +110,10 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
         </h2>
         <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
-            ? "3 шоо нэг удаа. Зүүн/баруун: таны / өрсөлдөгчийн 3 + нийлбэр. Төвд: 3D. Доор: шидэх. 5 раунд."
-            : "3 dice. Left & right: your/foe faces + total. Center: 3D. Roll at bottom. First to 5."}
+            ? "3 шоо шидэж нийлбэрээр өрсөлдөнө. Түрүүлж 5 оноо авбал ялна."
+            : "Roll 3 dice and compare sums. First to 5 points wins."}
         </p>
-        <details
-          className="mx-auto mt-1 max-w-sm rounded border border-amber-500/20 bg-black/25 px-2 py-1 text-left"
-          open
-        >
-          <summary
-            className={`${GAME_TEXT_BODY} cursor-pointer font-semibold text-amber-200/90`}
-          >
-            {loc === "mn" ? "Дүрмийн товчоо" : "How it works"}
-          </summary>
-          <ul className={`mt-1.5 !space-y-1 ${GAME_RULES_UL_CLASS} text-slate-400`}>
-            <li>
-              {loc === "mn"
-                ? "Нийлбэр тэнцвэртэй → энэ раунд хоёр талд оноо нэмэгдэхгүй."
-                : "If both totals tie, neither side gets a point that round."}
-            </li>
-            <li>
-              {loc === "mn"
-                ? "3D нь нүдтэй: тогтсоноор дээд тал нь шидэлтийн 1…6-ын нэг. Доор: ижил 3-ын нийлбэр, нэвт (3–18)."
-                : "3D dice have pips; at rest, the top face is your roll, matching the readout. Totals compare the two 3-dice sums (3–18)."}
-            </li>
-            <li>
-              {loc === "mn"
-                ? "2 тоглогч: Online — дээд товч, зүүн эзэн, баруун зочин."
-                : "2p online: top bar room; host = left, guest = right as labeled."}
-            </li>
-          </ul>
-        </details>
-        <div className="mt-1 flex justify-center gap-4 font-mono text-xs text-amber-200/90">
+        <div className="mt-1.5 flex justify-center gap-4 font-mono text-xs text-amber-200/90">
           <span>
             {loc === "mn" ? "Та" : "You"}: {sP}
           </span>
@@ -197,7 +168,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
             disabled={spin}
             className={GAME_CTA_PRIMARY}
           >
-            {loc === "mn" ? "Шидэх" : "Roll"}
+            {loc === "mn" ? "Шоо шидэх" : "Roll dice"}
           </button>
         </div>
       )}

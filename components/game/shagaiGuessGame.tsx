@@ -32,10 +32,6 @@ export type ShagaiGuessGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
 };
 
-// --------------------------------------------------------------------------
-// Shared shagai template – cloned per instance so we can tint / scale freely
-// without re-parsing the GLB.
-// --------------------------------------------------------------------------
 const TILE_BOX = SHAGAI_PHYS_BOX;
 
 function useShagaiTemplate(): THREE.Object3D | null {
@@ -63,10 +59,6 @@ function buildHorseUpQuaternion(): THREE.Quaternion {
   );
 }
 
-// --------------------------------------------------------------------------
-// One static shagai piece. Used to form piles, hand contents, and the
-// centre reveal cluster.
-// --------------------------------------------------------------------------
 const PIECE_SCALE = 0.7;
 
 function Piece({
@@ -110,8 +102,9 @@ function Piece({
     instance.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
-      const mats = (Array.isArray(m.material) ? m.material : [m.material]) as
-        THREE.MeshStandardMaterial[];
+      const mats = (
+        Array.isArray(m.material) ? m.material : [m.material]
+      ) as THREE.MeshStandardMaterial[];
       for (const mm of mats) {
         if (!mm) continue;
         mm.emissive = emissiveIntensity > 0 ? col : new THREE.Color(0x000000);
@@ -132,10 +125,6 @@ function Piece({
   );
 }
 
-// --------------------------------------------------------------------------
-// A row/grid of shagai laid on the mat. Used for each side's public pile.
-// The pile is arranged in up to 2 rows of 8 so it fits cleanly on the mat.
-// --------------------------------------------------------------------------
 const PILE_SPACING_X = 0.48;
 const PILE_SPACING_Z = 0.6;
 const PILE_ROWS = 2;
@@ -154,8 +143,6 @@ function Pile({
   tint: string;
   facing: "player" | "robot";
 }) {
-  // Arrange up to PILE_ROWS * PILE_COLS = 16 shagai. Origin sits at the
-  // middle of the grid. Rows are along z, cols along x.
   const positions = useMemo(() => {
     const out: { x: number; y: number; z: number; r: number }[] = [];
     const xStart = -((PILE_COLS - 1) / 2) * PILE_SPACING_X;
@@ -165,8 +152,6 @@ function Pile({
       const col = i % PILE_COLS;
       const x = xStart + col * PILE_SPACING_X;
       const z = zSign * row * PILE_SPACING_Z;
-      // Pseudo-random per-piece rotation (deterministic for visual
-      // stability across re-renders).
       const r = ((col * 19 + row * 7) % 31) * 0.09 - 1.4;
       out.push({ x, y: (TILE_BOX[1] * PIECE_SCALE) / 2 + 0.005, z, r });
     }
@@ -188,11 +173,6 @@ function Pile({
   );
 }
 
-// --------------------------------------------------------------------------
-// "Hand" zone – an illuminated disc with the hidden shagai on top. When
-// `reveal` is false we show a closed-fist emoji via Html; when true the
-// shagai are drawn directly on the mat so the viewer can count them.
-// --------------------------------------------------------------------------
 function Hand({
   origin,
   count,
@@ -211,7 +191,6 @@ function Hand({
   accent: string;
 }) {
   const positions = useMemo(() => {
-    // Arrange up to 16 shagai in a tidy 4×4 grid inside the circle.
     const out: { x: number; y: number; z: number; r: number }[] = [];
     const cols = 4;
     const spacing = 0.42;
@@ -231,7 +210,11 @@ function Hand({
   return (
     <group position={origin}>
       {/* Illuminated base disc. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} receiveShadow>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.001, 0]}
+        receiveShadow
+      >
         <circleGeometry args={[1.4, 48]} />
         <meshStandardMaterial
           color={reveal ? accent : "#1a1208"}
@@ -251,7 +234,6 @@ function Hand({
         />
       </mesh>
 
-      {/* Label hovering above the disc. */}
       <Html
         position={[0, 1.1, 0]}
         center
@@ -278,7 +260,6 @@ function Hand({
         </div>
       </Html>
 
-      {/* Closed-fist placeholder when not revealed. */}
       {!reveal && (
         <Html position={[0, 0.35, 0]} center style={{ pointerEvents: "none" }}>
           <div
@@ -307,9 +288,6 @@ function Hand({
   );
 }
 
-// --------------------------------------------------------------------------
-// Table + mat.
-// --------------------------------------------------------------------------
 function GuessMat() {
   return (
     <>
@@ -318,7 +296,6 @@ function GuessMat() {
         <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
 
-      {/* Centre round arena where the two hands meet. */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0.005, 0]}
@@ -334,10 +311,13 @@ function GuessMat() {
         scale={[1, 0.85, 1]}
       >
         <ringGeometry args={[6.08, 6.3, 64]} />
-        <meshStandardMaterial color="#c8a030" metalness={0.7} roughness={0.25} />
+        <meshStandardMaterial
+          color="#c8a030"
+          metalness={0.7}
+          roughness={0.25}
+        />
       </mesh>
 
-      {/* Subtle dividing line between the two halves. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.009, 0]}>
         <planeGeometry args={[11.4, 0.04]} />
         <meshStandardMaterial color="#a07820" metalness={0.5} roughness={0.4} />
@@ -346,9 +326,6 @@ function GuessMat() {
   );
 }
 
-// --------------------------------------------------------------------------
-// Victory lights.
-// --------------------------------------------------------------------------
 function WinLights({ active, side }: { active: boolean; side: Player | null }) {
   const light1 = useRef<THREE.PointLight>(null);
   const light2 = useRef<THREE.PointLight>(null);
@@ -386,9 +363,6 @@ function WinLights({ active, side }: { active: boolean; side: Player | null }) {
   );
 }
 
-// --------------------------------------------------------------------------
-// Scene root (reused in online 1v1).
-// --------------------------------------------------------------------------
 export function ShagaiGuessGameScene({
   state,
   hiddenReveal,
@@ -399,23 +373,19 @@ export function ShagaiGuessGameScene({
   state: GuessState;
   hiddenReveal: { player: number; robot: number } | null;
   robotThinking: boolean;
-  /** Hand labels (solo: ТА/РОБОТ vs YOU/ROBOT by app language; online: names). */
   leftName?: string;
   rightName?: string;
 }) {
   const { language } = useApp();
   const leftLabel = leftName ?? (language === "en" ? "YOU" : "ТА");
   const rightLabel = rightName ?? (language === "en" ? "ROBOT" : "РОБОТ");
-  const thinkingText =
-    language === "en" ? "🤖 thinking…" : "🤖 бодож байна…";
+  const thinkingText = language === "en" ? "🤖 thinking…" : "🤖 бодож байна…";
   const template = useShagaiTemplate();
   const reveal =
     state.phase === "revealing" ||
     state.phase === "result" ||
     state.phase === "matchOver";
 
-  // Remaining pile = overall stack minus the number currently held in fist
-  // while hiding/revealing.
   const heldPlayer = hiddenReveal?.player ?? 0;
   const heldRobot = hiddenReveal?.robot ?? 0;
   const playerPile = Math.max(0, state.playerStack - heldPlayer);
@@ -426,7 +396,6 @@ export function ShagaiGuessGameScene({
       <GuessMat />
       <WinLights active={state.phase === "matchOver"} side={state.winner} />
 
-      {/* Player pile near the camera. */}
       <Pile
         origin={[0, 0, 3.4]}
         count={playerPile}
@@ -435,7 +404,6 @@ export function ShagaiGuessGameScene({
         facing="player"
       />
 
-      {/* Robot pile on the far side. */}
       <Pile
         origin={[0, 0, -3.4]}
         count={robotPile}
@@ -444,7 +412,6 @@ export function ShagaiGuessGameScene({
         facing="robot"
       />
 
-      {/* Two hand zones side by side in the centre, player on the left. */}
       <Hand
         origin={[-1.8, 0, 0]}
         count={heldPlayer}
@@ -518,12 +485,8 @@ export function ShagaiGuessGameScene({
   );
 }
 
-// --------------------------------------------------------------------------
-// Root component.
-// --------------------------------------------------------------------------
 export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { grant, rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const [state, setState] = useState<GuessState>(INITIAL_GUESS_STATE);
   const [robotThinking, setRobotThinking] = useState(false);
   const [revealHidden, setRevealHidden] = useState<{
@@ -532,7 +495,6 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
   } | null>(null);
   const matchSentRef = useRef(false);
 
-  // Match-over side-effect.
   useEffect(() => {
     if (state.phase !== "matchOver") return;
     if (matchSentRef.current) return;
@@ -545,7 +507,6 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
     onComplete?.(won ? "win" : "lose", progressPct);
   }, [state.phase, state.winner, state.playerStack, onComplete]);
 
-  // -- Round flow --------------------------------------------------------
   useEffect(() => {
     if (state.phase !== "idle" || state.round !== 0) return;
     setState((prev) => ({ ...prev, phase: "hiding", round: 1 }));
@@ -562,14 +523,12 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
 
   const onCommit = useCallback(
     (playerHidden: number, playerGuess: number) => {
-      // Robot locks its choices silently.
       const robotHidden = robotPickHidden(state.robotStack);
       const robotGuess = robotPickGuess(robotHidden, state.playerStack);
 
       setRobotThinking(true);
       setState((prev) => ({ ...prev, phase: "robotThinking" }));
 
-      // After a short beat, reveal hands and resolve the round.
       const t1 = setTimeout(() => {
         setRobotThinking(false);
         setRevealHidden({ player: playerHidden, robot: robotHidden });
@@ -585,8 +544,10 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
             robotStack: state.robotStack,
             round: state.round,
           });
-          // Small coin reward when the player takes shagai from the robot.
-          if (record.transferredTo === "player" && record.transferredAmount > 0) {
+          if (
+            record.transferredTo === "player" &&
+            record.transferredAmount > 0
+          ) {
             if (record.transferredAmount > 0)
               grant({ coins: STONE_ROUND_COINS });
           }

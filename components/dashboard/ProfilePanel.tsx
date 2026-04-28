@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { getUserByEmail, updateHeroForEmail } from "@/lib/firebase-auth";
+import {
+  getUserByEmail,
+  updateHeroForEmail,
+  updateNicknameForEmail,
+} from "@/lib/firebase-auth";
 import {
   loadPlayer,
   savePlayer,
@@ -62,6 +66,9 @@ export function ProfilePanel({
   const [currentHeroId, setCurrentHeroId] = useState<HeroId>("shikhikhutag");
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
   const [saving, setSaving] = useState(false);
+  const [savingNick, setSavingNick] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [initialNickname, setInitialNickname] = useState("");
   const [cooldownMs, setCooldownMs] = useState(0);
   const [heroRows, setHeroRows] = useState<HeroRow[]>([]);
 
@@ -117,6 +124,11 @@ export function ProfilePanel({
         setHeroName(
           String(bundle.computed.displayHeroName ?? prof.heroName ?? ""),
         );
+        const loadedNick = String(
+          bundle.user.display_name ?? prof.name ?? saved.name ?? "",
+        ).trim();
+        setNickname(loadedNick);
+        setInitialNickname(loadedNick);
         setHeroTitle(
           String(bundle.computed.displayHeroTitle ?? prof.heroTitle ?? ""),
         );
@@ -151,6 +163,9 @@ export function ProfilePanel({
         const prof = data.profile as Record<string, unknown>;
         const prog = data.progress as Record<string, unknown>;
         setHeroName(String(prof.heroName ?? ""));
+        const loadedNick = String(prof.name ?? saved.name ?? "").trim();
+        setNickname(loadedNick);
+        setInitialNickname(loadedNick);
         setHeroTitle(String(prof.heroTitle ?? ""));
         const hid0 = parseHeroId(prof.heroId ?? saved.heroId);
         setHeroImage(
@@ -216,6 +231,21 @@ export function ProfilePanel({
     }
   };
 
+  const onSaveNickname = async () => {
+    const next = nickname.trim();
+    if (!userEmail || !next || next === initialNickname) return;
+    setSavingNick(true);
+    try {
+      await updateNicknameForEmail(userEmail, next);
+      setInitialNickname(next);
+      onHeroSaved?.();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSavingNick(false);
+    }
+  };
+
   const loadingLabel = useMemo(
     () => (lang === "mn" ? "Ачаалж байна…" : "Loading…"),
     [lang],
@@ -255,6 +285,26 @@ export function ProfilePanel({
           <p className="text-[11px] font-mono text-muted-foreground truncate">
             {userEmail}
           </p>
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="text"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value.slice(0, 36))}
+              placeholder={lang === "mn" ? "Таны nickname" : "Your nickname"}
+              className="h-8 w-full max-w-[260px] rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus:border-primary/60"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={
+                savingNick || !nickname.trim() || nickname.trim() === initialNickname
+              }
+              onClick={() => void onSaveNickname()}
+            >
+              {savingNick ? "…" : lang === "mn" ? "Хадгалах" : "Save"}
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
             <span className="text-foreground/80">{t.profileStationLabel}:</span>{" "}
             {currentStationLabel}

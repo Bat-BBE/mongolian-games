@@ -9,7 +9,7 @@ import { TWELVE_TARGET } from "./shagaiTwelveType";
 import {
   BERKH12_MAX_TURNS,
   BERKH12_PIECE_COUNT,
-  BERKH12_TOTAL_MORIES,
+  BERKH12_START_STACK,
 } from "./shagaiBerkh12Type";
 
 const pill = `rounded-lg border border-amber-500/35 bg-amber-950/40 px-2 py-1 font-[family-name:var(--font-inter)] text-xs font-bold tabular-nums leading-relaxed text-amber-100/95 sm:text-[0.8125rem]`;
@@ -66,12 +66,12 @@ export function TwelveShagaiRulesStrip({
   );
 }
 
-/** 12 бэрх — нэг шидэлт, төв, зорилго. */
+/** 12 бэрх — тойрог, 8-аас эхлэх шинэ хувилбар. */
 export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
   return (
     <div className="mt-2 space-y-1.5 rounded-xl border border-emerald-500/25 bg-emerald-950/15 px-2 py-2 sm:px-2.5">
       <p className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-emerald-200/80`}>
-        {isEn ? "One throw · pot & seats" : "Нэг шидэлт · төв ба суудал"}
+        {isEn ? "Round table · seat flow" : "Тойрог ширээ · суудлын урсгал"}
       </p>
       <div className={`flex flex-wrap items-center justify-center gap-2 ${GAME_TEXT_BODY} text-emerald-100/90`}>
         <span className={pill}>
@@ -81,7 +81,9 @@ export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
           ·
         </span>
         <span className={pill}>
-          {isEn ? `${BERKH12_TOTAL_MORIES} mories` : `${BERKH12_TOTAL_MORIES} морь (төв)`}
+          {isEn
+            ? `${BERKH12_START_STACK} start each`
+            : `тус бүр ${BERKH12_START_STACK}-аас`}
         </span>
         <span className="text-emerald-400/75" aria-hidden>
           ·
@@ -92,8 +94,8 @@ export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
       </div>
       <p className={`${GAME_TEXT_META} text-center text-slate-300/95`}>
         {isEn
-          ? "Everyone throws 12 at once, sunwise. Horses pull from the pot; camels make you pay others. Full rules in the sheet (?) button."
-          : "Бүгд нэгэн зэрэг 12-аа шиднэ. Морь төвөөс авна, тэмээ бусдад төлнө. Дэлгэрэнгүйг «Дүрэм» sheet-ээс нээнэ."}
+          ? "Horse takes from previous seat; camel gives to next seat. If your pile hits 0, you are out."
+          : "Морь буувал өмнөх суудлаасаа авна, тэмээ буувал дараагийн суудалдаа өгнө. Овоо 0 бол хасагдана."}
       </p>
     </div>
   );

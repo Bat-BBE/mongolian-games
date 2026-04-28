@@ -112,12 +112,10 @@ export function scoreRoll(sides: ShagaiSide[]): {
   return { points: 8, unique };
 }
 
-/** Generate a robot roll of 4 shagai using the shared traditional probabilities. */
 export function rollRobotSides(): ShagaiSide[] {
   return [0, 1, 2, 3].map(() => weightedTraditionalSide() as ShagaiSide);
 }
 
-/** First side to reach this wins the match. */
 export const TARGET_SCORE = 30;
 
 export const INITIAL_STATE: GameState = {

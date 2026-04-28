@@ -89,7 +89,8 @@ function SidesLegend({ activeSide }: { activeSide: ShagaiSide | null }) {
                 fontSize: 10,
                 letterSpacing: 1,
                 color: active ? "#f0c040" : "#aaa",
-                fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+                fontFamily:
+                  "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               }}
             >
               {info.name}
@@ -186,7 +187,8 @@ function ScoreRow({
           <span style={{ fontSize: 16 }}>{info.symbol}</span>
           <span
             style={{
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               letterSpacing: 1,
             }}
           >
@@ -270,9 +272,9 @@ function ResultDisplay({
   if (!result) {
     return (
       <div style={{ textAlign: "center", padding: "20px 0", opacity: 0.5 }}>
-        <div className="mb-1.5 text-[clamp(1.5rem,5vw,2rem)]">🦴</div>
+        <div className="mb-1.5 text-[clamp(1.5rem,5vw,2rem)]">🫵</div>
         <div className="text-[0.75rem] tracking-wide text-zinc-500 sm:text-xs">
-          Шагай шидэж эхэл
+          Шагай шидэж эхэлнэ
         </div>
       </div>
     );
@@ -366,9 +368,7 @@ export default function ShagaiUI({
   const mainChrome = narrowUi
     ? gamePanelPlayNarrowBottom()
     : gamePanelLeftDesktop(270);
-  const mainPad: CSSProperties = narrowUi
-    ? { padding: "12px 12px 14px" }
-    : {};
+  const mainPad: CSSProperties = narrowUi ? { padding: "12px 12px 14px" } : {};
 
   return (
     <>
@@ -384,7 +384,7 @@ export default function ShagaiUI({
       >
         <div className="mb-1 text-center">
           <span className={cn(GAME_PANEL_OVERLINE_CLASS, "text-zinc-500")}>
-            ШАГАЙ НААДАМ
+            ШАГАЙН НААДГАЙ
           </span>
         </div>
 
@@ -402,10 +402,10 @@ export default function ShagaiUI({
           disabled={isRolling}
           className={GAME_CTA_PRIMARY}
         >
-          {isRolling ? "🎲 Нисэж байна..." : "🦴 Шагай шидэх"}
+          {isRolling ? "Бууж байна..." : "Шагай орхих"}
         </button>
 
-        <div
+        {/* <div
           style={{
             color: "#555",
             fontSize: 11,
@@ -413,8 +413,8 @@ export default function ShagaiUI({
             marginTop: 8,
           }}
         >
-          Шагай дээр дарж ч шидэж болно
-        </div>
+          Шагай дээр дарж ч шидэх боломжтой
+        </div> */}
       </div>
 
       {!narrowUi ? (
@@ -436,7 +436,7 @@ export default function ShagaiUI({
             }}
           >
             <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-amber-500/90 sm:text-xs">
-              СТАТИСТИК
+              МЭДЭЭЛЭЛ
             </div>
             <div
               style={{
@@ -473,9 +473,10 @@ export default function ShagaiUI({
                   fontSize: 12,
                 }}
               >
-                <span style={{ color: "#888" }}>Морийн хувь</span>
+                <span style={{ color: "#888" }}>Морь буух магадлал</span>
                 <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                  {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%
+                  {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}
+                  %
                 </span>
               </div>
             </>
@@ -569,7 +570,10 @@ export default function ShagaiUI({
                 >
                   <span style={{ color: "#888" }}>Морийн хувь</span>
                   <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-                    {total > 0 ? ((score.horse / total) * 100).toFixed(1) : "0.0"}%
+                    {total > 0
+                      ? ((score.horse / total) * 100).toFixed(1)
+                      : "0.0"}
+                    %
                   </span>
                 </div>
               </>
@@ -598,7 +602,7 @@ export default function ShagaiUI({
                     "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
                 }}
               >
-                Шинээр эхлэх
+                Дахин эхлэх
               </button>
             )}
           </GameRulesSheet>

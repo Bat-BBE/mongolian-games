@@ -10,12 +10,12 @@ type HowToLocale = {
 type HowToEntry = { mn: HowToLocale; en: HowToLocale };
 
 const MAP_MN =
-  "Газрын зураг дээр энэ тоглоомын өртөө (тэмдэгтэй цэг) дээр дарж энд нээнэ.";
+  "Газрын зураг дээр өртөөний (тэмдэгтэй нэр) дээр дарж тоглоомыг нээнэ.";
 const MAP_EN =
   "On the map, tap this game’s station marker to open it in the modal.";
 
 const AT_STATION_DEFAULT_MN =
-  "Та өртөөний цонхонд байна. Доорх «Тоглох» товчийг дарвал тоглолтын цонх нээгдэнэ.";
+  "Та өртөөнд байна. Доорх «Тоглох» товчийг дарвал тоглоомын цонх нээгдэнэ.";
 const AT_STATION_DEFAULT_EN =
   "You’re at this station on the map. Tap Play below to open the game.";
 
@@ -278,8 +278,8 @@ const HOW: Record<string, HowToEntry> = {
     mn: {
       steps: [
         "Дэлгэц дээрх товчоор тоглоно.",
-        "Дээд талын «?» эсвэл талбар дээрх «Дүрэм»-ээр дүрмийг харна.",
-        "Хаах товчоор модалыг хаана.",
+        "Дээд талын «?» дээр дарч дүрмийг харна.",
+        "Хаах товчоор тоглоомыг хаана.",
       ],
       mapHint: MAP_MN,
     },

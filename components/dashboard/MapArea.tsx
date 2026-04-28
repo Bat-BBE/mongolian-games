@@ -25,6 +25,8 @@ import {
   LuSparkles,
   LuSwords,
   LuUser,
+  LuVolume2,
+  LuVolumeX,
   LuX,
 } from "react-icons/lu";
 import {
@@ -34,8 +36,13 @@ import {
 } from "@/components/ui/popover";
 import { MapVirtualJoystick } from "./MapVirtualJoystick";
 import type { IconType } from "react-icons";
+import { MapGlobalChatFab } from "./MapGlobalChatFab";
+import { useMapAmbientAudio } from "@/hooks/useMapAmbientAudio";
+import { playStationApproachSfx } from "@/lib/uiSounds";
 
 const MAP_LANDSCAPE_HINT_DISMISSED_KEY = "mapLandscapeHintDismissed";
+const MAP_AUDIO_MUTED_KEY = "mapAudioMuted";
+const MAP_AUDIO_VOLUME_KEY = "mapAudioVolume";
 
 interface MapAreaProps {
   t: DashStrings;
@@ -106,12 +113,28 @@ export function MapArea({
   const [mapLandscapePortraitNarrow, setMapLandscapePortraitNarrow] =
     useState(false);
   const [mapLandscapeHintReady, setMapLandscapeHintReady] = useState(false);
+  const [audioOpen, setAudioOpen] = useState(false);
+  const [mapAudioMuted, setMapAudioMuted] = useState(false);
+  const [mapAudioVolume, setMapAudioVolume] = useState(0.56);
 
   useEffect(() => {
     const onVis = () => setDocHidden(document.hidden);
     onVis();
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  useEffect(() => {
+    try {
+      setMapAudioMuted(localStorage.getItem(MAP_AUDIO_MUTED_KEY) === "1");
+      const raw = localStorage.getItem(MAP_AUDIO_VOLUME_KEY);
+      if (raw != null) {
+        const parsed = Number(raw);
+        if (Number.isFinite(parsed)) {
+          setMapAudioVolume(Math.max(0, Math.min(1, parsed)));
+        }
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -274,7 +297,14 @@ export function MapArea({
     [playerHomeKeyRaw, userEmail],
   );
 
-  const { publishPose, publishMapEmote, remotePeersRef } = useMapPresence({
+  const {
+    publishPose,
+    publishMapEmote,
+    remotePeersRef,
+    publishMapChat,
+    mapChatLinesRef,
+    setOnMapChatLine,
+  } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
     homeKey: presenceHomeKey,
     enabled: !docHidden,
@@ -304,6 +334,8 @@ export function MapArea({
     playMapHeroEmote,
     mapVirtualStickRef,
     worldPoiUi,
+    heroBiome,
+    daylightFactor,
   } = useThreeScene({
     containerRef: canvasRef,
     stations,
@@ -321,6 +353,17 @@ export function MapArea({
     presencePublishRef,
     remotePeersRef,
     onLocalMapEmote: publishMapEmote,
+    onStationEnter: (stationId) => {
+      playStationApproachSfx(stationId, 0.28);
+    },
+  });
+
+  useMapAmbientAudio({
+    enabled: !docHidden && !selectedGame,
+    muted: mapAudioMuted,
+    volume: mapAudioVolume,
+    biome: heroBiome,
+    daylightFactor,
   });
 
   useEffect(() => {
@@ -451,6 +494,93 @@ export function MapArea({
 
       {heroModelPath?.trim() ? (
         <>
+          <Popover open={audioOpen} onOpenChange={setAudioOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={lang === "mn" ? "Map дуу" : "Map audio"}
+                aria-label={lang === "mn" ? "Map дуу" : "Map audio"}
+                className={cn(
+                  "map-ui-fab pointer-events-auto absolute right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full",
+                  "top-[max(3.25rem,calc(2.75rem+env(safe-area-inset-top,0px)))] md:top-[4.5rem]",
+                )}
+              >
+                {mapAudioMuted || mapAudioVolume <= 0.001 ? (
+                  <LuVolumeX className="size-5 text-[color:var(--map-fog)]" aria-hidden />
+                ) : (
+                  <LuVolume2 className="size-5 text-[color:var(--gold-pale)]" aria-hidden />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              sideOffset={8}
+              className="z-[200] w-[15.5rem] border border-white/30 bg-slate-950/98 p-2.5 text-popover-foreground shadow-2xl backdrop-blur-md"
+            >
+              <p className="text-xs font-semibold text-zinc-200">
+                {lang === "mn" ? "Map ambience" : "Map ambience"}
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-zinc-400">
+                  {lang === "mn" ? "Mute" : "Mute"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !mapAudioMuted;
+                    setMapAudioMuted(next);
+                    try {
+                      localStorage.setItem(MAP_AUDIO_MUTED_KEY, next ? "1" : "0");
+                    } catch {}
+                  }}
+                  className={cn(
+                    "rounded-md border px-2 py-1 text-xs transition",
+                    mapAudioMuted
+                      ? "border-rose-400/55 bg-rose-950/35 text-rose-200"
+                      : "border-emerald-400/45 bg-emerald-950/30 text-emerald-200",
+                  )}
+                >
+                  {mapAudioMuted ? (lang === "mn" ? "Унтарсан" : "Muted") : lang === "mn" ? "Асаалттай" : "On"}
+                </button>
+              </div>
+              <div className="mt-2">
+                <label className="mb-1 block text-xs text-zinc-400">
+                  {lang === "mn" ? "Дууны хэмжээ" : "Volume"}
+                </label>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(mapAudioVolume * 100)}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(1, Number(e.target.value) / 100));
+                    setMapAudioVolume(v);
+                    try {
+                      localStorage.setItem(MAP_AUDIO_VOLUME_KEY, String(v));
+                    } catch {}
+                  }}
+                  className="w-full accent-emerald-400"
+                />
+                <p className="mt-1 text-right text-[11px] text-zinc-500">
+                  {Math.round(mapAudioVolume * 100)}%
+                </p>
+              </div>
+              <p className="mt-1 text-[10px] leading-snug text-zinc-500">
+                {lang === "mn"
+                  ? `Biome: ${heroBiome}`
+                  : `Biome: ${heroBiome}`}
+              </p>
+            </PopoverContent>
+          </Popover>
+          <MapGlobalChatFab
+            language={lang}
+            myDisplayName={playerDisplayName?.trim() || "Тоглогч"}
+            linesRef={mapChatLinesRef}
+            onIncomingLine={setOnMapChatLine}
+            sendChat={publishMapChat}
+          />
           <MapVirtualJoystick
             stickRef={mapVirtualStickRef}
             disabled={!!selectedGame || docHidden}

@@ -13,7 +13,7 @@ export function HorseRaceRulesForModal({ isMn }: { isMn: boolean }) {
     <div className="space-y-4">
       <div>
         <p className={`mb-2 ${GAME_TEXT_SECTION_LABEL} !text-[#c8a030]`}>
-          {s.howToSectionTitle}
+          {isMn ? "ТОГЛООМЫН ДҮРЭМ" : "HOW TO PLAY"}
         </p>
         <p className={GAME_TEXT_BODY}>{s.intro}</p>
       </div>

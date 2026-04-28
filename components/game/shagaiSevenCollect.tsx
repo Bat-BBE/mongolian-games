@@ -17,7 +17,6 @@ type Props = {
   onComplete: () => void;
 };
 
-/** Авсан шагайг талбараас дээш «авах» хөдөлгөөн. */
 export function SevenCollectAnimator({
   active,
   pieceId,

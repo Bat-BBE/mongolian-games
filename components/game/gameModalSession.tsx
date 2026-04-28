@@ -1,11 +1,10 @@
 "use client";
 
+import { createContext, useContext, type ReactNode } from "react";
 import {
-  createContext,
-  useContext,
-  type ReactNode,
-} from "react";
-import { getMatchLobbyIntroText, type LobbyIntroLang } from "./onlineRoomLobbyCopy";
+  getMatchLobbyIntroText,
+  type LobbyIntroLang,
+} from "./onlineRoomLobbyCopy";
 
 export type GameModalSessionValue = {
   stationSlug: string;
@@ -35,7 +34,6 @@ export function useGameModalSession(): GameModalSessionValue | null {
   return useContext(GameModalSessionContext);
 }
 
-/** Match-лобби тайлбар — зөвхөн `GameModal` доторх тоглоомуудаас дуудна. */
 export function useMatchLobbyIntro(lang: LobbyIntroLang): string {
   const v = useContext(GameModalSessionContext);
   if (!v) {

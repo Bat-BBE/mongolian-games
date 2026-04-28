@@ -19,9 +19,7 @@ import { GameResultEndOverlay } from "./GameResultEndOverlay";
 
 export type MemoryMatchGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
-  /** Online: серверээс ирсэн seed — хоёр талд ижил картууд. */
   multiplayerSeed?: number | null;
-  /** Online горимд эхлэх товчийг нуух (хост эхлүүлэх хүртэл). */
   multiplayerAwaitingStart?: boolean;
 };
 
@@ -296,7 +294,7 @@ export default function MemoryMatchGame({
         outcome={phase === "won" ? "win" : phase === "lost" ? "lose" : null}
         winTitle={
           language === "mn"
-            ? "🎉 ЯЛЛАА — бүх хосыг оллоо"
+            ? "🎉 ЯЛЛАА — бүх хосыг олсон"
             : "🎉 You win — all pairs found"
         }
         loseTitle={
@@ -304,15 +302,11 @@ export default function MemoryMatchGame({
             ? "⏱ ХОЖИГДЛОО — цаг дууссан"
             : "⏱ You lost — time’s up"
         }
-        subWin={
-          language === "mn"
-            ? "Тоглолт дууслаа. Модал удахгүй хаагдана."
-            : "Match finished. The window will close in a moment."
-        }
+        subWin={language === "mn" ? "Тоглолт дууслаа." : "Match finished."}
         subLose={
           language === "mn"
-            ? "Бүх хосыг олж чадсангүй. Модал удахгүй хаагдана."
-            : "The board was not fully cleared. The window will close in a moment."
+            ? "Бүх хосыг олж чадсангүй."
+            : "The board was not fully cleared."
         }
       />
     </div>

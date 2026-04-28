@@ -1,5 +1,3 @@
-/** Ньсрэхийн дараах мөргөлдөөний хүч (хурьдах + эргэлт). */
-
 export type KnockBurst = {
   lin: [number, number, number];
   ang: [number, number, number];

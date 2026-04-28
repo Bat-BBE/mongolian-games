@@ -30,6 +30,7 @@ type Peer = {
   last: PresencePose | null;
   lastSentServer: number;
   lastEmoteServer: number;
+  lastChatServer: number;
 };
 
 const DEFAULT_HERO_PATH = "/models/hero-22.fbx";
@@ -41,6 +42,8 @@ const POSE_MIN_INTERVAL_MS = 240;
 const EMOTE_MIN_INTERVAL_MS = 420;
 const MAX_DISPLAY = 36;
 const CLAMP = 6500;
+const MAX_CHAT_LEN = 280;
+const CHAT_MIN_INTERVAL_MS = 500;
 
 const ALLOWED_MAP_EMOTES = new Set([
   "boxing",
@@ -81,6 +84,11 @@ function safeJson(raw: unknown): Record<string, unknown> | null {
 function send(ws: WebSocket, msg: Record<string, unknown>): void {
   if (ws.readyState !== ws.OPEN) return;
   ws.send(JSON.stringify(msg));
+}
+
+function parseChatText(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw.replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_LEN);
 }
 
 function parseLivestock(body: Record<string, unknown>): PresenceLivestock {
@@ -178,6 +186,7 @@ export class MapPresenceHub {
       last: null,
       lastSentServer: 0,
       lastEmoteServer: 0,
+      lastChatServer: 0,
     };
     this.peers.set(id, peer);
 
@@ -248,6 +257,26 @@ export class MapPresenceHub {
         rec.emote = rawEm;
         rec.emoteGen += 1;
         this.broadcastPeerState(id);
+        return;
+      }
+
+      if (t === "chat") {
+        const text = parseChatText(body.text);
+        if (!text) return;
+        const now = Date.now();
+        if (now - rec.lastChatServer < CHAT_MIN_INTERVAL_MS) return;
+        rec.lastChatServer = now;
+        const payload = JSON.stringify({
+          type: "peer_chat",
+          id: rec.id,
+          displayName: rec.displayName,
+          text,
+          sentAt: now,
+          messageId: `${rec.id}:${now}:${Math.random().toString(36).slice(2, 7)}`,
+        });
+        for (const p of this.peers.values()) {
+          if (p.ws.readyState === p.ws.OPEN) p.ws.send(payload);
+        }
       }
     });
 

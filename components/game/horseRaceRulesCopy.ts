@@ -4,7 +4,6 @@ export type HorseRaceRuleStep = { n: string; t: string; d: string };
 export type HorseRaceScoreRow = { label: string; pts: string };
 
 export type HorseRaceRulesStrings = {
-  // howToSectionTitle: string;
   intro: string;
   steps: HorseRaceRuleStep[];
   scoringTitle: string;
@@ -18,14 +17,14 @@ export function horseRaceRulesStrings(
     return {
       // howToSectionTitle: "ТОГЛООМЫН ДҮРЭМ",
       intro:
-        "4 шагай орхиод, буусан морь бүрээр өөрийн морийг зам дээр 1 алхам урагшлуулна.",
+        "4 шагай орхиод, буусан морь бүрээр өөрийнхөө морийг зам дээр 1 алхам урагшлуулна.",
       steps: [
-        { n: "①", t: "Ээлжээр шидэх", d: "Нэг ээлжид 4 шагай орхино" },
-        { n: "②", t: "Морь тоолох", d: "Дээрээ морь бүр = +1 алхам" },
+        { n: "①", t: "Ээлжээр шидэх", d: "Нэг ээлжинд 4 шагай орхино" },
+        { n: "②", t: "Морь буух", d: "Дээрээ морь бүр = +1 алхам" },
         { n: "③", t: "Дараагийн ээлж", d: "Өрсөлдөгч (эсвэл робот) шиднэ" },
         { n: "④", t: "Ялалт", d: `Түрүүлж ${TRACK_LENGTH}-д хүрвэл ялна` },
       ],
-      scoringTitle: "ХӨДӨЛГӨӨНИЙ ҮНЭЛГЭЭ",
+      scoringTitle: "ОНОО",
       scoringRows: [
         { label: "1 морь", pts: "+1 алхам" },
         { label: "2 морь", pts: "+2 алхам" },
@@ -44,7 +43,7 @@ export function horseRaceRulesStrings(
       { n: "③", t: "Next turn", d: "Robot or opponent throws next" },
       { n: "④", t: "Win", d: `First to square ${TRACK_LENGTH}` },
     ],
-    scoringTitle: "MOVEMENT SCORING",
+    scoringTitle: "SCORING",
     scoringRows: [
       { label: "1 horse", pts: "+1 step" },
       { label: "2 horses", pts: "+2 steps" },

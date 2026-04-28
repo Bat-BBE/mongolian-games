@@ -5,7 +5,7 @@ import { useApp } from "@/components/AppContext";
 import {
   BERKH12_MAX_TURNS,
   BERKH12_PIECE_COUNT,
-  BERKH12_TOTAL_MORIES,
+  BERKH12_START_STACK,
 } from "./shagaiBerkh12Type";
 import type { ShagaiSide } from "./shagai";
 import { SHAgAI_SIDES } from "./shagai";
@@ -26,7 +26,6 @@ import { playButtonClick } from "@/lib/uiSounds";
 import {
   GAME_CALLOUT_AMBER,
   GAME_CALLOUT_ERROR,
-  GAME_CALLOUT_SKY,
   GAME_CTA_PRIMARY,
   GAME_CTA_SECONDARY,
   GAME_PANEL_HEADING_CLASS,
@@ -36,7 +35,6 @@ import {
   GAME_TEXT_META,
   GAME_TEXT_SUBTITLE,
 } from "./gameUiTheme";
-import { Berkh12RulesStrip } from "./shagaiStationRulesUI";
 
 type Props = {
   phase: Berkh12Phase;
@@ -113,35 +111,33 @@ export default function ShagaiBerkh12UI({
   const [rulesOpen, setRulesOpen] = useState(false);
 
   const t = {
-    title: isEn ? "12 Berkh (shagai party)" : "12 бэрх (шагайн наадгай)",
-    subtitle: isEn
-      ? "One throw each · pot in the middle · pay camels from your pile"
-      : "Нэг удаа шидэлт · төвийн сан · тэмээг өөрийн овооноос төлнө",
+    title: isEn ? "12 Berkh" : "12 бэрх",
+    subtitle: isEn ? "Board · round turn flow" : "Самбар · тойрог урсгал",
     lead: isEn
-      ? `Everyone throws all ${BERKH12_PIECE_COUNT} bones together. Horses pull mories from the pot; camels force you to pay other players.`
-      : `Бүгд ${BERKH12_PIECE_COUNT} шагайгаа зэрэг шиднэ. Морь төвөөс авна, тэмээ бусдад төлнө.`,
+      ? `Throw ${BERKH12_PIECE_COUNT} bones each turn. Last active player wins.`
+      : `Ээлж бүрт ${BERKH12_PIECE_COUNT} шагай шиднэ. Сүүлд үлдсэн хүн нь ялна.`,
     rules: isEn ? "Rules" : "Дүрэм",
     r1: isEn
-      ? "Everyone starts with 0; all mories sit in the pot in the middle at first."
-      : "Эхлээд бүгд 0, бүх морь төвд (хоорондын сан).",
+      ? `Everyone starts with ${BERKH12_START_STACK} mories.`
+      : `Хүн бүр эхэндээ ${BERKH12_START_STACK} морьтой эхэлнэ.`,
     r2: isEn
       ? "On your turn, all 12 bones are thrown. Count how many are horse, how many camel; sheep/goat are neutral in this table."
-      : "Ээлжтэй: 12 шагайг зэрэг. Морь, тэмээг нэгт — хонь/ямаа энэ дүрмэнд тооцохгүй.",
+      : "Ээлжтэй: 4 шагайг зэрэг. Морь, тэмээг нэгт — хонь/ямаа хамаарахгүй.",
     r3: isEn
-      ? "Horses: take that many mories from the pot into your pile, up to what the pot has."
-      : "Морь: тэр олоноороо төвөөс өөрт нэмж авах (төвд элсэх дээд хязгаар).",
+      ? "Horse: take that many mories from the previous active player."
+      : "Морь: өмнөх идэвхтэй тоглогчоос тэр тоогоор авна.",
     r4: isEn
-      ? "Camels: from your own pile, pay 1 mory to each other player in counter-sun order—previous seat first, and so on."
-      : "Тэмээ: өөрийнхөөс 1, 1-аар бусад сөрөгдүүдэд, эсрэг нарын дараалалаар төлнө.",
+      ? "Camel: give that many mories from your pile to the next active player."
+      : "Тэмээ: өөрийн шагайнаас тоогоор дараагийн идэвхтэй тоглогчид өгнө.",
     r5: isEn
-      ? "If you cannot pay all required camel mories, you are eliminated; your mories return to the pot."
-      : "Төлбөр хүрэлцэхгүй бол тоглогч хасагдна, морь нь төвд очиж нийлүүлнэ.",
+      ? "If your pile becomes 0, you are eliminated."
+      : "Шагай 0 болсон тоглогч хасагдана.",
     r6: isEn
-      ? `Win: hold all ${BERKH12_TOTAL_MORIES} mories, be last active, or after a long run (turn cap ${BERKH12_MAX_TURNS}), the largest pile wins per the in-panel rule.`
-      : `Хожих: ${BERKH12_TOTAL_MORIES}-ыг нэгт, эсвэл сүүлд идэвхтэй, эсвэл олон ээлж (${BERKH12_MAX_TURNS}) — хамгийн олонтой (доорх нөхцөл).`,
+      ? `Win: hold all table mories, be last active, or after turn cap ${BERKH12_MAX_TURNS}, the largest active pile wins.`
+      : `Хожих: бүх шагайг нэгтгэх, эсвэл сүүлд идэвхтэй үлдэх, эсвэл ${BERKH12_MAX_TURNS} хүрвэл хамгийн олон үлдэгдэлтэй нь.`,
     r7online: isEn
-      ? "Online: top bar → room → Ready, host starts. Seat order in the list = play order, same as Homboroi (Shagai Shooting) online."
-      : "Онлайн: дээд баганаар «Online» → өрөө, бэлэн, эзэн эхлүүлнэ. Нэрийн дараалал=суудлын нар, Хомборойтой ижилхэн.",
+      ? "Online: Seat order in the list = play order."
+      : "Онлайн: Нэрийн дараалал=суудлын нэр.",
     throw: isEn ? "Throw" : "Орхих",
     yourTurn: isEn ? "Your turn" : "Таны ээлж",
     p: isEn ? "P" : "Т",
@@ -149,13 +145,13 @@ export default function ShagaiBerkh12UI({
     wait: isEn ? "Not your turn" : "Таны ээлж биш",
     over: isEn ? "Winner" : "Хожигч",
     last: isEn ? "Horses / camels" : "Морь / тэмээ",
-    center: isEn ? "Pot" : "Төв (хооронд)",
+    center: isEn ? "Pot" : "Төв",
     out: isEn ? "Out" : "Хасагдсан",
     local: isEn ? "2–4 local" : "2–4 нэг дэлгэц",
     cpu: isEn ? "vs computer" : "Роботтой",
     soloRoomNote: isEn
-      ? "No other person in the online room — you play vs the computer (like Homboroi when alone)."
-      : "Онлайн өрөөнд өөр тоглогчгүй — Хомборойтой ижил роботтой тоглоно.",
+      ? "No other person in the online room — you play vs the computer."
+      : "Онлайн өрөөнд өөр тоглогчгүй — Роботтой тоглоно.",
   };
 
   const mainChrome = narrowUi
@@ -165,6 +161,7 @@ export default function ShagaiBerkh12UI({
     ? { padding: "10px 12px 12px" }
     : { padding: "16px" };
   const rulesFabLabel = isEn ? "Rules" : "Дүрэм";
+  const ringSeats = Array.from({ length: playerCount }, (_, i) => i);
 
   const playBlock = (
     <>
@@ -203,14 +200,67 @@ export default function ShagaiBerkh12UI({
           </div>
         ) : null}
       </div>
-      <Berkh12RulesStrip isEn={isEn} />
+      {lockMode ? <p className={GAME_CALLOUT_AMBER}>{t.r7online}</p> : null}
       {hideModeToggle && !lockMode ? (
-        <p className={`mb-1.5 !mt-0 ${GAME_CALLOUT_SKY}`}>{t.soloRoomNote}</p>
+        <p className={`mb-1.5 !mt-0 ${GAME_TEXT_META}`}>{t.soloRoomNote}</p>
       ) : null}
-      {lockMode ? (
-        <p className={GAME_CALLOUT_AMBER}>{t.r7online}</p>
-      ) : null}
-      <p className={`mt-1.5 ${GAME_TEXT_LEAD}`}>{t.lead}</p>
+      <p className={`mt-1 ${GAME_TEXT_LEAD}`}>{t.lead}</p>
+
+      <div className="mt-1.5 grid grid-cols-1 gap-1.5 rounded-lg border border-zinc-700/70 bg-zinc-950/55 px-2.5 py-2 text-xs text-zinc-200 sm:grid-cols-2">
+        <p className="flex items-center gap-1.5">
+          <span className="text-amber-300">🐴</span>
+          <span>
+            {isEn ? "Take from previous seat" : "Өмнөх хүнээсээ авна"}
+          </span>
+          <span className="font-semibold text-amber-200">←</span>
+        </p>
+        <p className="flex items-center gap-1.5">
+          <span className="text-orange-300">🐫</span>
+          <span>{isEn ? "Give to next seat" : "Дараагийн хүнд өгнө"}</span>
+          <span className="font-semibold text-orange-200">→</span>
+        </p>
+      </div>
+
+      <div className="mt-1.5 rounded-xl border border-amber-500/25 bg-gradient-to-b from-amber-950/20 to-zinc-950/35 px-2.5 py-2">
+        <p className={`${GAME_TEXT_META} text-center`}>
+          {isEn ? "Seat flow diagram" : "Тоглогчдын тойрог"}
+        </p>
+        <div className="mt-1.5 flex items-center justify-center gap-1.5 sm:gap-2">
+          {ringSeats.map((seat, idx) => {
+            const current = seat === turn && active[seat];
+            return (
+              <div
+                key={`seat-${seat}`}
+                className="flex items-center gap-1.5 sm:gap-2"
+              >
+                <div
+                  className={`relative flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-[11px] font-semibold transition ${
+                    current
+                      ? "border-emerald-400/70 bg-emerald-600/25 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                      : !active[seat]
+                        ? "border-zinc-700/70 bg-zinc-900/45 text-zinc-500"
+                        : "border-amber-500/40 bg-amber-900/25 text-amber-100"
+                  }`}
+                >
+                  {nameLabels[seat] ?? `${t.p}${seat + 1}`}
+                  {current ? (
+                    <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300 animate-pulse" />
+                  ) : null}
+                </div>
+                {idx < ringSeats.length - 1 ? (
+                  <span className="text-amber-300/85 text-sm animate-[pulse_2.2s_ease-in-out_infinite]">
+                    →
+                  </span>
+                ) : (
+                  <span className="text-amber-300/70 text-sm animate-[pulse_2.2s_ease-in-out_infinite]">
+                    ↺
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {!lockMode && !hideModeToggle && mode === "local" ? (
         <div className={`mt-1.5 flex flex-wrap gap-1.5 ${GAME_TEXT_BODY}`}>
@@ -235,15 +285,15 @@ export default function ShagaiBerkh12UI({
 
       <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className={GAME_TEXT_META}>{t.center}</div>
+          <div className={GAME_TEXT_META}>{isEn ? "Center" : "Төв"}</div>
           <div className="text-2xl font-bold tabular-nums text-amber-100 sm:text-3xl">
             {center}
             <span className="ml-0.5 text-sm font-normal text-zinc-500">🐴</span>
           </div>
-          <p className={`mt-0.5 ${GAME_TEXT_SUBTITLE}`}>
+          <p className={`mt-0.5 ${GAME_TEXT_META}`}>
             {isEn
-              ? "Pot = shared bank. Your number = mories left to pay camel costs."
-              : "Төв = нийтийн сан. Тоо = тэмээнд зарцуулах үлдсэн морь."}
+              ? "Player cards show remaining mories."
+              : "Тоглогчийн карт дээр үлдсэн морь харагдана."}
           </p>
         </div>
         <div className="grid max-w-[12rem] grid-cols-2 gap-1.5 sm:max-w-none sm:grid-cols-4">

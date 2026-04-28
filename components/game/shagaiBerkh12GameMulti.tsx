@@ -15,7 +15,7 @@ import ShagaiBerkh12UI from "./shagaiBerkh12UI";
 import {
   applyBerkhTurn,
   BERKH12_MAX_TURNS,
-  BERKH12_TOTAL_MORIES,
+  BERKH12_START_STACK,
   hasFullWin,
   type Berkh12Mode,
   type Berkh12Phase,
@@ -96,7 +96,7 @@ function findWinnerSlot(
   throwCount: number,
 ): number | null {
   for (let i = 0; i < n; i++) {
-    if (a[i] && hasFullWin(m, i, BERKH12_TOTAL_MORIES)) return i;
+    if (a[i] && hasFullWin(m, i, n * BERKH12_START_STACK)) return i;
   }
   const alive = a.slice(0, n).filter(Boolean);
   if (alive.length === 1) {
@@ -139,8 +139,13 @@ export default function ShagaiBerkh12GameMulti({
   const [phase, setPhase] = useState<Berkh12Phase>("idle");
   const [turnSlot, setTurnSlot] = useState(0);
   const [turnId, setTurnId] = useState("");
-  const [center, setCenter] = useState(BERKH12_TOTAL_MORIES);
-  const [mories, setMories] = useState([0, 0, 0, 0]);
+  const [center, setCenter] = useState(0);
+  const [mories, setMories] = useState([
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+  ]);
   const [active, setActive] = useState(
     [0, 1, 2, 3].map((i) => i < nP) as [boolean, boolean, boolean, boolean],
   );
@@ -189,13 +194,23 @@ export default function ShagaiBerkh12GameMulti({
 
   const reMatch = useCallback(() => {
     setPhase("idle");
-    setCenter(BERKH12_TOTAL_MORIES);
-    setMories([0, 0, 0, 0]);
-    mRef.current = [0, 0, 0, 0];
+    setCenter(0);
+    setMories([
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+    ]);
+    mRef.current = [
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+      BERKH12_START_STACK,
+    ];
     const act = [0, 1, 2, 3].map((i) => i < nP) as [boolean, boolean, boolean, boolean];
     setActive(act);
     aRef.current = act;
-    cRef.current = BERKH12_TOTAL_MORIES;
+    cRef.current = 0;
     setTurnSlot(0);
     setTurnId(orderId[0] ?? "");
     setWinnerSlot(null);

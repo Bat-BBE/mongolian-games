@@ -15,7 +15,6 @@ export type MatchPhase =
 
 export interface RaceTurnResult {
   turn: Racer;
-  /** In multiplayer, who threw (when set, UI shows a name). */
   throwerId?: string;
   sides: ShagaiSide[];
   horseCount: number;
@@ -36,8 +35,6 @@ export interface RaceState {
   winner: Racer | null;
 }
 
-// Track length: 20 "horse-landed" shagai laid in a row form the racing
-// course. A racer wins once their piece reaches or passes the final shagai.
 export const TRACK_LENGTH = 20;
 
 export const INITIAL_RACE_STATE: RaceState = {

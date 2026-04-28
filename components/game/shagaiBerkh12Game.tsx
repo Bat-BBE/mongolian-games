@@ -10,7 +10,7 @@ import ShagaiBerkh12UI from "./shagaiBerkh12UI";
 import {
   applyBerkhTurn,
   BERKH12_MAX_TURNS,
-  BERKH12_TOTAL_MORIES,
+  BERKH12_START_STACK,
   type Berkh12Mode,
   type Berkh12Phase,
   hasFullWin,
@@ -21,7 +21,10 @@ import {
   nextClockwiseActive,
   rollBerkh12Sides,
 } from "./shagaiBerkh12Type";
-import { getBerkhTwelveThrowStartPositions, getShagaiThrowParams } from "./shagaiThrowShared";
+import {
+  getBerkhTwelveThrowStartPositions,
+  getShagaiThrowParams,
+} from "./shagaiThrowShared";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { useApp } from "@/components/AppContext";
@@ -66,10 +69,22 @@ function ThrowMat() {
       </mesh>
       {(
         [
-          [[3.2, 1, 2.0] as [number, number, number], [0.2, 2, 5.2] as [number, number, number]],
-          [[-3.2, 1, 2.0] as [number, number, number], [0.2, 2, 5.2] as [number, number, number]],
-          [[0, 1, 4.2] as [number, number, number], [7, 2, 0.2] as [number, number, number]],
-          [[0, 1, -0.3] as [number, number, number], [14, 2, 0.2] as [number, number, number]],
+          [
+            [3.2, 1, 2.0] as [number, number, number],
+            [0.2, 2, 5.2] as [number, number, number],
+          ],
+          [
+            [-3.2, 1, 2.0] as [number, number, number],
+            [0.2, 2, 5.2] as [number, number, number],
+          ],
+          [
+            [0, 1, 4.2] as [number, number, number],
+            [7, 2, 0.2] as [number, number, number],
+          ],
+          [
+            [0, 1, -0.3] as [number, number, number],
+            [14, 2, 0.2] as [number, number, number],
+          ],
         ] as const
       ).map((w, i) => (
         <mesh key={i} position={w[0]}>
@@ -90,7 +105,12 @@ type SceneProps = {
   onSettle: (id: number, side: ShagaiSide) => void;
 };
 
-function Berkh12GameScene({ throwParams, isThrown, settledSides, onSettle }: SceneProps) {
+function Berkh12GameScene({
+  throwParams,
+  isThrown,
+  settledSides,
+  onSettle,
+}: SceneProps) {
   const pieceTemplate = useShagaiThrowPieceTemplate();
   return (
     <>
@@ -117,24 +137,39 @@ function Berkh12GameScene({ throwParams, isThrown, settledSides, onSettle }: Sce
 function labelFor(mode: Berkh12Mode, i: number, isMn: boolean): string {
   if (mode === "vsCpu") {
     if (i === 0) return isMn ? "Та" : "You";
-    return (isMn ? "Робот" : "Bot") + (i);
+    return (isMn ? "Робот" : "Bot") + i;
   }
   return (isMn ? "Тоглогч" : "P") + (i + 1);
 }
 
 export type ShagaiBerkh12GameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
-  /** Online on, room <2 people: auto «роботтой», сонголт нуугдна. */
   autoPlayVsBotWhenSoloInRoom?: boolean;
 };
 
 export { Berkh12GameScene, ThrowMat, POS12, PhysicsFloor };
 
 const EMPTY12 = () =>
-  [null, null, null, null, null, null, null, null, null, null, null, null] as (ShagaiSide | null)[];
+  [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+  ] as (ShagaiSide | null)[];
 
 function plate12(s: ShagaiSide[]): (ShagaiSide | null)[] {
-  return Array.from({ length: 12 }, (_, i) => s[i] ?? null) as (ShagaiSide | null)[];
+  return Array.from(
+    { length: 12 },
+    (_, i) => s[i] ?? null,
+  ) as (ShagaiSide | null)[];
 }
 
 export default function ShagaiBerkh12Game({
@@ -152,14 +187,20 @@ export default function ShagaiBerkh12Game({
   const [playerCount, setPlayerCount] = useState<LocalPlayerCount>(2);
   const [phase, setPhase] = useState<Berkh12Phase>("idle");
   const [turn, setTurn] = useState(0);
-  const [center, setCenter] = useState(BERKH12_TOTAL_MORIES);
-  const [mories, setMories] = useState([0, 0, 0, 0]);
+  const [center, setCenter] = useState(0);
+  const [mories, setMories] = useState([
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+    BERKH12_START_STACK,
+  ]);
   const [active, setActive] = useState([true, true, true, true]);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState(
     Array.from({ length: 12 }, () => getShagaiThrowParams()),
   );
-  const [settledSides, setSettledSides] = useState<(ShagaiSide | null)[]>(EMPTY12());
+  const [settledSides, setSettledSides] =
+    useState<(ShagaiSide | null)[]>(EMPTY12());
   const [lastSides, setLastSides] = useState<(ShagaiSide | null)[]>(EMPTY12());
   const [lastHorses, setLastHorses] = useState(0);
   const [lastCamels, setLastCamels] = useState(0);
@@ -200,12 +241,14 @@ export default function ShagaiBerkh12Game({
     centerRef.current = center;
   }, [center]);
 
-  const nameLabels = Array.from({ length: 4 }, (_, i) => labelFor(mode, i, isMn));
+  const nameLabels = Array.from({ length: 4 }, (_, i) =>
+    labelFor(mode, i, isMn),
+  );
 
   const findWinner = useCallback(
     (m: number[], a: boolean[], throwsAfter: number): number | null => {
       for (let i = 0; i < nPlayers; i++) {
-        if (a[i] && hasFullWin(m, i, BERKH12_TOTAL_MORIES)) return i;
+        if (a[i] && hasFullWin(m, i, nPlayers * BERKH12_START_STACK)) return i;
       }
       const act = a.slice(0, nPlayers).filter(Boolean);
       if (act.length === 1) {
@@ -253,9 +296,7 @@ export default function ShagaiBerkh12Game({
       if (r.eliminated >= 0) {
         const lab = labelFor(modeRef.current, r.eliminated, isMn);
         setElimToast(
-          isMn
-            ? `${lab} — төлж чадсангүй!`
-            : `${lab} — not enough mories!`,
+          isMn ? `${lab} — төлж чадсангүй!` : `${lab} — not enough mories!`,
         );
         window.setTimeout(() => setElimToast(null), 3000);
       } else {
@@ -369,7 +410,9 @@ export default function ShagaiBerkh12Game({
       activeRef.current = r.active;
       if (r.eliminated >= 0) {
         const lab = labelFor(mode, r.eliminated, isMn);
-        setElimToast(isMn ? `${lab} — төлж чадсангүй!` : `${lab} — not enough!`);
+        setElimToast(
+          isMn ? `${lab} — төлж чадсангүй!` : `${lab} — not enough!`,
+        );
         window.setTimeout(() => setElimToast(null), 3000);
       } else {
         setElimToast(null);
@@ -397,15 +440,7 @@ export default function ShagaiBerkh12Game({
       }
     }, 900);
     return () => clearTimeout(t);
-  }, [
-    phase,
-    mode,
-    turn,
-    nPlayers,
-    isMn,
-    findWinner,
-    grant,
-  ]);
+  }, [phase, mode, turn, nPlayers, isMn, findWinner, grant]);
 
   const canThrow =
     phase !== "matchOver" &&
@@ -429,16 +464,24 @@ export default function ShagaiBerkh12Game({
       completeOnce.current = false;
       setPhase("idle");
       setTurn(0);
-      setCenter(BERKH12_TOTAL_MORIES);
-      const m = [0, 0, 0, 0] as [number, number, number, number];
+      setCenter(0);
+      const m = [
+        BERKH12_START_STACK,
+        BERKH12_START_STACK,
+        BERKH12_START_STACK,
+        BERKH12_START_STACK,
+      ] as [number, number, number, number];
       setMories(m);
       moriesRef.current = m;
-      const a = [0, 1, 2, 3].map(
-        (i) => i < n,
-      ) as [boolean, boolean, boolean, boolean];
+      const a = [0, 1, 2, 3].map((i) => i < n) as [
+        boolean,
+        boolean,
+        boolean,
+        boolean,
+      ];
       setActive(a);
       activeRef.current = a;
-      centerRef.current = BERKH12_TOTAL_MORIES;
+      centerRef.current = 0;
       setIsThrown(false);
       setSettledSides(EMPTY12());
       setLastSides(EMPTY12());

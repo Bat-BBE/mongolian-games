@@ -1,7 +1,3 @@
-/**
- * Хомборой (gameType `shagai`) — дүрмийн текст нэг эх сурвалж:
- * модалын «?», газрын заавар.
- */
 import { TARGET_SCORE } from "./shagaiTargetType";
 
 export type HomboroiRuleItem = { n: string; t: string; d: string };
@@ -18,7 +14,7 @@ export function homboroiHowToPlay(lang: "mn" | "en"): string {
 export function homboroiRuleItems(lang: "mn" | "en"): HomboroiRuleItem[] {
   if (lang === "mn") {
     return [
-      { n: "①", t: "4 шагай орхих", d: "Ээлж бүрд" },
+      { n: "①", t: "4 шагай орхих", d: "Ээлж бүрт" },
       { n: "②", t: "Онооны тохирол", d: "Онооны хүснэгтийг харна уу" },
       { n: "③", t: "Роботын ээлж", d: "Автоматаар шидэнэ" },
       { n: "④", t: "Ялалт", d: `Түрүүлж яг ${T} оноонд хүр` },

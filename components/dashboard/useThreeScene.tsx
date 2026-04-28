@@ -78,6 +78,7 @@ interface UseThreeSceneOptions {
   remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
   /** Бүжгийн сүлжээ — `useMapPresence` publishMapEmote */
   onLocalMapEmote?: (emoteId: string) => void;
+  onStationEnter?: (stationId: string) => void;
 }
 
 interface CameraTarget {
@@ -185,6 +186,7 @@ export function useThreeScene({
   presencePublishRef,
   remotePeersRef,
   onLocalMapEmote,
+  onStationEnter,
 }: UseThreeSceneOptions) {
   const onLocalMapEmoteRef = useRef(onLocalMapEmote);
   onLocalMapEmoteRef.current = onLocalMapEmote;
@@ -216,16 +218,26 @@ export function useThreeScene({
     id: string;
     alpha: number;
   } | null>(null);
+  const [heroBiome, setHeroBiome] = useState<string>("steppe");
+  const [daylightFactor, setDaylightFactor] = useState(1);
   const worldPoiUiThrottleRef = useRef<{
     id: string;
     alpha: number;
   } | null>(null);
+  const heroBiomeRef = useRef<string>("steppe");
+  const heroBiomeAtRef = useRef(0);
+  const daylightAtRef = useRef(0);
+  const daylightRef = useRef(1);
 
   const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
+  const onStationEnterRef = useRef<UseThreeSceneOptions["onStationEnter"]>(null);
   const builderRef = useRef<SceneBuilder | null>(null);
   useEffect(() => {
     onSelectRef.current = onSelectStation ?? null;
   }, [onSelectStation]);
+  useEffect(() => {
+    onStationEnterRef.current = onStationEnter ?? null;
+  }, [onStationEnter]);
   const heroAtStationIdRef = useRef<string | null>(null);
 
   const flyToStationRef = useRef<((id: string, snap?: boolean) => void) | null>(
@@ -1311,6 +1323,15 @@ export function useThreeScene({
         fog.color.setRGB(fogR, fogG, fogB);
         fog.density = 0.00105 + (1 - dayFrac) * 0.00012;
         renderer.toneMappingExposure = 0.86 + dayFrac * 0.24;
+        const nowDay = performance.now();
+        if (
+          nowDay - daylightAtRef.current > 260 &&
+          Math.abs(dayFrac - daylightRef.current) > 0.04
+        ) {
+          daylightAtRef.current = nowDay;
+          daylightRef.current = dayFrac;
+          setDaylightFactor(dayFrac);
+        }
 
         const finalCamPos = new THREE.Vector3(
           cameraState.currentLook.x +
@@ -1679,6 +1700,26 @@ export function useThreeScene({
           return;
         }
 
+        const now = performance.now();
+        if (now - heroBiomeAtRef.current > 280) {
+          heroBiomeAtRef.current = now;
+          const rawBiome = terrainBiome(root.position.x, root.position.z, root.position.y);
+          const nextBiome =
+            rawBiome === "river_plain"
+              ? "lake"
+              : rawBiome === "forest"
+                ? "forest"
+                : rawBiome === "gobi"
+                  ? "gobi"
+                  : rawBiome === "mountain" || rawBiome === "high_alpine"
+                    ? "mountain"
+                    : "steppe";
+          if (nextBiome !== heroBiomeRef.current) {
+            heroBiomeRef.current = nextBiome;
+            setHeroBiome(nextBiome);
+          }
+        }
+
         /** Бүх өртөө — хаалганы энгийн ойртлын дүрс */
         const INNER_R = 58;
         /** Тоглогчийн гэр: ижил «ойртсон» мэдрэмж өгөхийн тулд трохи том (бусдаар ижил механик) */
@@ -1728,6 +1769,7 @@ export function useThreeScene({
         if (innerId !== heroAtStationIdRef.current) {
           heroAtStationIdRef.current = innerId;
           setHeroAtStationId(innerId);
+          if (innerId) onStationEnterRef.current?.(innerId);
         }
 
         const th = labelUiThrottleRef.current;
@@ -1886,5 +1928,7 @@ export function useThreeScene({
     playMapHeroEmote,
     mapVirtualStickRef,
     worldPoiUi,
+    heroBiome,
+    daylightFactor,
   };
 }

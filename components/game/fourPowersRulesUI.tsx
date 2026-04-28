@@ -1,6 +1,6 @@
 "use client";
 
-import { WIN_SCORE } from "./fourPowersType";
+import { MAX_ENERGY, ROUND_REGEN, WIN_SCORE } from "./fourPowersType";
 import {
   GAME_RULES_OL_CLASS,
   GAME_TEXT_BODY,
@@ -27,19 +27,19 @@ export function FourPowersHowItWorks({ lang, variant }: Props) {
   const modeLine =
     variant === "solo"
       ? isMn
-        ? "Ганцаархаг: та + 3 робот — бүгд нэгэн зэрэг сонголт хийнэ."
+        ? "Ганцаараа: та + 3 робот — бүгд нэгэн зэрэг сонголт хийнэ."
         : "Solo: you and three bots all lock in a pick at the same time."
       : isMn
-        ? "Өрөөнд 1–4 тоглогч нэгдэнэ; суудал дүүрээгүй бол робот нэмэгдэнэ."
-        : "Room: 1–4 humans; empty seats are filled by bots.";
+        ? "Өрөөнд 2–4 тоглогч нэгдэнэ; өрөө дүүрээгүй бол робот нэмэгдэнэ."
+        : "Room: 2–4 humans; empty seats are filled by bots.";
 
   const goalLine = isMn
-    ? `Зорилго — ${WIN_SCORE} оноо: түрүүнд ганцаархан хүрсэн суудал ялна (тэнцвэл үргэлжилнэ).`
+    ? `Зорилго — ${WIN_SCORE} оноо: түрүүлж хүрсэн хүн нь ялна (тэнцвэл үргэлжилнэ).`
     : `Goal — ${WIN_SCORE} pts: first sole leader wins (ties at the top keep play going).`;
 
   const pickLine = isMn
-    ? "Доорх дөрвөн товчоос нэгийг дарна — энэ нь таны «эрхэ» (сонголт)."
-    : "Tap one of the four buttons — that is your power pick for the round.";
+    ? "Үе бүрт 1 хүч сонгоно. Энерги хүрэхгүй хүчийг сонговол автоматаар хямд хүч рүү шилжилт хийнэ."
+    : "Pick one power per round. If energy is not enough, the move auto-falls back to an affordable power.";
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-2 text-left">
@@ -50,14 +50,14 @@ export function FourPowersHowItWorks({ lang, variant }: Props) {
         role="img"
         aria-label={
           isMn
-            ? "Морь тэмээг, тэмээ үхрийг, үхэр хонийг, хонь морийг дарна"
+            ? "Морь тэмээг, тэмээ үхрийг, үхэр хонийг, хонь морийг дийлнэ"
             : "Horse beats camel, camel ox, ox sheep, sheep horse"
         }
       >
         <p
           className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.12em] text-amber-200/80`}
         >
-          {isMn ? "Дугуй — хэн хэнийгээ дардаг" : "The cycle — who beats whom"}
+          {isMn ? "Цикл — хэн хэнийгээ дардаг" : "The cycle — who beats whom"}
         </p>
         <div className="mt-1.5 flex flex-wrap items-center justify-center gap-y-1 text-xs font-semibold text-zinc-100 sm:text-[0.8125rem]">
           {names.map((label, i) => (
@@ -103,25 +103,38 @@ export function FourPowersHowItWorks({ lang, variant }: Props) {
         <summary
           className={`${GAME_TEXT_BODY} cursor-pointer text-center font-semibold text-amber-200/90 [&::-webkit-details-marker]:hidden [&::marker]:hidden`}
         >
-          {isMn
-            ? "Оноо хэрхэн нэмэгддэг вэ? (дэлгэрэнгүй)"
-            : "How scoring works (details)"}
+          {isMn ? "Energy + Effect дүрэм" : "Energy + Effect rules"}
         </summary>
         <ol className={`mt-2 ${GAME_RULES_OL_CLASS} text-slate-300`}>
           <li className="list-decimal">
             {isMn
-              ? "Дөрвөн суудал ижил эрхэ сонговол, эсвэл дөрвөн өөр эрхэ сонговол — энэ раунд оноо 0."
-              : "If all four picks are the same power, or all four are different powers — this round scores 0."}
+              ? `Үе бүрт хүн бүхэн хүч зарцуулна. Үеийн төгсгөлд +${ROUND_REGEN} энерги сэргэнэ (max ${MAX_ENERGY}).`
+              : `Each seat spends energy to cast. At round end, +${ROUND_REGEN} energy is restored (max ${MAX_ENERGY}).`}
           </li>
           <li className="list-decimal">
             {isMn
-              ? "Хоёр төрөл 2–2-оор хуваагдвал: дугуйн дагуу давсан талын 2 суудал тус бүр +2 оноо, ялагдсан 2 нь 0."
-              : "If the picks split 2 vs 2: the two seats on the winning side of the cycle get +2 each; the other two get 0."}
+              ? "Суурь оноо: нэг өрсөлдөгчөө дийлсэн бүрт +1."
+              : "Base score: +1 for each opponent your power beats in the cycle."}
           </li>
           <li className="list-decimal">
             {isMn
-              ? "Нэг төрөл 3, нөгөө нь 1 бол: нэг ганцаархан сонголт гурвыг дугуйнд дарвал тэр суудал +3; эсрэг тохиолдолд гурван суудал тус бүр +1."
-              : "If the split is 3 vs 1: if the lone power beats the triple in the cycle, that lone seat gets +3; otherwise each of the three gets +1."}
+              ? "Horse: ялалт авбал +1 нэмэлт оноо."
+              : "Horse: gains +1 tempo bonus on winning rounds."}
+          </li>
+          <li className="list-decimal">
+            {isMn
+              ? "Camel: ялалт авбал дараагийн хүний хүчийг -1 сорно."
+              : "Camel: on win, drains -1 energy from next seat (unless shielded)."}
+          </li>
+          <li className="list-decimal">
+            {isMn
+              ? "Ox: өөрөө оноо авсан үед shield идэвхжиж drain-ийг хаана."
+              : "Ox: activates shield when it scores, blocking drain effects."}
+          </li>
+          <li className="list-decimal">
+            {isMn
+              ? "Sheep: энэ раундад +1 нэмэлт энерги сэргээнэ."
+              : "Sheep: recovers +1 extra energy this round."}
           </li>
         </ol>
       </details>

@@ -92,7 +92,7 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     waitingRobot: "Robot's turn…",
     playerTurn: (needed) => `Your turn — ${needed} squares to go`,
     robotTurn: "Robot's turn",
-    robotThinking: "Robot is thinking…",
+    robotThinking: "Robot …",
     playerAdvanced: (h) => `+${h} forward (${h} horse${h === 1 ? "" : "s"})`,
     robotAdvanced: (h) => `Robot +${h} (${h} horse${h === 1 ? "" : "s"})`,
     noMoveThisTurn: "No horses landed — skip this turn.",
@@ -122,7 +122,7 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     horsesCount: (n) => `${n} horse${n === 1 ? "" : "s"}`,
   };
   const mn: RaceI18n = {
-    title: "МОРЬ УРАЛДАХ",
+    title: "МОРЬ УРАЛДУУЛАХ",
     subtitle: "МОРЬ УРАЛДУУЛАХ · VS РОБОТ",
     overline: "ᠮᠣᠷᠢ ᠤᠷᠤᠯᠳᠤᠭᠠᠨ",
     rollingHint: "Шагайнууд бууж байна...",
@@ -135,11 +135,11 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     playerAdvanced: (h) => `+${h} урагш (${h} морь)`,
     robotAdvanced: (h) => `Робот +${h} (${h} морь)`,
     noMoveThisTurn: "Морь буугаагүй — ээлжээ алдлаа.",
-    youWonMatch: "ТА УРАЛДААНД ТҮРҮҮЛЛЭЭ!",
+    youWonMatch: "Та уралдаанд түрүүллээ!",
     robotWonMatch: "Робот уралдаанд түрүүллээ",
     you: "ТА",
     robot: "РОБОТ",
-    target: `Хэн түрүүлж ${TRACK_LENGTH}-р шагайнд хүрвэл ялна`,
+    target: `Хэн түрүүлж ${TRACK_LENGTH}-р шагайг давбал ялна`,
     position: "Шагай",
     // rulesTitle: rMn.howToSectionTitle,
     howToPlay: rMn.intro,
@@ -154,7 +154,7 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     ],
     historyTitle: "СҮҮЛИЙН ШИДЭЛТҮҮД",
     historyEmpty: "Түүх хоосон",
-    resetBtn: "Шинээр эхлэх",
+    resetBtn: "Дахин эхлэх",
     rewardLabel: "ШАГНАЛ",
     playerTag: "ТА",
     robotTag: "РОБОТ",
@@ -731,8 +731,7 @@ export default function HorseRaceUI({
     ? (state.phase === "idle" || state.phase === "playerResult") &&
       state.winner === null &&
       mp!.turnPlayerId === mp!.myId
-    : (state.phase === "idle" ||
-        state.phase === "robotResult") &&
+    : (state.phase === "idle" || state.phase === "robotResult") &&
       state.winner === null;
   const matchOver = state.phase === "matchOver";
   const playerWon = isMp

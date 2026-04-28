@@ -19,14 +19,12 @@ interface Props {
   revealHidden: { player: number; robot: number } | null;
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
   sessionGain?: { coins: number; gems: number };
-  /** Online 1v1: first order id = "player" stack, second = "robot" stack in state. */
   uiMode?: "robot" | "mp";
   mp?: {
     myId: string;
     order: string[];
     nameById: Record<string, string>;
   };
-  /** Hiding: true after you sent a commit, until the round is resolved. */
   commitLocked?: boolean;
 }
 
@@ -137,7 +135,7 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     yourStack: "Таны шагай",
     robotStack: "Роботын шагай",
     round: "Үе шат",
-    startRound: "Дараагийн үе шат эхлүүлэх",
+    startRound: "Дараагийн үеийг эхлүүлэх",
     chooseHidden: "Хэдэн шагай нуух вэ?",
     chooseGuess: "Нийт хэдэн шагай атгасан болохыг таа",
     commit: "Нуух ба таах",

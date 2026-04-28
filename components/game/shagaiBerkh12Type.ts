@@ -2,11 +2,8 @@ import type { ShagaiSide } from "./shagai";
 
 export type { ShagaiSide };
 
-/** Нийт дэвсгэрт байгаа «морь»-ны тоо (төв сан). */
-export const BERKH12_TOTAL_MORIES = 48;
-/** 12 бэрх: нэг удаа орхих шагайн тоо. */
+export const BERKH12_START_STACK = 8;
 export const BERKH12_PIECE_COUNT = 12;
-/** Сүүлд хааяа тоглолт дуусгах. */
 export const BERKH12_MAX_TURNS = 200;
 
 export type Berkh12Phase =
@@ -28,10 +25,6 @@ export function countCamels(sides: ShagaiSide[]): number {
   return sides.filter((s) => s === "camel").length;
 }
 
-/**
- * «Эсрэг нар» — ээлжийн дараалалд (p-1, p-2, …) эхний эсэргээр.
- * Тэмээгээр нэг мори тутамд: эхний нэг, дараа нь дараагийн гэх мэргэжилтэй.
- */
 export function counterSunOrder(nPlayers: number, p: number): number[] {
   const o: number[] = [];
   for (let k = 1; k < nPlayers; k++) {
@@ -61,10 +54,6 @@ export type ApplyTurnState = {
   eliminated: number;
 };
 
-/**
- * h морь: төвөөс morie авна. c тэмээ: сөрөгчдөд 1-ээр, эсрэг нарын дарааллаар;
- * нийлүүлэх морьгүй бол хасагдана, үлдсэн нь төврүү.
- */
 export function applyBerkhTurn(
   mories: number[],
   center: number,
@@ -91,26 +80,45 @@ export function applyBerkhTurn(
     };
   }
 
-  if (c > 0) {
-    if (nextM[p]! < c) {
-      nextC += nextM[p]!;
-      nextM[p] = 0;
-      nextA[p] = false;
-      elim = p;
-    } else {
-      const order = counterSunOrder(nPlayers, p);
-      for (let i = 0; i < c; i++) {
-        const t = order[i % order.length] ?? order[0]!;
-        if (t !== p) nextM[t] = (nextM[t] ?? 0) + 1;
-      }
-      nextM[p]! -= c;
+  const prevActive = (from: number): number => {
+    for (let k = 1; k <= nPlayers; k++) {
+      const j = (from - k + nPlayers * 4) % nPlayers;
+      if (nextA[j] !== false) return j;
+    }
+    return from;
+  };
+  const nextActiveIdx = (from: number): number => {
+    for (let k = 1; k <= nPlayers; k++) {
+      const j = (from + k) % nPlayers;
+      if (nextA[j] !== false) return j;
+    }
+    return from;
+  };
+
+  if (h > 0) {
+    const donor = prevActive(p);
+    if (donor !== p) {
+      const take = Math.min(h, nextM[donor] ?? 0);
+      nextM[donor] = Math.max(0, (nextM[donor] ?? 0) - take);
+      nextM[p] = (nextM[p] ?? 0) + take;
     }
   }
 
-  if (nextA[p] && h > 0) {
-    const take = Math.min(h, nextC);
-    nextM[p]! += take;
-    nextC -= take;
+  if (c > 0) {
+    const recv = nextActiveIdx(p);
+    if (recv !== p) {
+      const give = Math.min(c, nextM[p] ?? 0);
+      nextM[p] = Math.max(0, (nextM[p] ?? 0) - give);
+      nextM[recv] = (nextM[recv] ?? 0) + give;
+    }
+  }
+
+  for (let i = 0; i < nPlayers; i++) {
+    if (nextA[i] && (nextM[i] ?? 0) <= 0) {
+      nextM[i] = 0;
+      nextA[i] = false;
+      if (elim < 0) elim = i;
+    }
   }
 
   return {
@@ -123,7 +131,11 @@ export function applyBerkhTurn(
   };
 }
 
-export function hasFullWin(mories: number[], p: number, total: number): boolean {
+export function hasFullWin(
+  mories: number[],
+  p: number,
+  total: number,
+): boolean {
   return (mories[p] ?? 0) >= total;
 }
 
