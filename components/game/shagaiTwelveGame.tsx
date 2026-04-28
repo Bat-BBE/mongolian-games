@@ -9,8 +9,10 @@ import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
 import ShagaiTwelveUI from "./shagaiTwelveUI";
 import {
   countHorses,
-  getRequiredPickAfterThrows,
+  getAllowedTwelvePicks,
   isTwelveGameOver,
+  isTwelvePickAllowed,
+  pickCpuTwelveDefault,
   type ShagaiSide,
   type TwelvePhase,
   type TwelvePick,
@@ -154,7 +156,8 @@ export default function ShagaiTwelveGame({
   autoPlayVsBotWhenSoloInRoom = false,
 }: ShagaiTwelveGameProps) {
   const { grant, resetGrants } = useInventoryGrant();
-  const [matchCompleted, setMatchCompleted] = useState(0);
+  const [throwsAt4, setThrowsAt4] = useState(0);
+  const [throwsAt3, setThrowsAt3] = useState(0);
   const [phase, setPhase] = useState<TwelvePhase>("idle");
   const [turn, setTurn] = useState<0 | 1>(0);
   const [pick, setPick] = useState<TwelvePick>(4);
@@ -175,7 +178,8 @@ export default function ShagaiTwelveGame({
 
   const turnRef = useRef<0 | 1>(0);
   const nRef = useRef<TwelvePick>(4);
-  const matchCompletedRef = useRef(0);
+  const throwsAt4Ref = useRef(0);
+  const throwsAt3Ref = useRef(0);
   const settledRef = useRef<(ShagaiSide | null)[]>([null, null, null, null]);
   const settledCount = useRef(0);
   const resultDone = useRef(false);
@@ -189,15 +193,20 @@ export default function ShagaiTwelveGame({
     nRef.current = nThrow;
   }, [nThrow]);
   useEffect(() => {
-    matchCompletedRef.current = matchCompleted;
-  }, [matchCompleted]);
+    throwsAt4Ref.current = throwsAt4;
+  }, [throwsAt4]);
+  useEffect(() => {
+    throwsAt3Ref.current = throwsAt3;
+  }, [throwsAt3]);
 
   useEffect(() => {
     if (phase === "matchOver" || phase === "throwing" || phase === "settling")
       return;
-    const req = getRequiredPickAfterThrows(matchCompleted);
-    setPick((p) => (p === req ? p : req));
-  }, [matchCompleted, phase]);
+    const allowed = getAllowedTwelvePicks(throwsAt4, throwsAt3);
+    setPick((p) =>
+      allowed.includes(p) ? p : pickCpuTwelveDefault(throwsAt4, throwsAt3),
+    );
+  }, [throwsAt4, throwsAt3, phase]);
 
   useEffect(() => {
     if (phase !== "matchOver" || winner == null || completeOnce.current) return;
@@ -228,11 +237,12 @@ export default function ShagaiTwelveGame({
   const finishAndAdvance = useCallback(
     (horses: number, sides: ShagaiSide[]) => {
       if (horses > 0) grant({ coins: STONE_ROUND_COINS });
-      setMatchCompleted((c) => {
-        const n = c + 1;
-        matchCompletedRef.current = n;
-        return n;
-      });
+      const boneN = nRef.current;
+      if (boneN === 4) {
+        setThrowsAt4((u) => u + 1);
+      } else if (boneN === 3) {
+        setThrowsAt3((u) => u + 1);
+      }
       const last4: (ShagaiSide | null)[] = [null, null, null, null];
       for (let i = 0; i < sides.length; i++) {
         last4[i] = sides[i] ?? null;
@@ -289,7 +299,10 @@ export default function ShagaiTwelveGame({
   useEffect(() => {
     if (phase !== "cpuWait") return;
     const t = window.setTimeout(() => {
-      const n = getRequiredPickAfterThrows(matchCompletedRef.current);
+      const n = pickCpuTwelveDefault(
+        throwsAt4Ref.current,
+        throwsAt3Ref.current,
+      );
       setPick(n);
       startThrow(1, n);
     }, 900);
@@ -303,10 +316,9 @@ export default function ShagaiTwelveGame({
 
   const onThrow = useCallback(() => {
     if (!canHumanThrow) return;
-    const req = getRequiredPickAfterThrows(matchCompleted);
-    if (pick !== req) return;
+    if (!isTwelvePickAllowed(pick, throwsAt4, throwsAt3)) return;
     startThrow(0, pick);
-  }, [canHumanThrow, matchCompleted, pick, startThrow, turn]);
+  }, [canHumanThrow, throwsAt4, throwsAt3, pick, startThrow, turn]);
 
   const onReset = useCallback(() => {
     syncGen.current += 1;
@@ -324,8 +336,10 @@ export default function ShagaiTwelveGame({
     setWinner(null);
     resultDone.current = false;
     completeOnce.current = false;
-    setMatchCompleted(0);
-    matchCompletedRef.current = 0;
+    setThrowsAt4(0);
+    setThrowsAt3(0);
+    throwsAt4Ref.current = 0;
+    throwsAt3Ref.current = 0;
     resetGrants();
   }, [resetGrants]);
 
@@ -385,7 +399,8 @@ export default function ShagaiTwelveGame({
         turn={turn}
         pick={pick}
         onPick={setPick}
-        matchCompletedThrows={matchCompleted}
+        throwsAt4={throwsAt4}
+        throwsAt3={throwsAt3}
         scores={scores}
         canThrow={canHumanThrow}
         onThrow={onThrow}

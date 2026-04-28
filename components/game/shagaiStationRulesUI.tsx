@@ -14,14 +14,37 @@ import {
 
 const pill = `rounded-lg border border-amber-500/35 bg-amber-950/40 px-2 py-1 font-[family-name:var(--font-inter)] text-xs font-bold tabular-nums leading-relaxed text-amber-100/95 sm:text-[0.8125rem]`;
 
-/** 12 жил — шат + зорилго (нэгдсэн «chrome»). */
-export function TwelveShagaiRulesStrip({ isEn }: { isEn: boolean }) {
+type TwelveStripVariant = "full" | "panel";
+
+/** 12 жил — шат + зорилго (`full`: модал/дүрэм; `panel`: зөвхөн шатны хайрцаг). */
+export function TwelveShagaiRulesStrip({
+  isEn,
+  variant = "full",
+}: {
+  isEn: boolean;
+  variant?: TwelveStripVariant;
+}) {
+  const compact = variant === "panel";
   return (
-    <div className="mt-2 space-y-1.5 rounded-xl border border-sky-500/25 bg-sky-950/20 px-2 py-2 sm:px-2.5">
-      <p className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-sky-200/80`}>
-        {isEn ? "Throw tiers → horse points" : "Шатны шидэлт → морины оноо"}
-      </p>
-      <div className={`flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 ${GAME_TEXT_BODY} text-sky-100/90`}>
+    <div
+      className={`mt-2 space-y-1.5 rounded-xl border border-sky-500/25 bg-sky-950/20 px-2 py-2 sm:px-2.5 ${compact ? "py-1.5" : ""}`}
+    >
+      {!compact ? (
+        <p
+          className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-sky-200/80`}
+        >
+          {isEn ? "Throw tiers → horse points" : "Шатны шидэлт → морины оноо"}
+        </p>
+      ) : (
+        <p
+          className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.12em] text-sky-200/75`}
+        >
+          {isEn ? "Throw pattern" : "Шат"}
+        </p>
+      )}
+      <div
+        className={`flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 ${GAME_TEXT_BODY} text-sky-100/90`}
+      >
         <span className={pill}>4×4</span>
         <span className="text-sky-400/80" aria-hidden>
           →
@@ -32,11 +55,13 @@ export function TwelveShagaiRulesStrip({ isEn }: { isEn: boolean }) {
         </span>
         <span className={pill}>2×∞</span>
       </div>
-      <p className={`${GAME_TEXT_META} text-center text-slate-300/95`}>
-        {isEn
-          ? `Each bone that lands horse-face up = +1 horse point this throw. First to ${TWELVE_TARGET} horse points wins.`
-          : `Шагай бүр дээрээ морьтой бол энэ шидэлтэд +1 морины оноо. Хамгийн түрүүнд ${TWELVE_TARGET} хүргэгч ялна.`}
-      </p>
+      {!compact ? (
+        <p className={`${GAME_TEXT_META} text-center text-slate-300/95`}>
+          {isEn
+            ? `Horse on top = +1 this throw; first to ${TWELVE_TARGET} horse points wins. Four throws must use four bones each, three throws must use three bones (you pick the order); 2-bone throws are allowed anytime until those quotas are used, then only 2 bones.`
+            : `Дээрээ морь бол +1; анх ${TWELVE_TARGET} морь хүргэгч ялна. 4-өөр 4 удаа, 3-аар 3 удаа шидэхийг дарааллаар нь өөрөө сонгоно; квот дуусах хүртэл 2-оор ч шиднө. Хоёрыг дууссаны дараа зөвхөн 2.`}
+        </p>
+      ) : null}
     </div>
   );
 }

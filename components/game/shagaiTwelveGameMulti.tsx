@@ -15,8 +15,10 @@ import ShagaiTwelveUI from "./shagaiTwelveUI";
 import {
   TWELVE_TARGET,
   countHorses,
-  getRequiredPickAfterThrows,
+  getAllowedTwelvePicks,
   isTwelveGameOver,
+  isTwelvePickAllowed,
+  pickCpuTwelveDefault,
   type ShagaiSide,
   type TwelvePhase,
   type TwelvePick,
@@ -44,6 +46,9 @@ type T12Relay = {
   winnerId: string | null;
   /** Тоглолт дууссан шидэлтийн нийт тоо (энэ шидэлтийг оруулсны дараа). */
   matchThrowN: number;
+  /** Энэ шидэлтийн дараах квот: 4-өөр / 3-аар шидсэн нийт удаа. */
+  u4: number;
+  u3: number;
 };
 
 function parseR(x: unknown): T12Relay | null {
@@ -54,6 +59,8 @@ function parseR(x: unknown): T12Relay | null {
   if (o.n !== 2 && o.n !== 3 && o.n !== 4) return null;
   if (typeof o.s0 !== "number" || typeof o.s1 !== "number") return null;
   if (typeof o.matchThrowN !== "number" || o.matchThrowN < 1) return null;
+  if (typeof o.u4 !== "number" || typeof o.u3 !== "number") return null;
+  if (o.u4 < 0 || o.u3 < 0 || o.u4 > 4 || o.u3 > 3) return null;
   return o;
 }
 
@@ -121,9 +128,12 @@ export default function ShagaiTwelveGameMulti({
     null,
   ]);
   const [lastHorses, setLastHorses] = useState(0);
-  const [throwsDone, setThrowsDone] = useState(0);
+  const [throwsAt4, setThrowsAt4] = useState(0);
+  const [throwsAt3, setThrowsAt3] = useState(0);
   const [winnerSlot, setWinnerSlot] = useState<0 | 1 | null>(null);
   const matchThrowsRef = useRef(0);
+  const throwsAt4Ref = useRef(0);
+  const throwsAt3Ref = useRef(0);
   const scoresRef = useRef(scores);
   useEffect(() => {
     scoresRef.current = scores;
@@ -173,7 +183,10 @@ export default function ShagaiTwelveGameMulti({
     setIsThrown(false);
     setLastSides([null, null, null, null]);
     setLastHorses(0);
-    setThrowsDone(0);
+    setThrowsAt4(0);
+    setThrowsAt3(0);
+    throwsAt4Ref.current = 0;
+    throwsAt3Ref.current = 0;
     matchThrowsRef.current = 0;
     setWinnerSlot(null);
     setThrowParams([0, 1, 2, 3].map(() => getShagaiThrowParams()));
@@ -224,10 +237,16 @@ export default function ShagaiTwelveGameMulti({
       nRef.current = p.n;
       setLastSides(last4);
       setLastHorses(p.lastHorses);
-      setThrowsDone(p.matchThrowN);
       matchThrowsRef.current = p.matchThrowN;
+      setThrowsAt4(p.u4);
+      setThrowsAt3(p.u3);
+      throwsAt4Ref.current = p.u4;
+      throwsAt3Ref.current = p.u3;
       if (!p.matchOver) {
-        setPick(getRequiredPickAfterThrows(p.matchThrowN));
+        const allowed = getAllowedTwelvePicks(p.u4, p.u3);
+        setPick((prev) =>
+          allowed.includes(prev) ? prev : pickCpuTwelveDefault(p.u4, p.u3),
+        );
       }
       setScores([p.s0, p.s1] as [number, number]);
       setSettledSides([...last4] as (ShagaiSide | null)[]);
@@ -285,7 +304,9 @@ export default function ShagaiTwelveGameMulti({
       const g = syncGen.current;
       window.setTimeout(() => {
         if (g !== syncGen.current) return;
-        if (num !== getRequiredPickAfterThrows(matchThrowsRef.current)) {
+        const prev4 = throwsAt4Ref.current;
+        const prev3 = throwsAt3Ref.current;
+        if (!isTwelvePickAllowed(num, prev4, prev3)) {
           return;
         }
         const raw = settledRef.current.slice(0, num);
@@ -312,6 +333,8 @@ export default function ShagaiTwelveGameMulti({
         sendV.current += 1;
         const v = sendV.current;
         const matchThrowN = matchThrowsRef.current + 1;
+        const u4 = prev4 + (num === 4 ? 1 : 0);
+        const u3 = prev3 + (num === 3 ? 1 : 0);
         const pay: T12Relay = {
           kind: "t12",
           v,
@@ -325,6 +348,8 @@ export default function ShagaiTwelveGameMulti({
           matchOver: o.over,
           winnerId: o.over ? (winnerId ?? tId) : null,
           matchThrowN,
+          u4,
+          u3,
         };
         sendRelay(REL, pay);
         applyPayload(pay);
@@ -350,8 +375,8 @@ export default function ShagaiTwelveGameMulti({
 
   const onThrow = useCallback(() => {
     if (!canThrow) return;
-    const need = getRequiredPickAfterThrows(matchThrowsRef.current);
-    if (pick !== need) return;
+    if (!isTwelvePickAllowed(pick, throwsAt4Ref.current, throwsAt3Ref.current))
+      return;
     startThrow(myId, pick);
   }, [canThrow, myId, pick, startThrow]);
 
@@ -415,7 +440,8 @@ export default function ShagaiTwelveGameMulti({
         turn={turnSlot}
         pick={pick}
         onPick={setPick}
-        matchCompletedThrows={throwsDone}
+        throwsAt4={throwsAt4}
+        throwsAt3={throwsAt3}
         scores={scores}
         canThrow={canThrow}
         onThrow={onThrow}
