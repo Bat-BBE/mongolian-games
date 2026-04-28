@@ -1,6 +1,11 @@
 "use client";
 
 import {
+  homboroiHowToPlay,
+  homboroiRuleItems,
+  homboroiScoring,
+} from "./shagaiHomboroiRulesCopy";
+import {
   GameState,
   SHAGAI_INFO,
   ShagaiSide,
@@ -14,12 +19,10 @@ import { playButtonClick } from "@/lib/uiSounds";
 import {
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
-import GameRulesSheet from "./GameRulesSheet";
-import GameRulesFab from "./GameRulesFab";
-import { useState } from "react";
+import { GAME_CTA_PRIMARY } from "./gameUiTheme";
+import type { CSSProperties } from "react";
 
 interface Props {
   state: GameState;
@@ -104,6 +107,7 @@ type UiStrings = {
 
 function useI18n(): UiStrings & { language: "mn" | "en" } {
   const { language } = useApp();
+  const lang: "mn" | "en" = language === "en" ? "en" : "mn";
   const en: UiStrings = {
     title: "Homboroi",
     subtitle: "4 SHAGAI · RACE TO EXACTLY 32 · VS ROBOT",
@@ -132,23 +136,10 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     playerZero: "0 pts — no scoring combo",
     robotGot: (pts) => `+${pts} pts for robot`,
     rulesTitle: "HOW TO PLAY",
-    howToPlay:
-      "Throw 4 shagai each turn. Land exactly on 32 to win. If you pass 32, your score resets to 0 and you keep going.",
-    rules: [
-      { n: "①", t: "Throw 4 shagai", d: "Every turn" },
-      { n: "②", t: "Score combos", d: "See scoring table" },
-      { n: "③", t: "Robot answers", d: "Auto throw" },
-      { n: "④", t: "Win", d: "Be the first to hit exactly 32" },
-      { n: "⑤", t: "Overshoot", d: "Score resets to 0 — game continues" },
-    ],
+    howToPlay: "",
+    rules: [],
     scoringTitle: "SCORING",
-    scoring: [
-      { label: "4 horse (all sides)", pts: "Win" },
-      { label: "4 different sides (Dörvön berkh)", pts: "+8" },
-      { label: "4 identical (not 4 horse)", pts: "+4" },
-      { label: "Any two pairs (2+2 of two sides)", pts: "+2" },
-      { label: "Everything else", pts: "0" },
-    ],
+    scoring: [],
     statistic: "STATISTICS",
     stats: [
       { label: "Your score", valueKey: "playerScore" },
@@ -206,23 +197,10 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
     playerZero: "0 оноо — тохирол байхгүй",
     robotGot: (pts) => `+${pts} оноо роботонд`,
     rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
-    howToPlay:
-      "4 шагай орхиод тохирсон талаар оноо хуримтлуулна. Яг 32 оноонд хүрвэл ялна. 32-оос давбал оноо 0-с дахин эхэлнэ.",
-    rules: [
-      { n: "①", t: "4 шагай орхих", d: "Ээлж бүрд" },
-      { n: "②", t: "Онооны тохирол", d: "Онооны хүснэгтийг харна уу" },
-      { n: "③", t: "Роботын ээлж", d: "Автоматаар шидэнэ" },
-      { n: "④", t: "Ялалт", d: "Түрүүлж яг 32 оноонд хүр" },
-      { n: "⑤", t: "Хэтэрвэл", d: "Оноо 0-с эхэлнэ, тоглоом үргэлжилнэ" },
-    ],
+    howToPlay: "",
+    rules: [],
     scoringTitle: "ОНООНЫ ХҮСНЭГТ",
-    scoring: [
-      { label: "4 морь (бүгд морины тал)", pts: "Ялна" },
-      { label: "4 өөр тал (Дөрвөн бэрх)", pts: "+8" },
-      { label: "4 ижил (4 морь биш)", pts: "+4" },
-      { label: "Ямар ч 2+2 хос (хоёр төрөл тус бүр 2)", pts: "+2" },
-      { label: "Бусад тохиолдол", pts: "0" },
-    ],
+    scoring: [],
     statistic: "СТАТИСТИК",
     stats: [
       { label: "Таны оноо", valueKey: "playerScore" },
@@ -252,7 +230,14 @@ function useI18n(): UiStrings & { language: "mn" | "en" } {
       durvenMori: "Дөрвөн морь — шууд ялалт",
     },
   };
-  return { ...(language === "en" ? en : mn), language };
+  const core = lang === "en" ? en : mn;
+  return {
+    ...core,
+    howToPlay: homboroiHowToPlay(lang),
+    rules: homboroiRuleItems(lang),
+    scoring: homboroiScoring(lang),
+    language: lang,
+  };
 }
 
 function GoldDivider() {
@@ -554,6 +539,7 @@ function HistoryList({
 
 function TargetRulesAsideBody({
   showRulesHeading,
+  includeIntroRules = true,
   t,
   state,
   settledSides,
@@ -565,6 +551,8 @@ function TargetRulesAsideBody({
   mpNameFor,
 }: {
   showRulesHeading: boolean;
+  /** false: зөвхөн онооны хүснэгт, статистик, түүх (дүрмийн танилцуулгыг модалын «?»-д шилжүүлнэ) */
+  includeIntroRules?: boolean;
   t: UiStrings;
   state: GameState;
   settledSides: (ShagaiSide | null)[];
@@ -577,49 +565,53 @@ function TargetRulesAsideBody({
 }) {
   return (
     <>
-      {showRulesHeading ? (
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 8,
-          }}
-        >
-          {t.rulesTitle}
-        </div>
-      ) : null}
-      <div
-        style={{
-          color: "#888",
-          fontSize: 11,
-          marginBottom: 8,
-          lineHeight: 1.5,
-        }}
-      >
-        {t.howToPlay}
-      </div>
-      {t.rules.map((r) => (
-        <div
-          key={r.n}
-          style={{
-            display: "flex",
-            gap: 10,
-            marginBottom: 6,
-            alignItems: "flex-start",
-          }}
-        >
-          <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
-            {r.n}
-          </span>
-          <div>
-            <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
-            <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
+      {includeIntroRules ? (
+        <>
+          {showRulesHeading ? (
+            <div
+              style={{
+                color: "#c8a030",
+                fontSize: 11,
+                letterSpacing: 3,
+                marginBottom: 8,
+              }}
+            >
+              {t.rulesTitle}
+            </div>
+          ) : null}
+          <div
+            style={{
+              color: "#888",
+              fontSize: 11,
+              marginBottom: 8,
+              lineHeight: 1.5,
+            }}
+          >
+            {t.howToPlay}
           </div>
-        </div>
-      ))}
+          {t.rules.map((r) => (
+            <div
+              key={r.n}
+              style={{
+                display: "flex",
+                gap: 10,
+                marginBottom: 6,
+                alignItems: "flex-start",
+              }}
+            >
+              <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
+                {r.n}
+              </span>
+              <div>
+                <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
+                <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
+              </div>
+            </div>
+          ))}
 
-      <GoldDivider />
+          <GoldDivider />
+        </>
+      ) : null}
 
       <div
         style={{
@@ -874,12 +866,10 @@ export default function ShagaiTargetUI({
   const t = useI18n();
   const language = t.language;
   const narrowUi = useGameUiNarrow();
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const rulesFabLabel = language === "mn" ? "Дүрэм" : "Rules";
   const mainPanelChrome = narrowUi
     ? gamePanelPlayNarrowBottom()
     : gamePanelLeftDesktop(300);
-  const mainPanelPad: React.CSSProperties = narrowUi
+  const mainPanelPad: CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : {};
   const isMyTurnMp = uiMode === "mp" && mp ? mp.turnPlayerId === mp.myId : true;
@@ -967,7 +957,7 @@ export default function ShagaiTargetUI({
     return t.yourTurn(TARGET_SCORE);
   })();
 
-  const panel: React.CSSProperties = {
+  const panel: CSSProperties = {
     position: "absolute",
     background: "rgba(6,4,2,0.90)",
     border: "1px solid rgba(200,160,48,0.28)",
@@ -984,12 +974,10 @@ export default function ShagaiTargetUI({
     overflowX: "hidden",
     scrollbarWidth: "thin",
     scrollbarColor: "rgba(200,160,48,0.35) transparent",
-  } as React.CSSProperties;
+  } as CSSProperties;
 
   const pctPlayer = Math.min(100, (state.playerScore / TARGET_SCORE) * 100);
   const pctRobot = Math.min(100, (state.robotScore / TARGET_SCORE) * 100);
-  // Score now resets to 0 on overshoot, so flag the busting turn by looking
-  // at the most recent round's `bust` flag while its result is still on screen.
   const playerBust =
     state.phase === "playerResult" &&
     !!lastRound?.bust &&
@@ -1090,7 +1078,7 @@ export default function ShagaiTargetUI({
         className="shagai-target-panel"
         style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
-        <div style={{ textAlign: "center" }}>
+        {/* <div style={{ textAlign: "center" }}>
           <div
             style={{
               color: "#f0c040",
@@ -1107,9 +1095,9 @@ export default function ShagaiTargetUI({
               {uiMode === "mp" ? t.mpSubtitle : t.subtitle}
             </div>
           ) : null}
-        </div>
+        </div> */}
 
-        <GoldDivider />
+        {/* <GoldDivider /> */}
         {uiMode === "mp" && mp ? (
           <div
             style={{
@@ -1260,23 +1248,6 @@ export default function ShagaiTargetUI({
           </div>
         ) : null}
 
-        {uiMode !== "mp" &&
-          (state.phase === "robotThinking" ||
-            state.phase === "robotResult" ||
-            (state.phase === "matchOver" && state.robotSides)) && (
-            <RobotPanel
-              sides={state.robotSides}
-              revealed={
-                state.phase === "robotResult" || state.phase === "matchOver"
-              }
-              thinking={state.phase === "robotThinking"}
-              points={state.robotPoints}
-              label={t.labels[state.robotLabel as ScoreLabelKey] ?? ""}
-              t={t}
-              language={language}
-            />
-          )}
-
         {matchOver && (
           <div
             style={{
@@ -1295,15 +1266,14 @@ export default function ShagaiTargetUI({
                 : undefined,
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 4 }}>
+            <div className="mb-1 text-[clamp(1.25rem,5vw,1.5rem)] leading-none">
               {playerWon ? "🏆" : uiMode === "mp" ? "👤" : "🤖"}
             </div>
             <div
+              className="truncate px-0.5 font-bold leading-tight tracking-tight"
               style={{
                 color: playerWon ? "#f0c040" : "#e06050",
-                fontSize: 15,
-                fontWeight: "bold",
-                letterSpacing: 2,
+                fontSize: "clamp(0.8rem, 2.6vw, 0.9rem)",
               }}
             >
               {uiMode === "mp" && state.mpWinnerId && mp
@@ -1330,41 +1300,13 @@ export default function ShagaiTargetUI({
         <GoldDivider />
 
         <button
+          type="button"
           onClick={() => {
             playButtonClick();
             (matchOver ? onReset : onThrow)();
           }}
           disabled={!matchOver && !canThrow}
-          style={{
-            width: "100%",
-            padding: "8px 0",
-            fontSize: 15,
-            fontWeight: "bold",
-            letterSpacing: 2,
-            fontFamily:
-              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-            background:
-              matchOver || canThrow
-                ? "linear-gradient(135deg, #c8a030, #f0c040 50%, #c8a030)"
-                : "rgba(60,50,20,0.5)",
-            color: matchOver || canThrow ? "#1a0e00" : "#555",
-            border: "none",
-            borderRadius: 10,
-            cursor: matchOver || canThrow ? "pointer" : "not-allowed",
-            transition: "all 0.2s",
-            boxShadow:
-              matchOver || canThrow
-                ? "0 4px 20px rgba(200,160,48,0.4)"
-                : "none",
-          }}
-          onMouseEnter={(e) => {
-            if (matchOver || canThrow)
-              (e.currentTarget as HTMLButtonElement).style.transform =
-                "scale(1.02)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          }}
+          className={GAME_CTA_PRIMARY}
         >
           {matchOver
             ? t.resetBtn
@@ -1391,61 +1333,6 @@ export default function ShagaiTargetUI({
           {t.tapHint}
         </div>
       </div>
-
-      {!narrowUi ? (
-        <div
-          className="shagai-target-panel"
-          style={{ ...panel, ...gamePanelRightDesktop(260) }}
-        >
-          <TargetRulesAsideBody
-            showRulesHeading
-            t={t}
-            state={state}
-            settledSides={settledSides}
-            language={language}
-            sessionGain={sessionGain}
-            matchOver={matchOver}
-            onReset={onReset}
-            hideShagaiSides={compactRules}
-            mpNameFor={
-              uiMode === "mp" && mp ? (id) => mp.nameById[id] ?? "?" : undefined
-            }
-          />
-        </div>
-      ) : (
-        <>
-          <GameRulesFab
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-            label={rulesFabLabel}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rulesTitle}
-          >
-            <TargetRulesAsideBody
-              showRulesHeading={false}
-              t={t}
-              state={state}
-              settledSides={settledSides}
-              language={language}
-              sessionGain={sessionGain}
-              matchOver={matchOver}
-              onReset={onReset}
-              hideShagaiSides={compactRules}
-              mpNameFor={
-                uiMode === "mp" && mp
-                  ? (id) => mp.nameById[id] ?? "?"
-                  : undefined
-              }
-            />
-          </GameRulesSheet>
-        </>
-      )}
-
       <style>{`
         @keyframes glow {
           from { box-shadow: 0 0 10px rgba(200,160,48,0.3); }

@@ -9,6 +9,12 @@ import { TripleDiceReadout } from "./woodenDiceReadout";
 import { WoodenDiceSceneCanvas } from "./woodenDiceScene";
 import { playWoodenDiceRoll } from "@/lib/uiSounds";
 import { GameResultEndOverlay } from "./GameResultEndOverlay";
+import {
+  GAME_CTA_PRIMARY,
+  GAME_RULES_UL_CLASS,
+  GAME_TEXT_BODY,
+  GAME_TEXT_LEAD,
+} from "./gameUiTheme";
 
 type T = [number, number, number];
 
@@ -104,7 +110,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
         >
           {loc === "mn" ? "Модон шоо" : "Wooden dice duel"}
         </h2>
-        <p className="text-[10px] text-amber-100/88">
+        <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
             ? "3 шоо нэг удаа. Зүүн/баруун: таны / өрсөлдөгчийн 3 + нийлбэр. Төвд: 3D. Доор: шидэх. 5 раунд."
             : "3 dice. Left & right: your/foe faces + total. Center: 3D. Roll at bottom. First to 5."}
@@ -113,10 +119,12 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
           className="mx-auto mt-1 max-w-sm rounded border border-amber-500/20 bg-black/25 px-2 py-1 text-left"
           open
         >
-          <summary className="cursor-pointer text-[10px] font-semibold text-amber-200/90">
+          <summary
+            className={`${GAME_TEXT_BODY} cursor-pointer font-semibold text-amber-200/90`}
+          >
             {loc === "mn" ? "Дүрмийн товчоо" : "How it works"}
           </summary>
-          <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[9px] text-slate-400">
+          <ul className={`mt-1.5 !space-y-1 ${GAME_RULES_UL_CLASS} text-slate-400`}>
             <li>
               {loc === "mn"
                 ? "Нийлбэр тэнцвэртэй → энэ раунд хоёр талд оноо нэмэгдэхгүй."
@@ -187,7 +195,7 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
             type="button"
             onClick={() => void runRound()}
             disabled={spin}
-            className="rounded-lg border border-amber-500/50 bg-amber-950/40 px-5 py-2.5 text-sm font-semibold text-amber-100 disabled:opacity-50"
+            className={GAME_CTA_PRIMARY}
           >
             {loc === "mn" ? "Шидэх" : "Roll"}
           </button>

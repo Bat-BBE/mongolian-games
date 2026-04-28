@@ -11,11 +11,12 @@ import { playButtonClick, playHandPush } from "@/lib/uiSounds";
 import {
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesSheet from "./GameRulesSheet";
 import GameRulesFab from "./GameRulesFab";
+import { GAME_CTA_PRIMARY } from "./gameUiTheme";
+import { stoneGuessRulesStrings } from "./stoneGuessRulesCopy";
 import { useState } from "react";
 
 interface Props {
@@ -57,9 +58,10 @@ type StoneI18n = {
   computerWonGame: string;
   restart: string;
   nextRound: string;
-  rulesTitle: string;
+  howToPlay: string;
   rules: { n: string; t: string; d: string }[];
-  hideNote: string;
+  scoringTitle: string;
+  scoring: { label: string; pts: string }[];
   rewardLabel: string;
   won: string;
   lost: string;
@@ -68,12 +70,14 @@ type StoneI18n = {
 
 function useStoneI18n(): StoneI18n {
   const { language } = useApp();
+  const rEn = stoneGuessRulesStrings("en");
+  const rMn = stoneGuessRulesStrings("mn");
   if (language === "en") {
     return {
       title: "🪨 GUESS STONES",
       subtitle: "MONGOLIAN STONE GAME",
       player: "PLAYER",
-      computer: "COMPUTER",
+      computer: "ROBOT",
       round: "Round",
       upTo: `/ first to ${WIN_SCORE}`,
       pickLabel: "CHOOSE HOW MANY STONES TO GRAB",
@@ -82,25 +86,20 @@ function useStoneI18n(): StoneI18n {
       guessLabel: (n) => `GUESS THE TOTAL (you grabbed ${n}🪨)`,
       guessRange: `Possible values: 0 – ${MAX_STONES * 2}`,
       playerWin: "You guessed right!",
-      computerWin: "Computer guessed right!",
+      computerWin: "Robot guessed right!",
       tie: "Both were wrong",
-      youGuessed: (a, b) =>
-        `You guessed ${a}, robot guessed ${b}`,
+      youGuessed: (a, b) => `You guessed ${a}, robot guessed ${b}`,
       playerGrabbed: (n) => `You ${n}🪨`,
-      computerGrabbed: (n) => `Computer ${n}🪨`,
+      computerGrabbed: (n) => `Robot ${n}🪨`,
       equals: "=",
       youWon: "You won!",
-      computerWonGame: "Computer wins!",
+      computerWonGame: "Robot wins!",
       restart: "🔄 Restart",
       nextRound: "Next round →",
-      rulesTitle: "HOW TO PLAY",
-      rules: [
-        { n: "①", t: "Pick stones", d: "Grab 0–5 stones" },
-        { n: "②", t: "Reveal hands", d: "Both open together" },
-        { n: "③", t: "Guess the sum", d: "Pick 0–10" },
-        { n: "④", t: "Win", d: `First to ${WIN_SCORE} rounds` },
-      ],
-      hideNote: "Robot hides its stones. You only guess the sum.",
+      howToPlay: rEn.intro,
+      rules: rEn.steps,
+      scoringTitle: rEn.scoringTitle,
+      scoring: rEn.scoringRows,
       rewardLabel: "REWARD (SESSION)",
       won: "won",
       lost: "lost",
@@ -111,7 +110,7 @@ function useStoneI18n(): StoneI18n {
     title: "🪨 ЧУЛУУ ТАА",
     subtitle: "MONGOLIAN STONE GAME",
     player: "ТОГЛОГЧ",
-    computer: "КОМПЬЮТЕР",
+    computer: "РОБОТ",
     round: "Раунд",
     upTo: `/${WIN_SCORE} хүртэл`,
     pickLabel: "АТГАХ ЧУЛУУГАА СОНГО",
@@ -120,25 +119,21 @@ function useStoneI18n(): StoneI18n {
     guessLabel: (n) => `НИЙЛБЭРИЙГ ТАА (та ${n}🪨 атгасан)`,
     guessRange: `Боломжит утга: 0 – ${MAX_STONES * 2}`,
     playerWin: "Та зөв таалаа!",
-    computerWin: "Компьютер зөв таалаа!",
+    computerWin: "Робот зөв таалаа!",
     tie: "Хоёулаа буруу",
-    youGuessed: (a, b) => `Та ${a}, Robot ${b} гэж таалаа`,
+    youGuessed: (a, b) => `Та ${a}, Робот ${b} гэж таалаа`,
     playerGrabbed: (n) => `Та ${n}🪨`,
-    computerGrabbed: (n) => `Компьютер ${n}🪨`,
+    computerGrabbed: (n) => `Робот ${n}🪨`,
     equals: "=",
-    youWon: "Та ялалт байгуулав!",
-    computerWonGame: "Компьютер ялав!",
-    restart: "🔄 Дахин тоглох",
+    youWon: "Та ялаллаа",
+    computerWonGame: "Робот яллаа!",
+    restart: "Дахин тоглох",
     nextRound: "Дараагийн раунд →",
-    rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
-    rules: [
-      { n: "①", t: "Чулуугаа сонгоно", d: "0–5 чулуу атга" },
-      { n: "②", t: "Атган чулуугаа нээнэ", d: "Хоёулаа зэрэг" },
-      { n: "③", t: "Нийлбэр таана", d: "0–10 тоо сонго" },
-      { n: "④", t: "Хожих", d: `${WIN_SCORE} раунд хожно` },
-    ],
-    hideNote: "Робот чулуугаа нууна. Та зөвхөн нийлбэрийг таана.",
-    rewardLabel: "ШАГНАЛ (SESSION)",
+    howToPlay: rMn.intro,
+    rules: rMn.steps,
+    scoringTitle: rMn.scoringTitle,
+    scoring: rMn.scoringRows,
+    rewardLabel: "ШАГНАЛ",
     won: "хожсон",
     lost: "хожигдсон",
     draw: "тэнцсэн",
@@ -197,7 +192,13 @@ function ScoreBar({
       }}
     >
       <div style={{ textAlign: "center" }}>
-        <div style={{ color: "#60c060", fontSize: 22, fontWeight: "bold" }}>
+        <div
+          style={{
+            color: "#60c060",
+            fontSize: "clamp(0.95rem, 3.8vw, 1.1rem)",
+            fontWeight: "bold",
+          }}
+        >
           {score.player}
         </div>
         <div style={{ color: "#888", fontSize: 10, letterSpacing: 2 }}>
@@ -211,7 +212,13 @@ function ScoreBar({
         <div style={{ color: "#555", fontSize: 10 }}>{t.upTo}</div>
       </div>
       <div style={{ textAlign: "center" }}>
-        <div style={{ color: "#e06050", fontSize: 22, fontWeight: "bold" }}>
+        <div
+          style={{
+            color: "#e06050",
+            fontSize: "clamp(0.95rem, 3.8vw, 1.1rem)",
+            fontWeight: "bold",
+          }}
+        >
           {score.computer}
         </div>
         <div style={{ color: "#888", fontSize: 10, letterSpacing: 2 }}>
@@ -280,7 +287,8 @@ function StonePicker({
               alignItems: "center",
               justifyContent: "center",
               gap: 2,
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
               boxShadow:
                 selected === i ? "0 0 12px rgba(200,160,48,0.3)" : "none",
             }}
@@ -357,7 +365,8 @@ function GuessPicker({
               fontWeight: "bold",
               cursor: "pointer",
               transition: "all 0.15s",
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             }}
           >
             {n}
@@ -394,17 +403,17 @@ function ResultPanel({
     <div style={{ textAlign: "center" }}>
       {gameOver ? (
         <>
-          <div style={{ fontSize: 52, marginBottom: 8 }}>
+          <div className="mb-2 text-[clamp(1.75rem,7vw,2.5rem)] leading-none">
             {playerWins ? "🏆" : "😔"}
           </div>
           <div
+            className="mx-auto max-w-[18rem] truncate px-1 font-bold leading-tight tracking-tight"
             style={{
               color: playerWins ? "#f0c040" : "#e06050",
-              fontSize: 22,
-              fontWeight: "bold",
-              letterSpacing: 2,
+              fontSize: "clamp(0.82rem, 2.8vw, 0.95rem)",
               marginBottom: 6,
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             }}
           >
             {playerWins
@@ -423,11 +432,12 @@ function ResultPanel({
               : `${state.score.player} : ${state.score.computer}`}
           </div>
           <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onRestart();
             }}
-            style={primaryBtn("#c8a030", "#1a0e00")}
+            className={GAME_CTA_PRIMARY}
           >
             {t.restart}
           </button>
@@ -480,7 +490,7 @@ function ResultPanel({
                 marginBottom: 14,
               }}
             >
-              <div style={{ fontSize: 28, marginBottom: 6 }}>
+              <div className="mb-1.5 text-[clamp(1.05rem,4vw,1.25rem)] leading-none">
                 {(() => {
                   const meWin =
                     mp &&
@@ -543,9 +553,7 @@ function ResultPanel({
                         return mp.lang === "en"
                           ? `${mp.opponentName} guessed right!`
                           : `${mp.opponentName} зөв таалаа!`;
-                      return mp.lang === "en"
-                        ? "Both wrong"
-                        : t.tie;
+                      return mp.lang === "en" ? "Both wrong" : t.tie;
                     })()
                   : last.outcome === "player"
                     ? t.playerWin
@@ -570,11 +578,12 @@ function ResultPanel({
             </div>
           )}
           <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onNext();
             }}
-            style={primaryBtn("#c8a030", "#1a0e00")}
+            className={GAME_CTA_PRIMARY}
           >
             {t.nextRound}
           </button>
@@ -582,23 +591,6 @@ function ResultPanel({
       )}
     </div>
   );
-}
-
-function primaryBtn(bg: string, fg: string): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "12px 0",
-    background: `linear-gradient(135deg, ${bg}, #f0c040 50%, ${bg})`,
-    color: fg,
-    border: "none",
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: "bold",
-    cursor: "pointer",
-    letterSpacing: 1,
-    fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-    boxShadow: "0 4px 16px rgba(200,160,48,0.3)",
-  };
 }
 
 function HistoryDots({
@@ -658,18 +650,10 @@ function StoneRulesAsideBody({
 }) {
   return (
     <>
-      {showHeading ? (
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 8,
-          }}
-        >
-          {t.rulesTitle}
-        </div>
-      ) : null}
+      <Divider />
+      <div style={{ color: "#888", fontSize: 11, lineHeight: 1.5 }}>
+        {t.howToPlay}
+      </div>
       <Divider />
       {t.rules.map((r) => (
         <div
@@ -694,14 +678,33 @@ function StoneRulesAsideBody({
       <Divider />
       <div
         style={{
-          color: "#666",
+          color: "#c8a030",
           fontSize: 11,
-          textAlign: "center",
-          lineHeight: 1.5,
+          letterSpacing: 3,
+          marginBottom: 8,
         }}
       >
-        {t.hideNote}
+        {t.scoringTitle}
       </div>
+      {t.scoring.map((row) => (
+        <div
+          key={row.label}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 6,
+            padding: "5px 8px",
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.03)",
+          }}
+        >
+          <span style={{ color: "#bbb", fontSize: 11 }}>{row.label}</span>
+          <span style={{ color: "#f0c040", fontWeight: "bold", fontSize: 11 }}>
+            {row.pts}
+          </span>
+        </div>
+      ))}
+      <Divider />
     </>
   );
 }
@@ -753,7 +756,8 @@ export default function StoneGameUI({
     padding: "18px 18px 14px",
     backdropFilter: "blur(16px)",
     boxShadow: "0 8px 40px rgba(0,0,0,0.7)",
-    fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+    fontFamily:
+      "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
     color: "white",
     zIndex: 10,
     maxHeight: "calc(100% - 40px)",
@@ -806,7 +810,8 @@ export default function StoneGameUI({
                   fontSize: 13,
                   fontWeight: 900,
                   letterSpacing: 1.2,
-                  fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+                  fontFamily:
+                    "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
                   boxShadow:
                     e.kind === "coins"
                       ? "0 10px 40px rgba(200,160,48,0.18)"
@@ -833,7 +838,8 @@ export default function StoneGameUI({
               backdropFilter: "blur(14px)",
               boxShadow: "0 10px 40px rgba(0,0,0,0.55)",
               color: "white",
-              fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+              fontFamily:
+                "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             }}
           >
             <div
@@ -864,7 +870,7 @@ export default function StoneGameUI({
         className="stone-game-panel"
         style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
-        <div style={{ textAlign: "center", marginBottom: 6 }}>
+        {/* <div style={{ textAlign: "center", marginBottom: 6 }}>
           <div
             style={{
               color: "#c8a030",
@@ -880,7 +886,7 @@ export default function StoneGameUI({
               {t.subtitle}
             </div>
           ) : null}
-        </div>
+        </div> */}
 
         <Divider />
         <ScoreBar
@@ -1034,60 +1040,28 @@ export default function StoneGameUI({
         )}
       </div>
 
-      {!narrowUi ? (
-        <div
-          className="stone-game-panel"
-          style={{ ...panel, ...gamePanelRightDesktop(200) }}
-        >
-          {mp ? (
-            <>
-              <div
-                style={{
-                  color: "#c8a030",
-                  fontSize: 11,
-                  letterSpacing: 2,
-                  marginBottom: 8,
-                }}
-              >
-                {t.rulesTitle}
-              </div>
-              <Divider />
-              <p style={{ color: "#888", fontSize: 11, lineHeight: 1.5 }}>
-                {mp.lang === "en"
-                  ? "Two players: same rules as vs the robot. Max 2 in the room — you play each other."
-                  : "2 тоглогч: роботтой тоглохоос дүрэм нь ижил. Өрөөнд хамгийн ихдээ 2 — хоорондоо тоглоно."}
-              </p>
-            </>
-          ) : (
-            <StoneRulesAsideBody showHeading t={t} />
-          )}
-        </div>
-      ) : (
-        <>
-          <GameRulesFab
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-            label={rulesFabLabel}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rulesTitle}
-          >
-            {mp ? (
-              <p style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
-                {mp.lang === "en"
-                  ? "Two players: same rules as vs the robot. Max 2 in the room — you play each other."
-                  : "2 тоглогч: роботтой тоглохоос дүрэм нь ижил. Өрөөнд хамгийн ихдээ 2 — хоорондоо тоглоно."}
-              </p>
-            ) : (
-              <StoneRulesAsideBody showHeading={false} t={t} />
-            )}
-          </GameRulesSheet>
-        </>
-      )}
+      {/* <GameRulesFab
+        onClick={() => {
+          playButtonClick();
+          setRulesOpen(true);
+        }}
+        label={rulesFabLabel}
+      /> */}
+      {/* <GameRulesSheet
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title={t.rulesTitle}
+      >
+        {mp ? (
+          <p style={{ color: "#888", fontSize: 12, lineHeight: 1.5 }}>
+            {mp.lang === "en"
+              ? "Two players: same rules as vs the robot. Max 2 in the room — you play each other."
+              : "2 тоглогч: роботтой тоглохоос дүрэм нь ижил. Өрөөнд хамгийн ихдээ 2 — хоорондоо тоглоно."}
+          </p>
+        ) : (
+          <StoneRulesAsideBody showHeading={false} t={t} />
+        )}
+      </GameRulesSheet> */}
 
       <style>{`
         @keyframes pulse {

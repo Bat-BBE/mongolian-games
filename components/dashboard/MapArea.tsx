@@ -610,6 +610,13 @@ export function MapArea({
           }}
           travelLabel={t.mapTravelToStation}
           returnHomeLabel={t.mapReturnHome}
+          isMn={lang === "mn"}
+          mapStationHowToOpen={t.mapStationHowToOpen}
+          mapStationHowToHide={t.mapStationHowToHide}
+          mapStationHowToBack={t.mapStationHowToBack}
+          introNext={t.introNext}
+          introSkip={t.introSkip}
+          introDone={t.introDone}
         />
       )}
 

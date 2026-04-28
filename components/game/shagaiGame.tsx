@@ -24,7 +24,7 @@ import {
 import ShagaiHomboroiMulti from "./shagaiHomboroiMulti";
 import type { MatchRoomControls } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -33,6 +33,7 @@ export type ShagaiGameProps = {
 
 function ShagaiLobbyWait() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -50,9 +51,7 @@ function ShagaiLobbyWait() {
           "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #160e08 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }

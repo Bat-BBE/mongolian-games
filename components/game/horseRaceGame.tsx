@@ -3,7 +3,14 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment, useGLTF } from "@react-three/drei";
 import { Physics, usePlane } from "@react-three/cannon";
-import { Suspense, useState, useCallback, useRef, useEffect, useMemo } from "react";
+import {
+  Suspense,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import SingleShagai, { useShagaiThrowPieceTemplate } from "./singleShagai";
@@ -28,9 +35,6 @@ export type HorseRaceGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
 };
 
-// --------------------------------------------------------------------------
-// Physics floor + decorative mat (mirrors the other shagai games).
-// --------------------------------------------------------------------------
 function PhysicsFloor() {
   const [ref] = usePlane(() => ({
     rotation: [-Math.PI / 2, 0, 0],
@@ -48,9 +52,6 @@ function RaceMat() {
         <planeGeometry args={[25, 25]} />
         <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
-
-      {/* Elongated green turf "racing lane" sized to cover the 3 rows
-          (player racer, track tiles, robot racer). */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
@@ -60,7 +61,6 @@ function RaceMat() {
         <meshStandardMaterial color="#243b22" roughness={0.95} />
       </mesh>
 
-      {/* Lane borders — top and bottom edge of the turf. */}
       {[-6.2, 0].map((dz, i) => (
         <mesh
           key={i}
@@ -68,11 +68,14 @@ function RaceMat() {
           position={[0, 0.008, dz / 2 + -3.1]}
         >
           <planeGeometry args={[13, 0.06]} />
-          <meshStandardMaterial color="#c8a030" metalness={0.7} roughness={0.3} />
+          <meshStandardMaterial
+            color="#c8a030"
+            metalness={0.7}
+            roughness={0.3}
+          />
         </mesh>
       ))}
 
-      {/* Dashed center line along the track row. */}
       {Array.from({ length: 24 }).map((_, i) => {
         const x = -6 + i * 0.5;
         return (
@@ -87,7 +90,6 @@ function RaceMat() {
         );
       })}
 
-      {/* Throw zone — small oval in front of the camera */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
@@ -103,10 +105,13 @@ function RaceMat() {
         scale={[1, 0.7, 1]}
       >
         <ringGeometry args={[2.75, 2.88, 48]} />
-        <meshStandardMaterial color="#c8a030" metalness={0.72} roughness={0.22} />
+        <meshStandardMaterial
+          color="#c8a030"
+          metalness={0.72}
+          roughness={0.22}
+        />
       </mesh>
 
-      {/* Physics walls around the throw zone so shagai don't fly off */}
       {[
         {
           pos: [3.2, 1, 2.2] as [number, number, number],
@@ -142,27 +147,13 @@ function RaceMat() {
   );
 }
 
-// --------------------------------------------------------------------------
-// Track shagai – static, no physics. Oriented with the "horse" face up.
-// Length axis sticks out perpendicular to the track (along world Z) so the
-// 20 shagai can be packed edge-to-edge along world X in a single row.
-// All 20 share a single pre-built wrap that we clone for each tile.
-// --------------------------------------------------------------------------
 const TRACK_TILE_BOX = SHAGAI_PHYS_BOX;
-// Match the visual size of the 4 thrown shagai (which render at scale 1.0
-// through the SingleShagai component).
 const TRACK_SCALE = 0.85;
 const TRACK_SPACING = 0.55;
 const TRACK_START_X = -((20 - 1) * TRACK_SPACING) / 2; // centered around x = 0
 const TRACK_Z = -3.1;
 
 function buildTrackTileQuaternion(): THREE.Quaternion {
-  // The wrap produced by pickLastShagai has already been aligned by
-  // fitToBox so the shagai's short (flat-face) anatomical axis is local
-  // Y and its long axis is local Z. We only need one extra rotation to
-  // bring the "horse" face (local -Y per SHAGAI_SIDE_UP_AXIS) up to
-  // world +Y; no additional yaw, so the shagai's length ends up along
-  // world Z and 20 tiles pack neatly in a straight row on X.
   const align = new THREE.Quaternion().setFromUnitVectors(
     SHAGAI_SIDE_UP_AXIS.horse.clone(),
     new THREE.Vector3(0, 1, 0),
@@ -175,9 +166,6 @@ function useTrackTileTemplate(): THREE.Object3D | null {
   return useMemo(() => {
     const scene = (gltf as any)?.scene as THREE.Object3D | undefined;
     if (!scene) return null;
-    // pickLastShagai traverses + clones meshes → safe to call repeatedly on
-    // the cached scene. We keep a single processed template and clone it
-    // per-tile below.
     const wrap = pickLastShagai(scene.clone(true), TRACK_TILE_BOX);
     if (!wrap) return null;
     wrap.traverse((o) => {
@@ -209,8 +197,6 @@ function TrackTile({
   const instance = useMemo(() => {
     if (!template) return null;
     const clone = template.clone(true);
-    // Make materials unique per tile so we can tint them independently
-    // without bleeding color across the whole track.
     clone.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
@@ -250,16 +236,7 @@ function TrackTile({
   if (!instance) return null;
 
   return (
-    <group
-      position={[x, yOffset, z]}
-      quaternion={quat}
-      scale={TRACK_SCALE}
-    >
-      {/* IMPORTANT: do NOT put a rotation/quaternion prop on the
-          primitive — its wrap already carries the fitToBox rotation
-          that aligns the shagai's anatomy to the physics box axes.
-          Overriding it here is what made the tiles stand on their
-          end (onkh) instead of lying flat on the horse face. */}
+    <group position={[x, yOffset, z]} quaternion={quat} scale={TRACK_SCALE}>
       <primitive object={instance} />
     </group>
   );
@@ -274,8 +251,6 @@ function RaceTrack({
   robotPosition: number;
   template: THREE.Object3D | null;
 }) {
-  // Nearly-flush on the turf. The shagai short axis = TRACK_TILE_BOX[1]
-  // after scaling.
   const yOffset = (TRACK_TILE_BOX[1] * TRACK_SCALE) / 2 + 0.01;
 
   return (
@@ -308,11 +283,6 @@ function RaceTrack({
     </group>
   );
 }
-
-// --------------------------------------------------------------------------
-// Racer shagai – one per side (player/robot). Also static, sits above the
-// track at the current square and animates smoothly when advanced.
-// --------------------------------------------------------------------------
 const RACER_SCALE = 0.95;
 const RACER_TILE_BOX = SHAGAI_PHYS_BOX;
 
@@ -370,7 +340,6 @@ function Racer({
     });
   }, [instance, color, active]);
 
-  // Position 0 = before first tile; position N = on the Nth tile.
   const posToX = (p: number) => {
     const idx = Math.max(0, Math.min(TRACK_LENGTH - 1, p - 1));
     if (p <= 0) return TRACK_START_X - TRACK_SPACING; // idle before first tile
@@ -385,7 +354,6 @@ function Racer({
   useEffect(() => {
     currentX.current = posToX(position);
     targetX.current = posToX(position);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFrame((_, delta) => {
@@ -407,8 +375,6 @@ function Racer({
 
   return (
     <group ref={groupRef} scale={RACER_SCALE}>
-      {/* Same fix as TrackTile: put the orientation on an outer group
-          so we don't destroy the wrap's fitToBox alignment. */}
       <group quaternion={quat}>
         <primitive object={instance} />
       </group>
@@ -416,9 +382,6 @@ function Racer({
   );
 }
 
-// --------------------------------------------------------------------------
-// FX.
-// --------------------------------------------------------------------------
 function WinLightEffect({ active }: { active: boolean }) {
   const light1 = useRef<THREE.PointLight>(null);
   const light2 = useRef<THREE.PointLight>(null);
@@ -495,9 +458,6 @@ function GameScene({
         template={template}
       />
 
-      {/* Player racer sits in front of the track (closer to camera).
-          Tile half-extent in Z is ~SHAGAI_PHYS_BOX[2]·TRACK_SCALE; zOffset keeps
-          racers clear of the track mesh. */}
       <Racer
         position={playerPosition}
         zOffset={TRACK_Z + 2.1}
@@ -506,7 +466,6 @@ function GameScene({
         active={currentTurn === "player"}
       />
 
-      {/* Robot racer sits behind the track. */}
       <Racer
         position={robotPosition}
         zOffset={TRACK_Z - 2.1}
@@ -515,7 +474,6 @@ function GameScene({
         active={currentTurn === "robot"}
       />
 
-      {/* Оньс дээр дахин шидэхгүй (maxOnkhRetries=0); оньс → хонь/ямаа нь shagai.ts-ийн detect-тэй ижил. */}
       {[0, 1, 2, 3].map((i) => (
         <SingleShagai
           key={i}
@@ -535,12 +493,8 @@ function GameScene({
   );
 }
 
-// --------------------------------------------------------------------------
-// Root component.
-// --------------------------------------------------------------------------
 export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { grant, rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const [state, setState] = useState<RaceState>(INITIAL_RACE_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -567,39 +521,30 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
     onComplete?.(won ? "win" : "lose", won ? 100 : 0);
   }, [state.phase, state.winner, onComplete]);
 
-  const startThrow = useCallback(
-    (turn: "player" | "robot") => {
-      const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
-      setThrowParams(params);
-      settledRef.current = [null, null, null, null];
-      settledCount.current = 0;
-      resultSentRef.current = false;
-      setSettledSides([null, null, null, null]);
-      setCurrentTurn(turn);
-      currentTurnRef.current = turn;
+  const startThrow = useCallback((turn: "player" | "robot") => {
+    const params = [0, 1, 2, 3].map(() => getShagaiThrowParams());
+    setThrowParams(params);
+    settledRef.current = [null, null, null, null];
+    settledCount.current = 0;
+    resultSentRef.current = false;
+    setSettledSides([null, null, null, null]);
+    setCurrentTurn(turn);
+    currentTurnRef.current = turn;
 
-      setState((prev) => ({
-        ...prev,
-        phase: "throwing",
-        totalThrows:
-          turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
-        robotSides: turn === "robot" ? prev.robotSides : null,
-        robotHorseCount: turn === "robot" ? prev.robotHorseCount : 0,
-      }));
+    setState((prev) => ({
+      ...prev,
+      phase: "throwing",
+      totalThrows: turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
+      robotSides: turn === "robot" ? prev.robotSides : null,
+      robotHorseCount: turn === "robot" ? prev.robotHorseCount : 0,
+    }));
 
-      setIsThrown(false);
-      setTimeout(() => setIsThrown(true), 50);
-    },
-    [],
-  );
+    setIsThrown(false);
+    setTimeout(() => setIsThrown(true), 50);
+  }, []);
 
   const handleThrow = useCallback(() => {
-    if (
-      state.phase !== "idle" &&
-      state.phase !== "playerResult" &&
-      state.phase !== "robotResult"
-    )
-      return;
+    if (state.phase !== "idle" && state.phase !== "robotResult") return;
     if (state.winner !== null) return;
     startThrow("player");
   }, [state.phase, state.winner, startThrow]);
@@ -679,7 +624,6 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
     [grant],
   );
 
-  // playerResult → robot takes a turn.
   useEffect(() => {
     if (state.phase !== "playerResult") return;
     const t1 = setTimeout(() => {
@@ -688,7 +632,6 @@ export default function HorseRaceGame({ onComplete }: HorseRaceGameProps) {
     return () => clearTimeout(t1);
   }, [state.phase]);
 
-  // Robot thinks → throws.
   useEffect(() => {
     if (state.phase !== "robotThinking") return;
     const t1 = setTimeout(() => {

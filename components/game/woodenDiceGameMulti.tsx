@@ -9,7 +9,8 @@ import { makeRng, rollTriple, ROUNDS_TO_WIN, sum3 } from "./woodenDiceType";
 import { TripleDiceReadout } from "./woodenDiceReadout";
 import { WoodenDiceSceneCanvas } from "./woodenDiceScene";
 import { playWoodenDiceRoll } from "@/lib/uiSounds";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { GAME_CTA_PRIMARY, GAME_LOBBY_INTRO_CLASS, GAME_TEXT_LEAD } from "./gameUiTheme";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const REL = "wooden_dice_mp_v1";
 
@@ -43,16 +44,17 @@ type Props = {
 
 export function WoodenDiceOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-white/80"
+      className="flex h-full w-full items-center justify-center p-4 text-center"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      <span className={`max-w-md text-balance ${GAME_LOBBY_INTRO_CLASS}`}>
+        {lobbyIntro}
       </span>
     </div>
   );
@@ -211,7 +213,7 @@ export default function WoodenDiceGameMulti({
         >
           {loc === "mn" ? "Модон шоо" : "Wooden dice duel"}
         </h2>
-        <p className="text-[10px] text-amber-100/85">
+        <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
             ? "2 тоглогч · зүүн эзэн, баруун зочин. Талууд: нүд + нийлбэр. Төв: 3D. Доор эзэн шиднэ."
             : "Host left, guest right. Side panels: pips + total. Center: 3D. Host rolls at bottom."}
@@ -269,7 +271,7 @@ export default function WoodenDiceGameMulti({
             type="button"
             onClick={() => void doRoll()}
             disabled={spin}
-            className="rounded-lg border border-amber-500/50 bg-amber-950/40 px-5 py-2.5 text-sm font-semibold text-amber-100 disabled:opacity-50"
+            className={GAME_CTA_PRIMARY}
           >
             {loc === "mn" ? "Өнгө шидэх" : "Roll round"}
           </button>

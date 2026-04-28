@@ -32,7 +32,7 @@ import {
 } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const RELAY_CH = "four_bones_mp_v1";
 
@@ -300,6 +300,7 @@ type Props = {
 
 export function FourBonesOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -317,9 +318,7 @@ export function FourBonesOnlineLobby() {
           "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }

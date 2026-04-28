@@ -189,6 +189,10 @@ export interface DashStrings {
   mapPlayGameShort: string;
   gameStatusLocked: string;
   gameStatusDone: string;
+  /** Map popup: open per-game step guide */
+  mapStationHowToOpen: string;
+  mapStationHowToHide: string;
+  mapStationHowToBack: string;
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
@@ -702,7 +706,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар зэрэгцэнэ.\n\n【Хэрхэн】\n• Утас, таб — зүүн доод дугуй (joystick): чирж явуулна; ирмэгт ойртуулахад хурдан\n• Компьютер — WASD эсвэл сум, Shift = гүйх\n\n【Өртөө рүү амралтгүй очих】 Зүүн самбар — «Очих» эсвэл өртөө сонгоод баатар шууд тэнд зөөгнөнө.\n\nДараагийн алхам: өртөө, тоглоомыг хаанаас нээгддэг нь.",
     introStationsTitle: "Алхам 3. Өртөө сонгож, тоглоом нээх",
     introStationsBody:
-      "【Хаана】 3D газрын зураг дээр өөр өөр түүхэн өртөө (тэмдэгтэй).\n\n【Юу хийх】 Өртөө ойртуулж эсвэл нэрийг дар — тоглоомын жагсаалт гарна. Сонгоод нэвтрэх/тоглох.\n\n【Дүрэм】 Нэг тоглоомыг 7 хоногт хамгийн ихдээ 2 удаа. Эхэнд өөрийн эхний өртөөгөөс эхлүүлэх нь зөв.",
+      "【Хаана】 3D газрын зураг дээр өөр өөр түүхэн өртөө (тэмдэгтэй).\n\n【Юу хийх】 Өртөө ойртуулж эсвэл нэрийг дар — тоглоомын жагсаалт гарна. Сонгоод нэвтрэх/тоглох.\n\n【Дүрэм】 Нэг тоглоомыг 7 хоногт хамгийн ихдээ 3 удаа. Эхэнд өөрийн эхний өртөөгөөс эхлүүлэх нь зөв.",
     introHomeTitle: "Алхам 4. Гэр, мал, оноо — хаанаас удирдах вэ",
     introHomeBody:
       "【Гэр цонх】 Газрын зураг дээр home/нутаг өртөө руу очих (баатар home дээр) — гэр, малыг цонхоор нээж сайжруулна. Заримд «Миний гэр» товч байна.\n\n【Оноо】 Тоглоом ялалт → КП, зоос (зүүн — Эрдэнэс). Өртөө бүтэн → эрдэнийн чулуу (нэг удаа). Чулууг зоос болгох — зүүн «Э/чулуу».\n\n【Баатар, профайл】 Дээд баруун аватар/нэр дар — профайл, баатар солих.",
@@ -732,6 +736,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapPlayGameShort: "Тоглох",
     gameStatusLocked: "Хүлээгдэж буй",
     gameStatusDone: "Дууссан",
+    mapStationHowToOpen: "Алхам заавар",
+    mapStationHowToHide: "Хураах",
+    mapStationHowToBack: "Өмнөх",
   },
 
   en: {
@@ -1244,7 +1251,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "【Where】 The 3D hero is on the red path in the middle; a 2D board sits on the left.\n\n【How】\n• Phone / tablet: lower-left joystick — drag; push toward the edge to run\n• Desktop: WASD or arrows, Shift to sprint\n\n【Jump to a station】 Left panel — “Go” / pick a stop — the hero warps there.\n\nNext: how you open a station and a game.",
     introStationsTitle: "Step 3. Choose a stop, open a game",
     introStationsBody:
-      "【Where】 Historic stops (markers) on the 3D map.\n\n【What to do】 Walk up or tap the name — a game list opens. Choose and start.\n\n【Rule】 At most 2 plays per game every 7 days. Good to start at your first stop.",
+      "【Where】 Historic stops (markers) on the 3D map.\n\n【What to do】 Walk up or tap the name — a game list opens. Choose and start.\n\n【Rule】 At most 3 plays per game every 7 days. Good to start at your first stop.",
     introHomeTitle: "Step 4. Ger, animals, points — where to manage",
     introHomeBody:
       "【Home panel】 Walk to the home / homeland stop (hero on home) to open — upgrade ger and animals. Some UIs have a “My home” button.\n\n【Points】 Wins → KP and coins (left — Treasury). All games at a stop once → bonus gem (one-time). Turn gems to coins — left “E/gem” (or equivalent).\n\n【Avatar / profile】 Top-right name or picture — profile and hero look.",
@@ -1274,6 +1281,9 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapPlayGameShort: "Play",
     gameStatusLocked: "Locked",
     gameStatusDone: "Completed",
+    mapStationHowToOpen: "Step guide",
+    mapStationHowToHide: "Hide",
+    mapStationHowToBack: "Back",
   },
 };
 

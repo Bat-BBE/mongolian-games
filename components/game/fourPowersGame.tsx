@@ -12,8 +12,14 @@ import {
   roundPoints,
   type PowerId,
 } from "./fourPowersType";
+import { FourPowersHowItWorks } from "./fourPowersRulesUI";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  GAME_TEXT_META,
+  GAME_TEXT_MONO_META,
+  GAME_TEXT_SECTION_LABEL,
+} from "./gameUiTheme";
 
 const ACCENT = ["#38bdf8", "#a3e635", "#fbbf24", "#f472b6"] as const;
 
@@ -114,44 +120,12 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
         </h2>
-        <p className="mt-1 text-[11px] leading-snug text-amber-100/90 sm:text-xs">
-          {lang === "mn"
-            ? "Морь → тэмээ → үхэр → хонь → морь. 4 сонголтын дараа оноо нэмнэ. 7-ыг ганцаараа (Та) хамгийн түрүүнд хүрсэн нь — ялалт."
-            : "A 4-way cycle, then the round is scored. First seat to 7 all alone (you, green) wins. If two or more are tied for first at 7, play continues until one is ahead."}
-        </p>
-        <details
-          className="mx-auto mt-1.5 max-w-lg rounded border border-white/10 bg-black/20 px-2 py-1 text-left"
-          open
-        >
-          <summary className="cursor-pointer text-[10px] font-semibold text-amber-200/90">
-            {lang === "mn" ? "Оноо яаж нэмэгддэг (товч)" : "How points add (brief)"}
-          </summary>
-          <ul className="mt-1.5 list-disc space-y-1 pl-4 text-[9px] text-slate-400">
-            <li>
-              {lang === "mn"
-                ? "4 нь бүгд ижил, эсвэл дөрвөдөө төрлөөс нэг бүр (морь…хонь) сонгогдвол — 0. Үлдсэн: 2+2 эсвэл 3+1."
-                : "All the same, or all four different: 0. Otherwise a 2+2 or 3+1 split; see below."}
-            </li>
-            <li>
-              {lang === "mn"
-                ? "2+2: дугуйн дагуу ялсан 2 = тус бүр 2, ялагдсан 2 = 0."
-                : "2+2: the two on the side that wins the 4-way matchup get +2 each; the other two get 0."}
-            </li>
-            <li>
-              {lang === "mn"
-                ? "3+1: 1-ийн сонгогдол 3-ын сонгогдлыг дугуйд даравлаас +3; эс 3-ын 3-ын = тус бүр +1."
-                : "3+1: if the lone power beats the triple in the ring, that seat gets +3, else each of the three gets +1."}
-            </li>
-            <li>
-              {lang === "mn"
-                ? "Онлайн: дээд өрөө, 4 багананд тус бүр оноо."
-                : "Online: room in the top bar; four score columns, one per seat."}
-            </li>
-          </ul>
-        </details>
-        <p className="mt-1 font-mono text-[10px] text-slate-500">
-          {lang === "mn" ? "Өнгө" : "Round"} {round} · {lang === "mn" ? "зорилго" : "goal"}{" "}
-          {WIN_SCORE}
+        <div className="mt-1.5">
+          <FourPowersHowItWorks lang={lang} variant="solo" />
+        </div>
+        <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
+          {lang === "mn" ? "Өнгө" : "Round"} {round} ·{" "}
+          {lang === "mn" ? "зорилго" : "goal"} {WIN_SCORE}
         </p>
       </div>
 
@@ -169,7 +143,7 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
             }}
           >
             <div
-              className="text-[10px] font-bold uppercase tracking-wider"
+              className={`${GAME_TEXT_SECTION_LABEL} !font-bold tracking-wider`}
               style={{ color: ACCENT[i] }}
             >
               {i === 0
@@ -181,7 +155,7 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
             <div className="mt-0.5 text-sm font-semibold leading-tight text-white">
               {n.name}
             </div>
-            <div className="line-clamp-2 text-[10px] text-slate-500">
+            <div className={`line-clamp-2 ${GAME_TEXT_META} text-slate-500`}>
               {n.sub}
             </div>
             <div className="mt-auto pt-2 text-2xl font-bold tabular-nums text-amber-200">
@@ -204,9 +178,7 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
       {phase === "reveal" && lastChoices && (
         <p className="mt-2 text-center text-xs text-sky-200/90">
           {lang === "mn" ? "Сонголт:" : "Picks:"}{" "}
-          {lastChoices
-            .map((c) => powerLabel(c, lang).name)
-            .join(" · ")}
+          {lastChoices.map((c) => powerLabel(c, lang).name).join(" · ")}
         </p>
       )}
 

@@ -25,8 +25,7 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { getShagaiThrowParams } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
-import { useApp } from "@/components/AppContext";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { MatchRoomLobbyIntro } from "./MatchRoomLobbyIntro";
 import { PhysicsFloor, ShagaiTwelveGameScene } from "./shagaiTwelveGame";
 
 const REL = "twelve_shagai_mp_v1";
@@ -66,18 +65,15 @@ type Props = {
 };
 
 export function ShagaiTwelveOnlineLobby() {
-  const { language } = useApp();
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-white/80"
+      className="flex h-full w-full items-center justify-center p-4"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <MatchRoomLobbyIntro />
     </div>
   );
 }

@@ -56,11 +56,6 @@ export function countHorses(sides: ShagaiSide[]): number {
   return sides.filter((s) => s === "horse").length;
 }
 
-// Tuned weights so a race lasts a reasonable number of turns (roughly
-// 1.2 horses per 4-shagai throw on average → ~17 throws to finish the
-// 20-shagai track). Horse is noticeably more common than in the base
-// shagai distribution because every throw that yields zero horses is a
-// wasted turn for the player.
 export function rollHorseRaceSide(): ShagaiSide {
   const r = Math.random();
   if (r < 0.3) return "horse";

@@ -18,12 +18,25 @@ import {
   SHAGAI_GAME_PANEL_BASE,
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesFab from "./GameRulesFab";
 import GameRulesSheet from "./GameRulesSheet";
 import { playButtonClick } from "@/lib/uiSounds";
+import {
+  GAME_CALLOUT_AMBER,
+  GAME_CALLOUT_EMERALD_COMPACT,
+  GAME_CALLOUT_SKY,
+  GAME_CTA_PRIMARY,
+  GAME_CTA_SECONDARY,
+  GAME_PANEL_HEADING_CLASS,
+  GAME_RULES_OL_CLASS,
+  GAME_TEXT_LEAD,
+  GAME_TEXT_META,
+  GAME_TEXT_SECTION_LABEL,
+  GAME_TEXT_SUBTITLE,
+} from "./gameUiTheme";
+import { TwelveShagaiRulesStrip } from "./shagaiStationRulesUI";
 
 type Props = {
   phase: TwelvePhase;
@@ -58,7 +71,7 @@ function rulesList(
   lockMode: boolean,
 ) {
   return (
-    <ol className="list-decimal space-y-1.5 pl-4 text-[10px] leading-relaxed text-zinc-300">
+    <ol className={GAME_RULES_OL_CLASS}>
       <li>{t.r1}</li>
       <li>{t.r2}</li>
       <li>{t.r3}</li>
@@ -121,14 +134,13 @@ export default function ShagaiTwelveUI({
   const t = {
     title: isEn ? "12 years (shagai)" : "12 жил (шагай)",
     subtitle: isEn
-      ? "Tiers: 4×4 → 3×3 → 2s · 🐴 to 12"
-      : "Шат: 4×4 → 3×3 → 2-ууд · 🐴 12 хүртэл",
+      ? "Race to 12 horse points · throw sizes follow the strip below."
+      : "12 морины оноо хүртэл түрүүл · шатны шидэлтийг доорх хайрцгаас хар.",
     lead: isEn
-      ? "Horse face on top = 1 pt per bone. To 12 horse points first. Throw count is tiered: four throws of 4, then three of 3, then 2 with no cap."
-      : "Одоогийн шат: шаардлагатай тооны шагай. Морь дээр +1. Эхнээс 4 удаа 4, 3 удаа 3, дараа 2-оор хязгааргүй.",
+      ? "Pick the bone count for this tier, throw, then score: each 🐴 on top adds +1 for this turn only."
+      : "Энэ шатандаа шагайн тоогоо сонгоод шид. Дээрээ морь тутамд энэ удаад +1.",
     pick: isEn ? "Shagai per throw" : "Нэг удаад шагай",
     rules: isEn ? "How to play" : "Дүрэм",
-    rulesAside: isEn ? "Rules" : "Дүрэм",
     r1: isEn
       ? "Solo: you vs the computer. Online with a friend, use 2P room (separate view)."
       : "Ганцаараа: энэ панелд роботтой. 2 тоглогч онлайнаар «Online»-оор.",
@@ -168,44 +180,28 @@ export default function ShagaiTwelveUI({
     ? { padding: "10px 12px 12px" }
     : { padding: "16px" };
 
-  const rightChrome = {
-    ...SHAGAI_GAME_PANEL_BASE,
-    ...gamePanelRightDesktop(272),
-  };
-
   const playBlock = (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2
-            className="font-display text-sm font-bold tracking-wide text-amber-200"
-            style={{ textShadow: "0 0 12px rgba(200,160,48,0.2)" }}
-          >
-            {t.title}
-          </h2>
-          <p className="text-[8px] text-zinc-500">{t.subtitle}</p>
+          <h2 className={GAME_PANEL_HEADING_CLASS}>{t.title}</h2>
+          <p className={GAME_TEXT_SUBTITLE}>{t.subtitle}</p>
         </div>
       </div>
 
+      <TwelveShagaiRulesStrip isEn={isEn} />
+
       {showSoloOnlineNote && !lockMode ? (
-        <p className="mt-1.5 rounded border border-sky-500/20 bg-sky-950/20 px-2 py-1 text-[9px] leading-snug text-sky-100/90">
-          {t.soloRoomNote}
-        </p>
+        <p className={GAME_CALLOUT_SKY}>{t.soloRoomNote}</p>
       ) : null}
 
       {lockMode ? (
-        <p className="mt-1.5 rounded border border-amber-500/20 bg-amber-950/25 px-2 py-1 text-[9px] leading-snug text-amber-100/95">
-          {t.r5}
-        </p>
+        <p className={GAME_CALLOUT_AMBER}>{t.r5}</p>
       ) : null}
 
-      <p className="mt-1.5 text-[10px] leading-snug text-amber-100/90">
-        {t.lead}
-      </p>
+      <p className={`mt-1.5 ${GAME_TEXT_LEAD}`}>{t.lead}</p>
       {phase !== "matchOver" ? (
-        <p className="mt-1.5 rounded border border-emerald-500/20 bg-emerald-950/25 px-2 py-0.5 text-[9px] text-emerald-100/90">
-          {tierLine}
-        </p>
+        <p className={GAME_CALLOUT_EMERALD_COMPACT}>{tierLine}</p>
       ) : null}
 
       {phase === "matchOver" && winner != null ? (
@@ -242,7 +238,7 @@ export default function ShagaiTwelveUI({
 
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[10px] font-semibold uppercase text-zinc-500">
+          <div className={GAME_TEXT_SECTION_LABEL}>
             {t.pick}
             {requiredN != null ? (
               <span className="ml-1.5 text-emerald-200/80">
@@ -281,10 +277,10 @@ export default function ShagaiTwelveUI({
               {scores[1]}
             </span>
           </div>
-          <div className="text-[9px] text-zinc-500">
+          <div className={GAME_TEXT_META}>
             {name0} / {name1} · {isEn ? "target" : "зорилт"} {TWELVE_TARGET}
           </div>
-          <p className="mt-0.5 text-[8px] leading-tight text-amber-200/60">
+          <p className={`mt-0.5 ${GAME_TEXT_SUBTITLE} text-amber-200/70`}>
             {isEn
               ? "🐴 on top = +1; no 🐴 = 0 for this throw."
               : "Дээрх тал морь бол +1, үгүй бол энэ удаа 0."}
@@ -293,7 +289,7 @@ export default function ShagaiTwelveUI({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="min-h-[1.1rem] text-xs text-amber-100/90">
+        <p className={`min-h-[1.1rem] ${GAME_TEXT_LEAD}`}>
           {phase === "matchOver" && winner != null
             ? null
             : mode === "vsCpu" && turn === 1
@@ -309,7 +305,7 @@ export default function ShagaiTwelveUI({
             <button
               type="button"
               onClick={onReset}
-              className="rounded-lg border border-amber-500/50 bg-amber-950/50 px-3 py-1.5 text-xs font-semibold"
+              className={`${GAME_CTA_SECONDARY} !min-h-0 py-1.5 normal-case tracking-normal`}
             >
               {t.reset}
             </button>
@@ -318,7 +314,7 @@ export default function ShagaiTwelveUI({
               type="button"
               disabled={!canThrow}
               onClick={onThrow}
-              className="rounded-lg border border-amber-400/60 bg-amber-800/50 px-4 py-1.5 text-sm font-bold text-amber-50 disabled:opacity-35"
+              className={`${GAME_CTA_PRIMARY} !min-h-0 py-2 normal-case tracking-normal`}
             >
               {t.throw}
             </button>
@@ -328,7 +324,7 @@ export default function ShagaiTwelveUI({
 
       {showSides && phase !== "throwing" && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-zinc-800/80 pt-2">
-          <span className="text-[10px] text-zinc-500">{t.last}:</span>
+          <span className={`${GAME_TEXT_META} inline`}>{t.last}:</span>
           {lastSides.map(
             (s, i) =>
               s && (
@@ -358,44 +354,24 @@ export default function ShagaiTwelveUI({
         {playBlock}
       </div>
 
-      {!narrowUi ? (
-        <div
-          className="shagai-t12-right-panel"
-          style={{ ...rightChrome, padding: "14px 14px 12px" }}
-        >
-          <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-amber-400/95">
-            {t.rulesAside}
-          </p>
-          <div className="mt-2 border-t border-amber-500/15 pt-2">
-            {rulesList(t, lockMode)}
-          </div>
-        </div>
-      ) : null}
-
-      {narrowUi ? (
-        <>
-          <GameRulesFab
-            label={rulesFabLabel}
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rules}
-          >
-            {rulesList(t, lockMode)}
-          </GameRulesSheet>
-        </>
-      ) : null}
+      <GameRulesFab
+        label={rulesFabLabel}
+        onClick={() => {
+          playButtonClick();
+          setRulesOpen(true);
+        }}
+      />
+      <GameRulesSheet
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title={t.rules}
+      >
+        {rulesList(t, lockMode)}
+      </GameRulesSheet>
 
       <style>{`
-        .shagai-t12-main-panel::-webkit-scrollbar,
-        .shagai-t12-right-panel::-webkit-scrollbar { width: 6px; }
-        .shagai-t12-main-panel::-webkit-scrollbar-thumb,
-        .shagai-t12-right-panel::-webkit-scrollbar-thumb {
+        .shagai-t12-main-panel::-webkit-scrollbar { width: 6px; }
+        .shagai-t12-main-panel::-webkit-scrollbar-thumb {
           background: rgba(200,160,48,0.35);
           border-radius: 3px;
         }

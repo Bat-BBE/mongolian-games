@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   GuessState,
   INITIAL_STACK,
@@ -14,10 +14,7 @@ import { useGameUiNarrow } from "./useGameUiNarrow";
 
 interface Props {
   state: GuessState;
-  onStartRound: () => void;
   onCommit: (hidden: number, guess: number) => void;
-  onNextRound: () => void;
-  onReset: () => void;
   robotThinking: boolean;
   revealHidden: { player: number; robot: number } | null;
   rewardEvents?: { id: string; text: string; kind: "coins" | "gems" }[];
@@ -55,7 +52,6 @@ type I18n = {
   ) => string;
   howToPlayTitle: string;
   howToPlaySteps: { t: string; d: string }[];
-  statistic: string;
   playerLabel: string;
   robotLabel: string;
   playerHeld: string;
@@ -63,9 +59,6 @@ type I18n = {
   playerGuess: string;
   robotGuess: string;
   trueTotal: string;
-  historyTitle: string;
-  historyEmpty: string;
-  resetBtn: string;
   hiddenRange: (max: number) => string;
   guessRange: (max: number) => string;
   transferNote: (who: "player" | "robot", amount: number) => string;
@@ -73,7 +66,6 @@ type I18n = {
   outcomeTagRobot: string;
   outcomeTagBoth: string;
   outcomeTagNone: string;
-  roundsWon: string;
   totalShagai: string;
 };
 
@@ -121,7 +113,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
         d: `A pile that hits 0 is out. Whoever ends up with all ${TOTAL_SHAGAI} shagai wins.`,
       },
     ],
-    statistic: "STATS",
     playerLabel: "YOU",
     robotLabel: "ROBOT",
     playerHeld: "You hid",
@@ -129,9 +120,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     playerGuess: "Your guess",
     robotGuess: "Robot guess",
     trueTotal: "Actual total",
-    historyTitle: "ROUNDS",
-    historyEmpty: "No rounds played yet.",
-    resetBtn: "Reset match",
     hiddenRange: (max) => `0 … ${max}`,
     guessRange: (max) => `0 … ${max}`,
     transferNote: (who, amount) =>
@@ -140,7 +128,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     outcomeTagRobot: "Robot",
     outcomeTagBoth: "Draw",
     outcomeTagNone: "Miss",
-    roundsWon: "Rounds won",
     totalShagai: "Pile size",
   };
   const mn: I18n = {
@@ -186,7 +173,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
         d: `0 болсон тал хасагдана. Бүх ${TOTAL_SHAGAI} шагайг цуглуулсан нь хожно.`,
       },
     ],
-    statistic: "СТАТИСТИК",
     playerLabel: "ТА",
     robotLabel: "РОБОТ",
     playerHeld: "Таны атгасан",
@@ -194,9 +180,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     playerGuess: "Таны таавар",
     robotGuess: "Роботын таавар",
     trueTotal: "Нийт",
-    historyTitle: "ҮЕ ШАТУУД",
-    historyEmpty: "Үе шат өрнөөгүй байна.",
-    resetBtn: "Тоглоомыг дахин эхлүүлэх",
     hiddenRange: (max) => `0 … ${max}`,
     guessRange: (max) => `0 … ${max}`,
     transferNote: (who, amount) =>
@@ -205,7 +188,6 @@ function useI18n(): I18n & { language: "mn" | "en" } {
     outcomeTagRobot: "Робот",
     outcomeTagBoth: "Хоёулаа",
     outcomeTagNone: "Алдаа",
-    roundsWon: "Энэ үе шатанд хожсон",
     totalShagai: "Шагайны тоо",
   };
   return { language, ...(language === "en" ? en : mn) };
@@ -361,9 +343,7 @@ function PhaseControls({
   state,
   robotThinking,
   revealHidden,
-  onStartRound,
   onCommit,
-  onNextRound,
   t,
   language,
   mp,
@@ -372,9 +352,7 @@ function PhaseControls({
   state: GuessState;
   robotThinking: boolean;
   revealHidden: { player: number; robot: number } | null;
-  onStartRound: () => void;
   onCommit: (hidden: number, guess: number) => void;
-  onNextRound: () => void;
   t: I18n;
   language: "mn" | "en";
   mp?: Props["mp"];
@@ -382,6 +360,7 @@ function PhaseControls({
 }) {
   const [hidden, setHidden] = useState(0);
   const [guess, setGuess] = useState(0);
+  const [step, setStep] = useState<"pickHidden" | "pickGuess">("pickHidden");
   const myPile =
     mp && mp.order[0] && mp.order[1]
       ? mp.myId === mp.order[0]
@@ -392,21 +371,13 @@ function PhaseControls({
   const maxGuess = state.playerStack + state.robotStack;
   const phase: Phase = state.phase;
 
-  if (phase === "idle" || phase === "result") {
-    const handleStart = () => {
+  useEffect(() => {
+    if (phase === "hiding") {
+      setStep("pickHidden");
       setHidden(0);
       setGuess(0);
-      if (phase === "result") onNextRound();
-      else onStartRound();
-    };
-    return (
-      <PrimaryButton
-        onClick={handleStart}
-        disabled={state.winner !== null}
-        label={phase === "result" ? t.nextRound : t.startRound}
-      />
-    );
-  }
+    }
+  }, [phase, state.round]);
 
   if (phase === "matchOver") {
     return null;
@@ -434,7 +405,8 @@ function PhaseControls({
     );
   }
 
-  // phase === "hiding"
+  if (phase !== "hiding") return null;
+
   if (mp && commitLocked) {
     return (
       <div
@@ -458,17 +430,44 @@ function PhaseControls({
   const clampedHidden = Math.max(0, Math.min(playerStack, hidden));
   const clampedGuess = Math.max(0, Math.min(maxGuess, guess));
 
+  if (step === "pickHidden") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <NumberControl
+          label={t.chooseHidden}
+          value={clampedHidden}
+          onChange={setHidden}
+          min={0}
+          max={playerStack}
+          hint={t.hiddenRange(playerStack)}
+          accent="#60c060"
+        />
+        <PrimaryButton
+          onClick={() => setStep("pickGuess")}
+          label={
+            language === "en" ? "Continue to guess" : "Таах руу үргэлжлүүлэх"
+          }
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <NumberControl
-        label={t.chooseHidden}
-        value={clampedHidden}
-        onChange={setHidden}
-        min={0}
-        max={playerStack}
-        hint={t.hiddenRange(playerStack)}
-        accent="#60c060"
-      />
+      <div
+        style={{
+          fontSize: 11,
+          color: "#9ecf9a",
+          border: "1px solid rgba(96,192,96,0.25)",
+          background: "rgba(96,192,96,0.08)",
+          borderRadius: 6,
+          padding: "7px 9px",
+        }}
+      >
+        {language === "en"
+          ? `Hidden selected: ${clampedHidden}`
+          : `Нуусан шагай: ${clampedHidden}`}
+      </div>
       <NumberControl
         label={t.chooseGuess}
         value={clampedGuess}
@@ -478,6 +477,27 @@ function PhaseControls({
         hint={t.guessRange(maxGuess)}
         accent="#c8a030"
       />
+      <button
+        type="button"
+        onClick={() => {
+          playButtonClick();
+          setStep("pickHidden");
+        }}
+        style={{
+          width: "100%",
+          padding: "7px 10px",
+          fontSize: 11,
+          letterSpacing: 1.1,
+          textTransform: "uppercase",
+          background: "transparent",
+          color: "#8c7a4a",
+          border: "1px solid rgba(200,160,48,0.22)",
+          borderRadius: 6,
+          cursor: "pointer",
+        }}
+      >
+        {language === "en" ? "Change hidden amount" : "Нуух тоог өөрчлөх"}
+      </button>
       <PrimaryButton
         onClick={() => onCommit(clampedHidden, clampedGuess)}
         label={t.commit}
@@ -495,7 +515,7 @@ function PhaseControls({
             ? "Нуух, таамгаа баталсны дараа хоёр тал бэлэн болоход нээгдэнэ."
             : "When both players lock in, hands open and the round is scored."
           : language === "mn"
-            ? "Нуух тоог сонгоод таамгаа хатуулахад робот шидэлтээ шидэж, нээлт болно."
+            ? "Нуух тоог сонгоод таах тоогоо оруулахад робот мөн адил үйлдэл хийгээд үр дүн гарна."
             : "Pick how many to hide, enter your guess, then hands open."}
       </div>
     </div>
@@ -711,109 +731,9 @@ function Cell({
   );
 }
 
-function HistoryList({ state, t }: { state: GuessState; t: I18n }) {
-  const items = useMemo(
-    () => [...state.history].reverse().slice(0, 6),
-    [state.history],
-  );
-  if (items.length === 0) {
-    return (
-      <div
-        style={{
-          color: "#7a6a3e",
-          fontSize: 11,
-          fontStyle: "italic",
-          padding: "8px 0",
-        }}
-      >
-        {t.historyEmpty}
-      </div>
-    );
-  }
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {items.map((r) => {
-        const tag =
-          r.outcome === "player"
-            ? { label: t.outcomeTagPlayer, color: "#60c060" }
-            : r.outcome === "robot"
-              ? { label: t.outcomeTagRobot, color: "#e06050" }
-              : r.outcome === "both"
-                ? { label: t.outcomeTagBoth, color: "#d8c488" }
-                : { label: t.outcomeTagNone, color: "#8c7a4a" };
-        return (
-          <div
-            key={r.round}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(200,160,48,0.12)",
-              borderRadius: 6,
-              padding: "8px 10px",
-              fontSize: 11,
-            }}
-          >
-            <div
-              style={{
-                minWidth: 26,
-                height: 26,
-                borderRadius: 4,
-                background: "rgba(200,160,48,0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#c8a030",
-                fontWeight: 700,
-                fontSize: 11,
-              }}
-            >
-              {r.round}
-            </div>
-            <div style={{ flex: 1, color: "#c0aa70" }}>
-              <div>
-                <span style={{ color: "#60c060" }}>{r.playerHeld}</span>
-                <span style={{ opacity: 0.4 }}> + </span>
-                <span style={{ color: "#e06050" }}>{r.robotHeld}</span>
-                <span style={{ opacity: 0.4 }}> = </span>
-                <span style={{ color: "#f0c040", fontWeight: 700 }}>
-                  {r.total}
-                </span>
-              </div>
-              <div style={{ fontSize: 10, opacity: 0.7 }}>
-                {t.playerGuess}: {r.playerGuess} · {t.robotGuess}:{" "}
-                {r.robotGuess}
-              </div>
-            </div>
-            <div
-              style={{
-                color: tag.color,
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: 1,
-                textTransform: "uppercase",
-                padding: "2px 6px",
-                border: `1px solid ${tag.color}55`,
-                borderRadius: 4,
-              }}
-            >
-              {tag.label}
-              {r.transferredAmount > 0 ? ` +${r.transferredAmount}` : ""}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function ShagaiGuessUI({
   state,
-  onStartRound,
   onCommit,
-  onNextRound,
-  onReset,
   robotThinking,
   revealHidden,
   rewardEvents = [],
@@ -827,6 +747,21 @@ export default function ShagaiGuessUI({
   const isMp = uiMode === "mp" && mp;
   const p0 = mp ? (mp.nameById[mp.order[0] ?? ""] ?? t.playerLabel) : null;
   const p1 = mp ? (mp.nameById[mp.order[1] ?? ""] ?? t.robotLabel) : null;
+  const isMineWin = isMp
+    ? state.winner === "player"
+      ? mp?.myId === mp?.order[0]
+      : mp?.myId === mp?.order[1]
+    : state.winner === "player";
+  const matchResultText =
+    state.phase === "matchOver"
+      ? isMineWin
+        ? t.youWon
+        : isMp
+          ? t.language === "en"
+            ? `${state.winner === "player" ? p0 : p1} wins`
+            : `${state.winner === "player" ? p0 : p1} хожлоо`
+          : t.youLost
+      : "";
 
   return (
     <>
@@ -835,7 +770,7 @@ export default function ShagaiGuessUI({
           position: "absolute",
           ...(narrowUi
             ? { top: 8, left: 8, right: 8, bottom: 8, width: "auto" as const }
-            : { top: 16, right: 16, bottom: 16, width: 340 }),
+            : { top: 16, right: 16, bottom: 16, width: 280 }),
           display: "flex",
           flexDirection: "column",
           gap: 10,
@@ -852,7 +787,7 @@ export default function ShagaiGuessUI({
           zIndex: 5,
         }}
       >
-        <div>
+        {/* <div>
           <div
             style={{
               color: "#c8a030",
@@ -887,7 +822,7 @@ export default function ShagaiGuessUI({
           >
             {isMp ? (t.language === "en" ? "ONLINE · 2 PLAYERS" : "ONLINE · 2 ТОГЛОГЧ") : t.subtitle}
           </div>
-        </div>
+        </div> */}
 
         <GoldDivider />
 
@@ -916,13 +851,46 @@ export default function ShagaiGuessUI({
           language={t.language}
         />
 
+        {state.phase === "matchOver" ? (
+          <div
+            style={{
+              background: isMineWin
+                ? "rgba(96,192,96,0.14)"
+                : "rgba(224,96,80,0.14)",
+              border: isMineWin
+                ? "1px solid rgba(96,192,96,0.45)"
+                : "1px solid rgba(224,96,80,0.45)",
+              borderRadius: 10,
+              padding: "10px 12px",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 24, lineHeight: 1 }}>
+              {isMineWin ? "🏆" : "💥"}
+            </div>
+            <div
+              style={{
+                color: isMineWin ? "#8ce08c" : "#ff9a8f",
+                fontWeight: 700,
+                fontSize: 13,
+                letterSpacing: 0.4,
+                marginTop: 4,
+              }}
+            >
+              {matchResultText}
+            </div>
+            <div style={{ color: "#b39c68", fontSize: 11, marginTop: 4 }}>
+              {t.playerLabel}: {state.playerStack} · {t.robotLabel}:{" "}
+              {state.robotStack}
+            </div>
+          </div>
+        ) : null}
+
         <PhaseControls
           state={state}
           robotThinking={robotThinking}
           revealHidden={revealHidden}
-          onStartRound={onStartRound}
           onCommit={onCommit}
-          onNextRound={onNextRound}
           t={t}
           language={t.language}
           mp={mp}
@@ -933,123 +901,7 @@ export default function ShagaiGuessUI({
           <RoundDetails round={state.lastRound} t={t} />
         )}
 
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-          }}
-        >
-          {t.statistic}
-        </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 6,
-          }}
-        >
-          <Stat
-            label={t.roundsWon + " (" + t.playerLabel + ")"}
-            value={state.playerWins}
-            color="#60c060"
-          />
-          <Stat
-            label={t.roundsWon + " (" + t.robotLabel + ")"}
-            value={state.robotWins}
-            color="#e06050"
-          />
-          <Stat label={t.round} value={state.round} color="#d8c488" />
-        </div>
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-          }}
-        >
-          {t.historyTitle}
-        </div>
-        <HistoryList state={state} t={t} />
-
-        <GoldDivider />
-
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-          }}
-        >
-          {t.howToPlayTitle}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {t.howToPlaySteps.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                gap: 8,
-                fontSize: 11,
-                color: "#c0aa70",
-                lineHeight: 1.5,
-              }}
-            >
-              <div
-                style={{
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: "50%",
-                  background: "rgba(200,160,48,0.15)",
-                  color: "#f0c040",
-                  fontWeight: 700,
-                  fontSize: 10,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  marginTop: 1,
-                }}
-              >
-                {i + 1}
-              </div>
-              <div>
-                <div style={{ color: "#d8c488", fontWeight: 600 }}>{s.t}</div>
-                <div style={{ opacity: 0.7 }}>{s.d}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
         <div style={{ flex: 1 }} />
-
-        <button
-          onClick={() => {
-            playButtonClick();
-            onReset();
-          }}
-          style={{
-            padding: "8px 10px",
-            fontSize: 10,
-            letterSpacing: 1.6,
-            textTransform: "uppercase",
-            background: "transparent",
-            color: "#8c7a4a",
-            border: "1px solid rgba(200,160,48,0.25)",
-            borderRadius: 6,
-            cursor: "pointer",
-          }}
-        >
-          {t.resetBtn}
-        </button>
       </div>
 
       {/* Reward toasts + session gain pill (player side only). */}
@@ -1118,43 +970,5 @@ export default function ShagaiGuessUI({
         </div>
       )}
     </>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  return (
-    <div
-      style={{
-        background: "rgba(0,0,0,0.3)",
-        border: "1px solid rgba(200,160,48,0.15)",
-        borderRadius: 6,
-        padding: "6px 8px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-      }}
-    >
-      <div style={{ color, fontSize: 18, fontWeight: 700 }}>{value}</div>
-      <div
-        style={{
-          fontSize: 9,
-          color: "#8c7a4a",
-          letterSpacing: 0.5,
-          textTransform: "uppercase",
-          textAlign: "center",
-          lineHeight: 1.2,
-        }}
-      >
-        {label}
-      </div>
-    </div>
   );
 }

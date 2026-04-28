@@ -9,19 +9,15 @@ import { playButtonClick } from "@/lib/uiSounds";
 import {
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesSheet from "./GameRulesSheet";
 import GameRulesFab from "./GameRulesFab";
+import { GAME_CTA_PRIMARY, GAME_CTA_SECONDARY } from "./gameUiTheme";
+import { horseRaceRulesStrings } from "./horseRaceRulesCopy";
 import { useState } from "react";
 
-export const HORSE_MP_COLORS = [
-  "#60c060",
-  "#5ab0ff",
-  "#e88a5a",
-  "#c86fe8",
-];
+export const HORSE_MP_COLORS = ["#60c060", "#5ab0ff", "#e88a5a", "#c86fe8"];
 
 interface Props {
   state: RaceState;
@@ -63,7 +59,7 @@ type RaceI18n = {
   robot: string;
   target: string;
   position: string;
-  rulesTitle: string;
+  // rulesTitle: string;
   howToPlay: string;
   rules: { n: string; t: string; d: string }[];
   scoringTitle: string;
@@ -84,6 +80,8 @@ type RaceI18n = {
 
 function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
   const { language } = useApp();
+  const rEn = horseRaceRulesStrings("en");
+  const rMn = horseRaceRulesStrings("mn");
   const en: RaceI18n = {
     title: "HORSE RACE",
     subtitle: "MORIN URALDAAN · VS ROBOT",
@@ -104,22 +102,11 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     robot: "ROBOT",
     target: `First to square ${TRACK_LENGTH} wins`,
     position: "Square",
-    rulesTitle: "HOW TO PLAY",
-    howToPlay:
-      "Throw 4 shagai. Every horse side you roll moves your racer one square along the 20-shagai track.",
-    rules: [
-      { n: "1.", t: "Your turn", d: "Throw 4 shagai" },
-      { n: "2.", t: "Count horses", d: "Each horse = 1 forward step" },
-      { n: "3.", t: "Robot throws", d: "Robot rolls automatically" },
-      { n: "4.", t: "Win", d: `First to square ${TRACK_LENGTH}` },
-    ],
-    scoringTitle: "MOVEMENT",
-    scoring: [
-      { label: "1 horse", pts: "+1 step" },
-      { label: "2 horses", pts: "+2 steps" },
-      { label: "3 horses", pts: "+3 steps" },
-      { label: "4 horses", pts: "+4 steps" },
-    ],
+    // rulesTitle: rEn.howToSectionTitle,
+    howToPlay: rEn.intro,
+    rules: rEn.steps,
+    scoringTitle: rEn.scoringTitle,
+    scoring: rEn.scoringRows,
     statistic: "STATISTICS",
     stats: [
       { label: "Your square", valueKey: "playerPosition" },
@@ -154,22 +141,11 @@ function useRaceI18n(): RaceI18n & { language: "mn" | "en" } {
     robot: "РОБОТ",
     target: `Хэн түрүүлж ${TRACK_LENGTH}-р шагайнд хүрвэл ялна`,
     position: "Шагай",
-    rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
-    howToPlay:
-      "4 шагай орхиод, буусан морь бүрээр өөрийн морийг 20 шагайн замаар 1 алхам урагш ахиулна.",
-    rules: [
-      { n: "1.", t: "Таны ээлж", d: "4 шагай орхих" },
-      { n: "2.", t: "Морь явуулах", d: "1 морь = 1 алхам урагш" },
-      { n: "3.", t: "Робот шидэх", d: "Робот автоматаар шидэнэ" },
-      { n: "4.", t: "Ялалт", d: `Түрүүлж ${TRACK_LENGTH}-р шагайнд хүрвэл` },
-    ],
-    scoringTitle: "ХӨДӨЛГӨӨН",
-    scoring: [
-      { label: "1 морь", pts: "+1 алхам" },
-      { label: "2 морь", pts: "+2 алхам" },
-      { label: "3 морь", pts: "+3 алхам" },
-      { label: "4 морь", pts: "+4 алхам" },
-    ],
+    // rulesTitle: rMn.howToSectionTitle,
+    howToPlay: rMn.intro,
+    rules: rMn.steps,
+    scoringTitle: rMn.scoringTitle,
+    scoring: rMn.scoringRows,
     statistic: "СТАТИСТИК",
     stats: [
       { label: "Таны шагай", valueKey: "playerPosition" },
@@ -632,21 +608,13 @@ function HistoryList({
 function HorseRaceRulesAsideBody({
   showRulesHeading,
   t,
-  state,
-  language,
-  sessionGain,
-  nameById,
 }: {
   showRulesHeading: boolean;
   t: RaceI18n;
-  state: RaceState;
-  language: "mn" | "en";
-  sessionGain?: { coins: number; gems: number };
-  nameById?: Record<string, string>;
 }) {
   return (
     <>
-      {showRulesHeading ? (
+      {/* {showRulesHeading ? (
         <div
           style={{
             color: "#c8a030",
@@ -658,7 +626,7 @@ function HorseRaceRulesAsideBody({
         >
           {t.rulesTitle}
         </div>
-      ) : null}
+      ) : null} */}
       <GoldDivider />
       <div
         style={{
@@ -687,9 +655,7 @@ function HorseRaceRulesAsideBody({
               {r.n}
             </span>
             <div>
-              <div
-                style={{ color: "#ddd", fontSize: 11, fontWeight: "bold" }}
-              >
+              <div style={{ color: "#ddd", fontSize: 11, fontWeight: "bold" }}>
                 {r.t}
               </div>
               <div style={{ color: "#888", fontSize: 10 }}>{r.d}</div>
@@ -731,95 +697,6 @@ function HorseRaceRulesAsideBody({
           </div>
         ))}
       </div>
-
-      <GoldDivider />
-      <div
-        style={{
-          color: "#c8a030",
-          fontSize: 11,
-          letterSpacing: 3,
-          fontWeight: "bold",
-          textAlign: "center",
-        }}
-      >
-        {t.statistic}
-      </div>
-      <GoldDivider />
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        {t.stats.map((s, i) => (
-          <div
-            key={i}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 8px",
-              background: "rgba(255,255,255,0.02)",
-              borderRadius: 6,
-              fontSize: 11,
-            }}
-          >
-            <span style={{ color: "#aaa" }}>{s.label}</span>
-            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-              {state[s.valueKey]}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <GoldDivider />
-      <div
-        style={{
-          color: "#c8a030",
-          fontSize: 11,
-          letterSpacing: 3,
-          fontWeight: "bold",
-          textAlign: "center",
-        }}
-      >
-        {t.historyTitle}
-      </div>
-      <GoldDivider />
-      <HistoryList
-        history={state.history}
-        t={t}
-        language={language}
-        nameById={nameById}
-      />
-
-      {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) && (
-        <>
-          <GoldDivider />
-          <div
-            style={{
-              color: "#c8a030",
-              fontSize: 10,
-              letterSpacing: 2,
-              textAlign: "center",
-            }}
-          >
-            {t.rewardLabel}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              gap: 12,
-              marginTop: 4,
-            }}
-          >
-            {sessionGain.coins > 0 && (
-              <span style={{ color: "#f0c040", fontSize: 12 }}>
-                +{sessionGain.coins} coins
-              </span>
-            )}
-            {sessionGain.gems > 0 && (
-              <span style={{ color: "#bfe6ff", fontSize: 12 }}>
-                +{sessionGain.gems} gems
-              </span>
-            )}
-          </div>
-        </>
-      )}
     </>
   );
 }
@@ -855,7 +732,6 @@ export default function HorseRaceUI({
       state.winner === null &&
       mp!.turnPlayerId === mp!.myId
     : (state.phase === "idle" ||
-        state.phase === "playerResult" ||
         state.phase === "robotResult") &&
       state.winner === null;
   const matchOver = state.phase === "matchOver";
@@ -875,9 +751,7 @@ export default function HorseRaceUI({
     if (isMp) {
       if (matchOver) {
         if (mpWinnerId === mp?.myId) return t.youWonMatch;
-        const wn = mpWinnerId
-          ? (mp.nameById[mpWinnerId] ?? "?")
-          : "";
+        const wn = mpWinnerId ? (mp.nameById[mpWinnerId] ?? "?") : "";
         return language === "en" ? `${wn} wins!` : `${wn} яллаа!`;
       }
       if (state.phase === "throwing" || state.phase === "settling")
@@ -1001,7 +875,7 @@ export default function HorseRaceUI({
         className="horse-race-panel"
         style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
-        <div style={{ textAlign: "center" }}>
+        {/* <div style={{ textAlign: "center" }}>
           <div
             style={{
               color: "#f0c040",
@@ -1022,7 +896,7 @@ export default function HorseRaceUI({
                 : t.subtitle}
             </div>
           ) : null}
-        </div>
+        </div> */}
 
         {mpToastText && (
           <div
@@ -1037,7 +911,7 @@ export default function HorseRaceUI({
           </div>
         )}
 
-        <GoldDivider />
+        {/* <GoldDivider /> */}
 
         {isMp && mp ? (
           <TrackBarMulti
@@ -1055,7 +929,7 @@ export default function HorseRaceUI({
         <div
           style={{
             color: "#666",
-            fontSize: 9,
+            fontSize: 10,
             textAlign: "center",
             letterSpacing: 1,
             marginTop: 6,
@@ -1094,27 +968,13 @@ export default function HorseRaceUI({
 
         {!matchOver && (
           <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onThrow();
             }}
             disabled={!canThrow}
-            style={{
-              width: "100%",
-              padding: "11px 0",
-              marginTop: 6,
-              borderRadius: 10,
-              border: "1px solid rgba(200,160,48,0.5)",
-              background: canThrow
-                ? "linear-gradient(135deg, rgba(200,160,48,0.35), rgba(240,192,64,0.15))"
-                : "rgba(255,255,255,0.04)",
-              color: canThrow ? "#f0c040" : "#555",
-              fontSize: 13,
-              letterSpacing: 2,
-              fontWeight: "bold",
-              cursor: canThrow ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-            }}
+            className={`${GAME_CTA_PRIMARY} mt-1.5`}
           >
             {state.phase === "throwing" || state.phase === "settling"
               ? t.throwingButton
@@ -1130,69 +990,32 @@ export default function HorseRaceUI({
 
         {matchOver && (
           <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onReset();
             }}
-            style={{
-              width: "100%",
-              padding: "11px 0",
-              marginTop: 6,
-              borderRadius: 10,
-              border: "1px solid rgba(200,160,48,0.5)",
-              background:
-                "linear-gradient(135deg, rgba(200,160,48,0.35), rgba(240,192,64,0.15))",
-              color: "#f0c040",
-              fontSize: 13,
-              letterSpacing: 2,
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
+            className={`${GAME_CTA_SECONDARY} mt-1.5 normal-case tracking-normal text-sm text-amber-100`}
           >
             {t.resetBtn}
           </button>
         )}
       </div>
 
-      {!narrowUi ? (
-        <div
-          className="horse-race-panel-right"
-          style={{ ...panel, ...gamePanelRightDesktop(300) }}
-        >
-          <HorseRaceRulesAsideBody
-            showRulesHeading
-            t={t}
-            state={state}
-            language={language}
-            sessionGain={sessionGain}
-            nameById={isMp ? mp.nameById : undefined}
-          />
-        </div>
-      ) : (
-        <>
-          <GameRulesFab
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-            label={rulesFabLabel}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rulesTitle}
-          >
-            <HorseRaceRulesAsideBody
-              showRulesHeading={false}
-              t={t}
-              state={state}
-              language={language}
-              sessionGain={sessionGain}
-              nameById={isMp ? mp.nameById : undefined}
-            />
-          </GameRulesSheet>
-        </>
-      )}
+      {/* <GameRulesFab
+        onClick={() => {
+          playButtonClick();
+          setRulesOpen(true);
+        }}
+        label={rulesFabLabel}
+      />
+      <GameRulesSheet
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title={t.rulesTitle}
+      >
+        <HorseRaceRulesAsideBody showRulesHeading={false} t={t} />
+      </GameRulesSheet> */}
 
       <style jsx>{`
         @keyframes rewardFloat {

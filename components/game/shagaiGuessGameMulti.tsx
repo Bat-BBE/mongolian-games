@@ -18,7 +18,7 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const RELAY_CH = "shagai_guess_mp_v1";
 
@@ -78,6 +78,7 @@ type Props = {
 
 export function ShagaiGuessOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -95,9 +96,7 @@ export function ShagaiGuessOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }
@@ -264,7 +263,10 @@ export default function ShagaiGuessGameMulti({
     if (p) applyFromRelay(p);
   }, [lastPeerRelay, myId, applyFromRelay]);
 
-  const onStartRound = useCallback(() => {
+  useEffect(() => {
+    if (state.phase !== "idle" || state.round !== 0) return;
+    if (!aId || !bId) return;
+    if (!isMerger) return;
     const next: GuessState = {
       ...INITIAL_GUESS_STATE,
       phase: "hiding",
@@ -276,25 +278,30 @@ export default function ShagaiGuessGameMulti({
     setCommitLocked(false);
     setState(next);
     pushSync(next);
-  }, [pushSync]);
+  }, [state.phase, state.round, aId, bId, isMerger, pushSync]);
 
-  const onNextRound = useCallback(() => {
-    setState((prev) => {
-      if (prev.winner) return prev;
-      const next: GuessState = {
-        ...prev,
-        phase: "hiding",
-        round: prev.round + 1,
-        lastRound: null,
-      };
-      commitsRef.current = {};
-      mergedRound.current = null;
-      setCommitLocked(false);
-      setRevealHidden(null);
-      setTimeout(() => pushSync(next), 0);
-      return next;
-    });
-  }, [pushSync]);
+  useEffect(() => {
+    if (state.phase !== "result" || state.winner) return;
+    if (!isMerger) return;
+    const t = setTimeout(() => {
+      setState((prev) => {
+        if (prev.winner) return prev;
+        const next: GuessState = {
+          ...prev,
+          phase: "hiding",
+          round: prev.round + 1,
+          lastRound: null,
+        };
+        commitsRef.current = {};
+        mergedRound.current = null;
+        setCommitLocked(false);
+        setRevealHidden(null);
+        setTimeout(() => pushSync(next), 0);
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [state.phase, state.winner, isMerger, pushSync]);
 
   const onCommit = useCallback(
     (playerHidden: number, playerGuess: number) => {
@@ -317,20 +324,6 @@ export default function ShagaiGuessGameMulti({
     },
     [isMerger, myId, sendRelay, queueMerge],
   );
-
-  const onReset = useCallback(() => {
-    commitsRef.current = {};
-    mergedRound.current = null;
-    setState(INITIAL_GUESS_STATE);
-    setRevealHidden(null);
-    setRobotThinking(false);
-    setCommitLocked(false);
-    matchSentRef.current = false;
-    lastRelayId.current = -1;
-    resetGrants();
-    const v = sendV();
-    sendRelay(RELAY_CH, { kind: "sync", v, state: INITIAL_GUESS_STATE });
-  }, [resetGrants, sendRelay, sendV]);
 
   const leftN = aId ? (nameById[aId] ?? "P1").slice(0, 10) : "P1";
   const rightN = bId ? (nameById[bId] ?? "P2").slice(0, 10) : "P2";
@@ -389,10 +382,7 @@ export default function ShagaiGuessGameMulti({
 
       <ShagaiGuessUI
         state={state}
-        onStartRound={onStartRound}
         onCommit={onCommit}
-        onNextRound={onNextRound}
-        onReset={onReset}
         robotThinking={robotThinking}
         revealHidden={revealHidden}
         rewardEvents={rewardEvents}

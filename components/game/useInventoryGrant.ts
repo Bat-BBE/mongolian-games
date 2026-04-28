@@ -73,7 +73,6 @@ export function useInventoryGrant() {
 
           await syncAppUserSimple({ email, profile: nextProfile });
         } catch {
-          /* network */
         }
       })();
     },

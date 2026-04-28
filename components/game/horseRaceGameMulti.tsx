@@ -33,7 +33,7 @@ import {
 } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const RELAY_CH = "horse_race_mp_v1";
 
@@ -501,6 +501,7 @@ type Props = {
 
 export function HorseRaceOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -518,9 +519,7 @@ export function HorseRaceOnlineLobby() {
           "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }

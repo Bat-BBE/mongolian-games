@@ -1,5 +1,6 @@
 "use client";
 
+import { LuCircleHelp as CircleHelp } from "react-icons/lu";
 import { LuX as X } from "react-icons/lu";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useGLTF } from "@react-three/drei";
@@ -40,11 +41,17 @@ import MemoryMatchGame from "./memoryMatchGame";
 import KhorolGame from "./khorolGame";
 import WoodenPuzzleGame from "./woodenPuzzleGame";
 import { loadPlayer } from "@/components/hero-select/hero-data";
-import { completeGame } from "@/lib/api";
+import { completeGame, tryGetAppUserByEmail } from "@/lib/api";
 import { playButtonClick } from "@/lib/uiSounds";
 import { useMatchRoom } from "@/hooks/useMatchRoom";
+import { GameModalRulesBody } from "./gameModalRulesBody";
+import { GAME_MODAL_TITLE_CLASS, GAME_UI_FONT_FAMILY } from "./gameUiTheme";
+import { STATION_GAME_WEEKLY_PLAY_CAP } from "@/lib/stationWeeklyPlayCap";
 import { deriveStationGameMatchCode } from "@/lib/stationMatchCode";
-import { GameModalHowToBanner } from "./gameModalHowToBanner";
+import { useAuth } from "@/components/AuthContext";
+import GameRulesSheet from "./GameRulesSheet";
+import MatchRoomChatFab from "./MatchRoomChatFab";
+import { GameModalSessionProvider } from "./gameModalSession";
 import { useApp } from "@/components/AppContext";
 
 const MATCH_ROOM_GAME_TYPES = new Set<string>([
@@ -65,6 +72,15 @@ function usesMatchRoom(gt: string) {
   return MATCH_ROOM_GAME_TYPES.has(gt);
 }
 
+/** 1 тоглогчийн лобби: энэ хооронд хүн нэмэгдвэл multi; үгүй бол solo/робот. */
+const SOLO_LOBBY_WAIT_MIN_MS = 10_000;
+const SOLO_LOBBY_WAIT_MAX_MS = 15_000;
+
+function pickSoloLobbyWaitMs(): number {
+  const span = SOLO_LOBBY_WAIT_MAX_MS - SOLO_LOBBY_WAIT_MIN_MS;
+  return SOLO_LOBBY_WAIT_MIN_MS + Math.floor(Math.random() * (span + 1));
+}
+
 interface GameModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -74,7 +90,7 @@ interface GameModalProps {
   gameSlug: string;
   onCompleted?: (result: "win" | "lose") => void;
   /**
-   * Өртөөний 7 хоногийн 2 тоглолт — 0 бол тоглолт эхлүүлэхгүй.
+   * Өртөөний 7 хоногийн тоглолтын үлдэгдэл — 0 бол тоглолт эхлүүлэхгүй.
    * undefined: шалгалтгүй (жиш. нүүр "freeplay").
    */
   weeklyPlaysRemaining?: number;
@@ -91,6 +107,48 @@ export default function GameModal({
   weeklyPlaysRemaining,
 }: GameModalProps) {
   const { language } = useApp();
+  const { user: authUser, authConfigured } = useAuth();
+  const [appUserInPostgres, setAppUserInPostgres] = useState(false);
+  const isMn = language === "mn";
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    if (stationSlug === "freeplay" || !authConfigured) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    const email = authUser?.email?.trim();
+    if (!email) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const row = await tryGetAppUserByEmail(email);
+        if (!cancelled) setAppUserInPostgres(Boolean(row));
+      } catch {
+        if (!cancelled) setAppUserInPostgres(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, stationSlug, authConfigured, authUser?.email]);
+
+  const modalSession = useMemo(
+    () => ({
+      stationSlug,
+      appUserInPostgres,
+      authConfigured,
+    }),
+    [stationSlug, appUserInPostgres, authConfigured],
+  );
+
+  const [modalRulesOpen, setModalRulesOpen] = useState(false);
   const isMatch = isOpen && usesMatchRoom(gameType);
   const postPlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -98,6 +156,8 @@ export default function GameModal({
   const matchJoinRequestedRef = useRef(false);
   const autoMultiStartSentRef = useRef(false);
   const soloFallbackStartSentRef = useRef(false);
+  const soloLobbyWaitMsRef = useRef<number | null>(null);
+  const soloLobbyRoomCodeRef = useRef<string | null>(null);
   const playerName = loadPlayer()?.name?.trim() || "Player";
   const mp = useMatchRoom({
     enabled: isMatch,
@@ -120,6 +180,13 @@ export default function GameModal({
           : undefined,
   });
 
+  /** Чат: freeplay биш + өрөө байгаа + Postgres бүртгэлтэй (эсвэл Auth ENV байхгүй dev). */
+  const showMatchRoomChat =
+    isMatch &&
+    Boolean(mp.roomCode) &&
+    stationSlug !== "freeplay" &&
+    (!authConfigured || appUserInPostgres);
+
   useEffect(() => {
     if (!mp.connected) matchJoinRequestedRef.current = false;
   }, [mp.connected]);
@@ -133,7 +200,7 @@ export default function GameModal({
 
   const stationMatchCode = deriveStationGameMatchCode(stationSlug, gameSlug);
 
-  /** Нийтлэг өрөө: паблик код, бэлэн, 2+ бол эхлэх, 1 хүн 10с дараа ганцаарчлал. */
+  /** Нийтлэг өрөө: паблик код, бэлэн, 2+ бол эхлэх, 1 хүн 10–15с дараа solo. */
   useEffect(() => {
     if (!isOpen || !isMatch) {
       matchJoinRequestedRef.current = false;
@@ -188,15 +255,52 @@ export default function GameModal({
   ]);
 
   useEffect(() => {
-    if (!isOpen || !isMatch) return;
-    if (!mp.isHost || mp.roomStatus !== "lobby" || !mp.connected) return;
-    if (mp.players.length !== 1) return;
+    const clearSoloLobbyScheduling = () => {
+      soloLobbyWaitMsRef.current = null;
+      soloLobbyRoomCodeRef.current = null;
+    };
+
+    if (!isOpen || !isMatch) {
+      clearSoloLobbyScheduling();
+      return;
+    }
+
+    const soloWaitEligible =
+      mp.isHost &&
+      mp.roomStatus === "lobby" &&
+      mp.connected &&
+      Boolean(mp.roomCode) &&
+      mp.players.length === 1;
+
+    if (!soloWaitEligible || soloFallbackStartSentRef.current) {
+      if (!soloWaitEligible) clearSoloLobbyScheduling();
+      return;
+    }
+
+    /** Нүүр freeplay эсвэл Firebase-ээр нэвтэрээгүй — бусадтай нэгдэх цонхгүй, шууд solo. */
+    const skipSoloLobbyWait =
+      stationSlug === "freeplay" || !authUser;
+
+    if (soloLobbyRoomCodeRef.current !== mp.roomCode) {
+      soloLobbyRoomCodeRef.current = mp.roomCode;
+      soloLobbyWaitMsRef.current = skipSoloLobbyWait
+        ? 0
+        : pickSoloLobbyWaitMs();
+    }
+    const waitMs = skipSoloLobbyWait
+      ? 0
+      : (soloLobbyWaitMsRef.current ?? pickSoloLobbyWaitMs());
+    if (!skipSoloLobbyWait) soloLobbyWaitMsRef.current = waitMs;
+
     const t = window.setTimeout(() => {
-      if (soloFallbackStartSentRef.current) return;
-      soloFallbackStartSentRef.current = true;
-      mp.startMatch({ forceSolo: true });
-    }, 10_000);
-    return () => clearTimeout(t);
+      if (!soloFallbackStartSentRef.current) {
+        soloFallbackStartSentRef.current = true;
+        mp.startMatch({ forceSolo: true });
+      }
+    }, waitMs);
+    return () => {
+      window.clearTimeout(t);
+    };
   }, [
     isOpen,
     isMatch,
@@ -204,7 +308,10 @@ export default function GameModal({
     mp.roomStatus,
     mp.connected,
     mp.players.length,
+    mp.roomCode,
     mp.startMatch,
+    stationSlug,
+    authUser,
   ]);
 
   useEffect(() => {
@@ -223,6 +330,7 @@ export default function GameModal({
 
   useEffect(() => {
     if (isOpen) return;
+    setModalRulesOpen(false);
     if (postPlayCloseTimerRef.current) {
       clearTimeout(postPlayCloseTimerRef.current);
       postPlayCloseTimerRef.current = null;
@@ -247,7 +355,6 @@ export default function GameModal({
   if (!isOpen) return null;
 
   if (weeklyPlaysRemaining === 0) {
-    const isMn = language === "mn";
     return (
       <div
         className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -255,16 +362,17 @@ export default function GameModal({
         onClick={onClose}
       >
         <div
-          className="max-w-md rounded-2xl border border-amber-500/30 bg-zinc-950/95 p-6 text-center shadow-2xl"
+          className="max-w-md rounded-2xl border border-amber-500/30 bg-zinc-950/95 p-5 text-center shadow-2xl sm:p-6"
+          style={{ fontFamily: GAME_UI_FONT_FAMILY }}
           onClick={(e) => e.stopPropagation()}
         >
-          <p className="text-2xl font-bold text-amber-200">
+          <p className="text-balance font-bold leading-tight tracking-tight text-amber-200 text-[clamp(1rem,3.5vw,1.25rem)]">
             {isMn ? "7 хоногийн тоглолт дууссан" : "Weekly plays used up"}
           </p>
-          <p className="mt-3 text-sm leading-relaxed text-amber-100/80">
+          <p className="mt-3 text-xs leading-relaxed text-amber-100/80 sm:text-sm">
             {isMn
-              ? `«${gameName}»-ыг энэ өртөөнд сүүлийн 7 хоногт 2 удаа тоглосон. Дараагийн тоглолт хуанлийн 7 хоног шинээр эхлэхэд сэргэнэ.`
-              : `You've played this game 2 times in the last 7 days at this station. The limit resets on a rolling 7-day window.`}
+              ? `«${gameName}»-ыг энэ өртөөнд сүүлийн 7 хоногт ${STATION_GAME_WEEKLY_PLAY_CAP} удаа тоглосон. Дараагийн тоглолт хуанлийн 7 хоног шинээр эхлэхэд сэргэнэ.`
+              : `You've played this game ${STATION_GAME_WEEKLY_PLAY_CAP} times in the last 7 days at this station. The limit resets on a rolling 7-day window.`}
           </p>
           <button
             type="button"
@@ -403,6 +511,7 @@ export default function GameModal({
     }
     postPlayCloseTimerRef.current = setTimeout(() => {
       postPlayCloseTimerRef.current = null;
+      onClose();
       onCompleted?.(result);
     }, POST_PLAY_CLOSE_MS);
   }
@@ -424,48 +533,54 @@ export default function GameModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="flex justify-between items-star px-3 py-2 sm:px-5 sm:py-3"
+          className="flex shrink-0 items-center gap-2 border-b border-amber-900/20 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5"
           style={{
             background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)",
+              "linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.35))",
           }}
         >
-          <GameModalHowToBanner gameType={gameType} />
+          <h2 className={GAME_MODAL_TITLE_CLASS} title={gameName}>
+            {gameName}
+          </h2>
           <button
+            type="button"
+            onClick={() => {
+              playButtonClick();
+              setModalRulesOpen(true);
+            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-600/35 bg-black/45 text-amber-200/90 transition hover:border-amber-500/50 hover:bg-amber-950/40 hover:text-amber-50"
+            aria-label={isMn ? "Дүрэм" : "Rules"}
+            title={isMn ? "Дүрэм" : "Rules"}
+          >
+            <CircleHelp className="size-[18px]" aria-hidden />
+          </button>
+          <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onClose();
             }}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              background: "rgba(0,0,0,0.6)",
-              border: "1px solid rgba(200,160,48,0.2)",
-              color: "#888",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(200,160,48,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#888";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.6)";
-            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-zinc-400 transition hover:border-amber-500/30 hover:bg-amber-950/35 hover:text-white"
+            aria-label={isMn ? "Хаах" : "Close"}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <GameModalSessionProvider value={modalSession}>
+          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+            {isMatch && mp.roomCode && showMatchRoomChat && (
+              <MatchRoomChatFab
+                language={language}
+                roomCode={mp.roomCode}
+                playerId={mp.playerId}
+                players={mp.players}
+                sendRelay={mp.sendRelay}
+                lastPeerRelay={mp.lastPeerRelay}
+                myDisplayName={playerName}
+              />
+            )}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             {gameType === "shagai" && (
               <ShagaiGame
                 onComplete={(r, pct) => void submit(r, pct)}
@@ -658,8 +773,25 @@ export default function GameModal({
               <WoodenPuzzleGame onComplete={(r, pct) => void submit(r, pct)} />
             )}
             {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
+            </div>
           </div>
-        </div>
+        </GameModalSessionProvider>
+
+        <GameRulesSheet
+          open={modalRulesOpen}
+          onClose={() => setModalRulesOpen(false)}
+          title={isMn ? "Дүрэм" : "Rules"}
+        >
+          <GameModalRulesBody
+            gameType={gameType}
+            isMn={isMn}
+            fourPowersVariant={
+              isMatch && gameType === "four-powers" && mp.roomCode
+                ? "online"
+                : "solo"
+            }
+          />
+        </GameRulesSheet>
       </div>
     </div>
   );
@@ -668,24 +800,19 @@ export default function GameModal({
 function ComingSoon({ name }: { name: string }) {
   return (
     <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        color: "white",
-        fontFamily:
-          "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-      }}
+      className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center text-white"
+      style={{ fontFamily: GAME_UI_FONT_FAMILY }}
     >
-      <div style={{ fontSize: 48 }}>🚧</div>
-      <div style={{ color: "#c8a030", fontSize: 22, letterSpacing: 2 }}>
+      <div className="text-[clamp(1.75rem,6vw,2.25rem)]" aria-hidden>
+        🚧
+      </div>
+      <div
+        className="max-w-[min(100%,20rem)] truncate text-balance font-semibold tracking-tight text-[#c8a030] text-[clamp(0.85rem,2.8vw,1rem)]"
+        title={name}
+      >
         {name}
       </div>
-      <div style={{ color: "#666", fontSize: 14, letterSpacing: 1 }}>
+      <div className="text-xs tracking-wide text-zinc-500 sm:text-[0.8125rem]">
         Удахгүй нээгдэнэ
       </div>
     </div>

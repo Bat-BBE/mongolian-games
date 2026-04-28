@@ -6,7 +6,7 @@ import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { WIN_LEVEL } from "./stoneCairnType";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 import StoneCairnMemoryGame from "./stoneCairnMemoryGame";
 
 const REL = "cairn_mp_v1";
@@ -37,6 +37,7 @@ type Props = {
 
 export function StoneCairnOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-white/80"
@@ -45,9 +46,7 @@ export function StoneCairnOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }

@@ -2,6 +2,13 @@
 
 import { LuX as X } from "react-icons/lu";
 import type { ReactNode } from "react";
+import { useLayoutEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  GAME_RULES_SHEET_SCROLL_CLASS,
+  GAME_SHEET_TITLE_CLASS,
+  GAME_UI_FONT_FAMILY,
+} from "./gameUiTheme";
 
 type Props = {
   open: boolean;
@@ -10,15 +17,23 @@ type Props = {
   children: ReactNode;
 };
 
-/**
- * Mobile: rules / side info in a full-width bottom sheet so the 3D view stays visible.
- */
-export default function GameRulesSheet({ open, onClose, title, children }: Props) {
+export default function GameRulesSheet({
+  open,
+  onClose,
+  title,
+  children,
+}: Props) {
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    setPortalEl(document.body);
+  }, []);
+
   if (!open) return null;
 
-  return (
+  const sheet = (
     <div
-      className="fixed inset-0 z-[80] flex flex-col justify-end sm:items-center sm:justify-center sm:p-4"
+      className="fixed inset-0 z-[130] flex flex-col justify-end sm:items-center sm:justify-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.55)" }}
       onClick={onClose}
       role="presentation"
@@ -35,10 +50,7 @@ export default function GameRulesSheet({ open, onClose, title, children }: Props
         aria-labelledby="game-rules-sheet-title"
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-3 pr-3">
-          <h2
-            id="game-rules-sheet-title"
-            className="font-[family-name:var(--font-inter)] text-sm font-bold uppercase tracking-[0.2em] text-[#c8a030]"
-          >
+          <h2 id="game-rules-sheet-title" className={GAME_SHEET_TITLE_CLASS}>
             {title}
           </h2>
           <button
@@ -51,12 +63,15 @@ export default function GameRulesSheet({ open, onClose, title, children }: Props
           </button>
         </div>
         <div
-          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-3 [scrollbar-color:rgba(200,160,48,0.35)_transparent] [scrollbar-width:thin]"
-          style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
+          className={GAME_RULES_SHEET_SCROLL_CLASS}
+          style={{ fontFamily: GAME_UI_FONT_FAMILY }}
         >
           {children}
         </div>
       </div>
     </div>
   );
+
+  if (portalEl) return createPortal(sheet, portalEl);
+  return sheet;
 }

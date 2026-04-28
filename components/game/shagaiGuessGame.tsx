@@ -13,6 +13,7 @@ import {
 import * as THREE from "three";
 import { pickLastShagai } from "./shagaiModel";
 import { SHAGAI_PHYS_BOX, SHAGAI_SIDE_UP_AXIS } from "./shagai";
+import { useApp } from "@/components/AppContext";
 import ShagaiGuessUI from "./shagaiGuessUI";
 import {
   GuessState,
@@ -392,16 +393,21 @@ export function ShagaiGuessGameScene({
   state,
   hiddenReveal,
   robotThinking,
-  leftName = "YOU",
-  rightName = "ROBOT",
+  leftName,
+  rightName,
 }: {
   state: GuessState;
   hiddenReveal: { player: number; robot: number } | null;
   robotThinking: boolean;
-  /** Hand labels (default YOU / ROBOT; online uses play order names). */
+  /** Hand labels (solo: ТА/РОБОТ vs YOU/ROBOT by app language; online: names). */
   leftName?: string;
   rightName?: string;
 }) {
+  const { language } = useApp();
+  const leftLabel = leftName ?? (language === "en" ? "YOU" : "ТА");
+  const rightLabel = rightName ?? (language === "en" ? "ROBOT" : "РОБОТ");
+  const thinkingText =
+    language === "en" ? "🤖 thinking…" : "🤖 бодож байна…";
   const template = useShagaiTemplate();
   const reveal =
     state.phase === "revealing" ||
@@ -445,7 +451,7 @@ export function ShagaiGuessGameScene({
         template={template}
         tint="#b0e8b0"
         reveal={reveal}
-        label={leftName}
+        label={leftLabel}
         accent="#60c060"
       />
       <Hand
@@ -454,7 +460,7 @@ export function ShagaiGuessGameScene({
         template={template}
         tint="#f0b8a8"
         reveal={reveal}
-        label={rightName}
+        label={rightLabel}
         accent="#e06050"
       />
 
@@ -504,7 +510,7 @@ export function ShagaiGuessGameScene({
               animation: "pulse 1.2s ease-in-out infinite",
             }}
           >
-            🤖 thinking…
+            {thinkingText}
           </div>
         </Html>
       )}
@@ -540,24 +546,19 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
   }, [state.phase, state.winner, state.playerStack, onComplete]);
 
   // -- Round flow --------------------------------------------------------
-  const onStartRound = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      phase: "hiding",
-      round: prev.round + 1,
-    }));
-    setRevealHidden(null);
-  }, []);
+  useEffect(() => {
+    if (state.phase !== "idle" || state.round !== 0) return;
+    setState((prev) => ({ ...prev, phase: "hiding", round: 1 }));
+  }, [state.phase, state.round]);
 
-  const onNextRound = useCallback(() => {
-    if (state.winner) return;
-    setState((prev) => ({
-      ...prev,
-      phase: "hiding",
-      round: prev.round + 1,
-    }));
-    setRevealHidden(null);
-  }, [state.winner]);
+  useEffect(() => {
+    if (state.phase !== "result" || state.winner) return;
+    const t = setTimeout(() => {
+      setState((prev) => ({ ...prev, phase: "hiding", round: prev.round + 1 }));
+      setRevealHidden(null);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [state.phase, state.winner]);
 
   const onCommit = useCallback(
     (playerHidden: number, playerGuess: number) => {
@@ -660,10 +661,7 @@ export default function ShagaiGuessGame({ onComplete }: ShagaiGuessGameProps) {
 
       <ShagaiGuessUI
         state={state}
-        onStartRound={onStartRound}
         onCommit={onCommit}
-        onNextRound={onNextRound}
-        onReset={onReset}
         robotThinking={robotThinking}
         revealHidden={revealHidden}
         rewardEvents={rewardEvents}

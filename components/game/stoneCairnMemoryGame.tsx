@@ -12,6 +12,12 @@ import {
   playCairnInputTap,
   playCairnShowStoneBlink,
 } from "@/lib/uiSounds";
+import {
+  GAME_RULES_OL_CLASS,
+  GAME_TEXT_BODY,
+  GAME_TEXT_LEAD,
+  GAME_TEXT_META,
+} from "./gameUiTheme";
 
 export type StoneCairnMemoryGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -177,7 +183,7 @@ export default function StoneCairnMemoryGame({
         >
           {loc === "mn" ? "Чулуун овоо" : "Stone cairn memory"}
         </h2>
-        <p className="text-[10px] leading-relaxed text-amber-100/88">
+        <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
             ? "5 товч (1–5): дараалал гялс гарна → та ижил дарааллаар дар. Алхам бүр нэг оноо нэмнэ. 10 зөв алхам = ялалт."
             : "Five buttons (1–5): watch the flash, then tap the same order. Each success adds a new step. A full 10-step run with no error = win."}
@@ -186,10 +192,12 @@ export default function StoneCairnMemoryGame({
           className="mx-auto mt-1.5 max-w-md rounded border border-sky-500/25 bg-black/30 px-2 py-1 text-left"
           open
         >
-          <summary className="cursor-pointer text-[10px] font-semibold text-sky-200/90">
+          <summary
+            className={`${GAME_TEXT_BODY} cursor-pointer font-semibold text-sky-200/90`}
+          >
             {loc === "mn" ? "Дүрмийн дэлгэрэнгүй" : "Full rules (short)"}
           </summary>
-          <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[9px] leading-relaxed text-slate-400">
+          <ol className={`mt-1.5 !space-y-1 ${GAME_RULES_OL_CLASS} text-slate-400`}>
             <li>
               {loc === "mn"
                 ? "«Харагдах» үед зөвхөн ажиглана; «Оруулах» үед 1–5-ыг дараалалд дарна."
@@ -207,7 +215,7 @@ export default function StoneCairnMemoryGame({
             </li>
           </ol>
         </details>
-        <p className="mt-0.5 text-[10px] text-amber-200/60">{message}</p>
+        <p className={`mt-0.5 ${GAME_TEXT_META} text-amber-200/60`}>{message}</p>
       </div>
       <div className="relative min-h-0 w-full flex-1">
         <StoneCairnSceneCanvas
@@ -259,7 +267,7 @@ export default function StoneCairnMemoryGame({
           </div>
         ) : null}
         {phase === "show" ? (
-          <p className="w-full text-center text-[10px] text-amber-200/50">
+          <p className={`w-full text-center ${GAME_TEXT_META} text-amber-200/50`}>
             {loc === "mn" ? "… харагдаж байна" : "Watch…"}
           </p>
         ) : null}

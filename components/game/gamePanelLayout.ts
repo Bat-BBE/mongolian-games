@@ -1,19 +1,13 @@
 import type { CSSProperties } from "react";
+import { GAME_PANEL_CHROME, GAME_PANEL_TEXT_COLOR } from "./gameUiTheme";
 
 const abs: CSSProperties = { position: "absolute" };
 
-/** Shagai Shooting/12/бэрх — зөвхөн зураасан панелын нийтлэг хүрээ. */
 export const SHAGAI_GAME_PANEL_BASE: CSSProperties = {
   position: "absolute",
-  background: "rgba(6,4,2,0.90)",
-  border: "1px solid rgba(200,160,48,0.28)",
-  borderRadius: 16,
+  ...GAME_PANEL_CHROME,
   padding: "14px 14px 12px",
-  backdropFilter: "blur(16px)",
-  boxShadow: "0 8px 40px rgba(0,0,0,0.7)",
-  fontFamily:
-    "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-  color: "white",
+  color: GAME_PANEL_TEXT_COLOR,
   zIndex: 10,
   maxHeight: "calc(100% - 48px)",
   overflowY: "auto",
@@ -22,15 +16,9 @@ export const SHAGAI_GAME_PANEL_BASE: CSSProperties = {
   pointerEvents: "auto",
 } as const;
 
-/** Desktop: primary (left) gameplay panel. */
 export function gamePanelLeftDesktop(widthPx: number): CSSProperties {
   return { ...abs, top: 24, left: 24, width: widthPx };
 }
-
-/**
- * Mobile: anchor gameplay controls to the bottom so the 3D canvas stays visible
- * (shagai fall / board in the upper area).
- */
 export function gamePanelPlayNarrowBottom(): CSSProperties {
   return {
     ...abs,
@@ -44,7 +32,6 @@ export function gamePanelPlayNarrowBottom(): CSSProperties {
   };
 }
 
-/** Desktop: secondary (right) rules / stats panel. */
 export function gamePanelRightDesktop(widthPx: number): CSSProperties {
   return { ...abs, top: 24, right: 24, width: widthPx };
 }

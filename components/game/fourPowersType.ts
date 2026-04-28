@@ -9,13 +9,9 @@ export function beats(a: number, b: number): boolean {
   return ((a + 1) | 0) % POWERS === (b | 0);
 }
 
-/** Per-seat points for this round; seats 0..3. */
-export function roundPoints(choices: [number, number, number, number]): [
-  number,
-  number,
-  number,
-  number,
-] {
+export function roundPoints(
+  choices: [number, number, number, number],
+): [number, number, number, number] {
   const out: [number, number, number, number] = [0, 0, 0, 0];
   const cnt = [0, 0, 0, 0];
   for (const c of choices) {
@@ -62,24 +58,16 @@ export function addTotals(
   t: [number, number, number, number],
   d: [number, number, number, number],
 ): [number, number, number, number] {
-  return [
-    t[0] + d[0],
-    t[1] + d[1],
-    t[2] + d[2],
-    t[3] + d[3],
-  ];
+  return [t[0] + d[0], t[1] + d[1], t[2] + d[2], t[3] + d[3]];
 }
 
-/** Unique leader at or past target, else -1 (tie at top → keep playing). */
 export function firstWinner(
   scores: [number, number, number, number],
   target: number = WIN_SCORE,
 ): number {
   const hi = Math.max(...scores);
   if (hi < target) return -1;
-  const atTop = scores
-    .map((s, i) => (s === hi ? i : -1))
-    .filter((x) => x >= 0);
+  const atTop = scores.map((s, i) => (s === hi ? i : -1)).filter((x) => x >= 0);
   if (atTop.length !== 1) return -1;
   return atTop[0]!;
 }
@@ -104,7 +92,6 @@ export function powerLabel(
   return row[i] ?? { name: "?", sub: "" };
 }
 
-/** Seeded 0..1; mulberry32 */
 export function mulberry32(a: number): () => number {
   return () => {
     let t = (a + 0x6d2b79f5) | 0;

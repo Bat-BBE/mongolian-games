@@ -15,7 +15,7 @@ import {
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
 import { useApp } from "@/components/AppContext";
 
 const RELAY_CH = "stone_mp_v1";
@@ -120,6 +120,7 @@ type Props = {
 
 export function StoneGameOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -136,9 +137,7 @@ export function StoneGameOnlineLobby() {
         background: "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
-      </span>
+      <span>{lobbyIntro}</span>
     </div>
   );
 }

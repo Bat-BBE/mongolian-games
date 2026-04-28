@@ -1,4 +1,12 @@
 import type { CSSProperties } from "react";
+import {
+  GAME_DICE_READOUT_DIE_LABEL,
+  GAME_DICE_READOUT_DIE_LABEL_COMPACT,
+  GAME_DICE_READOUT_SUM_LABEL,
+  GAME_DICE_READOUT_SUM_LABEL_COMPACT,
+  GAME_DICE_READOUT_TITLE,
+  GAME_DICE_READOUT_TITLE_COMPACT,
+} from "./gameUiTheme";
 import { DICE_PIP_CELLS } from "./woodenDicePipLayout";
 
 const PIP = DICE_PIP_CELLS;
@@ -122,9 +130,7 @@ export function TripleDiceReadout({
     <div
       className={`flex min-w-0 max-w-[min(100%,16rem)] flex-col items-center gap-1.5 rounded-xl border border-white/10 p-1.5 sm:gap-2 sm:p-2 ${compact ? "h-full w-full min-h-0 max-w-none justify-between" : ""} ${t.bg} ${className}`.trim()}
     >
-      <p
-        className={`w-full text-center font-semibold uppercase tracking-wide text-slate-400 ${compact ? "text-[7px] leading-tight" : "text-[9px]"}`}
-      >
+      <p className={compact ? GAME_DICE_READOUT_TITLE_COMPACT : GAME_DICE_READOUT_TITLE}>
         {label}
       </p>
       {spinning ? (
@@ -144,7 +150,9 @@ export function TripleDiceReadout({
               className={`flex flex-col items-center ${compact ? "gap-1" : "gap-0.5"}`}
             >
               <span
-                className={`uppercase text-slate-500 ${compact ? "text-[6px]" : "text-[8px]"}`}
+                className={
+                  compact ? GAME_DICE_READOUT_DIE_LABEL_COMPACT : GAME_DICE_READOUT_DIE_LABEL
+                }
               >
                 {dieLabels[i]}
               </span>
@@ -177,7 +185,9 @@ export function TripleDiceReadout({
       )}
       <div className="w-full border-t border-white/10 text-center [font-variant-numeric:tabular-nums] pt-1.5">
         <span
-          className={`text-slate-500 ${compact ? "text-[7px]" : "text-[9px]"}`}
+          className={
+            compact ? GAME_DICE_READOUT_SUM_LABEL_COMPACT : GAME_DICE_READOUT_SUM_LABEL
+          }
         >
           {sumLabel}
         </span>

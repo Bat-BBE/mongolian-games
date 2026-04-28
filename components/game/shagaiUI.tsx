@@ -12,6 +12,12 @@ import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesSheet from "./GameRulesSheet";
 import GameRulesFab from "./GameRulesFab";
 import { useApp } from "@/components/AppContext";
+import {
+  GAME_CTA_PRIMARY,
+  GAME_PANEL_CHROME,
+  GAME_PANEL_OVERLINE_CLASS,
+} from "./gameUiTheme";
+import { cn } from "@/lib/utils";
 
 const SIDE_SPRITE_X: Record<ShagaiSide, string> = {
   camel: "5%",
@@ -264,8 +270,8 @@ function ResultDisplay({
   if (!result) {
     return (
       <div style={{ textAlign: "center", padding: "20px 0", opacity: 0.5 }}>
-        <div style={{ fontSize: 36, marginBottom: 6 }}>🦴</div>
-        <div style={{ color: "#888", fontSize: 13, letterSpacing: 2 }}>
+        <div className="mb-1.5 text-[clamp(1.5rem,5vw,2rem)]">🦴</div>
+        <div className="text-[0.75rem] tracking-wide text-zinc-500 sm:text-xs">
           Шагай шидэж эхэл
         </div>
       </div>
@@ -304,10 +310,11 @@ function ResultDisplay({
       <div
         style={{
           color: sideColor,
-          fontSize: 26,
+          fontSize: "clamp(1rem, 4vw, 1.35rem)",
           fontWeight: "bold",
-          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-          letterSpacing: 4,
+          fontFamily:
+            "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+          letterSpacing: "0.08em",
           textShadow: `0 0 20px ${sideColor}88`,
           marginBottom: 8,
         }}
@@ -369,21 +376,16 @@ export default function ShagaiUI({
         style={{
           ...mainChrome,
           ...mainPad,
-          background: "rgba(8,6,3,0.88)",
-          border: "1px solid rgba(200,160,48,0.35)",
-          borderRadius: 16,
+          ...GAME_PANEL_CHROME,
           padding: "18px 18px 14px",
-          backdropFilter: "blur(14px)",
-          boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-          fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
           color: "white",
           zIndex: 10,
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: 4 }}>
-          <div style={{ color: "#888", fontSize: 10, letterSpacing: 4 }}>
+        <div className="mb-1 text-center">
+          <span className={cn(GAME_PANEL_OVERLINE_CLASS, "text-zinc-500")}>
             ШАГАЙ НААДАМ
-          </div>
+          </span>
         </div>
 
         <GoldDivider />
@@ -392,28 +394,13 @@ export default function ShagaiUI({
         <GoldDivider />
 
         <button
+          type="button"
           onClick={() => {
             playButtonClick();
             onThrow();
           }}
           disabled={isRolling}
-          style={{
-            width: "100%",
-            padding: "13px 0",
-            fontSize: 15,
-            fontWeight: "bold",
-            fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-            letterSpacing: 2,
-            background: isRolling
-              ? "rgba(80,70,40,0.5)"
-              : "linear-gradient(135deg, #c8a030, #f0c040 50%, #c8a030)",
-            color: isRolling ? "#666" : "#1a0e00",
-            border: "none",
-            borderRadius: 10,
-            cursor: isRolling ? "not-allowed" : "pointer",
-            transition: "all 0.2s",
-            boxShadow: isRolling ? "none" : "0 4px 20px rgba(200,160,48,0.35)",
-          }}
+          className={GAME_CTA_PRIMARY}
         >
           {isRolling ? "🎲 Нисэж байна..." : "🦴 Шагай шидэх"}
         </button>
@@ -434,14 +421,8 @@ export default function ShagaiUI({
         <div
           style={{
             ...gamePanelRightDesktop(220),
-            background: "rgba(8,6,3,0.88)",
-            border: "1px solid rgba(200,160,48,0.25)",
-            borderRadius: 16,
+            ...GAME_PANEL_CHROME,
             padding: "16px 16px 12px",
-            backdropFilter: "blur(14px)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.6)",
-            fontFamily:
-              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
             color: "white",
             zIndex: 10,
           }}
@@ -454,7 +435,7 @@ export default function ShagaiUI({
               marginBottom: 4,
             }}
           >
-            <div style={{ color: "#c8a030", fontSize: 12, letterSpacing: 3 }}>
+            <div className="text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-amber-500/90 sm:text-xs">
               СТАТИСТИК
             </div>
             <div

@@ -18,12 +18,25 @@ import {
   SHAGAI_GAME_PANEL_BASE,
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesFab from "./GameRulesFab";
 import GameRulesSheet from "./GameRulesSheet";
 import { playButtonClick } from "@/lib/uiSounds";
+import {
+  GAME_CALLOUT_AMBER,
+  GAME_CALLOUT_ERROR,
+  GAME_CALLOUT_SKY,
+  GAME_CTA_PRIMARY,
+  GAME_CTA_SECONDARY,
+  GAME_PANEL_HEADING_CLASS,
+  GAME_RULES_OL_CLASS,
+  GAME_TEXT_BODY,
+  GAME_TEXT_LEAD,
+  GAME_TEXT_META,
+  GAME_TEXT_SUBTITLE,
+} from "./gameUiTheme";
+import { Berkh12RulesStrip } from "./shagaiStationRulesUI";
 
 type Props = {
   phase: Berkh12Phase;
@@ -60,7 +73,7 @@ type TRules = {
 
 function berkhRulesList(t: TRules, lockMode: boolean) {
   return (
-    <ol className="list-decimal space-y-1.5 pl-4 text-[10px] leading-relaxed text-zinc-300">
+    <ol className={GAME_RULES_OL_CLASS}>
       <li>{t.r1}</li>
       <li>{t.r2}</li>
       <li>{t.r3}</li>
@@ -102,13 +115,12 @@ export default function ShagaiBerkh12UI({
   const t = {
     title: isEn ? "12 Berkh (shagai party)" : "12 бэрх (шагайн наадгай)",
     subtitle: isEn
-      ? "12 bones · pot & piles · sunwise"
-      : "12 шагай · төв ба овоо · нар зөв",
+      ? "One throw each · pot in the middle · pay camels from your pile"
+      : "Нэг удаа шидэлт · төвийн сан · тэмээг өөрийн овооноос төлнө",
     lead: isEn
-      ? `Throw all ${BERKH12_PIECE_COUNT} at once, sunwise. The pot holds up to ${BERKH12_TOTAL_MORIES} mories; your column is what you can still pay to others for camels.`
-      : `Нар зөв нэг удаа ${BERKH12_PIECE_COUNT} шагай. Төвд нийт ${BERKH12_TOTAL_MORIES} морь; таны багананд байгаа нь тэмээ төлж таарах нөөц.`,
+      ? `Everyone throws all ${BERKH12_PIECE_COUNT} bones together. Horses pull mories from the pot; camels force you to pay other players.`
+      : `Бүгд ${BERKH12_PIECE_COUNT} шагайгаа зэрэг шиднэ. Морь төвөөс авна, тэмээ бусдад төлнө.`,
     rules: isEn ? "Rules" : "Дүрэм",
-    rulesAside: isEn ? "Rules" : "Дүрэм",
     r1: isEn
       ? "Everyone starts with 0; all mories sit in the pot in the middle at first."
       : "Эхлээд бүгд 0, бүх морь төвд (хоорондын сан).",
@@ -152,31 +164,20 @@ export default function ShagaiBerkh12UI({
   const mainPad: CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : { padding: "16px" };
-  const rightChrome = {
-    ...SHAGAI_GAME_PANEL_BASE,
-    ...gamePanelRightDesktop(280),
-  };
   const rulesFabLabel = isEn ? "Rules" : "Дүрэм";
 
   const playBlock = (
     <>
       {showElimToast ? (
-        <p className="mb-1.5 rounded border border-rose-500/40 bg-rose-950/50 px-2 py-0.5 text-center text-xs text-rose-200">
-          {showElimToast}
-        </p>
+        <p className={GAME_CALLOUT_ERROR}>{showElimToast}</p>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2
-            className="font-display text-sm font-bold text-amber-200"
-            style={{ textShadow: "0 0 12px rgba(200,160,48,0.2)" }}
-          >
-            {t.title}
-          </h2>
-          <p className="text-[8px] text-zinc-500">{t.subtitle}</p>
+          <h2 className={GAME_PANEL_HEADING_CLASS}>{t.title}</h2>
+          <p className={GAME_TEXT_SUBTITLE}>{t.subtitle}</p>
         </div>
         {!lockMode && !hideModeToggle ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+          <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-300">
             <button
               type="button"
               className={`rounded border px-1.5 py-0.5 ${
@@ -202,22 +203,17 @@ export default function ShagaiBerkh12UI({
           </div>
         ) : null}
       </div>
+      <Berkh12RulesStrip isEn={isEn} />
       {hideModeToggle && !lockMode ? (
-        <p className="mb-1.5 rounded border border-sky-500/20 bg-sky-950/20 px-2 py-1 text-[9px] leading-snug text-sky-100/90">
-          {t.soloRoomNote}
-        </p>
+        <p className={`mb-1.5 !mt-0 ${GAME_CALLOUT_SKY}`}>{t.soloRoomNote}</p>
       ) : null}
       {lockMode ? (
-        <p className="mt-1.5 rounded border border-amber-500/20 bg-amber-950/25 px-2 py-1 text-[9px] leading-snug text-amber-100/95">
-          {t.r7online}
-        </p>
+        <p className={GAME_CALLOUT_AMBER}>{t.r7online}</p>
       ) : null}
-      <p className="mt-1.5 text-[10px] leading-snug text-amber-100/90">
-        {t.lead}
-      </p>
+      <p className={`mt-1.5 ${GAME_TEXT_LEAD}`}>{t.lead}</p>
 
       {!lockMode && !hideModeToggle && mode === "local" ? (
-        <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px]">
+        <div className={`mt-1.5 flex flex-wrap gap-1.5 ${GAME_TEXT_BODY}`}>
           <span className="text-zinc-500">{isEn ? "Players" : "Тоглогч"}:</span>
           {([2, 3, 4] as const).map((c) => (
             <button
@@ -239,15 +235,15 @@ export default function ShagaiBerkh12UI({
 
       <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className="text-[10px] text-zinc-500">{t.center}</div>
+          <div className={GAME_TEXT_META}>{t.center}</div>
           <div className="text-2xl font-bold tabular-nums text-amber-100 sm:text-3xl">
             {center}
             <span className="ml-0.5 text-sm font-normal text-zinc-500">🐴</span>
           </div>
-          <p className="mt-0.5 text-[8px] leading-tight text-zinc-500">
+          <p className={`mt-0.5 ${GAME_TEXT_SUBTITLE}`}>
             {isEn
-              ? "Shared bank. Your column = mories you can use to pay for camels."
-              : "Нийтийн сан. Таны багана = тэмээ төлж чадах нөөц."}
+              ? "Pot = shared bank. Your number = mories left to pay camel costs."
+              : "Төв = нийтийн сан. Тоо = тэмээнд зарцуулах үлдсэн морь."}
           </p>
         </div>
         <div className="grid max-w-[12rem] grid-cols-2 gap-1.5 sm:max-w-none sm:grid-cols-4">
@@ -261,7 +257,7 @@ export default function ShagaiBerkh12UI({
                     : "border-zinc-700/80"
                 } ${!active[i] ? "opacity-45" : ""}`}
               >
-                <div className="text-[8px] uppercase text-zinc-500">
+                <div className={`${GAME_TEXT_META} uppercase`}>
                   {nameLabels[i] ?? `${t.p}${i + 1}`}
                   {!active[i] ? ` · ${t.out}` : ""}
                 </div>
@@ -274,7 +270,7 @@ export default function ShagaiBerkh12UI({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-amber-100/90">
+        <p className={GAME_TEXT_LEAD}>
           {phase === "matchOver" && winner != null
             ? `${t.over}: ${nameLabels[winner] ?? t.p + (winner + 1)}`
             : canThrow
@@ -286,7 +282,7 @@ export default function ShagaiBerkh12UI({
             <button
               type="button"
               onClick={onReset}
-              className="rounded-lg border border-amber-500/50 bg-amber-950/50 px-3 py-1.5 text-xs font-semibold"
+              className={`${GAME_CTA_SECONDARY} !min-h-0 py-1.5 normal-case tracking-normal`}
             >
               {t.reset}
             </button>
@@ -295,7 +291,7 @@ export default function ShagaiBerkh12UI({
               type="button"
               disabled={!canThrow}
               onClick={onThrow}
-              className="rounded-lg border border-amber-400/60 bg-amber-800/50 px-3 py-1.5 text-sm font-bold text-amber-50 disabled:opacity-35"
+              className={`${GAME_CTA_PRIMARY} !min-h-0 py-2 normal-case tracking-normal`}
             >
               {t.throw}
             </button>
@@ -305,7 +301,7 @@ export default function ShagaiBerkh12UI({
 
       {lastSides.some((s) => s) && phase !== "throwing" && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1 border-t border-zinc-800/80 pt-1.5">
-          <span className="text-[9px] text-zinc-500">
+          <span className={GAME_TEXT_META}>
             {t.last}: {lastHorses} 🐴 / {lastCamels} 🐫
           </span>
           {lastSides.map(
@@ -334,44 +330,24 @@ export default function ShagaiBerkh12UI({
         {playBlock}
       </div>
 
-      {!narrowUi ? (
-        <div
-          className="shagai-b12-right-panel"
-          style={{ ...rightChrome, padding: "14px 14px 12px" }}
-        >
-          <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-amber-400/95">
-            {t.rulesAside}
-          </p>
-          <div className="mt-2 border-t border-amber-500/15 pt-2">
-            {berkhRulesList(t, lockMode)}
-          </div>
-        </div>
-      ) : null}
-
-      {narrowUi ? (
-        <>
-          <GameRulesFab
-            label={rulesFabLabel}
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rules}
-          >
-            {berkhRulesList(t, lockMode)}
-          </GameRulesSheet>
-        </>
-      ) : null}
+      <GameRulesFab
+        label={rulesFabLabel}
+        onClick={() => {
+          playButtonClick();
+          setRulesOpen(true);
+        }}
+      />
+      <GameRulesSheet
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title={t.rules}
+      >
+        {berkhRulesList(t, lockMode)}
+      </GameRulesSheet>
 
       <style>{`
-        .shagai-b12-main-panel::-webkit-scrollbar,
-        .shagai-b12-right-panel::-webkit-scrollbar { width: 6px; }
-        .shagai-b12-main-panel::-webkit-scrollbar-thumb,
-        .shagai-b12-right-panel::-webkit-scrollbar-thumb {
+        .shagai-b12-main-panel::-webkit-scrollbar { width: 6px; }
+        .shagai-b12-main-panel::-webkit-scrollbar-thumb {
           background: rgba(200,160,48,0.35);
           border-radius: 3px;
         }

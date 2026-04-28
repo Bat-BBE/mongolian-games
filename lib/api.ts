@@ -1073,3 +1073,19 @@ export async function getAppUserByEmail(
   }
   return { user: data.user };
 }
+
+/** Postgres `app_users` — 404 эсвэл алдаа үед `null` (UI-д нэвтрээгүй гэж үзнэ). */
+export async function tryGetAppUserByEmail(
+  email: string,
+): Promise<AppUserRow | null> {
+  const q = encodeURIComponent(email.trim());
+  const res = await apiFetch(`/api/users/simple-me?email=${q}`);
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  if (!data.user) return null;
+  return data.user;
+}

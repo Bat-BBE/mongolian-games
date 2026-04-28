@@ -13,11 +13,12 @@ import { playButtonClick } from "@/lib/uiSounds";
 import {
   gamePanelLeftDesktop,
   gamePanelPlayNarrowBottom,
-  gamePanelRightDesktop,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
 import GameRulesSheet from "./GameRulesSheet";
 import GameRulesFab from "./GameRulesFab";
+import { GAME_CTA_PRIMARY } from "./gameUiTheme";
+import { fourBonesRulesStrings } from "./fourBonesRulesCopy";
 import { useState } from "react";
 
 interface Props {
@@ -63,7 +64,7 @@ type FourI18n = {
   robotThinking: string;
   youWonMatch: string;
   robotWonMatch: string;
-  rulesTitle: string;
+  // rulesTitle: string;
   howToPlay: string;
   rules: { n: string; t: string; d: string }[];
   scoringTitle: string;
@@ -89,12 +90,14 @@ type FourI18n = {
 
 function useFourI18n(): FourI18n & { language: "mn" | "en" } {
   const { language } = useApp();
+  const rEn = fourBonesRulesStrings("en");
+  const rMn = fourBonesRulesStrings("mn");
   const en: FourI18n = {
     title: "FOUR BERKH",
-    subtitle: "4 MONGOLIAN SHAGAI · VS ROBOT",
+    subtitle: "4 SHAGAI · VS ROBOT",
     overline: "ᠳᠥᠷᠪᠡᠨ ᠪᠡᠷᠬᠡ",
     rollingHint: "⏳ Shagai are falling...",
-    dorvenBerkh: "🎊 DÖRVÖN BERKH!",
+    dorvenBerkh: "🎊 DURVUN BERKH!",
     youLose: "Try again",
     tryAgain: "Try again",
     tapHint: "You can also click a shagai to throw",
@@ -113,22 +116,11 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     robotThinking: "🤖 Robot is thinking...",
     youWonMatch: "🏆 YOU WON THE MATCH!",
     robotWonMatch: "🤖 Robot wins the match",
-    rulesTitle: "HOW TO PLAY",
-    howToPlay:
-      "Roll 4 shagai. More unique sides = more points. Beat the robot to the target.",
-    rules: [
-      { n: "①", t: "Your turn", d: "Throw 4 shagai" },
-      { n: "②", t: "Earn points", d: "Scored by unique sides" },
-      { n: "③", t: "Robot throws", d: "Robot rolls automatically" },
-      { n: "④", t: "Win", d: `First to ${TARGET_SCORE} pts` },
-    ],
-    scoringTitle: "SCORING",
-    scoring: [
-      { label: "4 unique (Dörvön berkh)", pts: "+12" },
-      { label: "3 unique sides", pts: "+5" },
-      { label: "2 unique sides", pts: "+2" },
-      { label: "All same (4 equal)", pts: "+8" },
-    ],
+    // rulesTitle: rEn.howToSectionTitle,
+    howToPlay: rEn.intro,
+    rules: rEn.steps,
+    scoringTitle: rEn.scoringTitle,
+    scoring: rEn.scoringRows,
     statistic: "STATISTICS",
     stats: [
       { label: "Your score", valueKey: "playerScore" },
@@ -153,11 +145,11 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     youLose: "Дахин оролдоорой",
     tryAgain: "Дахин оролдоорой",
     tapHint: "Шагай дээр дарж ч орхиж болно",
-    throwButton: "💢 Шагай орхих",
-    throwingButton: "💢 Бууж байна...",
-    waitingRobot: "🤖 Роботын ээлж...",
+    throwButton: "Шагай орхих",
+    throwingButton: "Бууж байна...",
+    waitingRobot: "Роботын ээлж...",
     rollingText: "Орхиж байна...",
-    yourTurn: (left) => `Таны ээлж — ${left} оноо дутуу`,
+    yourTurn: (left) => `Таны ээлж — ялахад ${left} оноо дутуу`,
     robotTurn: "Роботын ээлж",
     score: "Оноо",
     target: `Хэн түрүүлж ${TARGET_SCORE} онооноос давбал ялна`,
@@ -168,26 +160,11 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     robotThinking: "🤖 Робот шидэж байна...",
     youWonMatch: "🏆 ТА ЯЛЛАА!",
     robotWonMatch: "🤖 Робот ялав",
-    rulesTitle: "ТОГЛООМЫН ДҮРЭМ",
-    howToPlay:
-      "4 шагайг орхиж онооны тохирол сайтай талыг буулгана. Роботыг хож.",
-    rules: [
-      { n: "①", t: "Таны ээлж", d: "Шагай орхих" },
-      { n: "②", t: "Оноо хураах", d: "Давтагдаагүй талаар тооцно" },
-      {
-        n: "③",
-        t: "Дараагийн тоглогчийн ээлж",
-        d: "Тоглогч ээлж дарааллаар шагай орхино",
-      },
-      { n: "④", t: "Ялалт", d: `Түрүүлж ${TARGET_SCORE} оноо давах` },
-    ],
-    scoringTitle: "ОНООНЫ ШАЛГУУР",
-    scoring: [
-      { label: "4 тал өөр (Дөрвөн бэрх)", pts: "+12" },
-      { label: "3 тал өөр", pts: "+5" },
-      { label: "2 тал өөр", pts: "+2" },
-      { label: "4 адил (хос)", pts: "+8" },
-    ],
+    // rulesTitle: rMn.howToSectionTitle,
+    howToPlay: rMn.intro,
+    rules: rMn.steps,
+    scoringTitle: rMn.scoringTitle,
+    scoring: rMn.scoringRows,
     statistic: "СТАТИСТИК",
     stats: [
       { label: "Таны оноо", valueKey: "playerScore" },
@@ -199,7 +176,7 @@ function useFourI18n(): FourI18n & { language: "mn" | "en" } {
     historyEmpty: "Түүх хоосон",
     resetBtn: "Шинээр эхлэх",
     shagaiSidesLabel: "ШАГАЙН ТАЛУУД",
-    rewardLabel: "ШАГНАЛ (SESSION)",
+    rewardLabel: "ШАГНАЛ",
     playerTag: "ТА",
     robotTag: "РОБОТ",
   };
@@ -401,373 +378,94 @@ function RobotPanel({
   );
 }
 
-function HistoryList({
-  history,
-  t,
-  language,
-}: {
-  history: GameState["history"];
-  t: FourI18n;
-  language: "mn" | "en";
-}) {
-  if (history.length === 0)
-    return (
-      <div
-        style={{
-          color: "#444",
-          fontSize: 11,
-          textAlign: "center",
-          padding: "8px 0",
-        }}
-      >
-        {t.historyEmpty}
-      </div>
-    );
-  const recent = [...history].reverse().slice(0, 6);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {recent.map((r, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "5px 8px",
-            background: r.isDorvenBerkh
-              ? "rgba(200,160,48,0.15)"
-              : r.turn === "robot"
-                ? "rgba(224,96,80,0.06)"
-                : "rgba(96,192,96,0.05)",
-            borderRadius: 8,
-            border: r.isDorvenBerkh
-              ? "1px solid rgba(200,160,48,0.4)"
-              : "1px solid rgba(255,255,255,0.05)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span
-              style={{
-                fontSize: 9,
-                color: r.turn === "robot" ? "#e06050" : "#60c060",
-                letterSpacing: 1,
-                minWidth: 30,
-              }}
-            >
-              {r.turn === "robot" ? t.robotTag : t.playerTag}
-            </span>
-            <div style={{ display: "flex", gap: 3 }}>
-              {r.sides.map((s, j) => (
-                <span
-                  key={j}
-                  title={sideName(s, language)}
-                  style={{ fontSize: 14 }}
-                >
-                  {SHAGAI_INFO[s].symbol}
-                </span>
-              ))}
-            </div>
-          </div>
-          <span
-            style={{
-              color: "#f0c040",
-              fontSize: 11,
-              fontWeight: "bold",
-            }}
-          >
-            +{r.points}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
+// function FourBonesRulesAsideBody({
+//   showRulesHeading,
+//   t,
+// }: {
+//   showRulesHeading: boolean;
+//   t: FourI18n;
+// }) {
+//   return (
+//     <>
+//       {showRulesHeading ? (
+//         <div
+//           style={{
+//             color: "#c8a030",
+//             fontSize: 11,
+//             letterSpacing: 3,
+//             marginBottom: 8,
+//           }}
+//         >
+//           {t.rulesTitle}
+//         </div>
+//       ) : null}
+//       <div
+//         style={{
+//           color: "#888",
+//           fontSize: 11,
+//           marginBottom: 8,
+//           lineHeight: 1.5,
+//         }}
+//       >
+//         {t.howToPlay}
+//       </div>
+//       {t.rules.map((r) => (
+//         <div
+//           key={r.n}
+//           style={{
+//             display: "flex",
+//             gap: 10,
+//             marginBottom: 6,
+//             alignItems: "flex-start",
+//           }}
+//         >
+//           <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
+//             {r.n}
+//           </span>
+//           <div>
+//             <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
+//             <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
+//           </div>
+//         </div>
+//       ))}
 
-function FourBonesRulesAsideBody({
-  showRulesHeading,
-  t,
-  state,
-  settledSides,
-  language,
-  sessionGain,
-  matchOver,
-  onReset,
-}: {
-  showRulesHeading: boolean;
-  t: FourI18n;
-  state: GameState;
-  settledSides: (ShagaiSide | null)[];
-  language: "mn" | "en";
-  sessionGain?: { coins: number; gems: number };
-  matchOver: boolean;
-  onReset: () => void;
-}) {
-  return (
-    <>
-      {showRulesHeading ? (
-        <div
-          style={{
-            color: "#c8a030",
-            fontSize: 11,
-            letterSpacing: 3,
-            marginBottom: 8,
-          }}
-        >
-          {t.rulesTitle}
-        </div>
-      ) : null}
-      <div
-        style={{
-          color: "#888",
-          fontSize: 11,
-          marginBottom: 8,
-          lineHeight: 1.5,
-        }}
-      >
-        {t.howToPlay}
-      </div>
-      {t.rules.map((r) => (
-        <div
-          key={r.n}
-          style={{
-            display: "flex",
-            gap: 10,
-            marginBottom: 6,
-            alignItems: "flex-start",
-          }}
-        >
-          <span style={{ color: "#c8a030", fontSize: 13, minWidth: 16 }}>
-            {r.n}
-          </span>
-          <div>
-            <div style={{ color: "#ddd", fontSize: 12 }}>{r.t}</div>
-            <div style={{ color: "#666", fontSize: 11 }}>{r.d}</div>
-          </div>
-        </div>
-      ))}
+//       <GoldDivider />
 
-      <GoldDivider />
-
-      <div
-        style={{
-          color: "#c8a030",
-          fontSize: 11,
-          letterSpacing: 3,
-          marginBottom: 6,
-        }}
-      >
-        {t.scoringTitle}
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {t.scoring.map((s) => (
-          <div
-            key={s.label}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontSize: 11,
-              color: "#bbb",
-              padding: "3px 6px",
-              background: "rgba(255,255,255,0.03)",
-              borderRadius: 6,
-            }}
-          >
-            <span>{s.label}</span>
-            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-              {s.pts}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <GoldDivider />
-
-      <div
-        style={{
-          color: "#c8a030",
-          fontSize: 11,
-          letterSpacing: 3,
-          marginBottom: 6,
-        }}
-      >
-        {t.statistic}
-      </div>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 6,
-          marginBottom: 8,
-        }}
-      >
-        {t.stats.map(({ label, valueKey }) => (
-          <div
-            key={label}
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 8,
-              padding: "6px 8px",
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{
-                color:
-                  valueKey === "playerScore"
-                    ? "#60c060"
-                    : valueKey === "robotScore"
-                      ? "#e06050"
-                      : "#f0c040",
-                fontSize: 16,
-                fontWeight: "bold",
-              }}
-            >
-              {String(state[valueKey] ?? 0)}
-            </div>
-            <div style={{ color: "#666", fontSize: 9, marginTop: 2 }}>
-              {label}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <GoldDivider />
-
-      <div
-        style={{
-          color: "#666",
-          fontSize: 10,
-          letterSpacing: 2,
-          marginBottom: 6,
-        }}
-      >
-        {t.shagaiSidesLabel}
-      </div>
-      {(["horse", "sheep", "goat", "camel"] as ShagaiSide[]).map((side) => {
-        const info = SHAGAI_INFO[side];
-        const isSettled = settledSides.includes(side);
-        return (
-          <div
-            key={side}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "3px 6px",
-              borderRadius: 6,
-              marginBottom: 2,
-              background: isSettled
-                ? `rgba(${hexToRgb(info.color)},0.12)`
-                : "transparent",
-              border: isSettled
-                ? `1px solid ${info.color}44`
-                : "1px solid transparent",
-              transition: "all 0.3s",
-            }}
-          >
-            <span style={{ fontSize: 15 }}>{info.symbol}</span>
-            <span
-              style={{
-                color: isSettled ? info.color : "#666",
-                fontSize: 12,
-                flex: 1,
-              }}
-            >
-              {sideName(side, language)}
-            </span>
-            {isSettled && (
-              <span style={{ color: info.color, fontSize: 14 }}>✓</span>
-            )}
-          </div>
-        );
-      })}
-
-      <GoldDivider />
-
-      <div
-        style={{
-          color: "#666",
-          fontSize: 10,
-          letterSpacing: 2,
-          marginBottom: 6,
-        }}
-      >
-        {t.historyTitle}
-      </div>
-      <HistoryList history={state.history} t={t} language={language} />
-
-      {sessionGain && (sessionGain.coins > 0 || sessionGain.gems > 0) ? (
-        <>
-          <GoldDivider />
-          <div
-            style={{
-              color: "#c8a030",
-              fontSize: 10,
-              letterSpacing: 3,
-              marginBottom: 4,
-            }}
-          >
-            {t.rewardLabel}
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              fontSize: 12,
-              color: "#ddd",
-            }}
-          >
-            <span style={{ color: "#f0c040", fontWeight: "bold" }}>
-              🪙 +{sessionGain.coins}
-            </span>
-            <span style={{ color: "#bfe6ff", fontWeight: "bold" }}>
-              💎 +{sessionGain.gems}
-            </span>
-          </div>
-        </>
-      ) : null}
-
-      {state.totalThrows > 0 && !matchOver && (
-        <button
-          type="button"
-          onClick={() => {
-            playButtonClick();
-            onReset();
-          }}
-          style={{
-            width: "100%",
-            marginTop: 10,
-            padding: "7px 0",
-            fontSize: 11,
-            letterSpacing: 1,
-            background: "rgba(255,255,255,0.04)",
-            color: "#666",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 8,
-            cursor: "pointer",
-            fontFamily:
-              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-            transition: "all 0.2s",
-          }}
-          onMouseEnter={(e) => {
-            const b = e.currentTarget as HTMLButtonElement;
-            b.style.color = "#c8a030";
-            b.style.borderColor = "rgba(200,160,48,0.3)";
-          }}
-          onMouseLeave={(e) => {
-            const b = e.currentTarget as HTMLButtonElement;
-            b.style.color = "#666";
-            b.style.borderColor = "rgba(255,255,255,0.08)";
-          }}
-        >
-          {t.resetBtn}
-        </button>
-      )}
-    </>
-  );
-}
+//       <div
+//         style={{
+//           color: "#c8a030",
+//           fontSize: 11,
+//           letterSpacing: 3,
+//           marginBottom: 6,
+//         }}
+//       >
+//         {t.scoringTitle}
+//       </div>
+//       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+//         {t.scoring.map((s) => (
+//           <div
+//             key={s.label}
+//             style={{
+//               display: "flex",
+//               justifyContent: "space-between",
+//               alignItems: "center",
+//               fontSize: 11,
+//               color: "#bbb",
+//               padding: "3px 6px",
+//               background: "rgba(255,255,255,0.03)",
+//               borderRadius: 6,
+//             }}
+//           >
+//             <span>{s.label}</span>
+//             <span style={{ color: "#f0c040", fontWeight: "bold" }}>
+//               {s.pts}
+//             </span>
+//           </div>
+//         ))}
+//       </div>
+//     </>
+//   );
+// }
 
 export default function FourBonesUI({
   state,
@@ -792,8 +490,7 @@ export default function FourBonesUI({
   const mainPanelPad: React.CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : {};
-  const isMyTurnMp =
-    uiMode === "mp" && mp ? mp.turnPlayerId === mp.myId : true;
+  const isMyTurnMp = uiMode === "mp" && mp ? mp.turnPlayerId === mp.myId : true;
   const canThrowBase = state.phase === "idle" || state.phase === "robotResult";
   const canThrow = canThrowBase && (uiMode !== "mp" || isMyTurnMp);
   const matchOver = state.phase === "matchOver";
@@ -875,7 +572,7 @@ export default function FourBonesUI({
   } as React.CSSProperties;
 
   const myScoreForBar =
-    uiMode === "mp" && mp ? mp.scores[mp.myId] ?? 0 : state.playerScore;
+    uiMode === "mp" && mp ? (mp.scores[mp.myId] ?? 0) : state.playerScore;
   const otherMax =
     uiMode === "mp" && mp
       ? Math.max(
@@ -951,7 +648,7 @@ export default function FourBonesUI({
         className="four-bones-panel"
         style={{ ...panel, ...mainPanelPad, ...mainPanelChrome }}
       >
-        <div style={{ textAlign: "center" }}>
+        {/* <div style={{ textAlign: "center" }}>
           <div
             style={{
               color: "#f0c040",
@@ -968,9 +665,9 @@ export default function FourBonesUI({
               {t.subtitle}
             </div>
           ) : null}
-        </div>
+        </div> */}
 
-        <GoldDivider />
+        {/* <GoldDivider /> */}
         <div
           style={{
             display: "grid",
@@ -986,7 +683,13 @@ export default function FourBonesUI({
             pct={pctPlayer}
           />
           <ScoreCell
-            label={uiMode === "mp" && mp ? (language === "en" ? "BEST (others)" : "Бусад max") : t.robot}
+            label={
+              uiMode === "mp" && mp
+                ? language === "en"
+                  ? "BEST (others)"
+                  : "Бусад max"
+                : t.robot
+            }
             value={otherMax}
             color="#e06050"
             pct={pctRobot}
@@ -995,7 +698,7 @@ export default function FourBonesUI({
         <div
           style={{
             color: "#666",
-            fontSize: 8,
+            fontSize: 10,
             textAlign: "center",
             letterSpacing: 1,
           }}
@@ -1035,21 +738,21 @@ export default function FourBonesUI({
           language={language}
         />
 
-        {uiMode !== "mp" &&
-        (state.phase === "robotThinking" ||
-          state.phase === "robotResult" ||
-          (state.phase === "matchOver" && state.robotSides)) && (
-          <RobotPanel
-            sides={state.robotSides}
-            revealed={
-              state.phase === "robotResult" || state.phase === "matchOver"
-            }
-            thinking={state.phase === "robotThinking"}
-            points={state.robotPoints}
-            t={t}
-            language={language}
-          />
-        )}
+        {/* {uiMode !== "mp" &&
+          (state.phase === "robotThinking" ||
+            state.phase === "robotResult" ||
+            (state.phase === "matchOver" && state.robotSides)) && (
+            <RobotPanel
+              sides={state.robotSides}
+              revealed={
+                state.phase === "robotResult" || state.phase === "matchOver"
+              }
+              thinking={state.phase === "robotThinking"}
+              points={state.robotPoints}
+              t={t}
+              language={language}
+            />
+          )} */}
 
         {matchOver && (
           <div
@@ -1069,15 +772,14 @@ export default function FourBonesUI({
                 : undefined,
             }}
           >
-            <div style={{ fontSize: 32, marginBottom: 4 }}>
+            <div className="mb-1 text-[clamp(1.25rem,5vw,1.5rem)] leading-none">
               {playerWinsMatch ? "🏆" : uiMode === "mp" ? "🎮" : "🤖"}
             </div>
             <div
+              className="truncate px-0.5 font-bold leading-tight tracking-tight"
               style={{
                 color: playerWinsMatch ? "#f0c040" : "#e06050",
-                fontSize: 15,
-                fontWeight: "bold",
-                letterSpacing: 2,
+                fontSize: "clamp(0.8rem, 2.6vw, 0.9rem)",
               }}
             >
               {playerWinsMatch
@@ -1091,7 +793,10 @@ export default function FourBonesUI({
             <div style={{ color: "#aaa", fontSize: 11, marginTop: 4 }}>
               {uiMode === "mp" && mp
                 ? mp.order
-                    .map((id) => `${(mp.nameById[id] || "?").slice(0, 8)}:${mp.scores[id] ?? 0}`)
+                    .map(
+                      (id) =>
+                        `${(mp.nameById[id] || "?").slice(0, 8)}:${mp.scores[id] ?? 0}`,
+                    )
                     .join(" · ")
                 : `${state.playerScore} : ${state.robotScore}`}
             </div>
@@ -1101,41 +806,13 @@ export default function FourBonesUI({
         <GoldDivider />
 
         <button
+          type="button"
           onClick={() => {
             playButtonClick();
             (matchOver ? onReset : onThrow)();
           }}
           disabled={!matchOver && !canThrow}
-          style={{
-            width: "100%",
-            padding: "8px 0",
-            fontSize: 15,
-            fontWeight: "bold",
-            letterSpacing: 2,
-            fontFamily:
-              "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-            background:
-              matchOver || canThrow
-                ? "linear-gradient(135deg, #c8a030, #f0c040 50%, #c8a030)"
-                : "rgba(60,50,20,0.5)",
-            color: matchOver || canThrow ? "#1a0e00" : "#555",
-            border: "none",
-            borderRadius: 10,
-            cursor: matchOver || canThrow ? "pointer" : "not-allowed",
-            transition: "all 0.2s",
-            boxShadow:
-              matchOver || canThrow
-                ? "0 4px 20px rgba(200,160,48,0.4)"
-                : "none",
-          }}
-          onMouseEnter={(e) => {
-            if (matchOver || canThrow)
-              (e.currentTarget as HTMLButtonElement).style.transform =
-                "scale(1.02)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          }}
+          className={GAME_CTA_PRIMARY}
         >
           {matchOver
             ? t.resetBtn
@@ -1159,80 +836,20 @@ export default function FourBonesUI({
         </div>
       </div>
 
-      {!narrowUi ? (
-        <div
-          className="four-bones-panel"
-          style={{ ...panel, ...gamePanelRightDesktop(240) }}
-        >
-          <FourBonesRulesAsideBody
-            showRulesHeading
-            t={t}
-            state={state}
-            settledSides={settledSides}
-            language={language}
-            sessionGain={sessionGain}
-            matchOver={matchOver}
-            onReset={onReset}
-          />
-        </div>
-      ) : (
-        <>
-          <GameRulesFab
-            onClick={() => {
-              playButtonClick();
-              setRulesOpen(true);
-            }}
-            label={rulesFabLabel}
-          />
-          <GameRulesSheet
-            open={rulesOpen}
-            onClose={() => setRulesOpen(false)}
-            title={t.rulesTitle}
-          >
-            <FourBonesRulesAsideBody
-              showRulesHeading={false}
-              t={t}
-              state={state}
-              settledSides={settledSides}
-              language={language}
-              sessionGain={sessionGain}
-              matchOver={matchOver}
-              onReset={onReset}
-            />
-          </GameRulesSheet>
-        </>
-      )}
-
-      <style>{`
-        @keyframes glow {
-          from { box-shadow: 0 0 10px rgba(200,160,48,0.3); }
-          to   { box-shadow: 0 0 30px rgba(200,160,48,0.7); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.4; }
-        }
-        @keyframes rewardFloat {
-          0%   { opacity: 0; transform: translateY(10px) scale(0.98); }
-          15%  { opacity: 1; transform: translateY(0px)  scale(1); }
-          70%  { opacity: 1; transform: translateY(-18px) scale(1.02); }
-          100% { opacity: 0; transform: translateY(-32px) scale(1.03); }
-        }
-        /* Custom scrollbar for the side panels */
-        .four-bones-panel::-webkit-scrollbar {
-          width: 6px;
-        }
-        .four-bones-panel::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .four-bones-panel::-webkit-scrollbar-thumb {
-          background: rgba(200,160,48,0.35);
-          border-radius: 3px;
-        }
-        .four-bones-panel::-webkit-scrollbar-thumb:hover {
-          background: rgba(200,160,48,0.55);
-        }
-      `}</style>
+      {/* <GameRulesFab
+        onClick={() => {
+          playButtonClick();
+          setRulesOpen(true);
+        }}
+        label={rulesFabLabel}
+      />
+      <GameRulesSheet
+        open={rulesOpen}
+        onClose={() => setRulesOpen(false)}
+        title={t.rulesTitle}
+      >
+        <FourBonesRulesAsideBody showRulesHeading={false} t={t} />
+      </GameRulesSheet> */}
     </>
   );
 }

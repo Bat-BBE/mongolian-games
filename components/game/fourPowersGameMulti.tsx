@@ -15,7 +15,14 @@ import {
 } from "./fourPowersType";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
-import { ONLINE_LOBBY_INTRO } from "./onlineRoomLobbyCopy";
+import { useMatchLobbyIntro } from "./gameModalSession";
+import { FourPowersHowItWorks } from "./fourPowersRulesUI";
+import {
+  GAME_LOBBY_INTRO_CLASS,
+  GAME_TEXT_META,
+  GAME_TEXT_MONO_META,
+  GAME_TEXT_SECTION_LABEL,
+} from "./gameUiTheme";
 
 const RELAY = "four_powers_mp_v1";
 
@@ -58,16 +65,17 @@ type Props = {
 
 export function FourPowersOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-sm leading-relaxed text-white/80"
+      className="flex h-full w-full items-center justify-center p-4 text-center"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      <span>
-        {language === "en" ? ONLINE_LOBBY_INTRO.en : ONLINE_LOBBY_INTRO.mn}
+      <span className={`max-w-md text-balance ${GAME_LOBBY_INTRO_CLASS}`}>
+        {lobbyIntro}
       </span>
     </div>
   );
@@ -277,7 +285,10 @@ export default function FourPowersGameMulti({
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
         </h2>
-        <p className="mt-1 text-[11px] text-slate-400">
+        <div className="mt-1.5">
+          <FourPowersHowItWorks lang={lang} variant="online" />
+        </div>
+        <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
           {lang === "mn" ? "Өнгө" : "Round"} {round} · {WIN_SCORE}{" "}
           {lang === "mn" ? "оноо" : "pts"}
         </p>
@@ -302,7 +313,7 @@ export default function FourPowersGameMulti({
               }}
             >
               <div
-                className="text-[10px] font-bold uppercase tracking-wider"
+                className={`${GAME_TEXT_SECTION_LABEL} !font-bold tracking-wider`}
                 style={{ color: ACCENT[i] }}
               >
                 {nameAtSeat(i)}
@@ -310,7 +321,7 @@ export default function FourPowersGameMulti({
               <div className="mt-0.5 line-clamp-1 text-sm font-semibold text-white">
                 {n.name}
               </div>
-              <div className="text-[10px] text-slate-500">{n.sub}</div>
+              <div className={`${GAME_TEXT_META} text-slate-500`}>{n.sub}</div>
               <div className="mt-auto pt-2 text-2xl font-bold tabular-nums text-amber-200">
                 {totals[i] ?? 0}
               </div>
