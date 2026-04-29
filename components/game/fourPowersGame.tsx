@@ -120,14 +120,14 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
       }}
     >
       <div className="shrink-0 text-center">
-        <h2
+        {/* <h2
           className="font-display text-base font-bold tracking-wide text-amber-100/95 sm:text-lg"
           style={{ textShadow: "0 0 20px rgba(200,160,48,0.25)" }}
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
-        </h2>
+        </h2> */}
         <div className="mt-1.5">
-          <FourPowersHowItWorks lang={lang} variant="solo" />
+          <FourPowersHowItWorks lang={lang} variant="solo" density="compact" />
         </div>
         <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
           {lang === "mn" ? "Өнгө" : "Round"} {state.round} ·{" "}
@@ -161,7 +161,9 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
             <div className="mt-0.5 text-sm font-semibold leading-tight text-white">
               {n.name}
             </div>
-            <div className={`line-clamp-2 ${GAME_TEXT_META} text-slate-500 flex items-center justify-between gap-2`}>
+            <div
+              className={`line-clamp-2 ${GAME_TEXT_META} text-slate-500 flex items-center justify-between gap-2`}
+            >
               <span>{n.sub}</span>
               <span className="rounded border border-white/15 px-1 text-[10px] text-slate-300">
                 E{state.energy[i]}/{MAX_ENERGY}
@@ -216,7 +218,9 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
                   }}
                 >
                   <div>{L.name}</div>
-                  <div className="text-[10px] text-zinc-300">Cost {POWER_SPECS[i].cost}</div>
+                  <div className="text-[10px] text-zinc-300">
+                    Cost {POWER_SPECS[i].cost}
+                  </div>
                 </button>
               );
             })

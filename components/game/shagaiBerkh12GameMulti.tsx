@@ -16,9 +16,11 @@ import {
   applyBerkhTurn,
   BERKH12_MAX_TURNS,
   BERKH12_START_STACK,
+  BERKH12_THROW_COUNT,
   hasFullWin,
   type Berkh12Mode,
   type Berkh12Phase,
+  type Berkh12TransferSummary,
   type LocalPlayerCount,
   type ShagaiSide,
   countCamels,
@@ -55,15 +57,27 @@ type P = {
   matchOver: boolean;
   winnerId: string | null;
   elimSlot: number;
+  hFrom: number;
+  hN: number;
+  cTo: number;
+  cN: number;
 };
 
 function parseP(x: unknown): P | null {
   if (typeof x !== "object" || x === null) return null;
   const o = x as P;
   if (o.kind !== "b12" || typeof o.v !== "number") return null;
-  if (!Array.isArray(o.sides) || o.sides.length !== 12) return null;
+  if (!Array.isArray(o.sides) || o.sides.length !== BERKH12_THROW_COUNT)
+    return null;
   if (o.nPlayers !== 2 && o.nPlayers !== 3 && o.nPlayers !== 4) return null;
   if (typeof o.m0 !== "number") return null;
+  if (
+    typeof o.hFrom !== "number" ||
+    typeof o.hN !== "number" ||
+    typeof o.cTo !== "number" ||
+    typeof o.cN !== "number"
+  )
+    return null;
   return o;
 }
 
@@ -117,7 +131,8 @@ function findWinnerSlot(
   return null;
 }
 
-const Z12: (ShagaiSide | null)[] = Array(12).fill(null);
+const emptySides = (): (ShagaiSide | null)[] =>
+  Array.from({ length: BERKH12_THROW_COUNT }, () => null);
 
 export default function ShagaiBerkh12GameMulti({
   onComplete,
@@ -151,22 +166,32 @@ export default function ShagaiBerkh12GameMulti({
   );
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState(
-    () => Array.from({ length: 12 }, () => getShagaiThrowParams()),
+    () =>
+      Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
   );
-  const [settledSides, setSettledSides] = useState(() => [...Z12]);
-  const [lastSides, setLastSides] = useState(() => [...Z12]);
+  const [settledSides, setSettledSides] = useState(() => emptySides());
+  const [lastSides, setLastSides] = useState(() => emptySides());
   const [lastH, setLastH] = useState(0);
   const [lastC, setLastC] = useState(0);
+  const [lastTransfer, setLastTransfer] = useState<Berkh12TransferSummary | null>(
+    null,
+  );
   const [winnerSlot, setWinnerSlot] = useState<number | null>(null);
   const [elimT, setElimT] = useState<string | null>(null);
   const [tTotal, setTTotal] = useState(0);
+  const [peerReplaySides, setPeerReplaySides] = useState<ShagaiSide[] | null>(
+    null,
+  );
 
   const settledCount = useRef(0);
-  const settledRef = useRef([...Z12] as (ShagaiSide | null)[]);
+  const settledRef = useRef(emptySides() as (ShagaiSide | null)[]);
   const resultDone = useRef(false);
   const syncG = useRef(0);
   const sendV = useRef(0);
   const applyV = useRef(0);
+  const replayGen = useRef(0);
+  const pendingPeerRef = useRef<P | null>(null);
+  const peerReplayActiveRef = useRef(false);
   const lastEvt = useRef(-1);
   const completeOnce = useRef(false);
   const tTotalRef = useRef(0);
@@ -216,11 +241,22 @@ export default function ShagaiBerkh12GameMulti({
     setWinnerSlot(null);
     tTotalRef.current = 0;
     setTTotal(0);
-    setSettledSides([...Z12]);
-    settledRef.current = [...Z12] as (ShagaiSide | null)[];
-    setLastSides([...Z12]);
+    setSettledSides(emptySides());
+    settledRef.current = emptySides() as (ShagaiSide | null)[];
+    setLastSides(emptySides());
+    setLastTransfer(null);
+    setLastH(0);
+    setLastC(0);
+    setThrowParams(
+      Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+    );
+    setIsThrown(false);
     sendV.current = 0;
     applyV.current = 0;
+    replayGen.current += 1;
+    peerReplayActiveRef.current = false;
+    pendingPeerRef.current = null;
+    setPeerReplaySides(null);
     lastEvt.current = -1;
     completeOnce.current = false;
     resetGrants();
@@ -231,10 +267,8 @@ export default function ShagaiBerkh12GameMulti({
     if (key) reMatch();
   }, [key, reMatch]);
 
-  const applyPayload = useCallback(
+  const commitPayloadState = useCallback(
     (h: P) => {
-      if (h.v <= applyV.current) return;
-      applyV.current = h.v;
       setMories([h.m0, h.m1, h.m2, h.m3]);
       mRef.current = [h.m0, h.m1, h.m2, h.m3];
       setCenter(h.center);
@@ -246,6 +280,12 @@ export default function ShagaiBerkh12GameMulti({
       setLastH(countHorses(h.sides));
       setLastC(countCamels(h.sides));
       setLastSides(h.sides as unknown as (ShagaiSide | null)[]);
+      setLastTransfer({
+        horseFromSeat: h.hFrom >= 0 ? h.hFrom : null,
+        horsesTaken: h.hN,
+        camelToSeat: h.cTo >= 0 ? h.cTo : null,
+        camelsGiven: h.cN,
+      });
       setTTotal(h.totalT);
       tTotalRef.current = h.totalT;
       if (h.throwerId === myId && countHorses(h.sides) > 0)
@@ -280,7 +320,7 @@ export default function ShagaiBerkh12GameMulti({
       setPhase("result");
       setTimeout(() => {
         if (applyV.current !== h.v) return;
-        setSettledSides([...Z12]);
+        setSettledSides(emptySides());
         setIsThrown(false);
         setPhase("idle");
       }, 1000);
@@ -288,14 +328,43 @@ export default function ShagaiBerkh12GameMulti({
     [grant, isMn, myId, nameL, onComplete, orderId],
   );
 
+  const applyPayload = useCallback(
+    (h: P) => {
+      if (h.v <= applyV.current) return;
+      applyV.current = h.v;
+      commitPayloadState(h);
+    },
+    [commitPayloadState],
+  );
+
+  const startPeerReplay = useCallback((h: P) => {
+    if (h.v <= applyV.current) return;
+    replayGen.current += 1;
+    const g = replayGen.current;
+    pendingPeerRef.current = h;
+    peerReplayActiveRef.current = true;
+    settledRef.current = emptySides() as (ShagaiSide | null)[];
+    setSettledSides(emptySides());
+    setPeerReplaySides([...h.sides]);
+    setThrowParams(
+      Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+    );
+    setPhase("throwing");
+    setIsThrown(false);
+    window.setTimeout(() => {
+      if (g !== replayGen.current) return;
+      setIsThrown(true);
+    }, 50);
+  }, []);
+
   useEffect(() => {
     if (!lastPeerRelay || lastPeerRelay.id === lastEvt.current) return;
     if (lastPeerRelay.channel !== REL) return;
     lastEvt.current = lastPeerRelay.id;
     if (lastPeerRelay.from === myId) return;
     const p = parseP(lastPeerRelay.payload);
-    if (p) applyPayload(p);
-  }, [lastPeerRelay, myId, applyPayload]);
+    if (p) startPeerReplay(p);
+  }, [lastPeerRelay, myId, startPeerReplay]);
 
   const canThrow =
     iAm &&
@@ -308,10 +377,11 @@ export default function ShagaiBerkh12GameMulti({
     const g = ++syncG.current;
     settledCount.current = 0;
     resultDone.current = false;
-    settledRef.current = [...Z12] as (ShagaiSide | null)[];
-    setSettledSides([...Z12]);
+    settledRef.current = emptySides() as (ShagaiSide | null)[];
+    setSettledSides(emptySides());
+    setLastTransfer(null);
     setThrowParams(
-      Array.from({ length: 12 }, () => getShagaiThrowParams()),
+      Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
     );
     setPhase("throwing");
     setIsThrown(false);
@@ -323,22 +393,23 @@ export default function ShagaiBerkh12GameMulti({
 
   const handleSettle = useCallback(
     (id: number, side: ShagaiSide) => {
+      if (peerReplayActiveRef.current) return;
       if (turnId !== myId) return;
-      if (id < 0 || id > 11) return;
+      if (id < 0 || id >= BERKH12_THROW_COUNT) return;
       if (settledRef.current[id] != null) return;
       settledRef.current[id] = side;
       settledCount.current += 1;
       setSettledSides([...settledRef.current]);
       setPhase("settling");
-      if (settledCount.current < 12 || resultDone.current) return;
+      if (settledCount.current < BERKH12_THROW_COUNT || resultDone.current)
+        return;
       resultDone.current = true;
       const g0 = syncG.current;
       window.setTimeout(() => {
         if (g0 !== syncG.current) return;
-        const sk = settledRef.current.filter(
-          (s): s is ShagaiSide => s != null,
-        );
-        if (sk.length !== 12) return;
+        const slots = settledRef.current;
+        if (slots.some((s) => s == null)) return;
+        const sk = slots.map((s) => s!);
         const mySlot = orderId.findIndex((p) => p === myId);
         if (mySlot < 0) return;
         const r = applyBerkhTurn(
@@ -383,15 +454,43 @@ export default function ShagaiBerkh12GameMulti({
           matchOver: wId != null,
           winnerId: wId,
           elimSlot: r.eliminated,
+          hFrom: r.transfer.horseFromSeat ?? -1,
+          hN: r.transfer.horsesTaken,
+          cTo: r.transfer.camelToSeat ?? -1,
+          cN: r.transfer.camelsGiven,
         };
         sendRelay(REL, pay);
         applyPayload(pay);
         resultDone.current = false;
         settledCount.current = 0;
-        settledRef.current = [...Z12] as (ShagaiSide | null)[];
+        settledRef.current = emptySides() as (ShagaiSide | null)[];
       }, 500);
     },
     [turnId, myId, nP, nPlayers, orderId, sendRelay, applyPayload],
+  );
+
+  const onSceneSettle = useCallback(
+    (id: number, side: ShagaiSide) => {
+      if (peerReplayActiveRef.current) {
+        const pending = pendingPeerRef.current;
+        if (!pending || id < 0 || id >= BERKH12_THROW_COUNT) return;
+        if (settledRef.current[id] != null) return;
+        settledRef.current[id] = side;
+        setSettledSides([...settledRef.current]);
+        setPhase("settling");
+        if (settledRef.current.some((s) => s == null)) return;
+        peerReplayActiveRef.current = false;
+        pendingPeerRef.current = null;
+        setPeerReplaySides(null);
+        setIsThrown(false);
+        applyV.current = pending.v;
+        commitPayloadState(pending);
+        settledRef.current = emptySides() as (ShagaiSide | null)[];
+        return;
+      }
+      handleSettle(id, side);
+    },
+    [commitPayloadState, handleSettle],
   );
 
   if (!iAm) {
@@ -431,7 +530,8 @@ export default function ShagaiBerkh12GameMulti({
               throwParams={throwParams}
               isThrown={isThrown}
               settledSides={settledSides}
-              onSettle={handleSettle}
+              onSettle={onSceneSettle}
+              forceSettleSides={peerReplaySides}
             />
           </Physics>
         </Suspense>
@@ -450,7 +550,6 @@ export default function ShagaiBerkh12GameMulti({
         playerCount={nP}
         turn={turnSlot}
         mories={mories as number[]}
-        center={center}
         active={active as boolean[]}
         canThrow={canThrow}
         onThrow={startT}
@@ -460,9 +559,11 @@ export default function ShagaiBerkh12GameMulti({
         lastSides={lastSides}
         lastHorses={lastH}
         lastCamels={lastC}
+        lastTransfer={lastTransfer}
         showElimToast={elimT}
         winner={winnerSlot}
         nameLabels={nameLabels}
+        mySeat={orderId.findIndex((id) => id === myId)}
         lockMode
       />
     </div>

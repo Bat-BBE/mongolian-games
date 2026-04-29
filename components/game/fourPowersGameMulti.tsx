@@ -300,7 +300,11 @@ export default function FourPowersGameMulti({
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
         </h2>
         <div className="mt-1.5">
-          <FourPowersHowItWorks lang={lang} variant="online" />
+          <FourPowersHowItWorks
+            lang={lang}
+            variant="online"
+            density="compact"
+          />
         </div>
         <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
           {lang === "mn" ? "Өнгө" : "Round"} {state.round} · {WIN_SCORE}{" "}

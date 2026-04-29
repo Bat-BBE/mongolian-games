@@ -66,44 +66,80 @@ export function TwelveShagaiRulesStrip({
   );
 }
 
-export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
+export function Berkh12RulesStrip({
+  isEn,
+  className = "",
+}: {
+  isEn: boolean;
+  /** Жиш. модалын эхэнд `mt-0` */
+  className?: string;
+}) {
   return (
-    <div className="mt-2 space-y-1.5 rounded-xl border border-emerald-500/25 bg-emerald-950/15 px-2 py-2 sm:px-2.5">
+    <div
+      className={`mt-2 space-y-1.5 rounded-xl border border-emerald-500/25 bg-emerald-950/15 px-2 py-2 sm:px-2.5 ${className}`}
+    >
       <p
         className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-emerald-200/80`}
       >
-        {isEn ? "Round table · seat flow" : "Тойрог ширээ · суудлын урсгал"}
+        {isEn ? "Table · flow" : "Тоглолт · урсгал"}
       </p>
       <div
         className={`flex flex-wrap items-center justify-center gap-2 ${GAME_TEXT_BODY} text-emerald-100/90`}
       >
         <span className={pill}>
           {isEn
-            ? `${BERKH12_PIECE_COUNT} bones`
-            : `${BERKH12_PIECE_COUNT} шагай`}
+            ? `${BERKH12_PIECE_COUNT} bones / throw`
+            : `${BERKH12_PIECE_COUNT} шагай/шидэлт`}
         </span>
         <span className="text-emerald-400/75" aria-hidden>
           ·
         </span>
         <span className={pill}>
           {isEn
-            ? `${BERKH12_START_STACK} start each`
-            : `тус бүр ${BERKH12_START_STACK}-аас`}
+            ? `${BERKH12_START_STACK} each`
+            : `эхлэл ${BERKH12_START_STACK}`}
         </span>
         <span className="text-emerald-400/75" aria-hidden>
           ·
         </span>
         <span className={pill}>
           {isEn
-            ? `≤${BERKH12_MAX_TURNS} turns cap`
+            ? `≤${BERKH12_MAX_TURNS} turns`
             : `≤${BERKH12_MAX_TURNS} ээлж`}
         </span>
       </div>
-      <p className={`${GAME_TEXT_META} text-center text-slate-300/95`}>
+      <p className={`${GAME_TEXT_META} text-center text-balance text-slate-300/95`}>
         {isEn
-          ? "Horse takes from previous seat; camel gives to next seat. If your pile hits 0, you are out."
-          : "Морь буувал өмнөх суудлаасаа авна, тэмээ буувал дараагийн суудалдаа өгнө. Овоо 0 бол хасагдана."}
+          ? "Horse → take from previous seat; camel → pay next. 0 mories = out. Win: all bones, last standing, or tie-break at turn cap."
+          : "Морь → өмнөхөөс авна; тэмээ → дараагийнд төлнө. 0 бол хасагдана. Ялалт: бүх шагай, сүүлийн үлдсэн, ээлжийн төгсгөл."}
       </p>
+    </div>
+  );
+}
+
+/** «?» модал — панел дээрх «Дүрэм»-тэй давхардахгүй нэгдсэн богино дүрэм */
+export function Berkh12RulesForModal({ isMn }: { isMn: boolean }) {
+  const isEn = !isMn;
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className={`mb-1.5 ${GAME_TEXT_SECTION_LABEL} !text-[#c8a030]`}>
+          {isMn ? "ХЭРХЭН ТОГЛОХ" : "HOW TO PLAY"}
+        </p>
+        <p className={`${GAME_TEXT_BODY} text-balance`}>
+          {isMn
+            ? "2–4 суудал ээлжээр нэг дор 4 шагай шиднэ. Зөвхөн морь, тэмээгээр овоо шилжинэ (хонь, ямаа тоолохгүй)."
+            : "2–4 seats take turns throwing 4 bones at once. Only horses and camels move mories (sheep/goat ignored)."}
+        </p>
+      </div>
+      <Berkh12RulesStrip isEn={isEn} className="!mt-0" />
+      <ul className="space-y-1.5 font-[family-name:var(--font-inter)] text-[0.6875rem] leading-snug text-zinc-400 sm:text-xs">
+        <li className="text-balance">
+          {isMn
+            ? "Онлайн өрөөнд ганцаар бол роботтой эхэлнэ (~10–15 с)."
+            : "Alone in a room, the match auto-starts with bots (~10–15 s)."}
+        </li>
+      </ul>
     </div>
   );
 }

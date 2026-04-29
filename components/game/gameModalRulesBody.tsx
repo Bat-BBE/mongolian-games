@@ -6,9 +6,10 @@ import { HorseRaceRulesForModal } from "./horseRaceRulesForModal";
 import { FourPowersHowItWorks } from "./fourPowersRulesUI";
 import { getHowToLines, getHowToMapHint } from "./gameHowToContent";
 import { ShagaiGuessRulesForModal } from "./shagaiGuessRulesForModal";
+import { StoneCairnRulesForModal } from "./stoneCairnRulesForModal";
 import { StoneGuessRulesForModal } from "./stoneGuessRulesForModal";
 import {
-  Berkh12RulesStrip,
+  Berkh12RulesForModal,
   TwelveShagaiRulesStrip,
 } from "./shagaiStationRulesUI";
 import { GAME_RULES_OL_CLASS, GAME_TEXT_META } from "./gameUiTheme";
@@ -96,6 +97,19 @@ export function GameModalRulesBody({
     );
   }
 
+  if (gameType === "stone-cairn") {
+    return (
+      <div className="space-y-4">
+        <StoneCairnRulesForModal isMn={isMn} />
+        {mapHint ? (
+          <p className={`border-t border-white/10 pt-3 ${GAME_TEXT_META}`}>
+            {mapHint}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   if (gameType === "shagai-guess") {
     return (
       <div className="space-y-4">
@@ -130,12 +144,7 @@ export function GameModalRulesBody({
   if (gameType === "berkh-12-shagai") {
     return (
       <div className="space-y-4">
-        <Berkh12RulesStrip isEn={isEn} />
-        <ol className={GAME_RULES_OL_CLASS}>
-          {lines.map((line, i) => (
-            <li key={i}>{line}</li>
-          ))}
-        </ol>
+        <Berkh12RulesForModal isMn={isMn} />
         {mapHint ? (
           <p className={`border-t border-white/10 pt-3 ${GAME_TEXT_META}`}>
             {mapHint}

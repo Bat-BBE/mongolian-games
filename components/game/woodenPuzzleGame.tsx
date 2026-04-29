@@ -779,10 +779,17 @@ export default function WoodenPuzzleGame({
           pointerEvents: "auto",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-          <div style={{ color: "#c8a030", fontSize: 11, letterSpacing: 1.5 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          {/* <div style={{ color: "#c8a030", fontSize: 11, letterSpacing: 1.5 }}>
             {ui.gameTitle}
-          </div>
+          </div> */}
           <div style={{ fontSize: 11, color: "#a89a88" }}>
             {mm}:{ss} · {moves} {ui.lang === "mn" ? "алхам" : "moves"}
           </div>
@@ -820,12 +827,25 @@ export default function WoodenPuzzleGame({
             lineHeight: 1.45,
           }}
         >
-          <summary style={{ cursor: "pointer", fontWeight: 600, color: "rgba(200, 210, 180, 0.95)" }}>
+          <summary
+            style={{
+              cursor: "pointer",
+              fontWeight: 600,
+              color: "rgba(200, 210, 180, 0.95)",
+            }}
+          >
             {ui.lang === "mn" ? "Хурдан тайлбар" : "Quick how-to"}
           </summary>
           <div style={{ marginTop: 6 }}>{ui.instructions}</div>
         </details>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            marginTop: "8px",
+          }}
+        >
           <button
             type="button"
             onClick={() => rotateSelected(-10)}
@@ -878,7 +898,7 @@ export default function WoodenPuzzleGame({
             {pieceLabel(nextActivePiece.def, ui.lang)}» —
             {ui.lang === "mn" ? (
               <>
-                шугам ба шар дугуй руу ойртуулна. Ногоон сүүлт гарвал{" "}
+                шугам ба шар дугуй руу ойртуулна. Ногоон хэсэг гарвал{" "}
                 <strong>гар тавихад</strong> түгжигдэнэ.
               </>
             ) : (
@@ -1076,7 +1096,6 @@ function WoodenGuidePanel({
   );
 }
 
-/** Дээрээс харах дүрс — meshParts бол олон хайрцаг. */
 function PieceTopPreview({ def, lang }: { def: PieceDef; lang: "mn" | "en" }) {
   const { minX, maxX, minZ, maxZ } = getBoundsXZ(def);
   const w = maxX - minX;

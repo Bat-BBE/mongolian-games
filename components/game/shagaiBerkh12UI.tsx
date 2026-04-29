@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { useApp } from "@/components/AppContext";
-import {
-  BERKH12_MAX_TURNS,
-  BERKH12_PIECE_COUNT,
-  BERKH12_START_STACK,
-} from "./shagaiBerkh12Type";
 import type { ShagaiSide } from "./shagai";
 import { SHAgAI_SIDES } from "./shagai";
 import type {
   Berkh12Mode,
   Berkh12Phase,
+  Berkh12TransferSummary,
   LocalPlayerCount,
 } from "./shagaiBerkh12Type";
 import {
@@ -20,20 +16,14 @@ import {
   gamePanelPlayNarrowBottom,
 } from "./gamePanelLayout";
 import { useGameUiNarrow } from "./useGameUiNarrow";
-import GameRulesFab from "./GameRulesFab";
-import GameRulesSheet from "./GameRulesSheet";
-import { playButtonClick } from "@/lib/uiSounds";
 import {
   GAME_CALLOUT_AMBER,
   GAME_CALLOUT_ERROR,
   GAME_CTA_PRIMARY,
   GAME_CTA_SECONDARY,
-  GAME_PANEL_HEADING_CLASS,
-  GAME_RULES_OL_CLASS,
   GAME_TEXT_BODY,
   GAME_TEXT_LEAD,
   GAME_TEXT_META,
-  GAME_TEXT_SUBTITLE,
 } from "./gameUiTheme";
 
 type Props = {
@@ -42,7 +32,6 @@ type Props = {
   playerCount: LocalPlayerCount;
   turn: number;
   mories: number[];
-  center: number;
   active: boolean[];
   canThrow: boolean;
   onThrow: () => void;
@@ -52,36 +41,15 @@ type Props = {
   lastSides: (ShagaiSide | null)[];
   lastHorses: number;
   lastCamels: number;
+  lastTransfer?: Berkh12TransferSummary | null;
   showElimToast?: string | null;
   winner: number | null;
   nameLabels: string[];
+  /** Харагчийн суудал (онлайн/роботод win/lose ялгах). */
+  mySeat?: number | null;
   lockMode?: boolean;
   hideModeToggle?: boolean;
 };
-
-type TRules = {
-  r1: string;
-  r2: string;
-  r3: string;
-  r4: string;
-  r5: string;
-  r6: string;
-  r7online: string;
-};
-
-function berkhRulesList(t: TRules, lockMode: boolean) {
-  return (
-    <ol className={GAME_RULES_OL_CLASS}>
-      <li>{t.r1}</li>
-      <li>{t.r2}</li>
-      <li>{t.r3}</li>
-      <li>{t.r4}</li>
-      <li>{t.r5}</li>
-      <li>{t.r6}</li>
-      {lockMode ? <li className="text-amber-200/90">{t.r7online}</li> : null}
-    </ol>
-  );
-}
 
 export default function ShagaiBerkh12UI({
   phase,
@@ -89,7 +57,6 @@ export default function ShagaiBerkh12UI({
   playerCount,
   turn,
   mories,
-  center,
   active,
   canThrow,
   onThrow,
@@ -99,60 +66,45 @@ export default function ShagaiBerkh12UI({
   lastSides,
   lastHorses,
   lastCamels,
+  lastTransfer = null,
   showElimToast,
   winner,
   nameLabels,
+  mySeat = null,
   lockMode = false,
   hideModeToggle = false,
 }: Props) {
   const { language } = useApp();
   const isEn = language === "en";
   const narrowUi = useGameUiNarrow();
-  const [rulesOpen, setRulesOpen] = useState(false);
 
   const t = {
-    title: isEn ? "12 Berkh" : "12 бэрх",
-    subtitle: isEn ? "Board · round turn flow" : "Самбар · тойрог урсгал",
-    lead: isEn
-      ? `Throw ${BERKH12_PIECE_COUNT} bones each turn. Last active player wins.`
-      : `Ээлж бүрт ${BERKH12_PIECE_COUNT} шагай шиднэ. Сүүлд үлдсэн хүн нь ялна.`,
-    rules: isEn ? "Rules" : "Дүрэм",
-    r1: isEn
-      ? `Everyone starts with ${BERKH12_START_STACK} mories.`
-      : `Хүн бүр эхэндээ ${BERKH12_START_STACK} морьтой эхэлнэ.`,
-    r2: isEn
-      ? "On your turn, all 12 bones are thrown. Count how many are horse, how many camel; sheep/goat are neutral in this table."
-      : "Ээлжтэй: 4 шагайг зэрэг. Морь, тэмээг нэгт — хонь/ямаа хамаарахгүй.",
-    r3: isEn
-      ? "Horse: take that many mories from the previous active player."
-      : "Морь: өмнөх идэвхтэй тоглогчоос тэр тоогоор авна.",
-    r4: isEn
-      ? "Camel: give that many mories from your pile to the next active player."
-      : "Тэмээ: өөрийн шагайнаас тоогоор дараагийн идэвхтэй тоглогчид өгнө.",
-    r5: isEn
-      ? "If your pile becomes 0, you are eliminated."
-      : "Шагай 0 болсон тоглогч хасагдана.",
-    r6: isEn
-      ? `Win: hold all table mories, be last active, or after turn cap ${BERKH12_MAX_TURNS}, the largest active pile wins.`
-      : `Хожих: бүх шагайг нэгтгэх, эсвэл сүүлд идэвхтэй үлдэх, эсвэл ${BERKH12_MAX_TURNS} хүрвэл хамгийн олон үлдэгдэлтэй нь.`,
     r7online: isEn
       ? "Online: Seat order in the list = play order."
-      : "Онлайн: Нэрийн дараалал=суудлын нэр.",
+      : "Онлайн: жагсаалтын дараалал = тоглох дараалал.",
     throw: isEn ? "Throw" : "Орхих",
     yourTurn: isEn ? "Your turn" : "Таны ээлж",
     p: isEn ? "P" : "Т",
     reset: isEn ? "Again" : "Дахин",
     wait: isEn ? "Not your turn" : "Таны ээлж биш",
     over: isEn ? "Winner" : "Хожигч",
-    last: isEn ? "Horses / camels" : "Морь / тэмээ",
-    center: isEn ? "Pot" : "Төв",
     out: isEn ? "Out" : "Хасагдсан",
     local: isEn ? "2–4 local" : "2–4 нэг дэлгэц",
     cpu: isEn ? "vs computer" : "Роботтой",
-    soloRoomNote: isEn
-      ? "No other person in the online room — you play vs the computer."
-      : "Онлайн өрөөнд өөр тоглогчгүй — Роботтой тоглоно.",
+    youWin: isEn ? "You won!" : "Та яллаа!",
+    youLose: isEn ? "You lost." : "Та ялагдлаа.",
+    winHint: isEn ? "Great throw flow. Press Again for rematch." : "Сайхан тоглолт боллоо. Дахин дарж ахин тоглоорой.",
+    loseHint: isEn ? "No worries, try again and take the chain." : "Зүгээр ээ, дахиад үзээд гинжийг аваарай.",
   };
+
+  const winnerLabel = winner != null ? (nameLabels[winner] ?? `${t.p}${winner + 1}`) : "";
+  const showFinalMessage = phase === "matchOver" && winner != null;
+  const myResult =
+    showFinalMessage && mySeat != null
+      ? winner === mySeat
+        ? "win"
+        : "lose"
+      : null;
 
   const mainChrome = narrowUi
     ? { ...SHAGAI_GAME_PANEL_BASE, ...gamePanelPlayNarrowBottom() }
@@ -160,7 +112,6 @@ export default function ShagaiBerkh12UI({
   const mainPad: CSSProperties = narrowUi
     ? { padding: "10px 12px 12px" }
     : { padding: "16px" };
-  const rulesFabLabel = isEn ? "Rules" : "Дүрэм";
   const ringSeats = Array.from({ length: playerCount }, (_, i) => i);
 
   const playBlock = (
@@ -168,43 +119,41 @@ export default function ShagaiBerkh12UI({
       {showElimToast ? (
         <p className={GAME_CALLOUT_ERROR}>{showElimToast}</p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className={GAME_PANEL_HEADING_CLASS}>{t.title}</h2>
-          <p className={GAME_TEXT_SUBTITLE}>{t.subtitle}</p>
+      {(lockMode || !hideModeToggle) && (
+        <div className="mb-1 flex flex-wrap items-center justify-end gap-2">
+          {lockMode ? (
+            <p className={`${GAME_CALLOUT_AMBER} w-full text-center sm:text-left`}>
+              {t.r7online}
+            </p>
+          ) : null}
+          {!lockMode && !hideModeToggle ? (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-300">
+              <button
+                type="button"
+                className={`rounded border px-1.5 py-0.5 ${
+                  mode === "local"
+                    ? "border-amber-500/50 bg-amber-950/60"
+                    : "border-zinc-600"
+                }`}
+                onClick={() => onModeChange("local")}
+              >
+                {t.local}
+              </button>
+              <button
+                type="button"
+                className={`rounded border px-1.5 py-0.5 ${
+                  mode === "vsCpu"
+                    ? "border-amber-500/50 bg-amber-950/60"
+                    : "border-zinc-600"
+                }`}
+                onClick={() => onModeChange("vsCpu")}
+              >
+                {t.cpu}
+              </button>
+            </div>
+          ) : null}
         </div>
-        {!lockMode && !hideModeToggle ? (
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-300">
-            <button
-              type="button"
-              className={`rounded border px-1.5 py-0.5 ${
-                mode === "local"
-                  ? "border-amber-500/50 bg-amber-950/60"
-                  : "border-zinc-600"
-              }`}
-              onClick={() => onModeChange("local")}
-            >
-              {t.local}
-            </button>
-            <button
-              type="button"
-              className={`rounded border px-1.5 py-0.5 ${
-                mode === "vsCpu"
-                  ? "border-amber-500/50 bg-amber-950/60"
-                  : "border-zinc-600"
-              }`}
-              onClick={() => onModeChange("vsCpu")}
-            >
-              {t.cpu}
-            </button>
-          </div>
-        ) : null}
-      </div>
-      {lockMode ? <p className={GAME_CALLOUT_AMBER}>{t.r7online}</p> : null}
-      {hideModeToggle && !lockMode ? (
-        <p className={`mb-1.5 !mt-0 ${GAME_TEXT_META}`}>{t.soloRoomNote}</p>
-      ) : null}
-      <p className={`mt-1 ${GAME_TEXT_LEAD}`}>{t.lead}</p>
+      )}
 
       <div className="mt-1.5 grid grid-cols-1 gap-1.5 rounded-lg border border-zinc-700/70 bg-zinc-950/55 px-2.5 py-2 text-xs text-zinc-200 sm:grid-cols-2">
         <p className="flex items-center gap-1.5">
@@ -283,20 +232,8 @@ export default function ShagaiBerkh12UI({
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <div className={GAME_TEXT_META}>{isEn ? "Center" : "Төв"}</div>
-          <div className="text-2xl font-bold tabular-nums text-amber-100 sm:text-3xl">
-            {center}
-            <span className="ml-0.5 text-sm font-normal text-zinc-500">🐴</span>
-          </div>
-          <p className={`mt-0.5 ${GAME_TEXT_META}`}>
-            {isEn
-              ? "Player cards show remaining mories."
-              : "Тоглогчийн карт дээр үлдсэн морь харагдана."}
-          </p>
-        </div>
-        <div className="grid max-w-[12rem] grid-cols-2 gap-1.5 sm:max-w-none sm:grid-cols-4">
+      <div className="mt-2 flex flex-wrap items-end justify-end gap-2">
+        <div className="grid w-full max-w-none grid-cols-2 gap-1.5 sm:grid-cols-4">
           {mories.slice(0, playerCount).map((m, i) => {
             return (
               <div
@@ -312,7 +249,6 @@ export default function ShagaiBerkh12UI({
                   {!active[i] ? ` · ${t.out}` : ""}
                 </div>
                 <span className="text-lg font-bold text-amber-200">{m}</span>
-                <span className="ml-0.5 text-amber-300/60">🐴</span>
               </div>
             );
           })}
@@ -320,9 +256,43 @@ export default function ShagaiBerkh12UI({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        {showFinalMessage ? (
+          <div
+            className={`w-full rounded-xl border px-3 py-2 text-center ${
+              myResult === "win"
+                ? "border-emerald-400/45 bg-emerald-950/35"
+                : myResult === "lose"
+                  ? "border-rose-400/45 bg-rose-950/30"
+                  : "border-amber-400/35 bg-amber-950/25"
+            }`}
+          >
+            <p
+              className={`${GAME_TEXT_LEAD} ${
+                myResult === "win"
+                  ? "text-emerald-200"
+                  : myResult === "lose"
+                    ? "text-rose-200"
+                    : "text-amber-100"
+              }`}
+            >
+              {myResult === "win"
+                ? `🎉 ${t.youWin}`
+                : myResult === "lose"
+                  ? `🫡 ${t.youLose}`
+                  : `${t.over}: ${winnerLabel}`}
+            </p>
+            <p className={`${GAME_TEXT_META} mt-0.5 text-zinc-300`}>
+              {myResult === "win"
+                ? t.winHint
+                : myResult === "lose"
+                  ? `${t.over}: ${winnerLabel}. ${t.loseHint}`
+                  : `${t.over}: ${winnerLabel}`}
+            </p>
+          </div>
+        ) : null}
         <p className={GAME_TEXT_LEAD}>
-          {phase === "matchOver" && winner != null
-            ? `${t.over}: ${nameLabels[winner] ?? t.p + (winner + 1)}`
+          {showFinalMessage
+            ? `${t.over}: ${winnerLabel}`
             : canThrow
               ? `${t.yourTurn}: ${nameLabels[turn] ?? t.p + (turn + 1)}`
               : t.wait}
@@ -350,22 +320,79 @@ export default function ShagaiBerkh12UI({
       </div>
 
       {lastSides.some((s) => s) && phase !== "throwing" && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-1 border-t border-zinc-800/80 pt-1.5">
-          <span className={GAME_TEXT_META}>
-            {t.last}: {lastHorses} 🐴 / {lastCamels} 🐫
-          </span>
-          {lastSides.map(
-            (s, i) =>
-              s && (
+        <div className="mt-2 space-y-2 border-t border-zinc-800/80 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            <div className="flex min-w-[5.5rem] flex-col items-center rounded-lg border border-amber-500/35 bg-amber-950/35 px-3 py-1.5">
+              <span className="text-lg font-bold tabular-nums text-amber-100">
+                {lastHorses}
+              </span>
+              <span className={GAME_TEXT_META}>
+                {isEn ? "Horse" : "Морь"} 🐴
+              </span>
+            </div>
+            <div className="flex min-w-[5.5rem] flex-col items-center rounded-lg border border-orange-500/35 bg-orange-950/25 px-3 py-1.5">
+              <span className="text-lg font-bold tabular-nums text-orange-100">
+                {lastCamels}
+              </span>
+              <span className={GAME_TEXT_META}>
+                {isEn ? "Camel" : "Тэмээ"} 🐫
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {lastSides.map((s, i) =>
+              s ? (
                 <span
                   key={i}
-                  className="inline-flex rounded bg-zinc-900/80 px-1 text-xs"
-                  style={{ color: SHAgAI_SIDES[s].color }}
+                  className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-zinc-900/90 px-1.5 py-0.5 text-xs font-semibold"
                 >
-                  {SHAgAI_SIDES[s].symbol}
+                  <span className="font-mono text-[0.65rem] text-zinc-500">
+                    {i + 1}
+                  </span>
+                  <span style={{ color: SHAgAI_SIDES[s].color }}>
+                    {SHAgAI_SIDES[s].symbol}
+                  </span>
                 </span>
-              ),
-          )}
+              ) : null,
+            )}
+          </div>
+          <p className={`text-center ${GAME_TEXT_META} text-zinc-500`}>
+            {isEn
+              ? "1–4 = each bone’s slot (same order as the four pieces in this throw)."
+              : "1–4 = энэ шидэлтийн дөрвөн шагайн байр (физик дээрх id дараалал)."}
+          </p>
+          {lastTransfer &&
+          (lastTransfer.horsesTaken > 0 || lastTransfer.camelsGiven > 0) ? (
+            <div
+              className={`rounded-lg border border-emerald-500/25 bg-emerald-950/20 px-2 py-1.5 ${GAME_TEXT_BODY} text-center text-balance leading-snug text-emerald-100/95`}
+            >
+              {lastTransfer.horsesTaken > 0 ? (
+                <p>
+                  {isEn
+                    ? `Took ${lastTransfer.horsesTaken} from ${lastTransfer.horseFromSeat != null ? (nameLabels[lastTransfer.horseFromSeat] ?? "—") : "—"}.`
+                    : `${lastTransfer.horseFromSeat != null ? (nameLabels[lastTransfer.horseFromSeat] ?? "—") : "—"}-аас ${lastTransfer.horsesTaken} морь авлаа.`}
+                </p>
+              ) : null}
+              {lastTransfer.camelsGiven > 0 ? (
+                <p className={lastTransfer.horsesTaken > 0 ? "mt-0.5" : ""}>
+                  {isEn
+                    ? `Paid ${lastTransfer.camelsGiven} to ${lastTransfer.camelToSeat != null ? (nameLabels[lastTransfer.camelToSeat] ?? "—") : "—"}.`
+                    : `${lastTransfer.camelToSeat != null ? (nameLabels[lastTransfer.camelToSeat] ?? "—") : "—"}-д ${lastTransfer.camelsGiven} тэмээ өглөө.`}
+                </p>
+              ) : null}
+            </div>
+          ) : lastTransfer &&
+            lastHorses + lastCamels > 0 &&
+            lastTransfer.horsesTaken === 0 &&
+            lastTransfer.camelsGiven === 0 ? (
+            <p
+              className={`rounded-lg border border-zinc-600/40 bg-zinc-900/40 px-2 py-1 text-center ${GAME_TEXT_META} text-zinc-400`}
+            >
+              {isEn
+                ? "Horse/camel sides did not move mories this round (e.g. only you in the chain)."
+                : "Энэ удаад морь/тэмээгээр овоо шилжээгүй (жишээ нь өмнөх нь та өөрөө)."}
+            </p>
+          ) : null}
         </div>
       )}
     </>
@@ -379,21 +406,6 @@ export default function ShagaiBerkh12UI({
       >
         {playBlock}
       </div>
-
-      <GameRulesFab
-        label={rulesFabLabel}
-        onClick={() => {
-          playButtonClick();
-          setRulesOpen(true);
-        }}
-      />
-      <GameRulesSheet
-        open={rulesOpen}
-        onClose={() => setRulesOpen(false)}
-        title={t.rules}
-      >
-        {berkhRulesList(t, lockMode)}
-      </GameRulesSheet>
 
       <style>{`
         .shagai-b12-main-panel::-webkit-scrollbar { width: 6px; }

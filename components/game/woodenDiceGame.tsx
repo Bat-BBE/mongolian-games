@@ -9,10 +9,7 @@ import { TripleDiceReadout } from "./woodenDiceReadout";
 import { WoodenDiceSceneCanvas } from "./woodenDiceScene";
 import { playWoodenDiceRoll } from "@/lib/uiSounds";
 import { GameResultEndOverlay } from "./GameResultEndOverlay";
-import {
-  GAME_CTA_PRIMARY,
-  GAME_TEXT_LEAD,
-} from "./gameUiTheme";
+import { GAME_CTA_PRIMARY, GAME_TEXT_LEAD } from "./gameUiTheme";
 
 type T = [number, number, number];
 
@@ -102,12 +99,12 @@ export default function WoodenDiceGame({ onComplete }: WoodenDiceGameProps) {
       style={{ background: "#080604" }}
     >
       <div className="shrink-0 px-3 py-1 text-center">
-        <h2
+        {/* <h2
           className="font-display text-sm font-bold text-amber-100 sm:text-base"
           style={{ textShadow: "0 0 18px rgba(200,160,48,0.2)" }}
         >
           {loc === "mn" ? "Модон шоо" : "Wooden dice duel"}
-        </h2>
+        </h2> */}
         <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
             ? "3 шоо шидэж нийлбэрээр өрсөлдөнө. Түрүүлж 5 оноо авбал ялна."

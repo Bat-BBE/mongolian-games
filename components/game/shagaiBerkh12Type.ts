@@ -3,7 +3,10 @@ import type { ShagaiSide } from "./shagai";
 export type { ShagaiSide };
 
 export const BERKH12_START_STACK = 8;
-export const BERKH12_PIECE_COUNT = 12;
+/** Нэг ээлжинд газарт унагах шагай (уламжлал: 4-өөр тоолно) */
+export const BERKH12_THROW_COUNT = 4;
+/** Хуучин нэршилтэй нийцүүлэх (шидэлт = THROW_COUNT) */
+export const BERKH12_PIECE_COUNT = BERKH12_THROW_COUNT;
 export const BERKH12_MAX_TURNS = 200;
 
 export type Berkh12Phase =
@@ -45,6 +48,15 @@ export function nextClockwiseActive(
   return from;
 }
 
+export type Berkh12TransferSummary = {
+  /** Морь авсан суудал (өмнөх идэвхтэй), байхгүй бол null */
+  horseFromSeat: number | null;
+  horsesTaken: number;
+  /** Тэмээ төлсөн суудал (дараагийн идэвхтэй), байхгүй бол null */
+  camelToSeat: number | null;
+  camelsGiven: number;
+};
+
 export type ApplyTurnState = {
   mories: number[];
   center: number;
@@ -52,6 +64,7 @@ export type ApplyTurnState = {
   h: number;
   c: number;
   eliminated: number;
+  transfer: Berkh12TransferSummary;
 };
 
 export function applyBerkhTurn(
@@ -68,6 +81,12 @@ export function applyBerkhTurn(
   const nextA = active.map((x) => x);
   let nextC = center;
   let elim = -1;
+  const transfer: Berkh12TransferSummary = {
+    horseFromSeat: null,
+    horsesTaken: 0,
+    camelToSeat: null,
+    camelsGiven: 0,
+  };
 
   if (!nextA[p] || p < 0) {
     return {
@@ -77,6 +96,7 @@ export function applyBerkhTurn(
       h,
       c,
       eliminated: -1,
+      transfer,
     };
   }
 
@@ -101,6 +121,10 @@ export function applyBerkhTurn(
       const take = Math.min(h, nextM[donor] ?? 0);
       nextM[donor] = Math.max(0, (nextM[donor] ?? 0) - take);
       nextM[p] = (nextM[p] ?? 0) + take;
+      if (take > 0) {
+        transfer.horseFromSeat = donor;
+        transfer.horsesTaken = take;
+      }
     }
   }
 
@@ -110,6 +134,10 @@ export function applyBerkhTurn(
       const give = Math.min(c, nextM[p] ?? 0);
       nextM[p] = Math.max(0, (nextM[p] ?? 0) - give);
       nextM[recv] = (nextM[recv] ?? 0) + give;
+      if (give > 0) {
+        transfer.camelToSeat = recv;
+        transfer.camelsGiven = give;
+      }
     }
   }
 
@@ -128,6 +156,7 @@ export function applyBerkhTurn(
     h,
     c,
     eliminated: elim,
+    transfer,
   };
 }
 

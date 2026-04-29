@@ -66,10 +66,7 @@ export default function StoneCairnMemoryGame({
         onComplete?.("win", 100);
         return;
       }
-      onComplete?.(
-        "lose",
-        Math.min(100, Math.round((best / WIN_LEVEL) * 100)),
-      );
+      onComplete?.("lose", Math.min(100, Math.round((best / WIN_LEVEL) * 100)));
     },
     [grant, onComplete],
   );
@@ -177,18 +174,18 @@ export default function StoneCairnMemoryGame({
       style={{ background: "#040608" }}
     >
       <div className="shrink-0 px-3 py-1 text-center">
-        <h2
+        {/* <h2
           className="font-display text-sm font-bold text-amber-100 sm:text-base"
           style={{ textShadow: "0 0 18px rgba(200,160,48,0.2)" }}
         >
           {loc === "mn" ? "Чулуун овоо" : "Stone cairn memory"}
-        </h2>
+        </h2> */}
         <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
             ? "5 товч (1–5): дараалал гялс гарна → та ижил дарааллаар дар. Алхам бүр нэг оноо нэмнэ. 10 зөв алхам = ялалт."
             : "Five buttons (1–5): watch the flash, then tap the same order. Each success adds a new step. A full 10-step run with no error = win."}
         </p>
-        <details
+        {/* <details
           className="mx-auto mt-1.5 max-w-md rounded border border-sky-500/25 bg-black/30 px-2 py-1 text-left"
           open
         >
@@ -214,8 +211,10 @@ export default function StoneCairnMemoryGame({
                 : "2p online: room, host = left; scores follow the match panel there."}
             </li>
           </ol>
-        </details>
-        <p className={`mt-0.5 ${GAME_TEXT_META} text-amber-200/60`}>{message}</p>
+        </details> */}
+        <p className={`mt-0.5 ${GAME_TEXT_META} text-amber-200/60`}>
+          {message}
+        </p>
       </div>
       <div className="relative min-h-0 w-full flex-1">
         <StoneCairnSceneCanvas
@@ -267,7 +266,9 @@ export default function StoneCairnMemoryGame({
           </div>
         ) : null}
         {phase === "show" ? (
-          <p className={`w-full text-center ${GAME_TEXT_META} text-amber-200/50`}>
+          <p
+            className={`w-full text-center ${GAME_TEXT_META} text-amber-200/50`}
+          >
             {loc === "mn" ? "… харагдаж байна" : "Watch…"}
           </p>
         ) : null}

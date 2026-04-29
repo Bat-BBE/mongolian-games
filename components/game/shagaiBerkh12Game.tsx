@@ -11,8 +11,10 @@ import {
   applyBerkhTurn,
   BERKH12_MAX_TURNS,
   BERKH12_START_STACK,
+  BERKH12_THROW_COUNT,
   type Berkh12Mode,
   type Berkh12Phase,
+  type Berkh12TransferSummary,
   hasFullWin,
   type LocalPlayerCount,
   type ShagaiSide,
@@ -22,7 +24,7 @@ import {
   rollBerkh12Sides,
 } from "./shagaiBerkh12Type";
 import {
-  getBerkhTwelveThrowStartPositions,
+  getBerkhThrowStartPositions,
   getShagaiThrowParams,
 } from "./shagaiThrowShared";
 import { useInventoryGrant } from "./useInventoryGrant";
@@ -96,13 +98,15 @@ function ThrowMat() {
   );
 }
 
-const POS12 = getBerkhTwelveThrowStartPositions();
+const BERKH_THROW_POS = getBerkhThrowStartPositions();
 
 type SceneProps = {
   throwParams: ReturnType<typeof getShagaiThrowParams>[];
   isThrown: boolean;
   settledSides: (ShagaiSide | null)[];
   onSettle: (id: number, side: ShagaiSide) => void;
+  /** 4 ширхэг — тогтоосон талууд (робот/peer replay). null = ердийн физик. */
+  forceSettleSides?: ShagaiSide[] | null;
 };
 
 function Berkh12GameScene({
@@ -110,16 +114,17 @@ function Berkh12GameScene({
   isThrown,
   settledSides,
   onSettle,
+  forceSettleSides = null,
 }: SceneProps) {
   const pieceTemplate = useShagaiThrowPieceTemplate();
   return (
     <>
       <ThrowMat />
-      {([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const).map((i) => (
+      {Array.from({ length: BERKH12_THROW_COUNT }, (_, i) => i).map((i) => (
         <SingleShagai
           key={i}
           id={i}
-          startPos={POS12[i]!}
+          startPos={BERKH_THROW_POS[i]!}
           throwVel={throwParams[i]?.vel ?? [0, 5, 0]}
           throwAngVel={throwParams[i]?.angVel ?? [4, 4, 4]}
           isThrown={isThrown}
@@ -128,6 +133,7 @@ function Berkh12GameScene({
           resultSide={settledSides[i] ?? null}
           pieceTemplate={pieceTemplate}
           maxOnkhRetries={0}
+          forceSettleSide={forceSettleSides?.[i] ?? null}
         />
       ))}
     </>
@@ -147,30 +153,11 @@ export type ShagaiBerkh12GameProps = {
   autoPlayVsBotWhenSoloInRoom?: boolean;
 };
 
-export { Berkh12GameScene, ThrowMat, POS12, PhysicsFloor };
+export { Berkh12GameScene, ThrowMat, PhysicsFloor };
 
-const EMPTY12 = () =>
-  [
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-    null,
-  ] as (ShagaiSide | null)[];
+const emptyThrowSlots = (): (ShagaiSide | null)[] =>
+  Array.from({ length: BERKH12_THROW_COUNT }, () => null);
 
-function plate12(s: ShagaiSide[]): (ShagaiSide | null)[] {
-  return Array.from(
-    { length: 12 },
-    (_, i) => s[i] ?? null,
-  ) as (ShagaiSide | null)[];
-}
 
 export default function ShagaiBerkh12Game({
   onComplete,
@@ -197,23 +184,31 @@ export default function ShagaiBerkh12Game({
   const [active, setActive] = useState([true, true, true, true]);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState(
-    Array.from({ length: 12 }, () => getShagaiThrowParams()),
+    Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
   );
   const [settledSides, setSettledSides] =
-    useState<(ShagaiSide | null)[]>(EMPTY12());
-  const [lastSides, setLastSides] = useState<(ShagaiSide | null)[]>(EMPTY12());
+    useState<(ShagaiSide | null)[]>(emptyThrowSlots());
+  const [lastSides, setLastSides] = useState<(ShagaiSide | null)[]>(
+    emptyThrowSlots(),
+  );
   const [lastHorses, setLastHorses] = useState(0);
   const [lastCamels, setLastCamels] = useState(0);
+  const [lastTransfer, setLastTransfer] = useState<Berkh12TransferSummary | null>(
+    null,
+  );
   const [winner, setWinner] = useState<number | null>(null);
   const [elimToast, setElimToast] = useState<string | null>(null);
   const [totalThrows, setTotalThrows] = useState(0);
+  const [botForcedSides, setBotForcedSides] = useState<ShagaiSide[] | null>(
+    null,
+  );
 
   const nPlayers = playerCount;
   const turnRef = useRef(0);
   const nPlayersRef = useRef(nPlayers);
   const modeRef = useRef(mode);
   const settledCount = useRef(0);
-  const settledRef = useRef<(ShagaiSide | null)[]>(EMPTY12());
+  const settledRef = useRef<(ShagaiSide | null)[]>(emptyThrowSlots());
   const resultDone = useRef(false);
   const syncGen = useRef(0);
   const completeOnce = useRef(false);
@@ -273,8 +268,9 @@ export default function ShagaiBerkh12Game({
 
   const finishAndAdvance = useCallback(
     (sides: ShagaiSide[], thrower: number) => {
-      if (sides.length !== 12) return;
-      setLastSides(plate12(sides));
+      if (sides.length !== BERKH12_THROW_COUNT) return;
+      setBotForcedSides(null);
+      setLastSides([...sides] as (ShagaiSide | null)[]);
       setLastHorses(countHorses(sides));
       setLastCamels(countCamels(sides));
       if (countHorses(sides) > 0) grant({ coins: STONE_ROUND_COINS });
@@ -287,6 +283,7 @@ export default function ShagaiBerkh12Game({
         sides,
         nPlayers,
       );
+      setLastTransfer(r.transfer);
       setMories(r.mories);
       moriesRef.current = r.mories;
       setCenter(r.center);
@@ -322,7 +319,7 @@ export default function ShagaiBerkh12Game({
         setPhase("botWait");
       } else {
         window.setTimeout(() => {
-          setSettledSides(EMPTY12());
+          setSettledSides(emptyThrowSlots());
           setIsThrown(false);
           setPhase("idle");
         }, 1000);
@@ -345,14 +342,18 @@ export default function ShagaiBerkh12Game({
     (forPlayer: number) => {
       const g = ++syncGen.current;
       if (!active[forPlayer]) return;
+      setBotForcedSides(null);
       setTurn(forPlayer);
       turnRef.current = forPlayer;
       settledCount.current = 0;
       resultDone.current = false;
-      const e = EMPTY12();
+      setLastTransfer(null);
+      const e = emptyThrowSlots();
       settledRef.current = e;
       setSettledSides([...e]);
-      setThrowParams(Array.from({ length: 12 }, () => getShagaiThrowParams()));
+      setThrowParams(
+        Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+      );
       setPhase("throwing");
       setIsThrown(false);
       setTimeout(() => {
@@ -365,22 +366,21 @@ export default function ShagaiBerkh12Game({
 
   const handleSettle = useCallback(
     (id: number, side: ShagaiSide) => {
-      if (id < 0 || id > 11) return;
+      if (id < 0 || id >= BERKH12_THROW_COUNT) return;
       if (settledRef.current[id] != null) return;
       settledRef.current[id] = side;
       settledCount.current += 1;
       setSettledSides([...settledRef.current]);
       setPhase("settling");
-      if (settledCount.current < 12 || resultDone.current) return;
+      if (settledCount.current < BERKH12_THROW_COUNT || resultDone.current)
+        return;
       resultDone.current = true;
       const g = syncGen.current;
       window.setTimeout(() => {
         if (g !== syncGen.current) return;
-        const arr = settledRef.current.filter(
-          (s): s is ShagaiSide => s != null,
-        );
-        if (arr.length !== 12) return;
-        finishAndAdvance(arr, turnRef.current);
+        const slots = settledRef.current;
+        if (slots.some((s) => s == null)) return;
+        finishAndAdvance(slots as ShagaiSide[], turnRef.current);
       }, 450);
     },
     [finishAndAdvance],
@@ -389,58 +389,30 @@ export default function ShagaiBerkh12Game({
   useEffect(() => {
     if (phase !== "botWait" || mode !== "vsCpu") return;
     const t = window.setTimeout(() => {
-      const s = rollBerkh12Sides(12);
-      setLastSides(plate12(s));
-      setLastHorses(countHorses(s));
-      setLastCamels(countCamels(s));
-      if (countHorses(s) > 0) grant({ coins: STONE_ROUND_COINS });
-      const thrower = turn;
-      const r = applyBerkhTurn(
-        [...moriesRef.current],
-        centerRef.current,
-        [...activeRef.current],
-        thrower,
-        s,
-        nPlayers,
+      const s = rollBerkh12Sides();
+      const g = ++syncGen.current;
+      settledCount.current = 0;
+      resultDone.current = false;
+      const e = emptyThrowSlots();
+      settledRef.current = e;
+      setSettledSides([...e]);
+      setLastTransfer(null);
+      setLastSides(emptyThrowSlots());
+      setBotForcedSides(s);
+      setThrowParams(
+        Array.from({ length: BERKH12_THROW_COUNT }, () =>
+          getShagaiThrowParams(),
+        ),
       );
-      setMories(r.mories);
-      moriesRef.current = r.mories;
-      setCenter(r.center);
-      setActive(r.active);
-      activeRef.current = r.active;
-      if (r.eliminated >= 0) {
-        const lab = labelFor(mode, r.eliminated, isMn);
-        setElimToast(
-          isMn ? `${lab} — төлж чадсангүй!` : `${lab} — not enough!`,
-        );
-        window.setTimeout(() => setElimToast(null), 3000);
-      } else {
-        setElimToast(null);
-      }
-      const nextN = totalThrowsRef.current + 1;
-      totalThrowsRef.current = nextN;
-      setTotalThrows(nextN);
-      setPhase("result");
-      const w1 = findWinner(r.mories, r.active, nextN);
-      if (w1 != null) {
-        setPhase("matchOver");
-        setWinner(w1);
-        return;
-      }
-      const nxt = nextClockwiseActive(nPlayers, thrower, r.active);
-      setTurn(nxt);
-      if (nxt === 0) {
-        window.setTimeout(() => {
-          setSettledSides(EMPTY12());
-          setIsThrown(false);
-          setPhase("idle");
-        }, 900);
-      } else {
-        setPhase("botWait");
-      }
-    }, 900);
+      setPhase("throwing");
+      setIsThrown(false);
+      window.setTimeout(() => {
+        if (g !== syncGen.current) return;
+        setIsThrown(true);
+      }, 50);
+    }, 420);
     return () => clearTimeout(t);
-  }, [phase, mode, turn, nPlayers, isMn, findWinner, grant]);
+  }, [phase, mode, turn, nPlayers]);
 
   const canThrow =
     phase !== "matchOver" &&
@@ -483,8 +455,13 @@ export default function ShagaiBerkh12Game({
       activeRef.current = a;
       centerRef.current = 0;
       setIsThrown(false);
-      setSettledSides(EMPTY12());
-      setLastSides(EMPTY12());
+      setThrowParams(
+        Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+      );
+      setSettledSides(emptyThrowSlots());
+      setLastSides(emptyThrowSlots());
+      setLastTransfer(null);
+      setBotForcedSides(null);
       setLastHorses(0);
       setLastCamels(0);
       setWinner(null);
@@ -545,6 +522,7 @@ export default function ShagaiBerkh12Game({
               isThrown={isThrown}
               settledSides={settledSides}
               onSettle={handleSettle}
+              forceSettleSides={botForcedSides}
             />
           </Physics>
         </Suspense>
@@ -563,7 +541,6 @@ export default function ShagaiBerkh12Game({
         playerCount={nPlayers as LocalPlayerCount}
         turn={turn}
         mories={mories as number[]}
-        center={center}
         active={active as boolean[]}
         canThrow={canThrow}
         onThrow={onThrow}
@@ -577,9 +554,11 @@ export default function ShagaiBerkh12Game({
         lastSides={lastSides}
         lastHorses={lastHorses}
         lastCamels={lastCamels}
+        lastTransfer={lastTransfer}
         showElimToast={elimToast}
         winner={winner}
         nameLabels={nameLabels}
+        mySeat={mode === "vsCpu" ? 0 : null}
       />
     </div>
   );

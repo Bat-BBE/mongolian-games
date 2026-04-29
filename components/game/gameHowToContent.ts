@@ -118,19 +118,19 @@ const HOW: Record<string, HowToEntry> = {
   "twelve-shagai": {
     mn: {
       steps: [
-        "Эхлээд 4 удаа тус бүр 4 шагай, дараа нь 3 удаа тус бүр 3, түүнээс хойш зөвхөн 2-оор (удааны хязгааргүй).",
-        "Нэг шидэлтэнд: дээрээ морьтой гарсан шагай бүр +1 «морины оноо».",
-        "Таблоор хэн түрүүлж байгааг харна — хамгийн түрүүнд 12 морины оноо хүргэгч ялна.",
-        "Өрөөнд зөвхөн таных бол 10–15 секундын хүлээгээний дараа автоматаар роботтой эхэлнэ.",
+        "Доорх хайрцагт байгаа шатны дарааллыг мөрдөнө (4×4 → 3×3 → 2×∞).",
+        "Нэг шидэлтэнд дээрээ морьтой гарсан шагай бүр +1 морины оноо.",
+        "Табло — хамгийн түрүүнд 12 морины оноо хүргэгч ялна.",
+        "Өрөөнд зөвхөн таных бол ~10–15 секундын дараа роботтой автоматаар эхэлнэ.",
       ],
       mapHint: MAP_MN,
     },
     en: {
       steps: [
-        "Throw tiers: four rounds of 4 bones, then three of 3, then only 2 bones (unlimited 2-bone rounds).",
-        "After each throw, every bone showing horse on top adds +1 horse point to your turn total.",
-        "The scoreboard tracks horse points — first to 12 wins the match.",
-        "If you’re alone in the room, the match auto-starts vs bots after about 10–15 seconds.",
+        "Follow the tier strip below: 4×4, then 3×3, then 2-bone throws until the match ends.",
+        "Each bone showing horse on top adds +1 horse point for that throw.",
+        "Scoreboard: first to 12 horse points wins.",
+        "Solo in a room: the match auto-starts vs bots after about 10–15 seconds.",
       ],
       mapHint: MAP_EN,
     },
@@ -138,19 +138,17 @@ const HOW: Record<string, HowToEntry> = {
   "berkh-12-shagai": {
     mn: {
       steps: [
-        "2–4 тоглогч (эсвэл робот) нар зэрэг 12 шагайгаа нэг удаад шиднэ.",
-        "Морь төвийн «сан»-аас таны овоо руу орж ирнэ; тэмээ бусад тоглогчид төлбөр төлүүлнэ.",
-        "Төлж чадахгүй бол хасагдна. Бүх морийг өөртөө цуглуулах, эсвэл сүүлийн идэвхтэй, эсвэл ээлжийн дээд хязгаар — ялалтын нөхцөл.",
-        "Өрөөнд зөвхөн таных бол 10–15 секундын дараа автоматаар эхэлнэ.",
+        "2–4 суудал ээлжээр нэг дор 4 шагай шиднэ — зөвхөн морь, тэмээгээр овоо шилжинэ.",
+        "Морь — өмнөх идэвхтэй суудлаас, тэмээ — дараагийн суудалд; 0 бол хасагдана.",
+        "Ялалт: бүх шагай, сүүлийн үлдсэн, эсвэл ээлжийн төгсгөл.",
       ],
       mapHint: MAP_MN,
     },
     en: {
       steps: [
-        "2–4 seats (humans or bots) each throw all 12 bones at once, sunwise.",
-        "Horses pull mories from the central pot into your pile; camels force you to pay other players.",
-        "Fail a camel payment and you’re out. Win by holding all pot mories, being last standing, or the turn-cap tie-break — see in-game rules.",
-        "If you’re alone in the room, the match auto-starts after about 10–15 seconds (with bots as needed).",
+        "2–4 seats take turns throwing 4 bones at once. Only horses & camels move mories.",
+        "Horse takes from the previous active seat; camel pays the next. 0 mories = out.",
+        "Win: all bones, last standing, or turn-cap tie-break.",
       ],
       mapHint: MAP_EN,
     },
@@ -240,19 +238,19 @@ const HOW: Record<string, HowToEntry> = {
   "four-powers": {
     mn: {
       steps: [
-        "Морь → тэмээ → үхэр → хонь → дахин морь: өмнөх нь дараагийнхаа дугуйнд дарагдана.",
-        "Раунд бүрт 4 суудал нэгэн зэрэг эрхэ сонгоно; дараа нь сонголтуудаар оноо тооцно (2–2, 3–1, эсвэл 0).",
-        "Ганцаархагт та + 3 робот; сүлжээнд 1–4 тоглогч өрөөнд, суудал дутвал робот.",
-        `${WIN_SCORE} оноо түрүүнд ганцаархан гарсан суудал ялна — олон хүн тэнцвэл үргэлжилнэ.`,
+        "Морь → тэмээ → үхэр → хонь → дахин морь: циклын дагуу хэн хэнийгээ дийлдэг.",
+        "Раунд бүр 4 суудал нэгэн зэрэг сонголт хийнэ; суудал бүр дийлсэн өрсөлдөгч бүртээ +1 суурь оноо авна (нарийвчилсан нөлөө: модалын доор).",
+        "Ганцаархагт та + 3 робот; сүлжээнд 1–4 тоглогч, суудал дутвал робот.",
+        `${WIN_SCORE} оноонд түрүүлж ганцаархан гарсан суудал ялна; тэнцвэл үргэлжилнэ.`,
       ],
       mapHint: MAP_MN,
     },
     en: {
       steps: [
         "Horse → camel → ox → sheep → horse: each power beats the next in the ring.",
-        "Every round all four seats pick at once; points come from the 2–2 or 3–1 split (or 0 if all same or all different).",
-        "Solo: you vs three bots. Online: 1–4 humans in a room, bots fill empty seats.",
-        `First sole leader at ${WIN_SCORE} points wins — ties at the top keep the match going.`,
+        "All four seats lock in each round; each seat gains +1 base point per opponent it beats (effects below).",
+        "Solo: you vs three bots. Online: 1–4 humans; bots fill empty seats.",
+        `First sole leader at ${WIN_SCORE} points wins; ties at the top keep the match going.`,
       ],
       mapHint: MAP_EN,
     },

@@ -32,7 +32,7 @@ export function getTwelveThrowStartPositions(
 }
 
 const BERKH12 = SHAGAI_HORSE_RACE_THROW_START_POSITIONS;
-/** 12 бэрх: 12 шагай — 3×4 сүлжээ (морин уралдааны шидэлтийн бүс). */
+/** 12 бэрх: 3×4 сүлжээний бүх байрлал (урт шидэлтэнд). */
 export function getBerkhTwelveThrowStartPositions(): [number, number, number][] {
   const out: [number, number, number][] = [];
   for (let row = 0; row < 3; row++) {
@@ -46,6 +46,15 @@ export function getBerkhTwelveThrowStartPositions(): [number, number, number][] 
     }
   }
   return out;
+}
+
+/** 12 бэрх: нэг шидэлтэнд 4 шагай — эхний эгнээ. */
+export function getBerkhThrowStartPositions(): [number, number, number][] {
+  return getBerkhTwelveThrowStartPositions().slice(0, 4) as [
+    number,
+    number,
+    number,
+  ][];
 }
 
 /** spread = 2.5 — анхны 2.2-той харьцuuлахад дөрвөн бэрхтэй нэгэн адил */
