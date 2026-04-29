@@ -6,6 +6,18 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { buildSeq, WIN_LEVEL } from "./stoneCairnType";
 import { StoneCairnSceneCanvas } from "./stoneCairnScene";
+import {
+  playCairnGameStart,
+  playCairnInputMiss,
+  playCairnInputTap,
+  playCairnShowStoneBlink,
+} from "@/lib/uiSounds";
+import {
+  GAME_RULES_OL_CLASS,
+  GAME_TEXT_BODY,
+  GAME_TEXT_LEAD,
+  GAME_TEXT_META,
+} from "./gameUiTheme";
 
 export type StoneCairnMemoryGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
@@ -32,11 +44,16 @@ export default function StoneCairnMemoryGame({
   const [inputPos, setInputPos] = useState(0);
   const [active, setActive] = useState<number | null>(null);
   const [message, setMessage] = useState("");
+  const [pressFlash, setPressFlash] = useState<number | null>(null);
+  const [errorFlash, setErrorFlash] = useState<number | null>(null);
   const doneOnce = useRef(false);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  type TTimer = ReturnType<typeof setTimeout>;
+  const timers = useRef<TTimer[]>([]);
   const seq = buildSeq(len, base);
   const clearT = useCallback(() => {
-    for (const t of timers.current) clearTimeout(t);
+    for (const t of timers.current) {
+      clearTimeout(t);
+    }
     timers.current = [];
   }, []);
 
@@ -49,10 +66,7 @@ export default function StoneCairnMemoryGame({
         onComplete?.("win", 100);
         return;
       }
-      onComplete?.(
-        "lose",
-        Math.min(100, Math.round((best / WIN_LEVEL) * 100)),
-      );
+      onComplete?.("lose", Math.min(100, Math.round((best / WIN_LEVEL) * 100)));
     },
     [grant, onComplete],
   );
@@ -93,6 +107,7 @@ export default function StoneCairnMemoryGame({
         return;
       }
       setActive(s[step]!);
+      playCairnShowStoneBlink();
       const t0 = setTimeout(() => {
         setActive(null);
         const t1 = setTimeout(() => {
@@ -112,11 +127,22 @@ export default function StoneCairnMemoryGame({
   const onStone = useCallback(
     (i: number) => {
       if (phase !== "input" || inputPos < 0) return;
+      if (errorFlash !== null) return;
       const s = buildSeq(len, base);
       if (s[inputPos] !== i) {
-        handleFail(Math.max(0, len - 1));
+        playCairnInputMiss();
+        setErrorFlash(i);
+        const t = setTimeout(() => {
+          setErrorFlash(null);
+          handleFail(Math.max(0, len - 1));
+        }, 300);
+        timers.current.push(t);
         return;
       }
+      playCairnInputTap();
+      setPressFlash(i);
+      // Not in timers: clearT() on next "show" would cancel this and leave pressFlash stuck
+      window.setTimeout(() => setPressFlash(null), 220);
       if (inputPos + 1 >= s.length) {
         if (len === WIN_LEVEL) {
           handleWin();
@@ -128,15 +154,19 @@ export default function StoneCairnMemoryGame({
       }
       setInputPos((p) => p + 1);
     },
-    [base, handleFail, handleWin, inputPos, len, mode, onLocalFinish, phase],
+    [base, errorFlash, handleFail, handleWin, inputPos, len, phase],
   );
 
   const start = useCallback(() => {
     if (mode === "solo") doneOnce.current = false;
+    clearT();
     setLen(1);
     setPhase("show");
     setMessage("");
-  }, [mode]);
+    setPressFlash(null);
+    setErrorFlash(null);
+    playCairnGameStart();
+  }, [clearT, mode]);
 
   return (
     <div
@@ -144,18 +174,47 @@ export default function StoneCairnMemoryGame({
       style={{ background: "#040608" }}
     >
       <div className="shrink-0 px-3 py-1 text-center">
-        <h2
+        {/* <h2
           className="font-display text-sm font-bold text-amber-100 sm:text-base"
           style={{ textShadow: "0 0 18px rgba(200,160,48,0.2)" }}
         >
           {loc === "mn" ? "Чулуун овоо" : "Stone cairn memory"}
-        </h2>
-        <p className="text-[10px] leading-relaxed text-slate-500">
+        </h2> */}
+        <p className={`${GAME_TEXT_LEAD} text-center`}>
           {loc === "mn"
-            ? "Талд хумисан 5 чулуу. Дарааллыг санаад дар — алхам бүрийн дараа нэг чулуу нэмнэ. 10 дараалал."
-            : "Five cairn stones. Watch, then repeat the pattern—each level adds a step. Clear 10 steps to win."}
+            ? "5 товч (1–5): дараалал гялс гарна → та ижил дарааллаар дар. Алхам бүр нэг оноо нэмнэ. 10 зөв алхам = ялалт."
+            : "Five buttons (1–5): watch the flash, then tap the same order. Each success adds a new step. A full 10-step run with no error = win."}
         </p>
-        <p className="mt-0.5 text-[10px] text-amber-200/60">{message}</p>
+        {/* <details
+          className="mx-auto mt-1.5 max-w-md rounded border border-sky-500/25 bg-black/30 px-2 py-1 text-left"
+          open
+        >
+          <summary
+            className={`${GAME_TEXT_BODY} cursor-pointer font-semibold text-sky-200/90`}
+          >
+            {loc === "mn" ? "Дүрмийн дэлгэрэнгүй" : "Full rules (short)"}
+          </summary>
+          <ol className={`mt-1.5 !space-y-1 ${GAME_RULES_OL_CLASS} text-slate-400`}>
+            <li>
+              {loc === "mn"
+                ? "«Харагдах» үед зөвхөн ажиглана; «Оруулах» үед 1–5-ыг дараалалд дарна."
+                : "During “show”, only watch. During “input”, tap 1–5 in order."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "Нэг буруу даралт = тоглолт дуусна. Оноо: хамгийн сайн дарааллын урт (тоглолт дууссаны дараа)."
+                : "One wrong tap = run ends. Your “best” length is how far you got before a mistake (see end message)."}
+            </li>
+            <li>
+              {loc === "mn"
+                ? "2 тоглогч онлайн: өрөө, эзэн — зүүн; нэгдсэн дүрмээр оноо тэмдэглэнэ."
+                : "2p online: room, host = left; scores follow the match panel there."}
+            </li>
+          </ol>
+        </details> */}
+        <p className={`mt-0.5 ${GAME_TEXT_META} text-amber-200/60`}>
+          {message}
+        </p>
       </div>
       <div className="relative min-h-0 w-full flex-1">
         <StoneCairnSceneCanvas
@@ -175,21 +234,41 @@ export default function StoneCairnMemoryGame({
           </button>
         ) : null}
         {phase === "input" ? (
-          <div className="flex w-full max-w-sm flex-wrap justify-center gap-1.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onStone(i)}
-                className="h-9 min-w-[2.4rem] rounded border border-white/20 bg-white/5 px-2 text-xs font-semibold text-slate-100"
-              >
-                {i + 1}
-              </button>
-            ))}
+          <div className="flex w-full max-w-sm flex-wrap justify-center gap-2 sm:gap-2.5">
+            {[0, 1, 2, 3, 4].map((i) => {
+              const isErr = errorFlash === i;
+              const isHit = pressFlash === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  style={{ WebkitTapHighlightColor: "transparent" }}
+                  onClick={() => onStone(i)}
+                  className={[
+                    "h-10 min-w-[2.6rem] touch-manipulation select-none rounded-lg border-2 px-2.5",
+                    "text-sm font-bold transition-all duration-100 ease-out will-change-transform",
+                    "border-white/32 bg-gradient-to-b from-white/[0.12] to-white/[0.04] text-amber-50/95",
+                    "shadow-[0_4px_0_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)]",
+                    "hover:-translate-y-px hover:border-sky-300/60 hover:from-sky-500/20 hover:shadow-[0_5px_0_rgba(0,0,0,0.4)]",
+                    "active:translate-y-0.5 active:scale-[0.94] active:shadow-[0_1px_0_rgba(0,0,0,0.55),inset_0_2px_8px_rgba(0,0,0,0.3)]",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-sky-400/80",
+                    isErr
+                      ? "z-10 !border-rose-400/95 !from-rose-500/30 !to-rose-900/30 !text-rose-100 ring-2 !ring-rose-300/55"
+                      : isHit
+                        ? "z-10 !border-amber-200/85 !from-amber-400/25 !to-amber-950/20 !text-amber-50 ring-2 !ring-amber-200/65"
+                        : "",
+                  ].join(" ")}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
           </div>
         ) : null}
         {phase === "show" ? (
-          <p className="w-full text-center text-[10px] text-amber-200/50">
+          <p
+            className={`w-full text-center ${GAME_TEXT_META} text-amber-200/50`}
+          >
             {loc === "mn" ? "… харагдаж байна" : "Watch…"}
           </p>
         ) : null}

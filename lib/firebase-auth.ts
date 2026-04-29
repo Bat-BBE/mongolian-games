@@ -1,9 +1,13 @@
-import { ref, set, get } from "firebase/database";
+import { ref, set, get, update } from "firebase/database";
 import { db } from "./firebase";
 import { emailToKey } from "./emailKey";
 import type { HeroId } from "@/components/hero-select/hero-strings";
 import { HEROES } from "@/components/hero-select/hero-data";
-import { syncAppUserSimple, getGameProfileByEmail } from "@/lib/api";
+import {
+  syncAppUserSimple,
+  getGameProfileByEmail,
+  updateSimpleProfileNickname,
+} from "@/lib/api";
 
 function isPlainRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -91,8 +95,9 @@ export async function registerEmail(email: string, heroId: HeroId) {
   const hero = HEROES.find((h) => h.id === heroId);
   if (!hero) throw new Error("Hero not found");
 
+  const randomNick = `Player${Math.floor(Math.random() * 9000) + 1000}`;
   const profile = {
-    name: email,
+    name: randomNick,
     heroId: hero.id,
     heroName: hero.name,
     heroTitle: hero.title,
@@ -121,7 +126,7 @@ export async function registerEmail(email: string, heroId: HeroId) {
   try {
     await syncAppUserSimple({
       email,
-      displayName: email,
+      displayName: randomNick,
       heroId: hero.id,
       profile: profile as Record<string, unknown>,
       progress: progress as Record<string, unknown>,
@@ -217,4 +222,13 @@ export async function updateHeroForEmail(email: string, heroId: HeroId) {
     profile: nextProfile,
     progress,
   });
+}
+
+export async function updateNicknameForEmail(email: string, nicknameRaw: string) {
+  const trimmed = email.trim();
+  const nickname = nicknameRaw.trim();
+  if (!nickname) throw new Error("Nickname хоосон байна");
+  const key = emailToKey(trimmed);
+  await update(ref(db, `users/${key}/profile`), { name: nickname });
+  await updateSimpleProfileNickname({ email: trimmed, nickname });
 }

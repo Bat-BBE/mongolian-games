@@ -32,6 +32,7 @@ import {
 } from "./shagaiThrowShared";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const RELAY_CH = "four_bones_mp_v1";
 
@@ -100,10 +101,22 @@ function GameTable() {
       </mesh>
       {(
         [
-          [[6, 1, 0], [0.2, 2, 12]],
-          [[-6, 1, 0], [0.2, 2, 12]],
-          [[0, 1, 5], [12, 2, 0.2]],
-          [[0, 1, -5], [12, 2, 0.2]],
+          [
+            [6, 1, 0],
+            [0.2, 2, 12],
+          ],
+          [
+            [-6, 1, 0],
+            [0.2, 2, 12],
+          ],
+          [
+            [0, 1, 5],
+            [12, 2, 0.2],
+          ],
+          [
+            [0, 1, -5],
+            [12, 2, 0.2],
+          ],
         ] as const
       ).map((w, i) => (
         <mesh key={i} position={w[0]}>
@@ -274,8 +287,7 @@ function parseRelay(raw: unknown): FourBonesMpRelay | null {
   if (!isRecord(raw.scores)) return null;
   if (typeof raw.nextTurnPlayerId !== "string") return null;
   if (typeof raw.totalThrows !== "number") return null;
-  if (raw.winnerId !== null && typeof raw.winnerId !== "string")
-    return null;
+  if (raw.winnerId !== null && typeof raw.winnerId !== "string") return null;
   if (typeof raw.streak !== "number" || typeof raw.bestStreak !== "number")
     return null;
   if (typeof raw.lastPoints !== "number") return null;
@@ -299,6 +311,7 @@ type Props = {
 
 export function FourBonesOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -316,16 +329,7 @@ export function FourBonesOnlineLobby() {
           "radial-gradient(circle at 50% 45%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then the host starts. 2–4: turn order to 30 pts.
-          Alone: start vs bot.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → эзэн «Эхлүүлэх» (2–4). 1: «Роботтой эхлэх».
-        </span>
-      )}
+      <span>{lobbyIntro}</span>
     </div>
   );
 }
@@ -348,8 +352,7 @@ export default function FourBonesGameMulti({
     [mp.players],
   );
 
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { grant, rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const [state, setState] = useState<GameState>(() => ({
     ...INITIAL_STATE,
     mpWinnerId: null,
@@ -445,17 +448,14 @@ export default function FourBonesGameMulti({
     startThrow(myId);
   }, [state.phase, startThrow, turnPlayerId, myId]);
 
-  const pushToast = useCallback(
-    (text: string) => {
-      if (toastT.current) clearTimeout(toastT.current);
-      setMpToast(text);
-      toastT.current = setTimeout(() => {
-        setMpToast(null);
-        toastT.current = null;
-      }, 3000);
-    },
-    [],
-  );
+  const pushToast = useCallback((text: string) => {
+    if (toastT.current) clearTimeout(toastT.current);
+    setMpToast(text);
+    toastT.current = setTimeout(() => {
+      setMpToast(null);
+      toastT.current = null;
+    }, 3000);
+  }, []);
 
   const applyRemoteRelay = useCallback(
     (h: FourBonesMpRelay) => {
@@ -478,9 +478,7 @@ export default function FourBonesGameMulti({
         robotPoints: 0,
       }));
       setSettledSides(h.sides);
-      setTurnPlayerId(
-        h.matchOver ? h.throwerId : h.nextTurnPlayerId,
-      );
+      setTurnPlayerId(h.matchOver ? h.throwerId : h.nextTurnPlayerId);
       if (!h.matchOver) {
         setTimeout(() => {
           setSettledSides([null, null, null, null]);
@@ -575,13 +573,9 @@ export default function FourBonesGameMulti({
         } satisfies FourBonesMpRelay);
 
         if (hist.isDorvenBerkh) {
-          pushToast(
-            language === "en" ? "Dörvön berkh!" : "Дөрвөн бүрх!",
-          );
+          pushToast(language === "en" ? "Dorvon berkh!" : "Дөрвөн бэрх!");
         } else {
-          pushToast(
-            language === "en" ? `+${points} pts` : `+${points} оноо`,
-          );
+          pushToast(language === "en" ? `+${points} pts` : `+${points} оноо`);
         }
 
         if (!matchOver) {
@@ -649,8 +643,7 @@ export default function FourBonesGameMulti({
     };
   }, [state, scores, myId]);
 
-  const isWin =
-    state.phase === "matchOver" && state.mpWinnerId === myId;
+  const isWin = state.phase === "matchOver" && state.mpWinnerId === myId;
 
   return (
     <div

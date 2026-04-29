@@ -14,9 +14,7 @@ export function SevenPathLine({ points }: { points: [number, number][] }) {
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry();
     if (points.length < 2) return g;
-    g.setFromPoints(
-      points.map(([x, z]) => new THREE.Vector3(x, 0.08, z)),
-    );
+    g.setFromPoints(points.map(([x, z]) => new THREE.Vector3(x, 0.08, z)));
     return g;
   }, [points]);
   const lineObj = useMemo(() => {
@@ -37,10 +35,6 @@ export type SevenPathDrawLayerProps = {
   onDraggingChange: (dragging: boolean) => void;
 };
 
-/**
- * Canvas дээр зааж чирэхэд камерын туяагаар ширэн (Y≈0.06) дээр огцолж зам зурна.
- * 3D шагайн mesh raycast-ийг орхино.
- */
 export function SevenPathDrawLayer({
   enabled,
   points,
@@ -112,9 +106,7 @@ export function SevenPathDrawLayer({
       e.stopPropagation();
       try {
         el.releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
+      } catch {}
       endDrag();
     };
 

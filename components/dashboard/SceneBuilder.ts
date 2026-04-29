@@ -9,6 +9,8 @@ import {
   terrainBiome,
   pseudoNoise2D,
   smoothstep,
+  getPlayerHomeYardHalfAxes,
+  type HomeLivestockForFence,
 } from "./sceneHelpers";
 import {
   STATION_CONFIGS,
@@ -63,10 +65,10 @@ function distPointSegment2D(
 const STATION_MAIN_GER_SCALE = 3.2;
 const STATION_SATELLITE_GER_SCALE_MIN = 1.68;
 const STATION_SATELLITE_GER_SCALE_MAX = 1.98;
-/** urtuunuus hol bairluulah mod, chuluu, rock */
-const STATION_CENTER_CLEAR = 62;
+/** Төвийн гол гэр/хаалганаас сүрийн мөхлөг, мод — илүү агаартай (далд хэмжээс өөрчлөгдөхгүй). */
+const STATION_CENTER_CLEAR = 66;
 /** ub-bogdiin urtuu hol bairluulah */
-const STATION_CENTER_CLEAR_ULAANBAATAR = 74;
+const STATION_CENTER_CLEAR_ULAANBAATAR = 78;
 
 /**
  * Процедурын морь, тэмээг **гэрийн ойролцоо** болон world map-ийн **ижил** нэг
@@ -76,6 +78,8 @@ const PROCEDURAL_HORSE_UNIFIED_SCALE = 1.27 * 1.48; // old median
 const PROCEDURAL_HORSE_SCALE_JITTER = 0.02;
 const PROCEDURAL_CAMEL_UNIFIED_SCALE = 1.18 * 1.42; // old median
 const PROCEDURAL_CAMEL_SCALE_JITTER = 0.02;
+const MAP_CLOUD_COUNT = 16;
+const MAP_BIRD_COUNT = 14;
 
 type StationPeripheryPreset = {
   trees?: number;
@@ -100,246 +104,268 @@ type StationPeripheryPreset = {
 
 const STATION_PERIPHERY: Record<string, StationPeripheryPreset> = {
   ulaanbaatar: {
-    trees: 8,
-    treeRadius: 64,
-    grassClumps: 10,
-    grassRadius: 60,
-    rocks: 3,
-    rockRadius: 58,
+    trees: 5,
+    treeRadius: 60,
+    decorGers: 2,
+    gerRadius: 44,
+    grassClumps: 8,
+    grassRadius: 56,
+    rocks: 2,
+    rockRadius: 52,
+    ovoos: 1,
+    ovooRadius: 46,
   },
   zuunmod: {
+    trees: 20,
+    treeRadius: 38,
+    decorGers: 5,
+    gerRadius: 32,
+    ovoos: 2,
+    ovooRadius: 26,
+    grassClumps: 24,
+    grassRadius: 36,
+  },
+  terelj: {
+    trees: 30,
+    treeRadius: 44,
+    rocks: 16,
+    rockRadius: 36,
+    horses: 3,
+    horseRadius: 30,
+    grassClumps: 22,
+    grassRadius: 38,
+  },
+  nalaikh: {
+    rocks: 30,
+    rockRadius: 34,
+    trees: 12,
+    treeRadius: 30,
+    ovoos: 2,
+    ovooRadius: 22,
+    grassClumps: 8,
+    grassRadius: 28,
+  },
+  kharakhorum: {
+    decorGers: 8,
+    gerRadius: 36,
+    trees: 18,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 34,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  arvaikheer: {
+    decorGers: 7,
+    gerRadius: 34,
+    horses: 9,
+    horseRadius: 38,
+    grassClumps: 34,
+    grassRadius: 42,
+    ovoos: 2,
+    ovooRadius: 28,
+  },
+  orkhon_river: {
+    trees: 20,
+    treeRadius: 38,
+    reedPatches: 30,
+    reedRadius: 40,
+    horses: 4,
+    horseRadius: 32,
+    grassClumps: 20,
+    grassRadius: 34,
+  },
+  mandalgovi: {
+    camels: 10,
+    camelRadius: 40,
+    decorGers: 4,
+    gerRadius: 30,
+    rocks: 12,
+    rockRadius: 34,
+    grassClumps: 10,
+    grassRadius: 30,
+    ovoos: 1,
+    ovooRadius: 24,
+  },
+  darkhan: {
+    trees: 32,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 32,
+    grassClumps: 26,
+    grassRadius: 38,
+    decorGers: 3,
+    gerRadius: 28,
+  },
+  erdenet: {
     trees: 22,
     treeRadius: 36,
     decorGers: 4,
     gerRadius: 28,
     ovoos: 2,
     ovooRadius: 22,
-    grassClumps: 18,
-    grassRadius: 30,
-  },
-  terelj: {
-    trees: 32,
-    treeRadius: 40,
-    rocks: 14,
-    rockRadius: 32,
-    horses: 3,
-    horseRadius: 26,
-    grassClumps: 24,
-    grassRadius: 34,
-  },
-  nalaikh: {
-    rocks: 28,
-    rockRadius: 30,
-    trees: 10,
-    treeRadius: 24,
-    ovoos: 1,
-    ovooRadius: 14,
-  },
-  kharakhorum: {
-    decorGers: 7,
-    gerRadius: 32,
-    trees: 14,
-    treeRadius: 38,
-    horses: 5,
-    horseRadius: 30,
-    ovoos: 2,
-    ovooRadius: 26,
     grassClumps: 20,
-    grassRadius: 36,
-  },
-  arvaikheer: {
-    decorGers: 6,
-    gerRadius: 34,
-    horses: 8,
-    horseRadius: 36,
-    grassClumps: 45,
-    grassRadius: 40,
-    ovoos: 2,
-    ovooRadius: 28,
-  },
-  orkhon_river: {
-    trees: 18,
-    treeRadius: 34,
-    reedPatches: 36,
-    reedRadius: 38,
-    horses: 4,
-    horseRadius: 28,
-    grassClumps: 22,
     grassRadius: 32,
-  },
-  mandalgovi: {
-    camels: 8,
-    camelRadius: 36,
-    decorGers: 3,
-    gerRadius: 26,
-    rocks: 14,
-    rockRadius: 32,
-    grassClumps: 14,
-    grassRadius: 30,
-  },
-  darkhan: {
-    trees: 34,
-    treeRadius: 38,
-    horses: 5,
-    horseRadius: 30,
-    grassClumps: 28,
-    grassRadius: 36,
-  },
-  erdenet: {
-    trees: 20,
-    treeRadius: 34,
-    decorGers: 3,
-    gerRadius: 24,
-    ovoos: 1,
-    ovooRadius: 18,
-    grassClumps: 18,
-    grassRadius: 28,
   },
   sukhbaatar: {
-    trees: 26,
-    treeRadius: 40,
-    rocks: 8,
-    rockRadius: 30,
-    grassClumps: 24,
-    grassRadius: 34,
+    trees: 24,
+    treeRadius: 42,
+    rocks: 10,
+    rockRadius: 34,
+    grassClumps: 22,
+    grassRadius: 36,
+    reedPatches: 8,
+    reedRadius: 30,
   },
   moron: {
-    trees: 22,
-    treeRadius: 36,
-    horses: 5,
-    horseRadius: 32,
-    reedPatches: 14,
-    reedRadius: 28,
-    grassClumps: 20,
-    grassRadius: 32,
-  },
-  khatgal: {
-    trees: 30,
-    treeRadius: 38,
-    rocks: 10,
-    rockRadius: 28,
-    reedPatches: 18,
-    reedRadius: 32,
-    grassClumps: 22,
-    grassRadius: 34,
-  },
-  uliastai: {
-    rocks: 16,
-    rockRadius: 34,
-    trees: 12,
-    treeRadius: 30,
-    ovoos: 2,
-    ovooRadius: 24,
-    grassClumps: 14,
-    grassRadius: 28,
-  },
-  bayankhongor: {
-    trees: 18,
-    treeRadius: 34,
-    rocks: 10,
-    rockRadius: 28,
-    horses: 4,
-    horseRadius: 30,
-    grassClumps: 20,
-    grassRadius: 32,
-  },
-  altai: {
-    rocks: 22,
-    rockRadius: 36,
-    trees: 10,
-    treeRadius: 32,
-    camels: 3,
-    camelRadius: 28,
-    ovoos: 1,
-    ovooRadius: 20,
-  },
-  khovd: {
-    trees: 16,
-    treeRadius: 34,
-    decorGers: 4,
-    gerRadius: 28,
-    camels: 4,
-    camelRadius: 30,
-    grassClumps: 18,
-    grassRadius: 32,
-  },
-  ulaangom: {
     trees: 24,
-    treeRadius: 38,
-    rocks: 12,
-    rockRadius: 32,
+    treeRadius: 40,
+    horses: 6,
+    horseRadius: 34,
     reedPatches: 16,
     reedRadius: 34,
+    grassClumps: 22,
+    grassRadius: 36,
+  },
+  khatgal: {
+    trees: 28,
+    treeRadius: 42,
+    rocks: 12,
+    rockRadius: 34,
+    reedPatches: 20,
+    reedRadius: 36,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  uliastai: {
+    rocks: 18,
+    rockRadius: 38,
+    trees: 14,
+    treeRadius: 34,
+    ovoos: 3,
+    ovooRadius: 28,
+    grassClumps: 16,
+    grassRadius: 32,
+  },
+  bayankhongor: {
+    trees: 20,
+    treeRadius: 36,
+    rocks: 12,
+    rockRadius: 32,
+    horses: 4,
+    horseRadius: 34,
+    grassClumps: 22,
+    grassRadius: 34,
+    reedPatches: 8,
+    reedRadius: 30,
+  },
+  altai: {
+    rocks: 24,
+    rockRadius: 40,
+    trees: 12,
+    treeRadius: 36,
+    camels: 4,
+    camelRadius: 32,
+    ovoos: 2,
+    ovooRadius: 24,
+    grassClumps: 10,
+    grassRadius: 30,
+  },
+  khovd: {
+    trees: 18,
+    treeRadius: 36,
+    decorGers: 5,
+    gerRadius: 32,
+    camels: 4,
+    camelRadius: 34,
     grassClumps: 20,
     grassRadius: 34,
   },
+  ulaangom: {
+    trees: 22,
+    treeRadius: 42,
+    rocks: 14,
+    rockRadius: 36,
+    reedPatches: 18,
+    reedRadius: 38,
+    grassClumps: 22,
+    grassRadius: 38,
+  },
   ondorhaan: {
-    trees: 26,
-    treeRadius: 36,
-    rocks: 16,
-    rockRadius: 34,
-    ovoos: 2,
-    ovooRadius: 26,
-    grassClumps: 18,
-    grassRadius: 32,
+    trees: 24,
+    treeRadius: 40,
+    rocks: 18,
+    rockRadius: 38,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 20,
+    grassRadius: 36,
   },
   kherlenbayan: {
+    decorGers: 8,
+    gerRadius: 38,
+    horses: 12,
+    horseRadius: 42,
+    grassClumps: 34,
+    grassRadius: 44,
+    ovoos: 3,
+    ovooRadius: 34,
+  },
+  choibalsan: {
+    horses: 14,
+    horseRadius: 44,
+    decorGers: 7,
+    gerRadius: 38,
+    grassClumps: 32,
+    grassRadius: 42,
+    ovoos: 3,
+    ovooRadius: 34,
+  },
+  baruun_urt: {
     decorGers: 7,
     gerRadius: 36,
-    horses: 10,
+    camels: 5,
+    camelRadius: 36,
+    horses: 7,
     horseRadius: 38,
-    grassClumps: 40,
-    grassRadius: 42,
+    grassClumps: 24,
+    grassRadius: 38,
+  },
+  dalanzadgad: {
+    camels: 16,
+    camelRadius: 46,
+    rocks: 14,
+    rockRadius: 42,
+    grassClumps: 8,
+    grassRadius: 34,
     ovoos: 2,
     ovooRadius: 30,
   },
-  choibalsan: {
-    horses: 12,
-    horseRadius: 40,
-    decorGers: 6,
-    gerRadius: 36,
-    grassClumps: 38,
-    grassRadius: 40,
-    ovoos: 2,
-    ovooRadius: 32,
-  },
-  baruun_urt: {
-    decorGers: 6,
-    gerRadius: 34,
-    camels: 4,
-    camelRadius: 32,
-    horses: 6,
-    horseRadius: 34,
-    grassClumps: 28,
-    grassRadius: 36,
-  },
-  dalanzadgad: {
-    camels: 14,
-    camelRadius: 42,
-    rocks: 12,
-    rockRadius: 38,
-    grassClumps: 12,
-    grassRadius: 36,
-  },
   sainshand: {
-    camels: 8,
-    camelRadius: 36,
-    decorGers: 3,
-    gerRadius: 28,
-    rocks: 10,
-    rockRadius: 32,
-    grassClumps: 16,
+    camels: 10,
+    camelRadius: 40,
+    decorGers: 4,
+    gerRadius: 30,
+    rocks: 12,
+    rockRadius: 36,
+    grassClumps: 12,
     grassRadius: 34,
+    ovoos: 1,
+    ovooRadius: 24,
   },
   zamiin_uud: {
-    rocks: 26,
-    rockRadius: 38,
-    camels: 4,
-    camelRadius: 32,
-    trees: 8,
-    treeRadius: 28,
-    ovoos: 2,
-    ovooRadius: 26,
+    rocks: 28,
+    rockRadius: 42,
+    camels: 6,
+    camelRadius: 36,
+    trees: 6,
+    treeRadius: 30,
+    ovoos: 3,
+    ovooRadius: 30,
+    grassClumps: 6,
+    grassRadius: 28,
   },
 };
 
@@ -862,7 +888,6 @@ export class SceneBuilder {
     _heroZ: number,
     _heroRy: number,
     campByPeer: Map<string, THREE.Object3D>,
-    enclosureByPeer: Map<string, THREE.Mesh>,
     meta?: {
       homeKey?: string;
       gerLevel: number;
@@ -877,45 +902,23 @@ export class SceneBuilder {
   ): void {
     const safeName = `remote_visit_camp_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
     const lv = Math.max(1, Math.min(30, Math.floor(meta?.gerLevel ?? 1)));
-    const ls = meta?.livestock;
-    const sheepN = Math.max(0, Math.min(99, Math.floor(ls?.sheep ?? 0)));
-    const goatN = Math.max(0, Math.min(99, Math.floor(ls?.goat ?? 0)));
-    const cowN = Math.max(0, Math.min(99, Math.floor(ls?.cow ?? 0)));
-    const horseN = Math.max(0, Math.min(99, Math.floor(ls?.horse ?? 0)));
-    const camelN = Math.max(0, Math.min(99, Math.floor(ls?.camel ?? 0)));
-    const totalMal = Math.min(
-      160,
-      sheepN + goatN + cowN + horseN + camelN,
-    );
 
     const step = Math.min(lv, 5);
     const earlyScale = 0.5 + (step - 1) * 0.095;
     const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
     const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
-    // `buildPlayerHomeGer`‑той ижил s — урьд *0.5 байсан тул бусад тоглогчийн гэр илүү жижиг харагддаг байсан.
     const s = earlyScale * midBoost * highBoost * 1.86;
 
-    const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
-    let ringSpan = 12.5;
-    if (extraGers > 0) {
-      ringSpan = 13.2 + Math.min(lv * 0.45, 10) + 7;
-    }
-    const yardW = Math.max(
-      34,
-      ringSpan * 2.15 + Math.min(lv, 8) * 0.9 + totalMal * 0.62,
-    );
-    const enclosureR = yardW * 0.5;
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, meta?.livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
 
     const fromHello = (meta?.homeKey ?? "").trim();
     const anchorKey = fromHello || peerId;
     const { x: gx, z: gz } = playerHomeWorldAnchor(anchorKey);
     const campYaw = 0;
-    const layoutKey = `${lv}|${totalMal}|${enclosureR.toFixed(1)}|${s.toFixed(2)}`;
-    const metaKey = `A|${anchorKey.slice(0, 64)}|${layoutKey}`;
-
-    const hy = terrainHeight(gx, gz);
-    const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
-    const y = hy + gerLift;
+    const layoutKey = `${lv}|${yardW.toFixed(1)}|${yardD.toFixed(1)}|${s.toFixed(2)}`;
+    const metaKey = `B|${anchorKey.slice(0, 64)}|${layoutKey}`;
 
     const existing = campByPeer.get(peerId);
     const needsRebuild =
@@ -929,44 +932,14 @@ export class SceneBuilder {
         disposeRemoteCampSubtree(existing);
         campByPeer.delete(peerId);
       }
-      this.makeGer(gx, gz, campYaw, s, false, "", container, safeName);
-      const created = container.getObjectByName(safeName);
-      if (created) {
-        created.userData.campMeta = metaKey;
-        campByPeer.set(peerId, created);
-      }
-    } else if (existing && existing.parent === container) {
-      existing.position.set(gx, y, gz);
-      existing.rotation.y = campYaw;
+      const campRoot = new THREE.Group();
+      campRoot.name = safeName;
+      campRoot.userData.campMeta = metaKey;
+      container.add(campRoot);
+      this.makeGer(gx, gz, campYaw, s, false, "", campRoot, `${safeName}_ger`);
+      this.makeFence(gx, gz, yardW, yardD, 0, false, campRoot);
+      campByPeer.set(peerId, campRoot);
     }
-
-    let ring = enclosureByPeer.get(peerId);
-    if (!ring || (ring.userData.campMeta as string | undefined) !== metaKey) {
-      if (ring) {
-        container.remove(ring);
-        ring.geometry.dispose();
-        (ring.material as THREE.Material).dispose();
-        enclosureByPeer.delete(peerId);
-      }
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x6e5a42,
-        transparent: true,
-        opacity: 0.4,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-      ring = new THREE.Mesh(
-        new THREE.RingGeometry(enclosureR * 0.87, enclosureR, 64),
-        mat,
-      );
-      ring.name = `remote_enc_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
-      ring.rotation.x = -Math.PI / 2;
-      ring.userData.campMeta = metaKey;
-      enclosureByPeer.set(peerId, ring);
-      container.add(ring);
-    }
-    const rHy = terrainHeight(gx, gz) + 0.26;
-    ring.position.set(gx, rHy, gz);
   }
 
   private makeFence(
@@ -1110,8 +1083,11 @@ export class SceneBuilder {
     const seed = stationId.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
 
     if (kind === "palace") {
-      const nGers = 12 + (seed % 9);
-      const ringR = 32 + (seed % 4) * 0.55;
+      const isUlaanbaatar = stationId === "ulaanbaatar";
+      const nGers = isUlaanbaatar ? 9 : 12 + (seed % 9);
+      const ringR = isUlaanbaatar
+        ? 28 + (seed % 3) * 0.45
+        : 32 + (seed % 4) * 0.55;
       for (let i = 0; i < nGers; i++) {
         const ang = (i / nGers) * Math.PI * 2 + rand(-0.03, 0.03);
         this.makeGer(
@@ -1125,14 +1101,14 @@ export class SceneBuilder {
           false,
         );
       }
-      const fw = 92;
-      const fd = 78;
+      const fw = isUlaanbaatar ? 80 : 92;
+      const fd = isUlaanbaatar ? 68 : 78;
       this.makeFence(x, z, fw, fd, rand(0, Math.PI * 0.1), true);
       const fh = Math.max(fw, fd) * 0.5;
-      const nMini = 11 + (seed % 6);
+      const nMini = isUlaanbaatar ? 7 : 11 + (seed % 6);
       for (let i = 0; i < nMini; i++) {
         const ang = (i / nMini) * Math.PI * 2 + rand(-0.14, 0.14);
-        const rad = fh + rand(10, 28);
+        const rad = fh + rand(isUlaanbaatar ? 12 : 10, isUlaanbaatar ? 20 : 28);
         this.makeMiniSumTemple(
           x + Math.cos(ang) * rad,
           z + Math.sin(ang) * rad,
@@ -1176,7 +1152,10 @@ export class SceneBuilder {
     }
   }
 
-  buildPlayerHomeGer(gerLevel = 1): void {
+  buildPlayerHomeGer(
+    gerLevel = 1,
+    livestock: HomeLivestockForFence = null,
+  ): void {
     const prev = this.scene.getObjectByName("playerHomeGer");
     if (prev) this.scene.remove(prev);
 
@@ -1217,8 +1196,9 @@ export class SceneBuilder {
         );
       }
     }
-    const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
-    const yardD = yardW * 0.86;
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
     this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
@@ -1382,6 +1362,67 @@ export class SceneBuilder {
     }
   }
 
+  /**
+   * Газрын сонин цэг — өртөөний тэмдэг биш, жижиг овоо/чулуун тэмдэг.
+   * `x, z` нь `stationWorldXZ`-аас (азотын өндөр: terrain).
+   */
+  buildWorldPoiMarkers(
+    pois: { id: string; x: number; z: number }[],
+  ): void {
+    const prev = this.scene.getObjectByName("worldPoiMarkers");
+    if (prev) {
+      prev.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry?.dispose();
+          const mat = o.material;
+          if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
+          else mat?.dispose();
+        }
+      });
+      this.scene.remove(prev);
+    }
+    if (pois.length === 0) return;
+    const root = new THREE.Group();
+    root.name = "worldPoiMarkers";
+    for (const p of pois) {
+      const y = terrainHeight(p.x, p.z);
+      if (y > 85) continue;
+      const g = new THREE.Group();
+      g.name = `world_poi_${p.id}`;
+      const base = new THREE.Mesh(
+        new THREE.ConeGeometry(0.65, 0.95, 5),
+        mkMat(0x6a5340, 0.9),
+      );
+      base.position.y = 0.48;
+      const mid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.48, 0.7, 6),
+        mkMat(0x8a7048, 0.88),
+      );
+      mid.position.y = 1.05;
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 7, 5),
+        mkMat(0xc9a86c, 0.85),
+      );
+      cap.position.y = 1.52;
+      g.add(base, mid, cap);
+      g.position.set(p.x, y - 0.02, p.z);
+      g.rotation.y = rand(0, Math.PI * 2);
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.9, 0.06, 5, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0x9acd32,
+          transparent: true,
+          opacity: 0.32,
+        }),
+      );
+      rim.rotation.x = Math.PI / 2;
+      rim.position.y = 0.04;
+      g.add(rim);
+      root.add(g);
+    }
+    this.scene.add(root);
+  }
+
   buildGerCamps(): void {
     const S = STATION_SPREAD;
     [
@@ -1536,7 +1577,7 @@ export class SceneBuilder {
     });
   }
 
-  /** Станцын эргэн тойронд нэг багц өвс — buildGrassTufts-тай ижил хаврын өнгө */
+  /** Станц тойрог: жижиг багц — газрын өнгийг биш зөвхөн зүлэг мэт навч (хуучин өнгө) */
   private makeGrassClumpAt(x: number, z: number): void {
     const h = terrainHeight(x, z);
     if (h > 16 || h < -0.6) return;
@@ -1564,8 +1605,8 @@ export class SceneBuilder {
           ? springAlpine
           : springSteppe;
     for (let b = 0; b < bladeCount; b++) {
-      const bx = rand(-0.35, 0.35);
-      const bz = rand(-0.35, 0.35);
+      const bx = rand(-0.3, 0.3);
+      const bz = rand(-0.3, 0.3);
       const blade = new THREE.Mesh(
         new THREE.CylinderGeometry(
           0.02,
@@ -1681,7 +1722,10 @@ export class SceneBuilder {
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const r = rand(radius * 0.3, radius);
+      const r = rand(
+        Math.max(radius * 0.36, innerClear * 0.9),
+        radius * 0.95,
+      );
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       if (Math.hypot(x - cx, z - cz) < innerClear) continue;
@@ -1780,30 +1824,30 @@ export class SceneBuilder {
     const smin = p.treeScaleMin ?? 0.45;
     const smax = p.treeScaleMax ?? 1.05;
     if (p.trees && p.trees > 0) {
-      const nt = Math.max(0, Math.floor(p.trees * 0.35));
+      const nt = Math.max(0, Math.floor(p.trees * 0.52));
       if (nt > 0)
         this.scatterPeripheryTrees(cx, cz, nt, tr, smin, smax, centerClear);
     }
 
     if (p.decorGers && p.decorGers > 0) {
-      const nd = Math.max(0, Math.round(p.decorGers * 0.38));
+      const nd = Math.max(0, Math.round(p.decorGers * 0.6));
       if (nd > 0)
         this.scatterPeripheryDecorGers(
           cx,
           cz,
           nd,
           p.gerRadius ?? 32,
-          stationId === "ulaanbaatar" ? 46 : 15,
+          stationId === "ulaanbaatar" ? 48 : 19,
         );
     }
 
     if (p.camels && p.camels > 0) {
-      const nc = Math.max(0, Math.floor(p.camels * 0.3));
+      const nc = Math.max(0, Math.floor(p.camels * 0.45));
       if (nc > 0) this.scatterPeripheryCamels(cx, cz, nc, p.camelRadius ?? 48);
     }
 
     if (p.horses && p.horses > 0) {
-      const nh = Math.max(0, Math.floor(p.horses * 0.28));
+      const nh = Math.max(0, Math.floor(p.horses * 0.42));
       if (nh > 0) this.scatterPeripheryHorses(cx, cz, nh, p.horseRadius ?? 44);
     }
 
@@ -1811,7 +1855,7 @@ export class SceneBuilder {
       this.scatterPeripheryRocks(
         cx,
         cz,
-        Math.max(0, Math.floor(p.rocks * 0.45)),
+        Math.max(0, Math.floor(p.rocks * 0.6)),
         p.rockRadius ?? 30,
         centerClear,
       );
@@ -1823,7 +1867,7 @@ export class SceneBuilder {
       this.scatterGrassClumps(
         cx,
         cz,
-        Math.max(0, Math.floor(p.grassClumps * 0.45)),
+        Math.max(0, Math.floor(p.grassClumps * 0.62)),
         p.grassRadius ?? 34,
       );
 
@@ -1831,7 +1875,7 @@ export class SceneBuilder {
       this.scatterPeripheryReeds(
         cx,
         cz,
-        Math.max(0, Math.floor(p.reedPatches * 0.4)),
+        Math.max(0, Math.floor(p.reedPatches * 0.55)),
         p.reedRadius ?? 36,
       );
   }
@@ -1841,9 +1885,11 @@ export class SceneBuilder {
     const ringSeed = stationId
       .split("")
       .reduce((a, c) => a + c.charCodeAt(0), 0);
-    const ringR = 28.5 + (ringSeed % 5) * 0.45;
-    for (let i = 0; i < 10; i++) {
-      const ang = (i / 10) * Math.PI * 2 + rand(-0.04, 0.04);
+    /** Тойргийн илүү сийрэг зай: жижиг гэрүүд нэгнээсээ болон төв гэрээр арай хол. */
+    const ringR = 31.0 + (ringSeed % 6) * 0.48;
+    const nSat = 12;
+    for (let i = 0; i < nSat; i++) {
+      const ang = (i / nSat) * Math.PI * 2 + rand(-0.05, 0.05);
       const gx = x + Math.cos(ang) * ringR;
       const gz = z + Math.sin(ang) * ringR;
       this.makeGer(
@@ -1865,7 +1911,7 @@ export class SceneBuilder {
       true,
       stationId,
     );
-    const fenceHalf = ringR + 12.5;
+    const fenceHalf = ringR + 14.8;
     this.makeFence(
       x,
       z,
@@ -2638,22 +2684,41 @@ export class SceneBuilder {
       legGroups.push(lg);
     });
     (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups = legGroups;
-    const tail = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.82, 10), dk);
-    tail.position.set(-0.56, 0.95, 0);
-    tail.rotation.z = 1.35;
-    tail.castShadow = true;
-    g.add(tail);
-    for (let m = 0; m < 5; m++) {
+    // Tail: segmented + tuft for clearer horse silhouette.
+    const tailRoot = new THREE.Group();
+    tailRoot.position.set(-0.56, 1.0, 0);
+    tailRoot.rotation.z = 1.25;
+    const tailBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.045, 0.034, 0.36, 8),
+      hm,
+    );
+    tailBase.position.y = -0.17;
+    tailBase.castShadow = true;
+    tailRoot.add(tailBase);
+    const tailMid = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.026, 0.34, 8),
+      dk,
+    );
+    tailMid.position.y = -0.43;
+    tailMid.castShadow = true;
+    tailRoot.add(tailMid);
+    const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.36, 9), dk);
+    tailTip.position.y = -0.73;
+    tailTip.rotation.z = 0.04;
+    tailTip.castShadow = true;
+    tailRoot.add(tailTip);
+    g.add(tailRoot);
+    for (let m = 0; m < 7; m++) {
       const maneStrand = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.028, 0.04, 0.22 + m * 0.04, 6),
+        new THREE.CylinderGeometry(0.026, 0.038, 0.2 + m * 0.04, 6),
         dk,
       );
       maneStrand.position.set(
-        0.32 + m * 0.04,
-        1.18 + m * 0.05,
-        (m % 2 === 0 ? 1 : -1) * 0.06,
+        0.26 + m * 0.045,
+        1.16 + m * 0.045,
+        (m % 2 === 0 ? 1 : -1) * 0.07,
       );
-      maneStrand.rotation.z = -0.42 - m * 0.05;
+      maneStrand.rotation.z = -0.5 - m * 0.045;
       maneStrand.castShadow = true;
       g.add(maneStrand);
     }
@@ -2854,9 +2919,9 @@ export class SceneBuilder {
 
   buildClouds(): void {
     // Clouds are heavy (many meshes). Keep count modest for performance.
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < MAP_CLOUD_COUNT; i++) {
       const cg = new THREE.Group();
-      const puffN = randInt(4, 11);
+      const puffN = randInt(3, 8);
       for (let p = 0; p < puffN; p++) {
         const cs = rand(2.5, 8);
         const cm = new THREE.Mesh(
@@ -2895,7 +2960,7 @@ export class SceneBuilder {
   }
 
   buildBirds(): void {
-    for (let i = 0; i < 28; i++) {
+    for (let i = 0; i < MAP_BIRD_COUNT; i++) {
       const pivot = new THREE.Group();
       const bx = rand(-1, 1) > 0 ? rand(-290, 290) : rand(-220, 220);
       const bz = rand(-1, 1) > 0 ? rand(-240, 240) : rand(-180, 180);
@@ -2931,7 +2996,7 @@ export class SceneBuilder {
   }
 
   buildGrassTufts(): void {
-    /** Эрт хаврын шар ногоон — хэт тод биш, бэлчээр дүүрэн */
+    /** Газрын дүрслэлийг хуучин үлдээн, зөвхөн сарнисан багц багц зүлэг (олон нягт нэгдэл биш) */
     const springSteppe = [0x8a9a72, 0x7a8a64, 0x9aaa82, 0x6f7f5c, 0xa3b08a];
     const springForest = [0x5a6b48, 0x4d5c3c, 0x677a52, 0x5f6d44];
     const springGobi = [0xb0aa78, 0xa29868, 0x9a9468, 0xc0b888];
@@ -2972,8 +3037,7 @@ export class SceneBuilder {
       return m;
     });
 
-    // Grass tufts dominate draw calls; reduce count for smooth map.
-    for (let i = 0; i < 780; i++) {
+    for (let i = 0; i < 720; i++) {
       const x = rand(-200, 115),
         z = rand(-65, 68);
       const h = terrainHeight(x, z);
@@ -2986,10 +3050,10 @@ export class SceneBuilder {
       const bladeCount = isAlpine
         ? randInt(1, 4)
         : isForest
-          ? randInt(5, 11)
+          ? randInt(4, 10)
           : isGobi
-            ? randInt(2, 6)
-            : randInt(5, 12);
+            ? randInt(2, 5)
+            : randInt(4, 9);
       const cylMats = isGobi
         ? matsGobi
         : isForest
@@ -3012,8 +3076,8 @@ export class SceneBuilder {
             ? rand(0.22, 0.62)
             : rand(0.2, 0.55);
       for (let b = 0; b < bladeCount; b++) {
-        const bx = rand(-0.42, 0.42),
-          bz = rand(-0.42, 0.42);
+        const bx = rand(-0.34, 0.34),
+          bz = rand(-0.34, 0.34);
         const ci = randInt(0, cylMats.length - 1);
         if (b % 3 === 0) {
           const blade = new THREE.Mesh(

@@ -1,29 +1,11 @@
-// ---------------------------------------------------------------------------
-// Shagai Guessing ("Шагай таалцах") – game rules & state machine.
-//
-// Traditional Mongolian game. Each player starts with the same number of
-// shagai. On each round both players secretly grab some of their shagai in
-// their fist and then *guess* the combined total held by all players. If
-// only one side guesses the true total correctly they win and transfer
-// shagai from the loser to themselves; both-correct / both-wrong rounds
-// leave the stacks untouched. A player with zero shagai is out. The
-// winner is the player who ends up holding all the shagai.
-// ---------------------------------------------------------------------------
-
 export type Player = "player" | "robot";
 
 export type Phase =
-  // Between rounds – waiting for the player to start.
   | "idle"
-  // Player is choosing how many to hide + their guess.
   | "hiding"
-  // Robot "thinking" visual pause before the reveal.
   | "robotThinking"
-  // Animate the reveal (hands open + totals shown).
   | "revealing"
-  // Show the round outcome, wait for next round.
   | "result"
-  // One side has run out of shagai.
   | "matchOver";
 
 export interface RoundRecord {
@@ -43,11 +25,9 @@ export interface GuessState {
   round: number;
   playerStack: number;
   robotStack: number;
-  // Most recently committed round (null before any round resolves).
   lastRound: RoundRecord | null;
   history: RoundRecord[];
   winner: Player | null;
-  // Rolling counters used by the UI header.
   playerWins: number;
   robotWins: number;
 }
@@ -67,42 +47,24 @@ export const INITIAL_GUESS_STATE: GuessState = {
   robotWins: 0,
 };
 
-// ---------------------------------------------------------------------------
-// Robot behaviour.
-// ---------------------------------------------------------------------------
-
-/** Pick a reasonable hidden count – random in [0, stack], slightly biased
- *  toward keeping half in hand so rounds stay interesting. */
 export function robotPickHidden(stack: number): number {
   if (stack <= 0) return 0;
-  // 70% pick in the middle band [1, stack], 30% edge (0 or all).
   const edge = Math.random();
   if (edge < 0.08) return 0;
   if (edge < 0.15) return stack;
-  // Slight preference for ~half with a binomial-ish spread.
   const mid = stack / 2;
   const noise = (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
   const picked = Math.round(mid + noise * stack);
   return Math.max(0, Math.min(stack, picked));
 }
 
-/** Pick a guess – the robot "knows" how many it's holding and guesses the
- *  player's hidden count using a centred Gaussian-ish spread around
- *  `playerStack/2`, then adds its own held count. Within legal bounds. */
-export function robotPickGuess(
-  robotHeld: number,
-  playerStack: number,
-): number {
+export function robotPickGuess(robotHeld: number, playerStack: number): number {
   const mid = playerStack / 2;
   const noise = (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
   const playerGuess = Math.round(mid + noise * playerStack);
   const clampedPlayer = Math.max(0, Math.min(playerStack, playerGuess));
   return robotHeld + clampedPlayer;
 }
-
-// ---------------------------------------------------------------------------
-// Round resolution.
-// ---------------------------------------------------------------------------
 
 export interface ResolveInput {
   playerHeld: number;
@@ -114,14 +76,6 @@ export interface ResolveInput {
   round: number;
 }
 
-/**
- * Determine the winner of a round and how many shagai move between piles.
- *
- * Transfer rule: the correct guesser takes the total number of shagai that
- * were actually revealed (`total`) from the loser's remaining pile. If the
- * loser doesn't have that many left in their pile the transfer is clamped
- * to whatever they still have. Both-correct / both-wrong → no transfer.
- */
 export function resolveRound(input: ResolveInput): RoundRecord {
   const {
     playerHeld,
@@ -164,10 +118,6 @@ export function resolveRound(input: ResolveInput): RoundRecord {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Apply a resolved round to the overall game state.
-// ---------------------------------------------------------------------------
-
 export function applyRound(state: GuessState, record: RoundRecord): GuessState {
   let nextPlayer = state.playerStack;
   let nextRobot = state.robotStack;
@@ -178,10 +128,8 @@ export function applyRound(state: GuessState, record: RoundRecord): GuessState {
     nextRobot += record.transferredAmount;
     nextPlayer -= record.transferredAmount;
   }
-  const playerWins =
-    state.playerWins + (record.outcome === "player" ? 1 : 0);
-  const robotWins =
-    state.robotWins + (record.outcome === "robot" ? 1 : 0);
+  const playerWins = state.playerWins + (record.outcome === "player" ? 1 : 0);
+  const robotWins = state.robotWins + (record.outcome === "robot" ? 1 : 0);
   let winner: Player | null = null;
   if (nextPlayer <= 0) winner = "robot";
   else if (nextRobot <= 0) winner = "player";

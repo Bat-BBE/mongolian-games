@@ -24,15 +24,16 @@ import {
 import ShagaiHomboroiMulti from "./shagaiHomboroiMulti";
 import type { MatchRoomControls } from "@/hooks/useMatchRoom";
 import { useApp } from "@/components/AppContext";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 export type ShagaiGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
   match?: MatchRoomControls | null;
-  multiplayerOn?: boolean;
 };
 
 function ShagaiLobbyWait() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       style={{
@@ -50,17 +51,7 @@ function ShagaiLobbyWait() {
           "radial-gradient(circle at 50% 45%, #3a2a1a 0%, #160e08 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — set Ready, then the host starts (2+). Solo host: «Start
-          vs bot».
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд «Бэлэн» → 2+ бол эзэн «Эхлүүлэх». 1-ээр: «Роботтой
-          эхлэх».
-        </span>
-      )}
+      <span>{lobbyIntro}</span>
     </div>
   );
 }
@@ -619,15 +610,9 @@ function ShagaiGameSolo({ onComplete }: ShagaiGameProps) {
   );
 }
 
-export default function ShagaiGame({
-  onComplete,
-  match = null,
-  multiplayerOn = false,
-}: ShagaiGameProps) {
+export default function ShagaiGame({ onComplete, match = null }: ShagaiGameProps) {
   const lobbyBlock =
-    multiplayerOn &&
-    match?.roomCode &&
-    match.roomStatus === "lobby";
+    Boolean(match?.roomCode) && match?.roomStatus === "lobby";
   if (lobbyBlock) {
     return <ShagaiLobbyWait />;
   }

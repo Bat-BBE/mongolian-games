@@ -121,11 +121,6 @@ const FACE_VECTORS: Record<FaceName, THREE.Vector3> = {
   "-z": new THREE.Vector3(0, 0, -1),
 };
 
-const FACE_TO_SIDE: Record<"+y" | "-y", ShagaiSide> = {
-  "-y": "horse",
-  "+y": "camel",
-};
-
 export function buildTargetQuaternion(side: ShagaiSide): THREE.Quaternion {
   const localUp = SHAGAI_SIDE_UP_AXIS[side].clone();
   const worldUp = new THREE.Vector3(0, 1, 0);
@@ -182,6 +177,25 @@ export function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
   return sheepTilt >= goatTilt ? "sheep" : "goat";
 }
 
+/**
+ * Дээшээ хамгийн ойрхон «тал»-ыг сонгоно — SHAGAI_SIDE_UP_AXIS-аар дөрвөн талыг шууд харьцуулна.
+ * Хуучин 6 талын хайрцаг (+y → тэмээ гэх мэт) нь муруй гадаргуу дээр ямаа/тэмээг алдаж байсан.
+ */
+function detectShagaiDominantFourWay(quat: THREE.Quaternion): ShagaiSide {
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  const order: ShagaiSide[] = ["horse", "camel", "sheep", "goat"];
+  let best: ShagaiSide = "sheep";
+  let bestDot = -Infinity;
+  for (const s of order) {
+    const d = SHAGAI_SIDE_UP_AXIS[s].clone().applyQuaternion(quat).dot(worldUp);
+    if (d > bestDot) {
+      bestDot = d;
+      best = s;
+    }
+  }
+  return best;
+}
+
 export function detectShagaiFromQuaternion(
   quat: THREE.Quaternion,
   options: ShagaiDetectOptions = {},
@@ -189,20 +203,19 @@ export function detectShagaiFromQuaternion(
   const { remapOnkh = true, randomOnkh = false } = options;
   const { face } = detectBestFace(quat);
 
-  if (face === "+z") return "sheep";
-  if (face === "-z") return "goat";
-
   if (face === "+x" || face === "-x") {
-    if (remapOnkh) {
+    if (remapOnkh && isShagaiOnkh(quat)) {
       if (randomOnkh) {
         return Math.random() < 0.5 ? "sheep" : "goat";
       }
       return resolveSheepGoatFromOnkh(quat);
     }
-    return weightedTraditionalSide();
+    if (!remapOnkh) {
+      return weightedTraditionalSide();
+    }
   }
 
-  return FACE_TO_SIDE[face];
+  return detectShagaiDominantFourWay(quat);
 }
 
 export function detectShagaiSideFromQuaternion(

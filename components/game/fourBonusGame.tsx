@@ -33,14 +33,11 @@ function PhysicsFloor() {
   return <mesh ref={ref as any} />;
 }
 
-//game table
 function GameTable() {
   return (
     <>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, 0, 0]}>
         <planeGeometry args={[25, 25]} />
-        {/* Warm dark brown instead of near-black so the mat doesn't look
-            like it's floating in a void. */}
         <meshStandardMaterial color="#2a1d12" roughness={1} />
       </mesh>
 
@@ -280,8 +277,7 @@ export default function FourBonesGame({
 }: {
   onComplete?: (result: "win" | "lose") => void;
 }) {
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { grant, rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const [state, setState] = useState<GameState>(INITIAL_STATE);
   const [isThrown, setIsThrown] = useState(false);
   const [throwParams, setThrowParams] = useState<
@@ -300,7 +296,6 @@ export default function FourBonesGame({
   const resultSentRef = useRef(false);
   const matchSentRef = useRef(false);
 
-  // Match-over side-effect (rewards + onComplete).
   useEffect(() => {
     if (state.phase !== "matchOver") return;
     if (matchSentRef.current) return;
@@ -322,12 +317,7 @@ export default function FourBonesGame({
     setState((prev) => ({
       ...prev,
       phase: "throwing",
-      // Only player throws advance the totalThrows counter (matches the
-      // other shagai games).
-      totalThrows:
-        turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
-      // Reset the previous robot result on the start of a new player throw
-      // so the robot panel doesn't show stale data.
+      totalThrows: turn === "player" ? prev.totalThrows + 1 : prev.totalThrows,
       robotSides: turn === "player" ? null : prev.robotSides,
       robotPoints: turn === "player" ? 0 : prev.robotPoints,
     }));
@@ -414,10 +404,8 @@ export default function FourBonesGame({
     [grant],
   );
 
-  // After playerResult, schedule the robot's turn.
   useEffect(() => {
     if (state.phase !== "playerResult") return;
-    // If player already reached target, end match.
     if (state.playerScore >= TARGET_SCORE) {
       setState((prev) => ({ ...prev, phase: "matchOver" }));
       return;
@@ -428,9 +416,6 @@ export default function FourBonesGame({
     return () => clearTimeout(t1);
   }, [state.phase, state.playerScore]);
 
-  // Robot thinking → physically throw its own 4 shagai (same mat as the
-  // player). handleSettle picks up the result once they come to rest and
-  // advances the phase to "robotResult".
   useEffect(() => {
     if (state.phase !== "robotThinking") return;
     const t1 = setTimeout(() => {
@@ -439,19 +424,14 @@ export default function FourBonesGame({
     return () => clearTimeout(t1);
   }, [state.phase, startThrow]);
 
-  // After robotResult, decide next step.
   useEffect(() => {
     if (state.phase !== "robotResult") return;
-    if (
-      state.playerScore >= TARGET_SCORE ||
-      state.robotScore >= TARGET_SCORE
-    ) {
+    if (state.playerScore >= TARGET_SCORE || state.robotScore >= TARGET_SCORE) {
       const t1 = setTimeout(() => {
         setState((prev) => ({ ...prev, phase: "matchOver" }));
       }, 1100);
       return () => clearTimeout(t1);
     }
-    // Otherwise stay on robotResult; player can throw again.
   }, [state.phase, state.playerScore, state.robotScore]);
 
   const handleReset = useCallback(() => {

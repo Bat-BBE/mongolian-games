@@ -2,25 +2,19 @@ import type { ShagaiSide } from "./shagaiTargetType";
 
 export type SevenPhase =
   | "idle"
-  /** Товч дарагдсаны дараа, физик шидэлтийн өмнөх богино «халхлах» үе */
   | "winding_up"
   | "throwing"
   | "settling"
   | "picking"
-  /** Мөргөлдөөний дараа шагайнууд дахин тогтож байна. */
   | "knock_settling"
-  /** Ньсрэхийн дараа хосын хоёроос нэгийг авах сонголт. */
   | "take_pick"
   | "won"
   | "lost";
 
 export const SEVEN_COUNT = 7;
 
-/** Эхлэл/төгсгөл шагайн төвөөс замын цэг хол зайд байх ёстой дээд хязгаар (м). */
 export const SEVEN_PATH_ANCHOR_EPS = 1.05;
-/** Бусад идэвхтэй шагайг «мөргөхгүй» гэж үзэх радиус (м). */
 export const SEVEN_PATH_OBSTACLE_R = 0.5;
-/** Хамгийн багадаа хэдэн цэгтэй полилайн байх ёстой (дарж зурах). */
 export const SEVEN_PATH_MIN_POINTS = 3;
 
 function dist2(ax: number, az: number, bx: number, bz: number): number {
@@ -29,7 +23,6 @@ function dist2(ax: number, az: number, bx: number, bz: number): number {
   return Math.hypot(dx, dz);
 }
 
-/** Сегмент [A,B]-оос цэг P хүртэлх хамгийн богино зай (XZ талбарт). */
 function segmentToPointDist2D(
   ax: number,
   az: number,
@@ -51,10 +44,6 @@ function segmentToPointDist2D(
   return dist2(cx, cz, px, pz);
 }
 
-/**
- * Хос тогтооход зурсан замыг шалгана: эхлэл/төгсгөл зөв шагай дээр очсон эсэх,
- * зам дээр бусад идэвхтэй шагайд хүрээгүй эсэх.
- */
 export function validateSevenPairPath(
   fromId: number,
   toId: number,
@@ -110,7 +99,6 @@ export function validateSevenPairPath(
   return true;
 }
 
-/** Active pieces must include at least one pair (same side) to continue. */
 export function canFormAnyPair(
   activeIds: number[],
   sides: (ShagaiSide | null)[],

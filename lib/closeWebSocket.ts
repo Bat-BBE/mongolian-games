@@ -1,8 +1,3 @@
-/**
- * Unmount/StrictMode cleanup: CONNECTING эхлүүлсний дараа `close()` дуудахад Chrome
- * «WebSocket is closed before the connection is established» гэж шуугиана.
- * `CONNECTING` үед `open` болоход л хаана.
- */
 export function closeWebSocketQuiet(ws: WebSocket | null | undefined): void {
   if (!ws) return;
   const { readyState } = ws;

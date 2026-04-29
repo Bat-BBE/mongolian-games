@@ -6,11 +6,18 @@ import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { WIN_LEVEL } from "./stoneCairnType";
+import { useMatchLobbyIntro } from "./gameModalSession";
 import StoneCairnMemoryGame from "./stoneCairnMemoryGame";
 
 const REL = "cairn_mp_v1";
 
-type EndMsg = { kind: "cairn_e"; v: number; from: string; best: number; won: boolean };
+type EndMsg = {
+  kind: "cairn_e";
+  v: number;
+  from: string;
+  best: number;
+  won: boolean;
+};
 
 function parseE(x: unknown): EndMsg | null {
   if (typeof x !== "object" || x === null) return null;
@@ -30,6 +37,7 @@ type Props = {
 
 export function StoneCairnOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
       className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-white/80"
@@ -38,11 +46,7 @@ export function StoneCairnOnlineLobby() {
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>Room: 2 players. Both memorize the same pattern (match seed). Higher score wins.</span>
-      ) : (
-        <span>Өрөө: 2 тоглогч. Нэг санаанд дараалал (нэг төрлийн). Илүү сайн санаасан нь.</span>
-      )}
+      <span>{lobbyIntro}</span>
     </div>
   );
 }
@@ -85,7 +89,13 @@ export default function StoneCairnMemoryGameMulti({
       setMine({ best: p.best, won: p.won });
       sendV.current += 1;
       const v = sendV.current;
-      sendRelay(REL, { kind: "cairn_e", v, from: myId, best: p.best, won: p.won });
+      sendRelay(REL, {
+        kind: "cairn_e",
+        v,
+        from: myId,
+        best: p.best,
+        won: p.won,
+      });
     },
     [myId, sendRelay],
   );
@@ -111,10 +121,7 @@ export default function StoneCairnMemoryGameMulti({
       return;
     }
     if (!mine.won && theirs.won) {
-      onComplete(
-        "lose",
-        Math.min(100, (mine.best / WIN_LEVEL) * 100),
-      );
+      onComplete("lose", Math.min(100, (mine.best / WIN_LEVEL) * 100));
       return;
     }
     if (mine.best > theirs.best) {
@@ -123,10 +130,7 @@ export default function StoneCairnMemoryGameMulti({
       return;
     }
     if (mine.best < theirs.best) {
-      onComplete(
-        "lose",
-        Math.min(100, (mine.best / WIN_LEVEL) * 100),
-      );
+      onComplete("lose", Math.min(100, (mine.best / WIN_LEVEL) * 100));
       return;
     }
     onComplete("lose", 50);
@@ -137,10 +141,6 @@ export default function StoneCairnMemoryGameMulti({
   }
 
   return (
-    <StoneCairnMemoryGame
-      mode="mp"
-      baseSeed={seed}
-      onLocalFinish={onLocal}
-    />
+    <StoneCairnMemoryGame mode="mp" baseSeed={seed} onLocalFinish={onLocal} />
   );
 }

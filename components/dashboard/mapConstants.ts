@@ -1,3 +1,7 @@
+import { STATION_GAME_WEEKLY_PLAY_CAP } from "@/lib/stationWeeklyPlayCap";
+
+export { STATION_GAME_WEEKLY_PLAY_CAP };
+
 export const STATION_CONFIGS: Record<
   string,
   {
@@ -359,12 +363,12 @@ export function isStationUnlockedInJourney(
   return Boolean(STATION_CONFIGS[stationId]);
 }
 
-/** Өртөө → тоглоом → тухайн тоглоомыг дуусгасан цагийн жагсаалт (7 хоногийн цонхонд 2 хүртэл). */
+/** Өртөө → тоглоом → тухайн тоглоомыг дуусгасан цагийн жагсаалт (7 хоногийн цонхонд `STATION_GAME_WEEKLY_PLAY_CAP` хүртэл). */
 export type StationGameVisits = Record<string, Record<string, number[]>>;
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Нэг тоглоомond 7 хоногт үлдсэн тоглолтын тоо (хамгийн ихдээ 2). */
+/** Нэг тоглоомонд 7 хоногт үлдсэн тоглолтын тоо. */
 export function gameWeeklyPlaysRemaining(
   stationId: string,
   gameSlug: string,
@@ -374,7 +378,7 @@ export function gameWeeklyPlaysRemaining(
   const visits = (stationGameVisits?.[stationId]?.[gameSlug] ?? [])
     .map((x) => Number(x))
     .filter((n) => Number.isFinite(n) && n >= now - WEEK_MS);
-  return Math.max(0, 2 - visits.length);
+  return Math.max(0, STATION_GAME_WEEKLY_PLAY_CAP - visits.length);
 }
 
 /**
@@ -403,5 +407,5 @@ export function stationWeeklyPlaysRemaining(
   const visits = (stationVisits?.[stationId] ?? [])
     .map((x) => Number(x))
     .filter((n) => Number.isFinite(n) && n >= now - windowMs);
-  return Math.max(0, 2 - visits.length);
+  return Math.max(0, STATION_GAME_WEEKLY_PLAY_CAP - visits.length);
 }

@@ -37,11 +37,20 @@ export type MapPresencePeer = {
   emoteGen: number;
 };
 
+export type MapChatLine = {
+  id: string;
+  fromPeerId: string;
+  fromDisplayName: string;
+  text: string;
+  sentAt: number;
+};
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 const DEFAULT_HERO = "/models/hero-22.fbx";
+const MAX_MAP_CHAT_CHARS = 280;
 
 const ZERO_LS: MapPresenceLivestock = {
   sheep: 0,
@@ -132,6 +141,8 @@ export function useMapPresence(opts: {
   const homeKeyRef = useRef(opts.homeKey);
   homeKeyRef.current = opts.homeKey;
   const lastEmoteAtRef = useRef(0);
+  const mapChatLinesRef = useRef<MapChatLine[]>([]);
+  const onMapChatLineRef = useRef<((line: MapChatLine) => void) | null>(null);
 
   const publishPose = useCallback((x: number, z: number, ry: number) => {
     const w = wsRef.current;
@@ -153,6 +164,14 @@ export function useMapPresence(opts: {
     w.send(JSON.stringify({ type: "emote", emote: emoteId.slice(0, 32) }));
   }, []);
 
+  const publishMapChat = useCallback((textRaw: string) => {
+    const text = textRaw.replace(/\s+/g, " ").trim().slice(0, MAX_MAP_CHAT_CHARS);
+    if (!text) return;
+    const w = wsRef.current;
+    if (!w || w.readyState !== WebSocket.OPEN) return;
+    w.send(JSON.stringify({ type: "chat", text }));
+  }, []);
+
   const flushList = () => {
     remotePeersRef.current = Array.from(othersRef.current.values());
   };
@@ -163,6 +182,7 @@ export function useMapPresence(opts: {
       wsRef.current = null;
       othersRef.current.clear();
       remotePeersRef.current = [];
+      mapChatLinesRef.current = [];
       myIdRef.current = null;
       return;
     }
@@ -217,6 +237,7 @@ export function useMapPresence(opts: {
         myIdRef.current = null;
         othersRef.current.clear();
         remotePeersRef.current = [];
+        mapChatLinesRef.current = [];
         attempt += 1;
         const delay = Math.min(
           30_000,
@@ -268,6 +289,32 @@ export function useMapPresence(opts: {
         if (ty === "peer_left" && typeof msg.id === "string") {
           othersRef.current.delete(msg.id);
           flushList();
+          return;
+        }
+
+        if (
+          ty === "peer_chat" &&
+          typeof msg.id === "string" &&
+          typeof msg.text === "string"
+        ) {
+          const line: MapChatLine = {
+            id:
+              typeof msg.messageId === "string" && msg.messageId.trim()
+                ? msg.messageId
+                : `${msg.id}:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`,
+            fromPeerId: msg.id,
+            fromDisplayName:
+              typeof msg.displayName === "string" && msg.displayName.trim()
+                ? msg.displayName.trim()
+                : "Тоглогч",
+            text: msg.text.slice(0, MAX_MAP_CHAT_CHARS),
+            sentAt:
+              typeof msg.sentAt === "number" && Number.isFinite(msg.sentAt)
+                ? msg.sentAt
+                : Date.now(),
+          };
+          mapChatLinesRef.current = [...mapChatLinesRef.current.slice(-119), line];
+          onMapChatLineRef.current?.(line);
         }
       };
     };
@@ -281,6 +328,7 @@ export function useMapPresence(opts: {
       wsRef.current = null;
       othersRef.current.clear();
       remotePeersRef.current = [];
+      mapChatLinesRef.current = [];
       myIdRef.current = null;
     };
   }, [opts.enabled]);
@@ -309,5 +357,19 @@ export function useMapPresence(opts: {
     opts.livestock,
   ]);
 
-  return { publishPose, publishMapEmote, remotePeersRef };
+  const setOnMapChatLine = useCallback(
+    (listener: ((line: MapChatLine) => void) | null) => {
+      onMapChatLineRef.current = listener;
+    },
+    [],
+  );
+
+  return {
+    publishPose,
+    publishMapEmote,
+    remotePeersRef,
+    publishMapChat,
+    mapChatLinesRef,
+    setOnMapChatLine,
+  };
 }

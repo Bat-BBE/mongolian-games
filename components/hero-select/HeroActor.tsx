@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
@@ -12,11 +12,21 @@ import {
 } from "@/components/map3d/heroFbx";
 import { tryAttachHeroIbl } from "@/components/map3d/heroIbl";
 
+/** Одоогийн анимын нэр хажууд харуулах emoji — товч, заавартай нийцнэ. */
+function heroActionIcon(action: string): string {
+  if (action === "idle") return "🧍";
+  if (action === "boxing") return "🥊";
+  if (action === "dancing") return "💃";
+  if (action.startsWith("run")) return "🏃";
+  if (action.startsWith("walk")) return "🚶";
+  if (action.startsWith("turn")) return "↩️";
+  return "🎬";
+}
+
 interface HeroActorProps {
   className?: string;
   autoRotate?: boolean;
   backgroundColor?: string;
-  /** Path to the hero model (GLB or FBX). Defaults to X Bot for back-compat. */
   modelPath?: string;
 }
 
@@ -35,6 +45,11 @@ export default function HeroActor({
   const [isSelected, setIsSelected] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
+  const currentActionRef = useRef(currentAction);
+  currentActionRef.current = currentAction;
+  const playingBoxingRef = useRef(false);
+  const playingDanceRef = useRef(false);
+
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -51,11 +66,72 @@ export default function HeroActor({
     isLocked,
   );
 
+  const triggerBoxing = useCallback(() => {
+    if (isLoading) return;
+    if (playingBoxingRef.current || playingDanceRef.current) return;
+    const mixer = mixerRef.current;
+    const boxing = animationsRef.current.get("boxing");
+    const idle = animationsRef.current.get("idle");
+    if (!mixer || !boxing || !idle) return;
+
+    playingBoxingRef.current = true;
+    const prevName = currentActionRef.current;
+    const prev = animationsRef.current.get(prevName);
+    if (prev && prev !== boxing) prev.fadeOut(0.15);
+
+    boxing.stop();
+    boxing.reset();
+    boxing.setLoop(THREE.LoopOnce, 1);
+    boxing.clampWhenFinished = true;
+    boxing.fadeIn(0.15).play();
+    setCurrentAction("boxing");
+
+    const onFinished = (evt: object) => {
+      const action = (evt as { action?: THREE.AnimationAction }).action;
+      if (action !== boxing) return;
+      mixer.removeEventListener("finished", onFinished);
+      playingBoxingRef.current = false;
+      boxing.fadeOut(0.2);
+      idle.reset().fadeIn(0.2).play();
+      setCurrentAction("idle");
+    };
+    mixer.addEventListener("finished", onFinished);
+  }, [isLoading]);
+
+  const triggerDance = useCallback(() => {
+    if (isLoading) return;
+    if (playingBoxingRef.current || playingDanceRef.current) return;
+    const mixer = mixerRef.current;
+    const dancing = animationsRef.current.get("dancing");
+    const idle = animationsRef.current.get("idle");
+    if (!mixer || !dancing || !idle) return;
+
+    playingDanceRef.current = true;
+    const prevName = currentActionRef.current;
+    const prev = animationsRef.current.get(prevName);
+    if (prev && prev !== dancing) prev.fadeOut(0.15);
+
+    dancing.stop();
+    dancing.reset();
+    dancing.setLoop(THREE.LoopOnce, 1);
+    dancing.clampWhenFinished = true;
+    dancing.fadeIn(0.15).play();
+    setCurrentAction("dancing");
+
+    const onFinished = (evt: object) => {
+      const action = (evt as { action?: THREE.AnimationAction }).action;
+      if (action !== dancing) return;
+      mixer.removeEventListener("finished", onFinished);
+      playingDanceRef.current = false;
+      dancing.fadeOut(0.2);
+      idle.reset().fadeIn(0.2).play();
+      setCurrentAction("idle");
+    };
+    mixer.addEventListener("finished", onFinished);
+  }, [isLoading]);
+
   useEffect(() => {
     if (!containerRef.current) return;
-
-    // External Mixamo-style clip files used as a fallback when the hero's
-    // GLB does not embed its own animations.
     const fallbackAnimFiles = [
       { name: "idle", path: "/models/standing idle 01.fbx" },
       { name: "walkForward", path: "/models/standing walk forward.fbx" },
@@ -68,6 +144,11 @@ export default function HeroActor({
       { name: "runRight", path: "/models/standing run right.fbx" },
       { name: "turnLeft", path: "/models/standing turn 90 left.fbx" },
       { name: "turnRight", path: "/models/standing turn 90 right.fbx" },
+      { name: "boxing", path: "/models/Boxing.fbx" },
+      {
+        name: "dancing",
+        path: `/models/${encodeURIComponent("Silly Dancing.fbx")}`,
+      },
     ];
 
     let disposed = false;
@@ -129,7 +210,6 @@ export default function HeroActor({
       controls.target.set(0, 0, 0);
       controlsRef.current = controls;
 
-      // Add lights
       const ambientLight = new THREE.AmbientLight(0x404060);
       scene.add(ambientLight);
 
@@ -156,7 +236,6 @@ export default function HeroActor({
       backLight.position.set(0, 2, -10);
       scene.add(backLight);
 
-      // Add ground grid and floor
       const gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0x444444);
       gridHelper.position.y = -1;
       scene.add(gridHelper);
@@ -175,7 +254,6 @@ export default function HeroActor({
       plane.receiveShadow = true;
       scene.add(plane);
 
-      // Add character to scene
       object.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
@@ -253,12 +331,48 @@ export default function HeroActor({
           "turnRight",
           pickClip(embeddedClips, ["turnright", "turn_right"]) ?? embedIdle,
         );
-        setAnimations(loadedAnimations);
+        const boxingClip = pickClip(embeddedClips, [
+          "boxing",
+          "box",
+          "punch",
+          "fight",
+          "jab",
+          "hook",
+        ]);
+        if (boxingClip) tryRegister("boxing", boxingClip);
+        const danceClip = pickClip(embeddedClips, [
+          "dance",
+          "dancing",
+          "silly",
+          "groove",
+          "hiphop",
+          "hip_hop",
+        ]);
+        if (danceClip) tryRegister("dancing", danceClip);
+        setAnimations({ ...loadedAnimations });
         setIsLoading(false);
+        if (!loadedAnimations["boxing"]) {
+          new FBXLoader().load("/models/Boxing.fbx", (animObject) => {
+            if (disposed) return;
+            const clip = animObject.animations?.[0];
+            if (!clip) return;
+            tryRegister("boxing", clip);
+            setAnimations({ ...loadedAnimations });
+          });
+        }
+        if (!loadedAnimations["dancing"]) {
+          new FBXLoader().load(
+            `/models/${encodeURIComponent("Silly Dancing.fbx")}`,
+            (animObject) => {
+              if (disposed) return;
+              const clip = animObject.animations?.[0];
+              if (!clip) return;
+              tryRegister("dancing", clip);
+              setAnimations({ ...loadedAnimations });
+            },
+          );
+        }
       } else {
-        // 2) Fallback: load the external Mixamo FBX clip library. These only
-        //    animate the model correctly if it shares bone names with Mixamo
-        //    rigs (bone name retargeting not performed here).
         const fbxLoader = new FBXLoader();
         let loadedCount = 0;
         fallbackAnimFiles.forEach((file) => {
@@ -299,7 +413,6 @@ export default function HeroActor({
       };
       window.addEventListener("resize", handleResize);
 
-      // Store cleanup on the component so the outer effect can call it.
       resizeCleanupRef.current = () => {
         window.removeEventListener("resize", handleResize);
         releaseIbl?.();
@@ -317,7 +430,6 @@ export default function HeroActor({
       current: null,
     };
     void init().catch((err) => {
-      // eslint-disable-next-line no-console
       console.warn("HeroActor: failed to load model", modelPath, err);
       setIsLoading(false);
     });
@@ -333,12 +445,31 @@ export default function HeroActor({
       if (isLoading) return;
 
       if (e.code === "Space") {
+        e.preventDefault();
         setIsSelected((prev) => !prev);
       }
 
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
         setIsLocked(true);
       }
+
+      if (e.code === "KeyF") {
+        e.preventDefault();
+        triggerBoxing();
+        return;
+      }
+
+      if (e.code === "Digit1" || e.code === "Numpad1") {
+        e.preventDefault();
+        triggerDance();
+        return;
+      }
+
+      if (
+        currentActionRef.current === "boxing" ||
+        currentActionRef.current === "dancing"
+      )
+        return;
 
       let newAction: string | null = null;
 
@@ -365,9 +496,10 @@ export default function HeroActor({
           return;
       }
 
-      if (newAction && newAction !== currentAction) {
-        // Fade out current action, fade in new one
-        const current = animationsRef.current.get(currentAction);
+      if (newAction && newAction !== currentActionRef.current) {
+        const current = animationsRef.current.get(
+          currentActionRef.current,
+        );
         const next = animationsRef.current.get(newAction);
 
         if (current && next) {
@@ -384,10 +516,15 @@ export default function HeroActor({
       }
 
       if (["KeyW", "KeyS", "KeyA", "KeyD", "KeyQ", "KeyE"].includes(e.code)) {
+        if (
+          currentActionRef.current === "boxing" ||
+          currentActionRef.current === "dancing"
+        )
+          return;
         const idle = animationsRef.current.get("idle");
         const current = animationsRef.current.get(currentAction);
 
-        if (idle && current && currentAction !== "idle") {
+        if (idle && current && currentActionRef.current !== "idle") {
           current.fadeOut(0.2);
           idle.reset().fadeIn(0.2).play();
           setCurrentAction("idle");
@@ -402,7 +539,7 @@ export default function HeroActor({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [currentAction, isLoading]);
+  }, [currentAction, isLoading, triggerBoxing, triggerDance]);
 
   return (
     <div
@@ -420,13 +557,69 @@ export default function HeroActor({
         {isLocked ? "🔒 Locked" : "Shift to lock"}
       </div>
 
-      <div className="absolute bottom-4 right-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded text-sm z-20">
-        Animation: {currentAction}
+      <div className="absolute bottom-4 right-4 z-20 max-w-[min(100%,14rem)] rounded bg-black/50 px-2.5 py-1.5 text-left text-[11px] text-white sm:text-xs">
+        <span className="text-zinc-500">Анимаци</span>
+        <div className="mt-0.5 flex items-center gap-1.5 font-medium leading-tight text-amber-100/95">
+          <span className="shrink-0 text-base" aria-hidden>
+            {heroActionIcon(currentAction)}
+          </span>
+          <span className="min-w-0 truncate">{currentAction}</span>
+        </div>
       </div>
 
-      <div className="absolute top-4 left-4 text-white bg-black bg-opacity-50 px-3 py-1 rounded text-sm z-20">
-        WASD: Walk | Shift+WASD: Run | Q/E: Turn
+      <div className="absolute top-4 left-4 z-20 max-w-[min(100%,22rem)] text-wrap rounded bg-black/50 px-3 py-2 text-[10px] leading-snug text-white sm:text-[11px]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span>
+            <span aria-hidden>🚶</span> WASD алхах
+          </span>
+          <span className="text-zinc-500">·</span>
+          <span>
+            <span aria-hidden>🏃</span> Shift+WASD гүйх
+          </span>
+          <span className="text-zinc-500">·</span>
+          <span>
+            <span aria-hidden>↩️</span> Q/E эргэх
+          </span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/10 pt-1.5">
+          <span className="font-semibold text-amber-200/95">
+            <span aria-hidden>💃</span> 1 бүжиг
+          </span>
+          <span className="text-zinc-500">·</span>
+          <span className="font-semibold text-amber-200/95">
+            <span aria-hidden>🥊</span> F бокс
+          </span>
+        </div>
       </div>
+
+      {(animations.boxing || animations.dancing) && (
+        <div className="absolute bottom-20 left-1/2 z-20 flex -translate-x-1/2 touch-manipulation gap-3 sm:bottom-24">
+          {animations.dancing && (
+            <button
+              type="button"
+              aria-label="Бүжгийн хөдөлгөөн тоглуулах"
+              title="1 — бүжиг"
+              disabled={isLoading}
+              onClick={() => triggerDance()}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-fuchsia-500/45 bg-black/60 text-2xl leading-none shadow-lg transition hover:bg-fuchsia-950/35 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            >
+              💃
+            </button>
+          )}
+          {animations.boxing && (
+            <button
+              type="button"
+              aria-label="Боксын хөдөлгөөн тоглуулах"
+              title="F — бокс"
+              disabled={isLoading}
+              onClick={() => triggerBoxing()}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-amber-500/50 bg-black/60 text-2xl leading-none text-amber-100 shadow-lg transition hover:bg-amber-950/50 active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+            >
+              🥊
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
