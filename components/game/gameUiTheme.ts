@@ -74,7 +74,7 @@ export const GAME_PANEL_HEADING_CLASS =
 
 /** Хэсгийн шошго (жиш. «Нэг удаад шагай») */
 export const GAME_TEXT_SECTION_LABEL =
-  "font-[family-name:var(--font-inter)] text-xs font-semibold uppercase tracking-wide text-zinc-500";
+  "font-[family-name:var(--font-inter)] text-xs font-semibold tracking-wide text-zinc-500";
 
 /** Дүрмийн жагсаалт (тоо) */
 export const GAME_RULES_OL_CLASS =

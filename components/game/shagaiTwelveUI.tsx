@@ -53,9 +53,7 @@ type Props = {
   name0?: string;
   name1?: string;
   lockMode?: boolean;
-  /** Соло өрөө: өөр тоглогчгүй үед. */
   showSoloOnlineNote?: boolean;
-  /** 4-өөр шидсэн удаа / 3-аар шидсэн удаа (квот). */
   throwsAt4?: number;
   throwsAt3?: number;
 };
@@ -119,11 +117,11 @@ export default function ShagaiTwelveUI({
       : `Quotas — ${q4left}× four-bone · ${q3left}× three-bone · 2-bone anytime.`
     : only2
       ? "Эцсийн шат: зөвхөн 2 шагай."
-      : `Квот — 4-өөр ${q4left}× · 3-аар ${q3left}× · 2-оор хэзээ ч.`;
+      : `Боломж — 4-өөр ${q4left} удаа · 3-аар ${q3left} удаа · 2-оор хязгааргүй.`;
 
   const t = {
-    title: isEn ? "12 years (shagai)" : "12 жил (шагай)",
-    pick: isEn ? "Shagai per throw" : "Нэг удаад шагай",
+    title: isEn ? "12 years" : "12 жил",
+    pick: isEn ? "Shagai per throw" : "Шагай шидэх боломж",
     rules: isEn ? "How to play" : "Дүрэм",
     r1: isEn
       ? "Solo: you vs the computer. Online with a friend, use 2P room (separate view)."
@@ -149,8 +147,13 @@ export default function ShagaiTwelveUI({
     local2: isEn ? "2 on one screen" : "2 нэг дэлгэц дээр",
     wait: isEn ? "Opponent's turn…" : "Өрсөлдөгчийн ээлж…",
     reset: isEn ? "Again" : "Дахин",
-    last: isEn ? "Horses this throw" : "Энэ удаад морь",
-    over: isEn ? "Winner" : "Хожигч",
+    // last: isEn ? "Horses this throw" : "Энэ удаад морь",
+    over: isEn ? "Winner" : "Ялагч",
+    quota: isEn ? "Throw quota" : "Шидэлтийн боломж",
+    quota4: isEn ? "4-bone" : "4 шагай",
+    quota3: isEn ? "3-bone" : "3 шагай",
+    quota2: isEn ? "2-bone" : "2 шагай",
+    used: isEn ? "used" : "ашигласан",
   };
 
   const canPick = phase === "idle" || phase === "result";
@@ -166,22 +169,20 @@ export default function ShagaiTwelveUI({
 
   const playBlock = (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={GAME_PANEL_HEADING_CLASS}>{t.title}</h2>
-      </div>
+      </div> */}
 
       <TwelveShagaiRulesStrip isEn={isEn} variant="panel" />
 
-      {showSoloOnlineNote && !lockMode ? (
+      {/* {showSoloOnlineNote && !lockMode ? (
         <p className={GAME_CALLOUT_SKY}>{t.soloRoomNote}</p>
-      ) : null}
+      ) : null} */}
 
-      {lockMode ? (
-        <p className={GAME_CALLOUT_AMBER}>{t.r5}</p>
-      ) : null}
+      {lockMode ? <p className={GAME_CALLOUT_AMBER}>{t.r5}</p> : null}
 
       {phase !== "matchOver" ? (
-        <p className={`mt-1.5 ${GAME_CALLOUT_EMERALD_COMPACT}`}>{tierLine}</p>
+        <p className={`mt-3 ${GAME_CALLOUT_EMERALD_COMPACT}`}>{tierLine}</p>
       ) : null}
 
       {phase === "matchOver" && winner != null ? (
@@ -216,7 +217,29 @@ export default function ShagaiTwelveUI({
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div className="mt-3 rounded-xl border border-amber-400/20 bg-black/20 p-2.5">
+        <div className={`${GAME_TEXT_SECTION_LABEL} mb-1`}>{t.quota}</div>
+        <div className="flex flex-wrap gap-1.5 text-[11px]">
+          <span className="rounded-md border border-amber-400/25 bg-amber-900/20 px-2 py-1 text-amber-100">
+            {t.quota4}: {throwsAt4}/{TWELVE_TIER1_THROWS} {t.used}
+          </span>
+          <span className="rounded-md border border-sky-400/25 bg-sky-900/20 px-2 py-1 text-sky-100">
+            {t.quota3}: {throwsAt3}/{TWELVE_TIER2_THROWS} {t.used}
+          </span>
+          <span className="rounded-md border border-emerald-400/25 bg-emerald-900/20 px-2 py-1 text-emerald-100">
+            {t.quota2}:{" "}
+            {only2
+              ? isEn
+                ? "only mode"
+                : "зөвхөн энэ горим"
+              : isEn
+                ? "open"
+                : "нээлттэй"}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-zinc-700/60 bg-zinc-950/40 p-3">
         <div>
           <div className={GAME_TEXT_SECTION_LABEL}>{t.pick}</div>
           <div className="mt-1 flex gap-1">
@@ -263,7 +286,7 @@ export default function ShagaiTwelveUI({
             : mode === "vsCpu" && turn === 1
               ? isEn
                 ? "Computer is throwing…"
-                : "Робот шидаж байна…"
+                : "Робот шидэж байна…"
               : canThrow
                 ? `${t.yourTurn} — ${turn === 0 ? name0 : name1}`
                 : t.wait}
@@ -290,7 +313,7 @@ export default function ShagaiTwelveUI({
         </div>
       </div>
 
-      {showSides && phase !== "throwing" && (
+      {/* {showSides && phase !== "throwing" && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-zinc-800/80 pt-2">
           <span className={`${GAME_TEXT_META} inline`}>{t.last}:</span>
           {lastSides.map(
@@ -309,7 +332,7 @@ export default function ShagaiTwelveUI({
             +{lastHorses} 🐴
           </span>
         </div>
-      )}
+      )} */}
     </>
   );
 
@@ -322,7 +345,7 @@ export default function ShagaiTwelveUI({
         {playBlock}
       </div>
 
-      <GameRulesFab
+      {/* <GameRulesFab
         label={rulesFabLabel}
         onClick={() => {
           playButtonClick();
@@ -335,7 +358,7 @@ export default function ShagaiTwelveUI({
         title={t.rules}
       >
         {rulesList(t, lockMode)}
-      </GameRulesSheet>
+      </GameRulesSheet> */}
 
       <style>{`
         .shagai-t12-main-panel::-webkit-scrollbar { width: 6px; }

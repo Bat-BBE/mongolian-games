@@ -39,7 +39,7 @@ export function TwelveShagaiRulesStrip({
         <p
           className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.12em] text-sky-200/75`}
         >
-          {isEn ? "Throw pattern" : "Шат"}
+          {/* {isEn ? "Throw pattern" : "Шат"} */}
         </p>
       )}
       <div
@@ -66,16 +66,21 @@ export function TwelveShagaiRulesStrip({
   );
 }
 
-/** 12 бэрх — тойрог, 8-аас эхлэх шинэ хувилбар. */
 export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
   return (
     <div className="mt-2 space-y-1.5 rounded-xl border border-emerald-500/25 bg-emerald-950/15 px-2 py-2 sm:px-2.5">
-      <p className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-emerald-200/80`}>
+      <p
+        className={`${GAME_TEXT_SECTION_LABEL} text-center tracking-[0.14em] text-emerald-200/80`}
+      >
         {isEn ? "Round table · seat flow" : "Тойрог ширээ · суудлын урсгал"}
       </p>
-      <div className={`flex flex-wrap items-center justify-center gap-2 ${GAME_TEXT_BODY} text-emerald-100/90`}>
+      <div
+        className={`flex flex-wrap items-center justify-center gap-2 ${GAME_TEXT_BODY} text-emerald-100/90`}
+      >
         <span className={pill}>
-          {isEn ? `${BERKH12_PIECE_COUNT} bones` : `${BERKH12_PIECE_COUNT} шагай`}
+          {isEn
+            ? `${BERKH12_PIECE_COUNT} bones`
+            : `${BERKH12_PIECE_COUNT} шагай`}
         </span>
         <span className="text-emerald-400/75" aria-hidden>
           ·
@@ -89,7 +94,9 @@ export function Berkh12RulesStrip({ isEn }: { isEn: boolean }) {
           ·
         </span>
         <span className={pill}>
-          {isEn ? `≤${BERKH12_MAX_TURNS} turns cap` : `≤${BERKH12_MAX_TURNS} ээлж`}
+          {isEn
+            ? `≤${BERKH12_MAX_TURNS} turns cap`
+            : `≤${BERKH12_MAX_TURNS} ээлж`}
         </span>
       </div>
       <p className={`${GAME_TEXT_META} text-center text-slate-300/95`}>
