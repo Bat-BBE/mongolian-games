@@ -14,12 +14,12 @@ import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import InventoryRewardOverlay from "./InventoryRewardOverlay";
 import { playButtonClick } from "@/lib/uiSounds";
+import { useApp } from "@/components/AppContext";
+import { GameResultEndOverlay } from "./GameResultEndOverlay";
 
 export type MemoryMatchGameProps = {
   onComplete?: (result: "win" | "lose", progressPct?: number) => void;
-  /** Online: серверээс ирсэн seed — хоёр талд ижил картууд. */
   multiplayerSeed?: number | null;
-  /** Online горимд эхлэх товчийг нуух (хост эхлүүлэх хүртэл). */
   multiplayerAwaitingStart?: boolean;
 };
 
@@ -34,8 +34,8 @@ export default function MemoryMatchGame({
   multiplayerSeed = null,
   multiplayerAwaitingStart = false,
 }: MemoryMatchGameProps) {
-  const { grant, rewardEvents, sessionGain, resetGrants } =
-    useInventoryGrant();
+  const { language } = useApp();
+  const { grant, rewardEvents, sessionGain, resetGrants } = useInventoryGrant();
   const [phase, setPhase] = useState<Phase>("idle");
   const [cards, setCards] = useState<MemoryCard[]>([]);
   const [faceUpIds, setFaceUpIds] = useState<number[]>([]);
@@ -95,10 +95,7 @@ export default function MemoryMatchGame({
     matchEndedRef.current = true;
     clearTimer();
     setPhase("won");
-    const pct = Math.max(
-      55,
-      Math.min(100, 100 - Math.max(0, moves - 8) * 4),
-    );
+    const pct = Math.max(55, Math.min(100, 100 - Math.max(0, moves - 8) * 4));
     if (!submittedRef.current) {
       submittedRef.current = true;
       void onComplete?.("win", pct);
@@ -240,8 +237,7 @@ export default function MemoryMatchGame({
           }}
         >
           {cards.map((card) => {
-            const up =
-              faceUpIds.includes(card.id) || matchedIds.has(card.id);
+            const up = faceUpIds.includes(card.id) || matchedIds.has(card.id);
             const info = SHAGAI_INFO[card.side];
             return (
               <button
@@ -291,6 +287,26 @@ export default function MemoryMatchGame({
         onRestart={resetAll}
         multiplayerAwaiting={
           multiplayerAwaitingStart && phase === "idle" && !multiplayerSeed
+        }
+      />
+
+      <GameResultEndOverlay
+        outcome={phase === "won" ? "win" : phase === "lost" ? "lose" : null}
+        winTitle={
+          language === "mn"
+            ? "🎉 ЯЛЛАА — бүх хосыг олсон"
+            : "🎉 You win — all pairs found"
+        }
+        loseTitle={
+          language === "mn"
+            ? "⏱ ХОЖИГДЛОО — цаг дууссан"
+            : "⏱ You lost — time’s up"
+        }
+        subWin={language === "mn" ? "Тоглолт дууслаа." : "Match finished."}
+        subLose={
+          language === "mn"
+            ? "Бүх хосыг олж чадсангүй."
+            : "The board was not fully cleared."
         }
       />
     </div>

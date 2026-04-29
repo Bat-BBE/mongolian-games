@@ -6,7 +6,11 @@ import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
 import { makeRng, rollTriple, ROUNDS_TO_WIN, sum3 } from "./woodenDiceType";
+import { TripleDiceReadout } from "./woodenDiceReadout";
 import { WoodenDiceSceneCanvas } from "./woodenDiceScene";
+import { playWoodenDiceRoll } from "@/lib/uiSounds";
+import { GAME_CTA_PRIMARY, GAME_LOBBY_INTRO_CLASS, GAME_TEXT_LEAD } from "./gameUiTheme";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 const REL = "wooden_dice_mp_v1";
 
@@ -40,19 +44,18 @@ type Props = {
 
 export function WoodenDiceOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-sm text-white/80"
+      className="flex h-full w-full items-center justify-center p-4 text-center"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>Room: Ready → host starts. Two players. Left = host, right = joiner.</span>
-      ) : (
-        <span>Өрөө: бэлэн → эзэн эхлүүлнэ. 2 тоглогч. Зүүн=эзэн, баруун=нэгдсэн.</span>
-      )}
+      <span className={`max-w-md text-balance ${GAME_LOBBY_INTRO_CLASS}`}>
+        {lobbyIntro}
+      </span>
     </div>
   );
 }
@@ -107,6 +110,7 @@ export default function WoodenDiceGameMulti({
     (p: P) => {
       if (p.v <= appliedV.current) return;
       appliedV.current = p.v;
+      playWoodenDiceRoll();
       setSpin(true);
       setLa(null);
       setLb(null);
@@ -131,9 +135,7 @@ export default function WoodenDiceGameMulti({
                 ? 100
                 : Math.min(
                     100,
-                    Math.round(
-                      ((iAmHost ? p.sh : p.sj) / ROUNDS_TO_WIN) * 100,
-                    ),
+                    Math.round(((iAmHost ? p.sh : p.sj) / ROUNDS_TO_WIN) * 100),
                   ),
             );
           }
@@ -183,6 +185,22 @@ export default function WoodenDiceGameMulti({
     return <WoodenDiceOnlineLobby />;
   }
 
+  const leftLabel = iAmHost
+    ? loc === "mn"
+      ? "Та"
+      : "You"
+    : loc === "mn"
+      ? "Эзэн"
+      : "Host";
+  const rightLabel = iAmJoiner
+    ? loc === "mn"
+      ? "Та"
+      : "You"
+    : loc === "mn"
+      ? "Зочин"
+      : "Joiner";
+  const sumL = loc === "mn" ? "Нийлбэр" : "Total";
+
   return (
     <div
       className="flex h-full min-h-0 w-full flex-col"
@@ -195,8 +213,10 @@ export default function WoodenDiceGameMulti({
         >
           {loc === "mn" ? "Модон шоо" : "Wooden dice duel"}
         </h2>
-        <p className="text-[10px] text-slate-500">
-          {loc === "mn" ? "2 тоглогч · эзэн зүүн" : "Two players · host left."}
+        <p className={`${GAME_TEXT_LEAD} text-center`}>
+          {loc === "mn"
+            ? "2 тоглогч: 3 шоо шидээд нийлбэрээр өрсөлдөнө. Түрүүлж 5 оноо авсан нь ялна."
+            : "2 players: roll 3 dice and compare sums. First to 5 points wins."}
         </p>
         <div className="mt-1 flex justify-center gap-4 font-mono text-xs text-amber-200/90">
           <span>
@@ -207,22 +227,41 @@ export default function WoodenDiceGameMulti({
           </span>
         </div>
       </div>
-      <div className="relative min-h-0 w-full flex-1">
-        <WoodenDiceSceneCanvas spin={spin} />
-        <div className="pointer-events-none absolute inset-0 flex items-end justify-center gap-8 pb-2 sm:pb-3">
-          <div className="w-20 text-center">
-            <p className="text-[9px] uppercase text-slate-500">Host</p>
-            <p className="text-2xl font-bold text-sky-200 tabular-nums">
-              {la ? sum3(la) : "—"}
-            </p>
-            <p className="text-[9px] text-slate-600">{la ? la.join(" · ") : ""}</p>
+      <div className="flex min-h-0 w-full flex-1 flex-col">
+        <div
+          className="flex min-h-0 flex-1 flex-row items-stretch gap-0.5 px-0.5 sm:gap-1.5 sm:px-1"
+          style={{ minHeight: "clamp(11rem, 28vh, 100%)" }}
+        >
+          <div className="flex w-[28%] max-w-[6.5rem] min-w-0 shrink-0 sm:max-w-[7.5rem]">
+            <TripleDiceReadout
+              label={leftLabel}
+              sumLabel={sumL}
+              triple={la}
+              sum={spin || !la ? null : sum3(la)}
+              dieLabels={["1", "2", "3"]}
+              tone="sky"
+              spinning={spin}
+              compact
+            />
           </div>
-          <div className="w-20 text-center">
-            <p className="text-[9px] uppercase text-slate-500">Joiner</p>
-            <p className="text-2xl font-bold text-rose-200/95 tabular-nums">
-              {lb ? sum3(lb) : "—"}
-            </p>
-            <p className="text-[9px] text-slate-600">{lb ? lb.join(" · ") : ""}</p>
+          <div className="min-h-0 min-w-0 flex-1">
+            <WoodenDiceSceneCanvas
+              spin={spin}
+              leftTriple={la ?? [1, 1, 1]}
+              rightTriple={lb ?? [1, 1, 1]}
+            />
+          </div>
+          <div className="flex w-[28%] max-w-[6.5rem] min-w-0 shrink-0 sm:max-w-[7.5rem]">
+            <TripleDiceReadout
+              label={rightLabel}
+              sumLabel={sumL}
+              triple={lb}
+              sum={spin || !lb ? null : sum3(lb)}
+              dieLabels={["1", "2", "3"]}
+              tone="rose"
+              spinning={spin}
+              compact
+            />
           </div>
         </div>
       </div>
@@ -232,9 +271,9 @@ export default function WoodenDiceGameMulti({
             type="button"
             onClick={() => void doRoll()}
             disabled={spin}
-            className="rounded-lg border border-amber-500/50 bg-amber-950/40 px-5 py-2.5 text-sm font-semibold text-amber-100 disabled:opacity-50"
+            className={GAME_CTA_PRIMARY}
           >
-            {loc === "mn" ? "Өнгө шидэх" : "Roll round"}
+            {loc === "mn" ? "Шоо шидэх" : "Roll dice"}
           </button>
         </div>
       )}

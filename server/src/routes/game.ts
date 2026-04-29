@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db.js";
+import { STATION_GAME_WEEKLY_PLAY_CAP } from "../stationWeeklyPlayCap.js";
 
 export const gameRouter = Router();
 
@@ -87,10 +88,6 @@ function readStationGameVisits(
   return out;
 }
 
-/**
- * Нийт үнэлгээ (leaderboard `wealthScore`) — хэт том тоо гарч ирэхгүй байхын тулд
- * KP/зоос/гэрийн хувь нэмэгдлийг хязгаарлаж, жингүүдийг дундаж хэмжээнд тааруулсан.
- */
 function computeWealthScore(profile: Record<string, unknown>): number {
   const kpRaw = num(profile.kp, 0);
   const inv = isPlainRecord(profile.inventory)
@@ -128,13 +125,11 @@ function computeWealthScore(profile: Record<string, unknown>): number {
   return Math.max(0, Math.floor(base));
 }
 
-/** `lib/homeEconomy.ts` `gerUpgradeCost`-тай ижил байх ёстой */
 function upgradeCost(gerLevel: number): { coins: number; kp: number } {
   const lvl = Math.max(1, Math.floor(gerLevel));
   return { coins: 130 + lvl * 52, kp: 42 + lvl * 11 };
 }
 
-/** `lib/homeEconomy.ts` LIVESTOCK_COIN_PRICES-тай ижил */
 function livestockCost(
   kind: "sheep" | "goat" | "cow" | "horse" | "camel",
   qty: number,
@@ -202,6 +197,10 @@ function rewardFor(gameSlug: string): {
       return { ...base, xp: 20, kp: 9, coins: 19, gems: 0 };
     case "seven-shagai":
       return { ...base, xp: 22, kp: 10, coins: 19, gems: 0 };
+    case "twelve-shagai":
+      return { ...base, xp: 22, kp: 10, coins: 20, gems: 0 };
+    case "berkh-12-shagai":
+      return { ...base, xp: 23, kp: 10, coins: 21, gems: 0 };
     case "puzzle":
       return { ...base, xp: 16, kp: 7, coins: 14, gems: 0 };
     case "modon-onis":
@@ -275,9 +274,9 @@ gameRouter.post("/complete", async (req, res) => {
     const prevForGame = (visitsByGame[stationSlug]?.[gameSlug] ?? []).filter(
       (t) => t >= cutoff,
     );
-    if (prevForGame.length >= 2) {
+    if (prevForGame.length >= STATION_GAME_WEEKLY_PLAY_CAP) {
       res.status(429).json({
-        error: "Weekly limit reached for this game (2 plays / 7 days)",
+        error: `Weekly limit reached for this game (${STATION_GAME_WEEKLY_PLAY_CAP} plays / 7 days)`,
         remainingMs: Math.max(0, Math.min(...prevForGame) + windowMs - now),
       });
       return;
@@ -308,8 +307,7 @@ gameRouter.post("/complete", async (req, res) => {
       const doneIds = Array.isArray(doneIdsRaw)
         ? doneIdsRaw.map((x) => String(x))
         : [];
-      const stationFirstFullClear =
-        doneNow && !doneIds.includes(stationSlug);
+      const stationFirstFullClear = doneNow && !doneIds.includes(stationSlug);
       if (stationFirstFullClear) {
         doneIds.push(stationSlug);
       }

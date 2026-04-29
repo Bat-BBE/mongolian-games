@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { StationImageOrIcon } from "./StationImageOrIcon";
 import type { LabelPos } from "./AnimationController";
 import {
   STATION_CONFIGS,
@@ -53,10 +54,7 @@ export function StationLabels({
 
         const isPlayerHome = station.id === "home";
         const isCurrent =
-          !isPlayerHome &&
-          heroAtStationId != null &&
-          heroAtStationId !== "home" &&
-          station.id === heroAtStationId;
+          heroAtStationId != null && station.id === heroAtStationId;
         const isDone = doneStationIds.includes(station.id);
         const isUnlocked = isStationUnlockedInJourney(
           station.id,
@@ -102,11 +100,6 @@ export function StationLabels({
             ? 0.76
             : 0.34 + 0.66 * ap;
         const opacity = baseOpacity * farFade;
-        const blurPx = isPlayerHome
-          ? 0
-          : showAllVisibleLabels && !isDoorStation
-            ? 0
-            : Math.max(0, 3.2 * (1 - ap));
 
         return (
           <div
@@ -119,9 +112,7 @@ export function StationLabels({
                 ? "translate(-50%, -100%) scale(1)"
                 : `translate(-50%, -100%) scale(${labelZoomScale})`,
               opacity,
-              filter: blurPx > 0.05 ? `blur(${blurPx}px)` : undefined,
-              transition:
-                "opacity 0.35s ease, filter 0.35s ease, transform 0.25s ease",
+              transition: "opacity 0.35s ease, transform 0.25s ease",
               zIndex: isPlayerHome
                 ? 40
                 : showAllVisibleLabels && isDoorStation
@@ -141,9 +132,13 @@ export function StationLabels({
             <div className="flex flex-col items-center gap-0">
               <div
                 className={cn(
-                  "relative flex items-center gap-1 rounded-full border backdrop-blur-sm transition-all duration-200 whitespace-nowrap",
+                  "relative flex items-center gap-1.5 rounded-full border backdrop-blur-sm transition-all duration-200 whitespace-nowrap",
                   isPlayerHome &&
-                    "map-label-home px-2.5 py-1.5 rounded-xl text-xs",
+                    cn(
+                      "map-label-home px-2.5 py-1.5 rounded-xl text-xs",
+                      isCurrent &&
+                        "ring-1 ring-emerald-400/55 ring-offset-1 ring-offset-black/30 scale-105",
+                    ),
                   !isPlayerHome && isLocked
                     ? "px-2.5 py-1 text-xs font-semibold bg-zinc-950/80 border-zinc-600/50 text-zinc-500 scale-95 shadow-lg"
                     : !isPlayerHome && isCurrent
@@ -172,10 +167,10 @@ export function StationLabels({
                     🔒
                   </span>
                 )}
-                {isPlayerHome && (
+                {isPlayerHome && isCurrent && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3">
                     <span className="map-home-ping absolute inset-0 rounded-full animate-ping opacity-70" />
-                    <span className="absolute inset-0 rounded-full bg-[color:var(--map-sky)]" />
+                    <span className="absolute inset-0 rounded-full bg-emerald-300/90" />
                   </span>
                 )}
                 {!isPlayerHome && isCurrent && (
@@ -185,19 +180,18 @@ export function StationLabels({
                   </span>
                 )}
 
-                <span className="text-xs leading-none flex items-center justify-center shrink-0">
-                  {isPlayerHome ? (
-                    "🛖"
-                  ) : station.imageUrl ? (
-                    <img
-                      src={station.imageUrl}
-                      alt=""
-                      className="h-[1.1em] w-[1.1em] rounded-sm object-cover ring-1 ring-white/15"
-                    />
-                  ) : (
-                    fallbackIcon
-                  )}
-                </span>
+                {isPlayerHome ? (
+                  <span className="text-xs leading-none flex h-7 w-7 min-h-7 min-w-7 items-center justify-center text-lg">
+                    🛖
+                  </span>
+                ) : (
+                  <StationImageOrIcon
+                    size="label"
+                    imageUrl={station.imageUrl}
+                    icon={fallbackIcon}
+                    alt=""
+                  />
+                )}
 
                 <span className="flex flex-col items-start gap-0 leading-tight">
                   {isPlayerHome ? (

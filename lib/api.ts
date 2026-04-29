@@ -145,6 +145,28 @@ export async function getGameProfileByEmail(
   return { user: data.user };
 }
 
+export async function updateSimpleProfileNickname(body: {
+  email: string;
+  nickname: string;
+}): Promise<{ user: AppUserRow }> {
+  const res = await apiFetch("/api/users/simple-profile", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `simple-profile failed (${res.status})`);
+  }
+  if (!data.user) {
+    throw new Error("simple-profile: missing user in response");
+  }
+  return { user: data.user };
+}
+
 export type GameRow = {
   id: string;
   slug: string;
@@ -1072,4 +1094,20 @@ export async function getAppUserByEmail(
     throw new Error("simple-me: missing user in response");
   }
   return { user: data.user };
+}
+
+/** Postgres `app_users` — 404 эсвэл алдаа үед `null` (UI-д нэвтрээгүй гэж үзнэ). */
+export async function tryGetAppUserByEmail(
+  email: string,
+): Promise<AppUserRow | null> {
+  const q = encodeURIComponent(email.trim());
+  const res = await apiFetch(`/api/users/simple-me?email=${q}`);
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    user?: AppUserRow;
+  };
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  if (!data.user) return null;
+  return data.user;
 }

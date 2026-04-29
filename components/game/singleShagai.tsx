@@ -8,6 +8,7 @@ import { ShagaiSide, SHAGAI_INFO } from "./fourBonusType";
 import {
   biasSideForAirTorque,
   biasSideForThrow,
+  buildTargetQuaternion,
   detectShagaiSideFromQuaternion,
   isShagaiOnkh,
   SHAGAI_PHYS_BOX,
@@ -67,6 +68,11 @@ interface SingleShagaiProps {
   maxOnkhRetries?: number;
   /** `isShagaiOnkh`-д — бага утга = илүү олон тохиолдолд оньс гэж үзнэ. */
   onkhMinTipDot?: number;
+  /**
+   * Тогтоосон тал руу газардуулна (робот/онлайн тоглогчийн шидэлтийг харагдуулах).
+   * Физикийн random-тэй зөрөхгүйн тулд богино нислэгийн дараа байрлал/эргэлтийг тааруулна.
+   */
+  forceSettleSide?: ShagaiSide | null;
 }
 
 function buildShagaiGeo(): THREE.BufferGeometry {
@@ -141,6 +147,7 @@ export default function SingleShagai({
   presentOnTable = true,
   maxOnkhRetries = DEFAULT_MAX_ONKH_RETRIES,
   onkhMinTipDot = 0.76,
+  forceSettleSide = null,
 }: SingleShagaiProps) {
   const groupRef = useRef<THREE.Group>(null);
   const lastPosEmitRef = useRef(0);
@@ -333,6 +340,39 @@ export default function SingleShagai({
       );
       api.velocity.set(0, 0, 0);
       api.angularVelocity.set(0, 0, 0);
+    }
+
+    if (forceSettleSide && !reportedRef.current) {
+      const py = posRef.current[1];
+      const [vx, vy, vz] = velRef.current;
+      const [wx, wy, wz] = angVelRef.current;
+      const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
+      const angSpeed = Math.sqrt(wx * wx + wy * wy + wz * wz);
+      const stagger = 0.34 + id * 0.12;
+      const calmNearGround =
+        py < 0.42 &&
+        speed < 0.95 &&
+        angSpeed < 1.45 &&
+        airtimeRef.current >= stagger;
+      const hardTimeout = airtimeRef.current >= 1.75;
+      if (calmNearGround || hardTimeout) {
+        const q = buildTargetQuaternion(forceSettleSide);
+        const e = new THREE.Euler().setFromQuaternion(q, "XYZ");
+        api.velocity.set(0, 0, 0);
+        api.angularVelocity.set(0, 0, 0);
+        const y = restHeightsRef.current[forceSettleSide];
+        api.position.set(posRef.current[0], y, posRef.current[2]);
+        posRef.current = [posRef.current[0], y, posRef.current[2]];
+        api.rotation.set(e.x, e.y, e.z);
+        api.sleep();
+        reportedRef.current = true;
+        if (!landSoundPlayedRef.current && !muted) {
+          playShagaiLandSound();
+          landSoundPlayedRef.current = true;
+        }
+        onSettle(id, forceSettleSide);
+        return;
+      }
     }
 
     if (reportedRef.current) {

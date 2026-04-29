@@ -33,7 +33,6 @@ const GROUND_PIECES = [
   { name: "Туулай", count: 4 },
 ];
 
-/** Дээрээс доош — хамгийн томоос хамгийн бага руу */
 const HIERARCHY_LADDER = [
   "Чандмань",
   "Хорол",
@@ -252,7 +251,9 @@ export default function KhorolGame() {
 
       <div className="grid md:grid-cols-2 gap-4 max-w-5xl mx-auto">
         <div>
-          <SectionTitle icon={<IconLayers size={18} />}>{c.handTitle}</SectionTitle>
+          <SectionTitle icon={<IconLayers size={18} />}>
+            {c.handTitle}
+          </SectionTitle>
           <PieceTable rows={HAND_PIECES} accent={GOLD} />
         </div>
         <div>
@@ -296,8 +297,12 @@ export default function KhorolGame() {
       </div>
 
       <div className="max-w-5xl mx-auto">
-        <SectionTitle icon={<IconUsers size={18} />}>{c.playTitle}</SectionTitle>
-        <p className="text-sm leading-relaxed text-white/80 mb-6">{c.playLead}</p>
+        <SectionTitle icon={<IconUsers size={18} />}>
+          {c.playTitle}
+        </SectionTitle>
+        <p className="text-sm leading-relaxed text-white/80 mb-6">
+          {c.playLead}
+        </p>
 
         <h3 className="text-sm font-semibold mb-2" style={{ color: "#8cb4d4" }}>
           {c.evenTitle}

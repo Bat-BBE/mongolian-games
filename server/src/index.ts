@@ -41,7 +41,6 @@ app.use("/api/game", gameRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/users", usersRouter);
 
-/** HTTP GET-оор /ws/* дуудахад (Upgrade header үгүй) — зөв нь WebSocket upgrade. */
 function wsHttpOnlyHint(_req: express.Request, res: express.Response) {
   res
     .status(426)

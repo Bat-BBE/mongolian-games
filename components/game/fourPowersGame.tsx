@@ -3,17 +3,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "@/components/AppContext";
 import {
+  MAX_ENERGY,
+  makeInitialRoundState,
+  POWER_SPECS,
+  resolveRoundWithEffects,
+  suggestMovesForSeat,
   WIN_SCORE,
-  addTotals,
   firstWinner,
   mulberry32,
   pickBotPower,
   powerLabel,
-  roundPoints,
+  type RoundState,
+  type Seat4,
   type PowerId,
 } from "./fourPowersType";
+import { FourPowersHowItWorks } from "./fourPowersRulesUI";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
+import {
+  GAME_TEXT_META,
+  GAME_TEXT_MONO_META,
+  GAME_TEXT_SECTION_LABEL,
+} from "./gameUiTheme";
 
 const ACCENT = ["#38bdf8", "#a3e635", "#fbbf24", "#f472b6"] as const;
 
@@ -26,23 +37,18 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
   const lang = language === "en" ? "en" : "mn";
   const { grant } = useInventoryGrant();
 
-  const [totals, setTotals] = useState<[number, number, number, number]>([
-    0, 0, 0, 0,
-  ]);
-  const [round, setRound] = useState(1);
+  const [state, setState] = useState<RoundState>(() => makeInitialRoundState());
   const [phase, setPhase] = useState<"pick" | "reveal">("pick");
-  const [lastChoices, setLastChoices] = useState<
-    [PowerId, PowerId, PowerId, PowerId] | null
-  >(null);
-  const [lastDelta, setLastDelta] = useState<
-    [number, number, number, number] | null
-  >(null);
+  const [lastChoices, setLastChoices] = useState<Seat4 | null>(null);
+  const [lastDelta, setLastDelta] = useState<Seat4 | null>(null);
+  const [lastNotes, setLastNotes] = useState<string[]>([]);
+  const [picked, setPicked] = useState<PowerId | null>(null);
   const [done, setDone] = useState(false);
   const [seed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
-  const totalsRef = useRef(totals);
+  const stateRef = useRef(state);
   useEffect(() => {
-    totalsRef.current = totals;
-  }, [totals]);
+    stateRef.current = state;
+  }, [state]);
 
   const rng = useMemo(() => mulberry32(seed), [seed]);
 
@@ -52,7 +58,7 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
   );
 
   const finish = useCallback(
-    (won: boolean, finalScores: [number, number, number, number]) => {
+    (won: boolean, finalScores: Seat4) => {
       setDone(true);
       if (won) grant({ coins: STONE_ROUND_COINS });
       const progressPct = Math.round(
@@ -66,37 +72,43 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
   const commit = useCallback(
     (humanPick: PowerId) => {
       if (phase !== "pick" || done) return;
-      const choices: [PowerId, PowerId, PowerId, PowerId] = [
+      const current = stateRef.current;
+      const choices: Seat4 = [
         humanPick,
         pickBotPower(rng, humanPick) as PowerId,
         pickBotPower(rng, humanPick) as PowerId,
         pickBotPower(rng, humanPick) as PowerId,
       ];
-      const delta = roundPoints(choices);
-      const next = addTotals(totalsRef.current, delta);
-      totalsRef.current = next;
-      setTotals(next);
-      setLastChoices(choices);
-      setLastDelta(delta);
+      const resolved = resolveRoundWithEffects(current, choices);
+      const next = resolved.nextState;
+      stateRef.current = next;
+      setState(next);
+      setPicked(humanPick);
+      setLastChoices(resolved.appliedChoices);
+      setLastDelta(resolved.deltas);
+      setLastNotes(resolved.notes);
       setPhase("reveal");
       window.setTimeout(() => {
-        setRound((r) => r + 1);
-        const w = firstWinner(next);
+        const w = firstWinner(next.totals);
         if (w === 0) {
-          finish(true, next);
+          finish(true, next.totals);
           return;
         }
         if (w > 0) {
-          finish(false, next);
+          finish(false, next.totals);
           return;
         }
         setPhase("pick");
         setLastChoices(null);
         setLastDelta(null);
+        setLastNotes([]);
+        setPicked(null);
       }, 2000);
     },
     [done, finish, phase, rng],
   );
+
+  const hints = useMemo(() => suggestMovesForSeat(state, 0), [state]);
 
   return (
     <div
@@ -108,20 +120,18 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
       }}
     >
       <div className="shrink-0 text-center">
-        <h2
+        {/* <h2
           className="font-display text-base font-bold tracking-wide text-amber-100/95 sm:text-lg"
           style={{ textShadow: "0 0 20px rgba(200,160,48,0.25)" }}
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
-        </h2>
-        <p className="mt-1 text-[11px] leading-snug text-slate-400 sm:text-xs">
-          {lang === "mn"
-            ? "Морь → тэмээ → үхэр → хонь → морь. Эхлээд 7 оноо хүргэгч ялна. Та ногоон суудал (Та)."
-            : "Horse beats camel, camel ox, ox sheep, sheep horse. First to 7 points wins. You are the green seat."}
-        </p>
-        <p className="mt-1 font-mono text-[10px] text-slate-500">
-          {lang === "mn" ? "Өнгө" : "Round"} {round} · {lang === "mn" ? "зорилго" : "goal"}{" "}
-          {WIN_SCORE}
+        </h2> */}
+        <div className="mt-1.5">
+          <FourPowersHowItWorks lang={lang} variant="solo" density="compact" />
+        </div>
+        <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
+          {lang === "mn" ? "Өнгө" : "Round"} {state.round} ·{" "}
+          {lang === "mn" ? "зорилго" : "goal"} {WIN_SCORE}
         </p>
       </div>
 
@@ -139,7 +149,7 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
             }}
           >
             <div
-              className="text-[10px] font-bold uppercase tracking-wider"
+              className={`${GAME_TEXT_SECTION_LABEL} !font-bold tracking-wider`}
               style={{ color: ACCENT[i] }}
             >
               {i === 0
@@ -151,11 +161,16 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
             <div className="mt-0.5 text-sm font-semibold leading-tight text-white">
               {n.name}
             </div>
-            <div className="line-clamp-2 text-[10px] text-slate-500">
-              {n.sub}
+            <div
+              className={`line-clamp-2 ${GAME_TEXT_META} text-slate-500 flex items-center justify-between gap-2`}
+            >
+              <span>{n.sub}</span>
+              <span className="rounded border border-white/15 px-1 text-[10px] text-slate-300">
+                E{state.energy[i]}/{MAX_ENERGY}
+              </span>
             </div>
             <div className="mt-auto pt-2 text-2xl font-bold tabular-nums text-amber-200">
-              {totals[i]}
+              {state.totals[i]}
             </div>
             {lastDelta && (
               <div
@@ -171,12 +186,17 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
         ))}
       </div>
 
+      <p className="mt-2 text-center text-xs text-zinc-300">
+        {lang === "mn"
+          ? `Санал: Шилдэг ${powerLabel(hints.best, lang).name} · Аюулгүй ${powerLabel(hints.safe, lang).name} · Эрсдэлтэй ${powerLabel(hints.risk, lang).name}`
+          : `Hint: Best ${powerLabel(hints.best, lang).name} · Safe ${powerLabel(hints.safe, lang).name} · Risk ${powerLabel(hints.risk, lang).name}`}
+      </p>
+
       {phase === "reveal" && lastChoices && (
         <p className="mt-2 text-center text-xs text-sky-200/90">
           {lang === "mn" ? "Сонголт:" : "Picks:"}{" "}
-          {lastChoices
-            .map((c) => powerLabel(c, lang).name)
-            .join(" · ")}
+          {lastChoices.map((c) => powerLabel(c, lang).name).join(" · ")}
+          {lastNotes.length > 0 ? ` · ${lastNotes.join(", ")}` : ""}
         </p>
       )}
 
@@ -194,14 +214,25 @@ export default function FourPowersGame({ onComplete }: FourPowersGameProps) {
                     borderColor: `${ACCENT[i]}55`,
                     background: `linear-gradient(145deg, ${ACCENT[i]}18, #0c0a08)`,
                     color: "#fff",
+                    opacity: POWER_SPECS[i].cost > state.energy[0] ? 0.45 : 1,
                   }}
                 >
-                  {L.name}
+                  <div>{L.name}</div>
+                  <div className="text-[10px] text-zinc-300">
+                    Cost {POWER_SPECS[i].cost}
+                  </div>
                 </button>
               );
             })
           : null}
       </div>
+      {picked != null && phase === "reveal" ? (
+        <p className="mt-1 text-center text-[11px] text-amber-200/80">
+          {lang === "mn"
+            ? `Таны сонголт: ${powerLabel(picked, lang).name}`
+            : `You picked: ${powerLabel(picked, lang).name}`}
+        </p>
+      ) : null}
       {done && (
         <p className="mt-2 text-center text-sm text-amber-200/90">
           {lang === "mn" ? "Тоглоом дууссан." : "Match over."}

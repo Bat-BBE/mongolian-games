@@ -22,7 +22,6 @@ type Props = {
   onComplete: () => void;
 };
 
-/** Сонгосон шагайг зурсан замаар гүйлгээд, төгсгөлд хүчтэй мөргөлдөөн өгнө. */
 export function SevenPairPathAnimator({
   active,
   fromId,

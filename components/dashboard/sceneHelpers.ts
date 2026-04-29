@@ -6,9 +6,6 @@ export const rand = (a: number, b: number): number =>
 export const randInt = (a: number, b: number): number =>
   Math.floor(rand(a, b + 1));
 
-/**
- * Стандарт PBR — гэр, чулуу, ургамалд ижил гэрэл тусгалтай харагдуулна.
- */
 export const mkMat = (
   color: number,
   rough = 0.85,
@@ -21,7 +18,6 @@ export const mkMat = (
     envMapIntensity: 0.55,
   });
 
-/** Мал, ноос — бага металл, зөөлөн тусгал */
 export function mkFurMat(
   color: number,
   rough = 0.78,
@@ -122,22 +118,14 @@ export function terrainHeight(x: number, z: number): number {
     const edgeBlend = smoothstep(0.28, 1.05, coreEll);
     h *= 0.36 + 0.64 * edgeBlend;
   }
-
-  // Алс баруун хойд зэрэгт синусын нийлбэр сөрөг гарч болно; тоглогчийн гэр
-  // болон 3D объект бүгд ижил `terrainHeight`-ийг ашигладаг тул доод тал нэмэх нь
-  // зөвхөн "далайн түвшнээс доош" хавтгай тогтворгүй байдлыг арилгана.
   return Math.max(h, 0.12);
 }
 
-/**
- * Бариул/огнооны эргэн тойронд `terrainHeight`-ийг max — налуу/овлог дээр хөл газар
- * шигдэхоос. `ry` = эргэлт (Y), `atan2`‑тай ижил конвенц (x,z) тэнхлэг.
- */
 export function terrainHeightFeet(
   x: number,
   z: number,
   ry: number,
-  r = 0.38
+  r = 0.38,
 ): number {
   const f = (dx: number, dz: number) => terrainHeight(x + dx, z + dz);
   let m = f(0, 0);
@@ -154,21 +142,45 @@ export function terrainHeightFeet(
     f(fwx * r, fwz * r),
     f(-fwx * r, -fwz * r),
     f(rtx * r, rtz * r),
-    f(-rtx * r, -rtz * r)
+    f(-rtx * r, -rtz * r),
   );
   m = Math.max(
     m,
     f(fwx * r * 0.6 + rtx * r * 0.45, fwz * r * 0.6 + rtz * r * 0.45),
-    f(fwx * r * 0.6 - rtx * r * 0.45, fwz * r * 0.6 - rtz * r * 0.45)
+    f(fwx * r * 0.6 - rtx * r * 0.45, fwz * r * 0.6 - rtz * r * 0.45),
   );
   return m;
 }
 
-/**
- * `SceneBuilder.buildPlayerHomeGer` — `makeFence` овлын `yardW` / `yardD`‑тай **ижил** нэгдэл.
- * Гэр+хашлаас дугуй биш, тэгш өнцгийн ов: эллипсээр **ойролцоолно**.
- */
-export function getPlayerHomeYardHalfAxes(gerLevel: number): {
+const HOME_FENCE_YARD_SCALE = 1.5;
+
+const FENCE_BONUS_W_PER_HEAD = 0.5;
+const FENCE_HEAD_STRETCH_CAP = 48;
+
+export type HomeLivestockForFence = {
+  sheep?: number;
+  goat?: number;
+  cow?: number;
+  horse?: number;
+  camel?: number;
+} | null;
+
+export function clampedHomeLivestockHeadCount(
+  ls: HomeLivestockForFence,
+): number {
+  if (!ls || typeof ls !== "object") return 0;
+  const sheepN = Math.max(0, Math.min(14, Math.floor(Number(ls.sheep) || 0)));
+  const goatN = Math.max(0, Math.min(12, Math.floor(Number(ls.goat) || 0)));
+  const cowN = Math.max(0, Math.min(8, Math.floor(Number(ls.cow) || 0)));
+  const horseN = Math.max(0, Math.min(5, Math.floor(Number(ls.horse) || 0)));
+  const camelN = Math.max(0, Math.min(4, Math.floor(Number(ls.camel) || 0)));
+  return sheepN + goatN + cowN + horseN + camelN;
+}
+
+export function getPlayerHomeYardHalfAxes(
+  gerLevel: number,
+  livestock: HomeLivestockForFence = null,
+): {
   halfW: number;
   halfD: number;
 } {
@@ -179,34 +191,48 @@ export function getPlayerHomeYardHalfAxes(gerLevel: number): {
     const ringR = 13.2 + Math.min(lv * 0.45, 10);
     ringSpan = ringR + 7;
   }
-  const yardW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
+  const baseW = Math.max(30, ringSpan * 2.15 + Math.min(lv, 8) * 0.85);
+  const heads = clampedHomeLivestockHeadCount(livestock);
+  const headStretch =
+    Math.min(heads, FENCE_HEAD_STRETCH_CAP) * FENCE_BONUS_W_PER_HEAD;
+  const yardW = (baseW + headStretch) * HOME_FENCE_YARD_SCALE;
   const yardD = yardW * 0.86;
   return { halfW: yardW * 0.5, halfD: yardD * 0.5 };
 }
 
-/**
- * 3D collisionгүйгээр нэвтэрнэ — гэрийн **овол** дээр (эллипс) хаалтын гадуур түлхэнэ.
- * Буцах: шинэ x,z + `pushed` (дохио) — илүндээ хөдлөгчийн v бууруулж болно.
- */
+const HOME_PUSH_ELLIPSE_INSET = 0.5;
+const HOME_PUSH_EDGE_PAD = 0.5;
+const HOME_PUSH_RADIAL_ESCAPE = 1.006;
+const HOME_PUSH_EDGE_SOFT = 0.88;
+
 export function pushOutOfPlayerHomeOval(
   x: number,
   z: number,
   homeX: number,
   homeZ: number,
   gerLevel: number,
+  livestock: HomeLivestockForFence = null,
 ): { x: number; z: number; pushed: boolean } {
-  const { halfW, halfD } = getPlayerHomeYardHalfAxes(gerLevel);
-  const pad = 0.95;
-  const a = halfW + pad;
-  const b = halfD + pad;
+  const { halfW, halfD } = getPlayerHomeYardHalfAxes(gerLevel, livestock);
+  const a = (halfW + HOME_PUSH_EDGE_PAD) * HOME_PUSH_ELLIPSE_INSET;
+  const b = (halfD + HOME_PUSH_EDGE_PAD) * HOME_PUSH_ELLIPSE_INSET;
   const dx = x - homeX;
   const dz = z - homeZ;
   const t = (dx * dx) / (a * a) + (dz * dz) / (b * b);
   if (t <= 1) {
     if (t < 1e-10) {
-      return { x: homeX + a * 1.01, z: homeZ, pushed: true };
+      return {
+        x: homeX + a * HOME_PUSH_RADIAL_ESCAPE,
+        z: homeZ,
+        pushed: true,
+      };
     }
-    const s = 1.01 / Math.sqrt(t);
+    const sFull = HOME_PUSH_RADIAL_ESCAPE / Math.sqrt(t);
+    const edgeBlend =
+      t <= HOME_PUSH_EDGE_SOFT
+        ? 1
+        : 1 - smoothstep(HOME_PUSH_EDGE_SOFT, 1, t) * 0.45;
+    const s = 1 + (sFull - 1) * edgeBlend;
     return { x: homeX + dx * s, z: homeZ + dz * s, pushed: true };
   }
   return { x, z, pushed: false };

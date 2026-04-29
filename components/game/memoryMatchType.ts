@@ -2,17 +2,15 @@ import type { ShagaiSide } from "./fourBonusType";
 
 export const GRID_SIZE = 16;
 export const PAIR_COUNT = 8;
-/** Seconds to find all pairs (1 minute) */
-export const MATCH_TIME_LIMIT_SEC = 60;
+/** Seconds to find all pairs (45 seconds) */
+export const MATCH_TIME_LIMIT_SEC = 40;
 
 export interface MemoryCard {
   id: number;
   side: ShagaiSide;
-  /** Index within same side (0,1) for each of two pairs per symbol */
   pairGroup: number;
 }
 
-/** Two copies of each animal pair → 4 cards per side → 8 pairs / 16 cards */
 export function buildDeck(): MemoryCard[] {
   const sides: ShagaiSide[] = ["sheep", "horse", "goat", "camel"];
   const out: MemoryCard[] = [];
@@ -35,7 +33,6 @@ export function shuffleDeck<T>(arr: T[]): T[] {
   return a;
 }
 
-/** Mulberry32 — ижил seed → ижил дараалал (online хос ол). */
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {

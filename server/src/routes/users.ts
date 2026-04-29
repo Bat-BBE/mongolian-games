@@ -10,6 +10,33 @@ function localFirebaseUid(normalizedEmail: string): string {
   return `local:${normalizedEmail}`;
 }
 
+function makeDefaultNickname(): string {
+  const adjectives = [
+    "Blue",
+    "Swift",
+    "Brave",
+    "Golden",
+    "Mighty",
+    "Silent",
+    "Lucky",
+    "Wild",
+  ];
+  const animals = [
+    "Horse",
+    "Falcon",
+    "Wolf",
+    "Eagle",
+    "Stag",
+    "Camel",
+    "Goat",
+    "Fox",
+  ];
+  const a = adjectives[Math.floor(Math.random() * adjectives.length)] ?? "Steppe";
+  const b = animals[Math.floor(Math.random() * animals.length)] ?? "Rider";
+  const n = Math.floor(Math.random() * 9000) + 1000;
+  return `${a}${b}${n}`;
+}
+
 const jsonRecord = z.record(z.string(), z.unknown());
 
 const simpleSyncBody = z.object({
@@ -18,6 +45,11 @@ const simpleSyncBody = z.object({
   heroId: z.string().optional(),
   profile: jsonRecord.optional(),
   progress: jsonRecord.optional(),
+});
+
+const simpleProfileBody = z.object({
+  email: z.string(),
+  nickname: z.string().trim().min(2).max(36),
 });
 
 usersRouter.post("/simple-sync", async (req, res) => {
@@ -32,7 +64,7 @@ usersRouter.post("/simple-sync", async (req, res) => {
     return;
   }
   const email = emailResult.data;
-  const displayName = parsed.data.displayName?.trim() || null;
+  const displayName = parsed.data.displayName?.trim() || makeDefaultNickname();
   const heroId = parsed.data.heroId?.trim() || null;
   const profile = parsed.data.profile ?? {};
   const progress = parsed.data.progress ?? {};
@@ -66,6 +98,39 @@ usersRouter.post("/simple-sync", async (req, res) => {
       JSON.stringify(progress),
     ],
   );
+  res.json({ user: result.rows[0] });
+});
+
+usersRouter.patch("/simple-profile", async (req, res) => {
+  const parsed = simpleProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const emailResult = emailSchema.safeParse(parsed.data.email);
+  if (!emailResult.success) {
+    res.status(400).json({ error: "Invalid email" });
+    return;
+  }
+  const email = emailResult.data;
+  const uid = localFirebaseUid(email);
+  const nickname = parsed.data.nickname.trim();
+
+  const result = await pool.query(
+    `UPDATE app_users
+     SET display_name = $2,
+         profile = jsonb_set(COALESCE(profile, '{}'::jsonb), '{name}', to_jsonb($2::text), true),
+         updated_at = now()
+     WHERE firebase_uid = $1
+     RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+    [uid, nickname],
+  );
+  if (result.rowCount === 0) {
+    res
+      .status(404)
+      .json({ error: "User not found; POST /api/users/simple-sync first" });
+    return;
+  }
   res.json({ user: result.rows[0] });
 });
 

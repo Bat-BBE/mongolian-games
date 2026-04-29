@@ -6,6 +6,8 @@ import { SHAGAI_INFO } from "./shagaiTargetType";
 import type { SevenPhase } from "./shagaiSevenType";
 import { SEVEN_COUNT, SEVEN_PATH_MIN_POINTS } from "./shagaiSevenType";
 import { playButtonClick } from "@/lib/uiSounds";
+import { GamePanelResultCard } from "./GamePanelResultCard";
+import { GAME_UI_FONT_FAMILY } from "./gameUiTheme";
 
 /** Зөвхөн монгол (document.lang-аас хамаардаггүй — SSR/клиент ижил). */
 const T = {
@@ -116,9 +118,8 @@ export default function ShagaiSevenUI({
         border: "1px solid rgba(200,160,48,0.28)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.45)",
         color: "#e8e0d4",
-        fontFamily:
-          "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-        fontSize: 14,
+        fontFamily: GAME_UI_FONT_FAMILY,
+        fontSize: 13,
         lineHeight: 1.45,
         zIndex: 10,
         pointerEvents: "auto",
@@ -128,97 +129,30 @@ export default function ShagaiSevenUI({
       }}
     >
       <div
+        className="mb-2 truncate text-center font-semibold uppercase tracking-[0.1em] text-amber-400/95"
         style={{
-          fontSize: 18,
-          letterSpacing: 3,
-          color: "#c8a030",
-          marginBottom: 8,
+          fontSize: "clamp(0.78rem, 2.4vw, 0.88rem)",
+          fontFamily: GAME_UI_FONT_FAMILY,
         }}
       >
         {t.title}
       </div>
 
       {phase === "won" && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            marginBottom: 16,
-            padding: "20px 16px 18px",
-            borderRadius: 16,
-            background:
-              "linear-gradient(160deg, rgba(35,95,52,0.72) 0%, rgba(18,48,28,0.88) 100%)",
-            border: "2px solid rgba(100,220,130,0.55)",
-            boxShadow:
-              "0 0 28px rgba(60,200,90,0.28), inset 0 1px 0 rgba(255,255,255,0.14)",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 30,
-              fontWeight: 800,
-              color: "#c8ffc0",
-              letterSpacing: 4,
-              textShadow: "0 2px 12px rgba(0,0,0,0.35)",
-              marginBottom: 10,
-              lineHeight: 1.15,
-            }}
-          >
-            {t.wonTitle}
-          </div>
-          <div
-            style={{
-              fontSize: 15,
-              color: "#e0f5dc",
-              lineHeight: 1.55,
-              fontWeight: 500,
-            }}
-          >
-            {t.won}
-          </div>
-        </div>
+        <GamePanelResultCard
+          variant="win"
+          title={t.wonTitle}
+          subtitle={t.won}
+          className="mb-4"
+        />
       )}
       {phase === "lost" && (
-        <div
-          role="alert"
-          aria-live="assertive"
-          style={{
-            marginBottom: 16,
-            padding: "20px 16px 18px",
-            borderRadius: 16,
-            background:
-              "linear-gradient(160deg, rgba(110,32,28,0.75) 0%, rgba(48,16,14,0.9) 100%)",
-            border: "2px solid rgba(240,100,80,0.5)",
-            boxShadow:
-              "0 0 28px rgba(200,60,40,0.22), inset 0 1px 0 rgba(255,255,255,0.08)",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              color: "#ffb8a8",
-              letterSpacing: 3,
-              textShadow: "0 2px 12px rgba(0,0,0,0.4)",
-              marginBottom: 10,
-              lineHeight: 1.15,
-            }}
-          >
-            {t.lostTitle}
-          </div>
-          <div
-            style={{
-              fontSize: 15,
-              color: "#f5ddd8",
-              lineHeight: 1.55,
-              fontWeight: 500,
-            }}
-          >
-            {loseReason === "stuck" ? t.lostStuck : t.lostWrong}
-          </div>
-        </div>
+        <GamePanelResultCard
+          variant="lose"
+          title={t.lostTitle}
+          subtitle={loseReason === "stuck" ? t.lostStuck : t.lostWrong}
+          className="mb-4"
+        />
       )}
 
       {phase === "picking" && allSettled && (

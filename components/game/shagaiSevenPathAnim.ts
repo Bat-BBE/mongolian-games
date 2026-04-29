@@ -1,5 +1,3 @@
-/** Ньсрэх анимац — зурсан зам + эх/төгсгөлийн байрлал. */
-
 export function buildPairAnimPathWorld(
   from: [number, number, number],
   pathXz: [number, number][],
@@ -21,9 +19,7 @@ export function buildPairAnimPathWorld(
   return out;
 }
 
-function cumulativeLengths3D(
-  points: [number, number, number][],
-): number[] {
+function cumulativeLengths3D(points: [number, number, number][]): number[] {
   const lens: number[] = [0];
   let acc = 0;
   for (let i = 1; i < points.length; i++) {

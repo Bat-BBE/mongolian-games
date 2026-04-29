@@ -15,7 +15,6 @@ export type MatchPhase =
 
 export interface RaceTurnResult {
   turn: Racer;
-  /** In multiplayer, who threw (when set, UI shows a name). */
   throwerId?: string;
   sides: ShagaiSide[];
   horseCount: number;
@@ -36,8 +35,6 @@ export interface RaceState {
   winner: Racer | null;
 }
 
-// Track length: 20 "horse-landed" shagai laid in a row form the racing
-// course. A racer wins once their piece reaches or passes the final shagai.
 export const TRACK_LENGTH = 20;
 
 export const INITIAL_RACE_STATE: RaceState = {
@@ -56,11 +53,6 @@ export function countHorses(sides: ShagaiSide[]): number {
   return sides.filter((s) => s === "horse").length;
 }
 
-// Tuned weights so a race lasts a reasonable number of turns (roughly
-// 1.2 horses per 4-shagai throw on average → ~17 throws to finish the
-// 20-shagai track). Horse is noticeably more common than in the base
-// shagai distribution because every throw that yields zero horses is a
-// wasted turn for the player.
 export function rollHorseRaceSide(): ShagaiSide {
   const r = Math.random();
   if (r < 0.3) return "horse";

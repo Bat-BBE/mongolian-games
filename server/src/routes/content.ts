@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db.js";
+import { STATION_GAME_WEEKLY_PLAY_CAP } from "../stationWeeklyPlayCap.js";
 import { JOURNEY_STATION_COUNT } from "../journeyOrder.js";
 
 export const contentRouter = Router();
@@ -205,9 +206,9 @@ contentRouter.get("/dashboard-bundle", async (req, res) => {
     const questDesc =
       lang === "mn"
         ? (strings["sidebar.homeQuestDescMn"] ??
-          "Зураг дээрх бүх өртөө руу чөлөөтэй очоод тогло. Өртөө бүрт 7 хоногт 2 удаа. Лимит дууссан өртөө түгжигдэнэ. Гэр дээр дараад гэрээ сайжруулж, мал худалдана.")
+          `Зураг дээрх бүх өртөө руу чөлөөтэй очоод тогло. Өртөө бүрт 7 хоногт ${STATION_GAME_WEEKLY_PLAY_CAP} удаа. Лимит дууссан өртөө түгжигдэнэ. Гэр дээр дараад гэрээ сайжруулж, мал худалдана.`)
         : (strings["sidebar.homeQuestDescEn"] ??
-          "Visit any station on the map and play. Each station allows 2 plays per 7 days, then it locks until the week resets. Open Home to upgrade your ger and buy livestock.");
+          `Visit any station on the map and play. Each game at a station allows ${STATION_GAME_WEEKLY_PLAY_CAP} plays per 7 days, then it locks until the window resets. Open Home to upgrade your ger and buy livestock.`);
 
     const bonusMultiplier =
       typeof hero?.bonus_multiplier === "string"

@@ -7,12 +7,13 @@ import {
   LuClock as IconClock,
   LuFootprints as IconMoves,
   LuCopy as IconPairs,
-  LuSparkles as IconSparkles,
-  LuBookOpen as IconRules,
   LuPlay as IconPlay,
   LuRotateCcw as IconAgain,
 } from "react-icons/lu";
+import { GamePanelResultCard } from "./GamePanelResultCard";
+import { GAME_CTA_PRIMARY, GAME_UI_FONT_FAMILY } from "./gameUiTheme";
 import { MATCH_TIME_LIMIT_SEC } from "./memoryMatchType";
+import { useMatchLobbyIntro } from "./gameModalSession";
 
 type I18n = {
   title: string;
@@ -36,6 +37,8 @@ type I18n = {
 
 function useI18n(): I18n {
   const { language } = useApp();
+  const lobbyIntroMn = useMatchLobbyIntro("mn");
+  const lobbyIntroEn = useMatchLobbyIntro("en");
   return useMemo(() => {
     if (language === "mn") {
       return {
@@ -55,12 +58,13 @@ function useI18n(): I18n {
           "Хоёр ижил дүрсийг дарахад хос гэж тооцогдоно.",
           "Бүх " + MATCH_TIME_LIMIT_SEC + " секундын дотор 8 хосыг ол.",
         ],
-        playingHint: "Картуудыг хурдан хослуул — цаг хязгаартай.",
+        playingHint: "Картуудыг хурдан тааруул — цагтаа багтах чухал.",
         progressLabel: "Явц",
         phasePlaying: "Тоглож байна",
         phaseReady: "Бэлэн",
-        mpWaitHint:
-          "Өрөөнд хүлээнэ — найз чинь ирэхэд хамт эхэлнэ. Ганцаараа бол ~10 секундын дараа самбар өөрөө нээгдэнэ.",
+        mpWaitHint: lobbyIntroMn.trim()
+          ? `${lobbyIntroMn} хүн нэгдэхэд хамт эхэлнэ; ганцаараа бол 10–15 секундын дараа самбар нээгдэнэ.`
+          : "Тоглоом удахгүй нээгдэнэ.",
       };
     }
     return {
@@ -84,10 +88,11 @@ function useI18n(): I18n {
       progressLabel: "Progress",
       phasePlaying: "Playing",
       phaseReady: "Ready",
-      mpWaitHint:
-        "Waiting for the room — a friend can join to start together. If you're alone, the board opens in ~10s.",
+      mpWaitHint: lobbyIntroEn.trim()
+        ? `${lobbyIntroEn} If a friend joins, you start together; if you’re alone, the board opens automatically after about 10–15 seconds.`
+        : "The board will open in a moment.",
     };
-  }, [language]);
+  }, [language, lobbyIntroMn, lobbyIntroEn]);
 }
 
 interface Props {
@@ -97,7 +102,6 @@ interface Props {
   pairsFound: number;
   onStart: () => void;
   onRestart: () => void;
-  /** Online: серверээс эхлэх дохио хүлээнэ. */
   multiplayerAwaiting?: boolean;
 }
 
@@ -128,43 +132,6 @@ export default function MemoryMatchUI({
   return (
     <>
       <style>{`
-        .mm-panel-btn {
-          width: 100%;
-          padding: 14px 18px;
-          border-radius: 12px;
-          border: 1px solid rgba(201, 162, 39, 0.5);
-          background: linear-gradient(
-            165deg,
-            rgba(201, 162, 39, 0.42) 0%,
-            rgba(90, 58, 22, 0.72) 48%,
-            rgba(45, 32, 14, 0.9) 100%
-          );
-          color: #faf6ea;
-          font-size: 13px;
-          font-weight: 600;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 10px;
-          box-shadow:
-            0 4px 20px rgba(0, 0, 0, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.12);
-          transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-        }
-        .mm-panel-btn:hover {
-          transform: translateY(-1px);
-          border-color: rgba(230, 200, 120, 0.65);
-          box-shadow:
-            0 8px 28px rgba(201, 162, 39, 0.18),
-            0 4px 20px rgba(0, 0, 0, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.15);
-        }
-        .mm-panel-btn:active {
-          transform: translateY(0);
-        }
         @keyframes mm-urgent-pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.72; }
@@ -174,7 +141,7 @@ export default function MemoryMatchUI({
         }
       `}</style>
 
-      <aside className="mt-5" style={panel} aria-label="Memory game panel">
+      <aside style={panel} aria-label="Memory game panel">
         <div style={topAccent} aria-hidden />
         <h2 style={h2}>{t.title}</h2>
         <p style={sub}>{t.subtitle}</p>
@@ -238,12 +205,11 @@ export default function MemoryMatchUI({
         </div>
 
         {phase === "won" && (
-          <div style={bannerOk}>
-            <IconSparkles size={20} style={{ marginBottom: 6 }} aria-hidden />
-            <div>{t.win}</div>
-          </div>
+          <GamePanelResultCard variant="win" title={t.win} className="mt-1" />
         )}
-        {phase === "lost" && <div style={bannerBad}>{t.lose}</div>}
+        {phase === "lost" && (
+          <GamePanelResultCard variant="lose" title={t.lose} className="mt-1" />
+        )}
 
         <div style={{ marginTop: "auto", paddingTop: 20 }}>
           {phase === "idle" && multiplayerAwaiting && (
@@ -265,7 +231,7 @@ export default function MemoryMatchUI({
           {showAction && (
             <button
               type="button"
-              className="mm-panel-btn"
+              className={GAME_CTA_PRIMARY}
               onClick={() => {
                 playButtonClick();
                 (phase === "idle" ? onStart : onRestart)();
@@ -284,21 +250,6 @@ export default function MemoryMatchUI({
               )}
             </button>
           )}
-        </div>
-
-        <div style={rulesSection}>
-          <div style={rulesTitleRow}>
-            <IconRules size={14} color={GOLD_DIM} aria-hidden />
-            <span style={rulesTitle}>{t.howTitle}</span>
-          </div>
-          <ol style={rulesList}>
-            {t.howLines.map((line, i) => (
-              <li key={i} style={rulesLi}>
-                <span style={rulesNum}>{i + 1}</span>
-                <span style={rulesText}>{line}</span>
-              </li>
-            ))}
-          </ol>
         </div>
       </aside>
     </>
@@ -349,24 +300,24 @@ const panel: CSSProperties = {
   top: 0,
   right: 0,
   bottom: 0,
-  width: "min(400px, calc(100vw - 16px))",
+  width: "min(300px, calc(100vw - 16px))",
   zIndex: 20,
   display: "flex",
   flexDirection: "column",
   padding: "22px 22px 26px",
-  background: `
-    linear-gradient(
-      165deg,
-      rgba(14, 10, 6, 0.99) 0%,
-      rgba(22, 16, 10, 0.97) 45%,
-      rgba(12, 9, 6, 0.99) 100%
-    )
-  `,
-  borderLeft: "1px solid rgba(201, 162, 39, 0.18)",
+  border: "1px solid rgba(148, 129, 1, 0.45)",
+  // background: `
+  //   linear-gradient(
+  //     165deg,
+  //     rgba(14, 10, 6, 0.99) 0%,
+  //     rgba(22, 16, 10, 0.97) 45%,
+  //     rgba(12, 9, 6, 0.99) 100%
+  //   )
+  // `,
   boxShadow: "-16px 0 48px rgba(0, 0, 0, 0.45)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
-  fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif",
+  fontFamily: GAME_UI_FONT_FAMILY,
   color: "#ebe4d8",
   overflowY: "auto",
   overflowX: "hidden",
@@ -390,28 +341,31 @@ const headerRow: CSSProperties = {
 };
 
 const overline: CSSProperties = {
-  fontSize: 10,
-  letterSpacing: "0.38em",
+  fontSize: 9,
+  letterSpacing: "0.2em",
   color: "rgba(201, 162, 39, 0.48)",
-  margin: "0 0 8px",
-  fontWeight: 500,
+  margin: "0 0 6px",
+  fontWeight: 600,
 };
 
 const h2: CSSProperties = {
-  fontSize: 22,
-  letterSpacing: "0.14em",
+  fontSize: "clamp(0.8rem, 2.8vw, 0.95rem)",
+  letterSpacing: "0.1em",
   color: "#e8c860",
-  margin: "0 0 8px",
+  margin: "0 0 6px",
   fontWeight: 700,
   textShadow: "0 2px 24px rgba(201, 162, 39, 0.25)",
   lineHeight: 1.25,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  maxWidth: "100%",
 };
 
 const sub: CSSProperties = {
-  fontSize: 13,
+  fontSize: 12,
   color: "#8a8074",
-  margin: "0 0 16px",
-  lineHeight: 1.5,
+  margin: "0 0 14px",
+  lineHeight: 1.45,
   maxWidth: "100%",
 };
 
@@ -460,7 +414,7 @@ const label: CSSProperties = {
 };
 
 const big: CSSProperties = {
-  fontSize: 22,
+  fontSize: "clamp(0.95rem, 3.5vw, 1.1rem)",
   fontWeight: 700,
   fontVariantNumeric: "tabular-nums",
   lineHeight: 1.1,
@@ -513,94 +467,4 @@ const progressFill: CSSProperties = {
   borderRadius: 999,
   transition: "width 0.35s ease, background 0.35s ease",
   minWidth: 0,
-};
-
-const bannerOk: CSSProperties = {
-  marginTop: 4,
-  marginBottom: 12,
-  padding: "16px 14px",
-  borderRadius: 12,
-  textAlign: "center",
-  fontWeight: 600,
-  fontSize: 14,
-  color: "#b8e8b8",
-  background:
-    "linear-gradient(165deg, rgba(50, 90, 55, 0.35), rgba(25, 40, 28, 0.5))",
-  border: "1px solid rgba(120, 200, 140, 0.28)",
-  boxShadow: "0 0 24px rgba(100, 180, 120, 0.12)",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-};
-
-const bannerBad: CSSProperties = {
-  marginTop: 4,
-  marginBottom: 12,
-  padding: "14px 14px",
-  borderRadius: 12,
-  textAlign: "center",
-  fontWeight: 600,
-  fontSize: 13,
-  color: "#e8b0a0",
-  background:
-    "linear-gradient(165deg, rgba(90, 45, 40, 0.4), rgba(35, 20, 18, 0.55))",
-  border: "1px solid rgba(200, 120, 100, 0.28)",
-};
-
-const rulesSection: CSSProperties = {
-  marginTop: 8,
-  paddingTop: 18,
-  borderTop: "1px solid rgba(201, 162, 39, 0.1)",
-};
-
-const rulesTitleRow: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  marginBottom: 14,
-};
-
-const rulesTitle: CSSProperties = {
-  fontSize: 10,
-  letterSpacing: "0.22em",
-  textTransform: "uppercase",
-  color: GOLD_DIM,
-  fontWeight: 600,
-};
-
-const rulesList: CSSProperties = {
-  margin: 0,
-  padding: 0,
-  listStyle: "none",
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const rulesLi: CSSProperties = {
-  display: "flex",
-  gap: 12,
-  alignItems: "flex-start",
-};
-
-const rulesNum: CSSProperties = {
-  flexShrink: 0,
-  width: 22,
-  height: 22,
-  borderRadius: 6,
-  background: "rgba(201, 162, 39, 0.15)",
-  border: "1px solid rgba(201, 162, 39, 0.22)",
-  color: "#e8c860",
-  fontSize: 11,
-  fontWeight: 700,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const rulesText: CSSProperties = {
-  fontSize: 12,
-  color: "#9a9084",
-  lineHeight: 1.55,
-  paddingTop: 2,
 };

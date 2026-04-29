@@ -1,12 +1,16 @@
 "use client";
 
-import { LuX as X, LuStar as Star } from "react-icons/lu";
+import { useEffect, useState } from "react";
+import { LuBookOpen as BookOpen, LuX as X, LuStar as Star } from "react-icons/lu";
 import { cn } from "@/lib/utils";
+import { StationImageOrIcon } from "./StationImageOrIcon";
 import type { UrtuuStation } from "./UrtuuNode";
 import {
   gameWeeklyPlaysRemaining,
+  STATION_GAME_WEEKLY_PLAY_CAP,
   stationAllGamesWeeklyLocked,
 } from "./mapConstants";
+import { StationGameHowToInline } from "./StationGameHowToInline";
 
 interface StationPopupProps {
   station: UrtuuStation | null;
@@ -28,6 +32,13 @@ interface StationPopupProps {
   canPlay?: boolean;
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
   stationGameVisits?: Record<string, Record<string, number[]>>;
+  isMn: boolean;
+  mapStationHowToOpen: string;
+  mapStationHowToHide: string;
+  mapStationHowToBack: string;
+  introNext: string;
+  introSkip: string;
+  introDone: string;
 }
 
 export function StationPopup({
@@ -50,7 +61,20 @@ export function StationPopup({
   canPlay = true,
   stationSteps,
   stationGameVisits,
+  isMn,
+  mapStationHowToOpen,
+  mapStationHowToHide,
+  mapStationHowToBack,
+  introNext,
+  introSkip,
+  introDone,
 }: StationPopupProps) {
+  const [howToSlug, setHowToSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHowToSlug(null);
+  }, [station?.id]);
+
   if (!station) return null;
 
   const list =
@@ -114,23 +138,12 @@ export function StationPopup({
         </button>
 
         <div className="flex shrink-0 items-start gap-3 border-b border-white/10 p-3 pr-10">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 text-2xl"
-            style={{
-              background:
-                "color-mix(in oklch, var(--primary) 12%, transparent)",
-            }}
-          >
-            {station.imageUrl ? (
-              <img
-                src={station.imageUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span>{station.icon?.trim() || "📍"}</span>
-            )}
-          </div>
+          <StationImageOrIcon
+            size="popup"
+            imageUrl={station.imageUrl}
+            icon={station.icon?.trim() || "📍"}
+            alt={station.name}
+          />
           <div className="min-w-0 flex-1 pt-0.5">
             <h4 className="font-display text-base font-semibold leading-tight tracking-wide text-foreground">
               {station.name}
@@ -206,8 +219,25 @@ export function StationPopup({
           <p className="mb-2 text-[9px] leading-snug text-muted-foreground/90">
             {stationWeeklyExhausted
               ? "7 хоногийн лимит дууссан."
-              : "Тоглоом бүр 7 хоногт хамгийн ихдээ 2 удаа тоголно."}
+              : `Тоглоом бүр 7 хоногт хамгийн ихдээ ${STATION_GAME_WEEKLY_PLAY_CAP} удаа тоголно.`}
           </p>
+
+          {howToSlug ? (
+            <StationGameHowToInline
+              gameSlug={howToSlug}
+              gameName={
+                list.find((g) => (g.slug?.trim() || "") === howToSlug)?.name ??
+                howToSlug
+              }
+              isMn={isMn}
+              nextLabel={introNext}
+              backLabel={mapStationHowToBack}
+              skipLabel={introSkip}
+              doneLabel={introDone}
+              hideLabel={mapStationHowToHide}
+              onClose={() => setHowToSlug(null)}
+            />
+          ) : null}
 
           <div className="grid grid-cols-2 gap-2">
             {list.slice(0, 2).map((g) => {
@@ -224,7 +254,7 @@ export function StationPopup({
               const statusText = progressionLocked
                 ? lockedHint
                 : gameRem <= 0
-                  ? "Лимит"
+                  ? `${STATION_GAME_WEEKLY_PLAY_CAP}/${STATION_GAME_WEEKLY_PLAY_CAP} — 7 хоног`
                   : isDone
                     ? doneHint
                     : lockedHint;
@@ -256,6 +286,16 @@ export function StationPopup({
                   >
                     {canStart ? playLabel : statusText}
                   </button>
+                  {slug ? (
+                    <button
+                      type="button"
+                      onClick={() => setHowToSlug(slug)}
+                      className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-sky-500/25 bg-sky-950/20 py-1 text-[8px] font-semibold text-sky-200/90 hover:bg-sky-950/35"
+                    >
+                      <BookOpen className="size-2.5 shrink-0 opacity-90" aria-hidden />
+                      {mapStationHowToOpen}
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
@@ -286,21 +326,33 @@ export function StationPopup({
                     <span className="min-w-0 truncate text-muted-foreground">
                       {g.name}
                     </span>
-                    <button
-                      type="button"
-                      disabled={!canStart}
-                      onClick={() =>
-                        canStart && g.slug && onPlay(g.slug, g.name)
-                      }
-                      className={cn(
-                        "shrink-0 rounded-md px-2 py-0.5 text-[9px] font-semibold uppercase",
-                        canStart
-                          ? "bg-primary/85 text-primary-foreground"
-                          : "opacity-50",
-                      )}
-                    >
-                      {canStart ? playLabel : "—"}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {slug ? (
+                        <button
+                          type="button"
+                          onClick={() => setHowToSlug(slug)}
+                          className="rounded-md border border-sky-500/25 bg-sky-950/25 px-1.5 py-0.5 text-[8px] font-semibold text-sky-200/90"
+                          title={mapStationHowToOpen}
+                        >
+                          <BookOpen className="mx-auto size-2.5" aria-hidden />
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={!canStart}
+                        onClick={() =>
+                          canStart && g.slug && onPlay(g.slug, g.name)
+                        }
+                        className={cn(
+                          "rounded-md px-2 py-0.5 text-[9px] font-semibold uppercase",
+                          canStart
+                            ? "bg-primary/85 text-primary-foreground"
+                            : "opacity-50",
+                        )}
+                      >
+                        {canStart ? playLabel : "—"}
+                      </button>
+                    </div>
                   </li>
                 );
               })}

@@ -57,11 +57,6 @@ function debugDumpScene(root: THREE.Object3D): void {
   } catch {}
 }
 
-// Returns a wrap containing just the LAST visible shagai.
-// Handles three cases automatically:
-//   1) Multiple Object3D siblings (one per shagai)
-//   2) Multiple meshes somewhere in the tree (pick last mesh)
-//   3) A single merged mesh containing 3 disconnected islands (split geometry)
 function pickLastShagai(
   root: THREE.Object3D | undefined | null,
   targetSize: [number, number, number],
@@ -73,26 +68,21 @@ function pickLastShagai(
 
   const wrap = new THREE.Group();
 
-  // Gather every mesh in the scene.
   const meshes: THREE.Mesh[] = [];
   root.traverse((o) => {
     if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh);
   });
 
   if (meshes.length === 0) {
-    // No meshes at all — clone the whole root as fallback.
     wrap.add(root.clone(true));
     fitToBox(wrap, targetSize);
     return wrap;
   }
 
   if (meshes.length >= 2) {
-    // Case 1/2: multiple meshes → pick the LAST one, baked with world transform.
     const last = meshes[meshes.length - 1]!;
     last.updateWorldMatrix(true, false);
     const cloned = last.clone();
-    // Bake world transform so the cloned mesh sits at origin-relative place
-    // regardless of parent chain we dropped.
     const pos = new THREE.Vector3();
     const quat = new THREE.Quaternion();
     const scl = new THREE.Vector3();
@@ -102,7 +92,6 @@ function pickLastShagai(
     cloned.scale.copy(scl);
     wrap.add(cloned);
     if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
       console.log(
         "[shagai] mode=multi-mesh, total=",
         meshes.length,
@@ -111,14 +100,12 @@ function pickLastShagai(
       );
     }
   } else {
-    // Case 3: single mesh, possibly 3 islands merged in one geometry.
     const mesh = meshes[0]!;
     const split = splitMeshIslands(mesh);
     if (split && split.length >= 2) {
       const last = split[split.length - 1]!;
       wrap.add(last);
       if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
         console.log(
           "[shagai] mode=split-islands, islands=",
           split.length,
@@ -126,7 +113,6 @@ function pickLastShagai(
         );
       }
     } else {
-      // Truly a single shagai — just clone the mesh as is.
       mesh.updateWorldMatrix(true, false);
       const cloned = mesh.clone();
       const pos = new THREE.Vector3();
@@ -138,7 +124,6 @@ function pickLastShagai(
       cloned.scale.copy(scl);
       wrap.add(cloned);
       if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
         console.log("[shagai] mode=single-mesh (no split)");
       }
     }
@@ -152,7 +137,6 @@ function fitToBox(
   wrap: THREE.Group,
   targetSize: [number, number, number],
 ): void {
-  // Step 1: centre the model at origin.
   const box = new THREE.Box3().setFromObject(wrap);
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
@@ -160,11 +144,6 @@ function fitToBox(
   box.getCenter(center);
   wrap.children.forEach((c) => c.position.sub(center));
 
-  // Step 2: align the model's anatomical axes with the physics box axes
-  //   - SHORTEST model dim  → physics Y (height / flat-face normal)
-  //   - LONGEST  model dim  → physics Z (length)
-  //   - MIDDLE   model dim  → physics X (width)
-  // We do this by rotating the wrap 90° around the axes needed.
   const dims: [string, number][] = [
     ["x", size.x],
     ["y", size.y],
@@ -174,39 +153,28 @@ function fitToBox(
   const shortAxis = dims[0]![0];
   const longAxis = dims[2]![0];
 
-  // Simple case-table: rotate so shortest → y and longest → z.
-  // Rotations act on the wrap group (its children already centered).
   const key = `${shortAxis}/${longAxis}`;
-  // The 6 possible orderings (shortestAxis/longestAxis):
   switch (key) {
     case "y/z":
-      // Already aligned. No rotation.
       break;
     case "y/x":
-      // Long is X, short Y. Swap X<->Z. Rotate 90° around Y.
       wrap.rotation.set(0, Math.PI / 2, 0);
       break;
     case "x/y":
-      // Short is X, long is Y. Rotate 90° around Z so X→Y & Y→-X,
-      // then 90° around X to bring long (now Y) to Z.
       wrap.rotation.set(Math.PI / 2, 0, Math.PI / 2);
       break;
     case "x/z":
-      // Short is X, long is Z. Rotate 90° around Z so X→Y.
       wrap.rotation.set(0, 0, Math.PI / 2);
       break;
     case "z/y":
-      // Short is Z, long is Y. Rotate 90° around X.
       wrap.rotation.set(Math.PI / 2, 0, 0);
       break;
     case "z/x":
-      // Short Z, long X. Rotate 90° around X then 90° around Y.
       wrap.rotation.set(Math.PI / 2, Math.PI / 2, 0);
       break;
   }
   wrap.updateMatrixWorld(true);
 
-  // Step 3: uniform scale so the now-aligned bbox fits inside the target.
   const box2 = new THREE.Box3().setFromObject(wrap);
   const size2 = new THREE.Vector3();
   box2.getSize(size2);
@@ -218,7 +186,6 @@ function fitToBox(
 
   if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
     try {
-      // eslint-disable-next-line no-console
       console.log(
         "[shagai] aligned model. original size=",
         size
@@ -234,8 +201,6 @@ function fitToBox(
   }
 }
 
-// Try to split a single merged mesh into connected-component islands
-// (Union-Find over triangle adjacency via shared vertex indices).
 function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
   const geom = mesh.geometry as THREE.BufferGeometry;
   if (!geom) return null;
@@ -243,11 +208,9 @@ function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
   if (!posAttr) return null;
   const idxAttr = geom.index;
 
-  // Build triangles list as triples of vertex indices.
   const triCount = idxAttr ? idxAttr.count / 3 : posAttr.count / 3;
   if (!Number.isFinite(triCount) || triCount < 2) return null;
 
-  // Dedupe vertices by position so islands connect via shared verts.
   const vertCount = posAttr.count;
   const key = new Array<number>(vertCount);
   const map = new Map<string, number>();
@@ -265,7 +228,6 @@ function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
     key[i] = id;
   }
 
-  // Union-Find over dedup'd vertex ids.
   const N = map.size;
   const parent = new Int32Array(N);
   for (let i = 0; i < N; i++) parent[i] = i;
@@ -294,7 +256,6 @@ function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
     union(key[b]!, key[c]!);
   }
 
-  // Group triangles by root.
   const groups = new Map<number, number[]>();
   for (let t = 0; t < triCount; t++) {
     const r = find(key[triVerts[t * 3]!]!);
@@ -307,7 +268,6 @@ function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
   }
   if (groups.size < 2) return null;
 
-  // Order groups by bounding box center x (or whichever axis has most spread).
   const tmp: { tris: number[]; cx: number; cy: number; cz: number }[] = [];
   for (const tris of groups.values()) {
     const bb = new THREE.Box3();
@@ -323,7 +283,7 @@ function splitMeshIslands(mesh: THREE.Mesh): THREE.Mesh[] | null {
     bb.getCenter(center);
     tmp.push({ tris, cx: center.x, cy: center.y, cz: center.z });
   }
-  // Sort by X ascending; the "last" one is the rightmost by X.
+
   tmp.sort((a, b) => a.cx - b.cx);
 
   mesh.updateWorldMatrix(true, false);
@@ -422,7 +382,6 @@ export default function ShagaiModel({
         const m = o as THREE.Mesh;
         m.castShadow = true;
         m.receiveShadow = true;
-        // Slight polish for PBR under strong lighting.
         const mat = m.material as
           | THREE.MeshStandardMaterial
           | THREE.MeshStandardMaterial[];
@@ -438,15 +397,7 @@ export default function ShagaiModel({
         }
       }
     });
-    // Measure the exact rest height for each side by iterating real
-    // vertices. The collider center must sit at `-minY` above the floor
-    // so the visual mesh rests flush against it regardless of mesh
-    // asymmetries (the model is not perfectly symmetric around its bbox
-    // center — one end is broader than the other).
-    // We compute in wrap-parent space (= rigid body local space) by
-    // manually composing wrap.matrix × mesh.matrix, not matrixWorld,
-    // because the wrap may already be parented to the rigid body group
-    // whose transform must NOT be included here.
+
     model.updateMatrix();
     const worldUp = new THREE.Vector3(0, 1, 0);
     const sides: ShagaiSide[] = ["sheep", "goat", "horse", "camel"];
@@ -491,7 +442,6 @@ export default function ShagaiModel({
     onkhRetryRef.current = 0;
     biasTargetRef.current = biasSideForAirTorque();
 
-    // Wake up the body in case a previous throw ended with api.sleep().
     api.wakeUp();
     api.position.set(0, 5, 0);
     api.rotation.set(
@@ -591,15 +541,11 @@ export default function ShagaiModel({
         }
       }}
     >
-      {/* Physics collider (invisible). Keep stable even if model changes. */}
       <mesh visible={false}>
         <boxGeometry args={PHYS_BOX} />
         <meshStandardMaterial />
       </mesh>
 
-      {/* Visual model: pick the LAST shagai (3rd child) from the GLB,
-          auto-centered, auto-aligned (shortest axis → Y, longest → Z),
-          and auto-scaled to fit the physics collider. */}
       {model ? <primitive object={model} position={[0, 0, 0]} /> : null}
     </group>
   );

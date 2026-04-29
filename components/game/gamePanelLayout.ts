@@ -1,16 +1,24 @@
 import type { CSSProperties } from "react";
+import { GAME_PANEL_CHROME, GAME_PANEL_TEXT_COLOR } from "./gameUiTheme";
 
 const abs: CSSProperties = { position: "absolute" };
 
-/** Desktop: primary (left) gameplay panel. */
+export const SHAGAI_GAME_PANEL_BASE: CSSProperties = {
+  position: "absolute",
+  ...GAME_PANEL_CHROME,
+  padding: "14px 14px 12px",
+  color: GAME_PANEL_TEXT_COLOR,
+  zIndex: 10,
+  maxHeight: "calc(100% - 48px)",
+  overflowY: "auto",
+  overflowX: "hidden",
+  scrollbarWidth: "thin",
+  pointerEvents: "auto",
+} as const;
+
 export function gamePanelLeftDesktop(widthPx: number): CSSProperties {
   return { ...abs, top: 24, left: 24, width: widthPx };
 }
-
-/**
- * Mobile: anchor gameplay controls to the bottom so the 3D canvas stays visible
- * (shagai fall / board in the upper area).
- */
 export function gamePanelPlayNarrowBottom(): CSSProperties {
   return {
     ...abs,
@@ -24,7 +32,6 @@ export function gamePanelPlayNarrowBottom(): CSSProperties {
   };
 }
 
-/** Desktop: secondary (right) rules / stats panel. */
 export function gamePanelRightDesktop(widthPx: number): CSSProperties {
   return { ...abs, top: 24, right: 24, width: widthPx };
 }

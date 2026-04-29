@@ -4,17 +4,30 @@ import { useApp } from "@/components/AppContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MatchRoomControls, PeerRelayEvent } from "@/hooks/useMatchRoom";
 import {
+  MAX_ENERGY,
+  makeInitialRoundState,
+  POWER_SPECS,
+  resolveRoundWithEffects,
+  suggestMovesForSeat,
   WIN_SCORE,
-  addTotals,
   firstWinner,
   mulberry32,
   pickBotPower,
   powerLabel,
-  roundPoints,
+  type RoundState,
+  type Seat4,
   type PowerId,
 } from "./fourPowersType";
 import { useInventoryGrant } from "./useInventoryGrant";
 import { STONE_ROUND_COINS } from "./gameRewardConstants";
+import { useMatchLobbyIntro } from "./gameModalSession";
+import { FourPowersHowItWorks } from "./fourPowersRulesUI";
+import {
+  GAME_LOBBY_INTRO_CLASS,
+  GAME_TEXT_META,
+  GAME_TEXT_MONO_META,
+  GAME_TEXT_SECTION_LABEL,
+} from "./gameUiTheme";
 
 const RELAY = "four_powers_mp_v1";
 
@@ -23,8 +36,10 @@ type RMsg = {
   kind: "R";
   v: number;
   r: number;
-  ch: [number, number, number, number];
-  tot: [number, number, number, number];
+  ch: Seat4;
+  st: RoundState;
+  d: Seat4;
+  notes: string[];
 };
 
 const ACCENT = ["#38bdf8", "#a3e635", "#fbbf24", "#f472b6"] as const;
@@ -35,7 +50,11 @@ function parseR(p: unknown): RMsg | null {
   if (o.kind !== "R") return null;
   if (typeof o.v !== "number" || typeof o.r !== "number") return null;
   if (!Array.isArray(o.ch) || o.ch.length !== 4) return null;
-  if (!Array.isArray(o.tot) || o.tot.length !== 4) return null;
+  if (!Array.isArray(o.st?.totals) || o.st.totals.length !== 4) return null;
+  if (!Array.isArray(o.st?.energy) || o.st.energy.length !== 4) return null;
+  if (typeof o.st?.round !== "number") return null;
+  if (!Array.isArray(o.d) || o.d.length !== 4) return null;
+  if (!Array.isArray(o.notes)) return null;
   return o;
 }
 
@@ -57,26 +76,18 @@ type Props = {
 
 export function FourPowersOnlineLobby() {
   const { language } = useApp();
+  const lobbyIntro = useMatchLobbyIntro(language === "en" ? "en" : "mn");
   return (
     <div
-      className="flex h-full w-full items-center justify-center p-4 text-center text-sm leading-relaxed text-white/80"
+      className="flex h-full w-full items-center justify-center p-4 text-center"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, #1a1410 0%, #0a0806 100%)",
       }}
     >
-      {language === "en" ? (
-        <span>
-          In the room — Ready, then host starts. 2–4 players; extra seats
-          are bots. First to 7 points wins. Turn off Online to play alone vs
-          bots.
-        </span>
-      ) : (
-        <span>
-          Өрөөнд: бүгд бэлэн → эзэн «Эхлүүлэх». 2–4 тоглогч; сул байрлалд
-          бот. 7 оноо — ялалт. Ганцаар: Online унтраана.
-        </span>
-      )}
+      <span className={`max-w-md text-balance ${GAME_LOBBY_INTRO_CLASS}`}>
+        {lobbyIntro}
+      </span>
     </div>
   );
 }
@@ -119,33 +130,26 @@ export default function FourPowersGameMulti({
     [seatIds, mp.players, lang],
   );
 
-  const [totals, setTotals] = useState<[number, number, number, number]>([
-    0, 0, 0, 0,
-  ]);
-  const [round, setRound] = useState(1);
+  const [state, setState] = useState<RoundState>(() => makeInitialRoundState());
   const [phase, setPhase] = useState<"pick" | "reveal">("pick");
-  const [lastCh, setLastCh] = useState<
-    [number, number, number, number] | null
-  >(null);
-  const [lastD, setLastD] = useState<
-    [number, number, number, number] | null
-  >(null);
+  const [lastCh, setLastCh] = useState<Seat4 | null>(null);
+  const [lastD, setLastD] = useState<Seat4 | null>(null);
+  const [lastNotes, setLastNotes] = useState<string[]>([]);
+  const [picked, setPicked] = useState<PowerId | null>(null);
   const [done, setDone] = useState(false);
 
   const appliedV = useRef(0);
   const rGen = useRef(0);
   const picks = useRef<Record<number, Record<string, number>>>({});
-  const totalsRef = useRef(totals);
-  const roundRef = useRef(round);
+  const stateRef = useRef(state);
+  const roundRef = useRef(state.round);
   const resultSent = useRef(false);
   const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    totalsRef.current = totals;
-  }, [totals]);
-  useEffect(() => {
-    roundRef.current = round;
-  }, [round]);
+    stateRef.current = state;
+    roundRef.current = state.round;
+  }, [state]);
 
   const seatIdsRef = useRef(seatIds);
   const humanIdsRef = useRef(humanIds);
@@ -153,12 +157,13 @@ export default function FourPowersGameMulti({
   humanIdsRef.current = humanIds;
 
   const finishIfNeeded = useCallback(
-    (tot: [number, number, number, number], seatOrder: [string, string, string, string]) => {
-      const w = firstWinner(tot);
+    (st: RoundState, seatOrder: [string, string, string, string]) => {
+      const w = firstWinner(st.totals);
       if (w < 0) {
         setPhase("pick");
         setLastCh(null);
         setLastD(null);
+        setLastNotes([]);
         return;
       }
       setDone(true);
@@ -166,7 +171,7 @@ export default function FourPowersGameMulti({
       const won = winId === myId;
       if (won) grant({ coins: STONE_ROUND_COINS });
       const myScore =
-        mySeat >= 0 && mySeat < 4 ? tot[mySeat]! : 0;
+        mySeat >= 0 && mySeat < 4 ? st.totals[mySeat]! : 0;
       if (!resultSent.current) {
         resultSent.current = true;
         onComplete(
@@ -183,16 +188,15 @@ export default function FourPowersGameMulti({
       if (msg.v <= appliedV.current) return;
       if (msg.r !== roundRef.current) return;
       appliedV.current = msg.v;
-      totalsRef.current = msg.tot;
-      setTotals(msg.tot);
+      stateRef.current = msg.st;
+      setState(msg.st);
       setLastCh(msg.ch);
-      setLastD(roundPoints(msg.ch));
+      setLastD(msg.d);
+      setLastNotes(msg.notes ?? []);
       setPhase("reveal");
       if (revealTimer.current) clearTimeout(revealTimer.current);
       revealTimer.current = setTimeout(() => {
-        const w0 = firstWinner(msg.tot);
-        if (w0 < 0) setRound((k) => k + 1);
-        finishIfNeeded(msg.tot, seatIdsRef.current);
+        finishIfNeeded(msg.st, seatIdsRef.current);
         delete picks.current[msg.r];
       }, 2000);
     },
@@ -201,7 +205,8 @@ export default function FourPowersGameMulti({
 
   const tryResolve = useCallback(() => {
     if (!isHost) return;
-    const r0 = roundRef.current;
+    const current = stateRef.current;
+    const r0 = current.round;
     const m = picks.current[r0];
     if (!m) return;
     for (const hid of humanIdsRef.current) {
@@ -221,9 +226,17 @@ export default function FourPowersGameMulti({
         ch[s] = pickBotPower(rng) as PowerId;
       }
     }
-    const next = addTotals(totalsRef.current, roundPoints(ch));
+    const resolved = resolveRoundWithEffects(current, ch);
     const v = (rGen.current += 1);
-    const msg: RMsg = { kind: "R", v, r: r0, ch, tot: next };
+    const msg: RMsg = {
+      kind: "R",
+      v,
+      r: r0,
+      ch: resolved.appliedChoices,
+      st: resolved.nextState,
+      d: resolved.deltas,
+      notes: resolved.notes,
+    };
     sendRelay(RELAY, msg);
     queueMicrotask(() => {
       applyR(msg);
@@ -261,6 +274,7 @@ export default function FourPowersGameMulti({
       const r0 = roundRef.current;
       if (!picks.current[r0]) picks.current[r0] = {};
       picks.current[r0]![myId] = c;
+      setPicked(c);
       sendRelay(RELAY, { kind: "p", r: r0, from: myId, c } satisfies PMsg);
       if (isHost) queueMicrotask(() => {
         tryResolve();
@@ -285,8 +299,15 @@ export default function FourPowersGameMulti({
         >
           {lang === "mn" ? "Дөрвөн эрхэ" : "Clash of Four Powers"}
         </h2>
-        <p className="mt-1 text-[11px] text-slate-400">
-          {lang === "mn" ? "Өнгө" : "Round"} {round} · {WIN_SCORE}{" "}
+        <div className="mt-1.5">
+          <FourPowersHowItWorks
+            lang={lang}
+            variant="online"
+            density="compact"
+          />
+        </div>
+        <p className={`mt-1 ${GAME_TEXT_MONO_META}`}>
+          {lang === "mn" ? "Өнгө" : "Round"} {state.round} · {WIN_SCORE}{" "}
           {lang === "mn" ? "оноо" : "pts"}
         </p>
       </div>
@@ -310,7 +331,7 @@ export default function FourPowersGameMulti({
               }}
             >
               <div
-                className="text-[10px] font-bold uppercase tracking-wider"
+                className={`${GAME_TEXT_SECTION_LABEL} !font-bold tracking-wider`}
                 style={{ color: ACCENT[i] }}
               >
                 {nameAtSeat(i)}
@@ -318,9 +339,14 @@ export default function FourPowersGameMulti({
               <div className="mt-0.5 line-clamp-1 text-sm font-semibold text-white">
                 {n.name}
               </div>
-              <div className="text-[10px] text-slate-500">{n.sub}</div>
+              <div className={`${GAME_TEXT_META} text-slate-500 flex items-center justify-between gap-2`}>
+                <span>{n.sub}</span>
+                <span className="rounded border border-white/15 px-1 text-[10px] text-slate-300">
+                  E{state.energy[i]}/{MAX_ENERGY}
+                </span>
+              </div>
               <div className="mt-auto pt-2 text-2xl font-bold tabular-nums text-amber-200">
-                {totals[i] ?? 0}
+                {state.totals[i] ?? 0}
               </div>
               {lastD && (lastD[i] ?? 0) > 0 && (
                 <div className="text-xs font-semibold text-emerald-400">
@@ -332,9 +358,21 @@ export default function FourPowersGameMulti({
         })}
       </div>
 
+      {mySeat >= 0 ? (
+        <p className="mt-2 text-center text-xs text-zinc-300">
+          {(() => {
+            const h = suggestMovesForSeat(state, mySeat);
+            return lang === "mn"
+              ? `Санал: Шилдэг ${powerLabel(h.best, lang).name} · Аюулгүй ${powerLabel(h.safe, lang).name} · Эрсдэлтэй ${powerLabel(h.risk, lang).name}`
+              : `Hint: Best ${powerLabel(h.best, lang).name} · Safe ${powerLabel(h.safe, lang).name} · Risk ${powerLabel(h.risk, lang).name}`;
+          })()}
+        </p>
+      ) : null}
+
       {phase === "reveal" && lastCh && (
         <p className="mt-2 text-center text-xs text-sky-200/90">
           {lastCh.map((c) => powerLabel(c, lang).name).join(" · ")}
+          {lastNotes.length > 0 ? ` · ${lastNotes.join(", ")}` : ""}
         </p>
       )}
 
@@ -352,13 +390,22 @@ export default function FourPowersGameMulti({
                   borderColor: `${ACCENT[i]}55`,
                   background: `linear-gradient(145deg, ${ACCENT[i]}18, #0c0a08)`,
                   color: "#fff",
+                  opacity: POWER_SPECS[i].cost > state.energy[mySeat] ? 0.45 : 1,
                 }}
               >
-                {L.name}
+                <div>{L.name}</div>
+                <div className="text-[10px] text-zinc-300">Cost {POWER_SPECS[i].cost}</div>
               </button>
             );
           })}
         </div>
+      ) : null}
+      {picked != null && phase === "pick" ? (
+        <p className="mt-1 text-center text-[11px] text-amber-200/80">
+          {lang === "mn"
+            ? `Сонгосон: ${powerLabel(picked, lang).name}`
+            : `Selected: ${powerLabel(picked, lang).name}`}
+        </p>
       ) : null}
 
       {done && (

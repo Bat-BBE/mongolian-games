@@ -7,7 +7,6 @@ type Props = {
   sessionGain: { coins: number; gems: number };
 };
 
-/** StoneGameUI-той ойролцоо toast + энэ тоглоомын нийлбэр. */
 export default function InventoryRewardOverlay({
   rewardEvents,
   sessionGain,

@@ -133,6 +133,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [gameReloadTick, setGameReloadTick] = useState(0);
   const [homeOpen, setHomeOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [playerNickname, setPlayerNickname] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
   const [heroMapStationId, setHeroMapStationId] = useState<string | null>(null);
@@ -161,6 +162,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           questDesc: bundle.computed.questDesc,
         };
         setUserEmail(String(bundle.user.email ?? saved.name));
+        setPlayerNickname(
+          String(bundle.user.display_name ?? bundle.user.email ?? saved.name ?? ""),
+        );
       } catch {
         /* Хэрэглэгч зөвхөн Firebase эсвэл API уншихгүй */
       }
@@ -175,7 +179,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         setLoading(false);
         return;
       }
-
       const fbProf = isPlainRecord(data.profile)
         ? { ...(data.profile as Record<string, unknown>) }
         : {};
@@ -194,6 +197,11 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           ? (bundle.user.progress as Record<string, unknown>)
           : {}),
       };
+      const fallbackNick =
+        typeof fbProf.name === "string" && fbProf.name.trim()
+          ? fbProf.name.trim()
+          : saved.name;
+      setPlayerNickname((prev) => (prev.trim() ? prev : fallbackNick));
       const inv = isPlainRecord(prof.inventory)
         ? (prof.inventory as Record<string, unknown>)
         : {};
@@ -423,8 +431,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
 
         <MapArea
           t={t}
+          lang={lang}
           userEmail={userEmail}
-          playerDisplayName={player.name}
+          playerDisplayName={playerNickname || player.name}
           homeGerLevel={player.homeGerLevel ?? 1}
           homeLivestock={player.homeLivestock}
           currentStationId={player.currentStationId?.trim() || "home"}
@@ -437,6 +446,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           stationGameVisits={player.stationGameVisits}
           onGameCompleted={() => setGameReloadTick((n) => n + 1)}
           onOpenHome={() => setHomeOpen(true)}
+          homeModalOpen={homeOpen}
           onRegisterFlyHome={(fn) => {
             flyHomeRef.current = fn;
           }}

@@ -1,24 +1,30 @@
 "use client";
 
-import { LuUsers as IconUsers, LuX as X } from "react-icons/lu";
-import { useEffect, useRef, useState } from "react";
+import { LuCircleHelp as CircleHelp } from "react-icons/lu";
+import { LuX as X } from "react-icons/lu";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGLTF } from "@react-three/drei";
 import ShagaiGame from "./shagaiGame";
 import StoneGame from "./stoneGame";
 import StoneGameMulti, { StoneGameOnlineLobby } from "./stoneGameMulti";
 import FourBonesGame from "./fourBonusGame";
-import FourBonesGameMulti, {
-  FourBonesOnlineLobby,
-} from "./fourBonesGameMulti";
+import FourBonesGameMulti, { FourBonesOnlineLobby } from "./fourBonesGameMulti";
 import HorseRaceGame from "./horseRaceGame";
-import HorseRaceGameMulti, {
-  HorseRaceOnlineLobby,
-} from "./horseRaceGameMulti";
+import HorseRaceGameMulti, { HorseRaceOnlineLobby } from "./horseRaceGameMulti";
 import ShagaiGuessGame from "./shagaiGuessGame";
 import ShagaiGuessGameMulti, {
   ShagaiGuessOnlineLobby,
 } from "./shagaiGuessGameMulti";
 import ShagaiSevenGame from "./shagaiSevenGame";
+import ShagaiTwelveGame from "./shagaiTwelveGame";
+import ShagaiTwelveGameMulti, {
+  ShagaiTwelveOnlineLobby,
+} from "./shagaiTwelveGameMulti";
+import ShagaiBerkh12Game from "./shagaiBerkh12Game";
+import ShagaiBerkh12GameMulti, {
+  ShagaiBerkh12OnlineLobby,
+} from "./shagaiBerkh12GameMulti";
+import type { LocalPlayerCount } from "./shagaiBerkh12Type";
 import FourPowersGame from "./fourPowersGame";
 import FourPowersGameMulti, {
   FourPowersOnlineLobby,
@@ -34,13 +40,49 @@ import StoneCairnMemoryGameMulti, {
 import MemoryMatchGame from "./memoryMatchGame";
 import KhorolGame from "./khorolGame";
 import WoodenPuzzleGame from "./woodenPuzzleGame";
+import WoodenPuzzleGameMulti, {
+  WoodenPuzzleOnlineLobby,
+} from "./woodenPuzzleGameMulti";
 import { loadPlayer } from "@/components/hero-select/hero-data";
-import { completeGame } from "@/lib/api";
+import { completeGame, tryGetAppUserByEmail } from "@/lib/api";
 import { playButtonClick } from "@/lib/uiSounds";
 import { useMatchRoom } from "@/hooks/useMatchRoom";
-import { MultiplayerMatchPanel } from "./MultiplayerMatchPanel";
+import { GameModalRulesBody } from "./gameModalRulesBody";
+import { GAME_MODAL_TITLE_CLASS, GAME_UI_FONT_FAMILY } from "./gameUiTheme";
+import { STATION_GAME_WEEKLY_PLAY_CAP } from "@/lib/stationWeeklyPlayCap";
 import { deriveStationGameMatchCode } from "@/lib/stationMatchCode";
-import { GameModalHowToBanner } from "./gameModalHowToBanner";
+import { useAuth } from "@/components/AuthContext";
+import GameRulesSheet from "./GameRulesSheet";
+import MatchRoomChatFab from "./MatchRoomChatFab";
+import { GameModalSessionProvider } from "./gameModalSession";
+import { useApp } from "@/components/AppContext";
+
+const MATCH_ROOM_GAME_TYPES = new Set<string>([
+  "puzzle",
+  "shagai",
+  "stone-guess",
+  "four-bones",
+  "horse-race",
+  "shagai-guess",
+  "four-powers",
+  "wooden-dice",
+  "stone-cairn",
+  "twelve-shagai",
+  "berkh-12-shagai",
+  "modon-onis",
+]);
+
+function usesMatchRoom(gt: string) {
+  return MATCH_ROOM_GAME_TYPES.has(gt);
+}
+
+const SOLO_LOBBY_WAIT_MIN_MS = 10_000;
+const SOLO_LOBBY_WAIT_MAX_MS = 15_000;
+
+function pickSoloLobbyWaitMs(): number {
+  const span = SOLO_LOBBY_WAIT_MAX_MS - SOLO_LOBBY_WAIT_MIN_MS;
+  return SOLO_LOBBY_WAIT_MIN_MS + Math.floor(Math.random() * (span + 1));
+}
 
 interface GameModalProps {
   isOpen: boolean;
@@ -50,6 +92,7 @@ interface GameModalProps {
   stationSlug: string;
   gameSlug: string;
   onCompleted?: (result: "win" | "lose") => void;
+  weeklyPlaysRemaining?: number;
 }
 
 export default function GameModal({
@@ -60,50 +103,114 @@ export default function GameModal({
   stationSlug,
   gameSlug,
   onCompleted,
+  weeklyPlaysRemaining,
 }: GameModalProps) {
-  const [multiplayerOn, setMultiplayerOn] = useState(false);
+  const { language } = useApp();
+  const { user: authUser, authConfigured } = useAuth();
+  const [appUserInPostgres, setAppUserInPostgres] = useState(false);
+  const [matchDisplayName, setMatchDisplayName] = useState(
+    loadPlayer()?.name?.trim() || "Player",
+  );
+  const isMn = language === "mn";
+
+  useEffect(() => {
+    if (!isOpen) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    if (stationSlug === "freeplay" || !authConfigured) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    const email = authUser?.email?.trim();
+    if (!email) {
+      setAppUserInPostgres(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const row = await tryGetAppUserByEmail(email);
+        if (!cancelled) setAppUserInPostgres(Boolean(row));
+      } catch {
+        if (!cancelled) setAppUserInPostgres(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, stationSlug, authConfigured, authUser?.email]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fallback = loadPlayer()?.name?.trim() || "Player";
+    const email = authUser?.email?.trim();
+    if (!authConfigured || !email) {
+      setMatchDisplayName(fallback);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const row = await tryGetAppUserByEmail(email);
+        if (cancelled) return;
+        const nick = row?.display_name?.trim();
+        setMatchDisplayName(nick || fallback);
+      } catch {
+        if (!cancelled) setMatchDisplayName(fallback);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, authConfigured, authUser?.email]);
+
+  const modalSession = useMemo(
+    () => ({
+      stationSlug,
+      appUserInPostgres,
+      authConfigured,
+    }),
+    [stationSlug, appUserInPostgres, authConfigured],
+  );
+
+  const [modalRulesOpen, setModalRulesOpen] = useState(false);
+  const isMatch = isOpen && usesMatchRoom(gameType);
+  const postPlayCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const matchJoinRequestedRef = useRef(false);
   const autoMultiStartSentRef = useRef(false);
   const soloFallbackStartSentRef = useRef(false);
-  const playerName = loadPlayer()?.name?.trim() || "Player";
+  const soloLobbyWaitMsRef = useRef<number | null>(null);
+  const soloLobbyRoomCodeRef = useRef<string | null>(null);
   const mp = useMatchRoom({
-    enabled:
-      isOpen &&
-      (gameType === "puzzle" ||
-        (multiplayerOn &&
-          (gameType === "shagai" ||
-            gameType === "stone-guess" ||
-            gameType === "four-bones" ||
-            gameType === "horse-race" ||
-            gameType === "four-powers" ||
-            gameType === "wooden-dice" ||
-            gameType === "stone-cairn" ||
-            gameType === "shagai-guess"))),
+    enabled: isMatch,
     gameType,
     gameSlug,
-    displayName: playerName,
+    displayName: matchDisplayName,
     maxRoomPlayers:
       gameType === "stone-guess" ||
       gameType === "shagai-guess" ||
       gameType === "wooden-dice" ||
-      gameType === "stone-cairn"
+      gameType === "stone-cairn" ||
+      gameType === "twelve-shagai"
         ? 2
         : gameType === "shagai" ||
             gameType === "four-bones" ||
-            gameType === "horse-race" || gameType === "four-powers"
+            gameType === "horse-race" ||
+            gameType === "four-powers" ||
+            gameType === "berkh-12-shagai" ||
+            gameType === "modon-onis"
           ? 4
           : undefined,
   });
 
-  /** Хос ол: нээгдэхэд шууд нийтлэг өрөө; бусад тоглоомд зөвхөн Online товчоор. */
-  useEffect(() => {
-    if (!isOpen) {
-      setMultiplayerOn(false);
-      return;
-    }
-    if (gameType === "puzzle") setMultiplayerOn(true);
-    else setMultiplayerOn(false);
-  }, [isOpen, gameType]);
+  const showMatchRoomChat =
+    isMatch &&
+    Boolean(mp.roomCode) &&
+    stationSlug !== "freeplay" &&
+    (!authConfigured || appUserInPostgres);
 
   useEffect(() => {
     if (!mp.connected) matchJoinRequestedRef.current = false;
@@ -118,9 +225,8 @@ export default function GameModal({
 
   const stationMatchCode = deriveStationGameMatchCode(stationSlug, gameSlug);
 
-  /** Паблик өрөөг автоматаар үүсгэх эсвэл нэгдэх. */
   useEffect(() => {
-    if (!isOpen || gameType !== "puzzle" || !multiplayerOn) {
+    if (!isOpen || !isMatch) {
       matchJoinRequestedRef.current = false;
       return;
     }
@@ -130,8 +236,7 @@ export default function GameModal({
     mp.createRoom(stationMatchCode);
   }, [
     isOpen,
-    gameType,
-    multiplayerOn,
+    isMatch,
     mp.connected,
     mp.playerId,
     mp.roomCode,
@@ -139,16 +244,14 @@ export default function GameModal({
     stationMatchCode,
   ]);
 
-  /** Бүх хүн lobby-д автоматаар бэлэн. */
   useEffect(() => {
-    if (!isOpen || gameType !== "puzzle" || !multiplayerOn) return;
+    if (!isOpen || !isMatch) return;
     if (!mp.connected || mp.roomStatus !== "lobby" || !mp.roomCode) return;
     const me = mp.players.find((p) => p.id === mp.playerId);
     if (me && !me.ready) mp.setReady(true);
   }, [
     isOpen,
-    gameType,
-    multiplayerOn,
+    isMatch,
     mp.connected,
     mp.roomStatus,
     mp.roomCode,
@@ -157,9 +260,8 @@ export default function GameModal({
     mp.setReady,
   ]);
 
-  /** 2+ тоглогч бүгд бэлэн бол эзэн шууд эхлүүлнэ. */
   useEffect(() => {
-    if (!isOpen || gameType !== "puzzle" || !multiplayerOn) return;
+    if (!isOpen || !isMatch) return;
     if (!mp.isHost || mp.roomStatus !== "lobby" || !mp.connected) return;
     if (mp.players.length < 2) return;
     if (!mp.players.every((p) => p.ready)) return;
@@ -168,8 +270,7 @@ export default function GameModal({
     mp.startMatch();
   }, [
     isOpen,
-    gameType,
-    multiplayerOn,
+    isMatch,
     mp.isHost,
     mp.roomStatus,
     mp.connected,
@@ -177,26 +278,62 @@ export default function GameModal({
     mp.startMatch,
   ]);
 
-  /** 10 секунд зөвхөн 1 хүн — серверээс seed (ганцаарчилсан самбар). */
   useEffect(() => {
-    if (!isOpen || gameType !== "puzzle" || !multiplayerOn) return;
-    if (!mp.isHost || mp.roomStatus !== "lobby" || !mp.connected) return;
-    if (mp.players.length !== 1) return;
+    const clearSoloLobbyScheduling = () => {
+      soloLobbyWaitMsRef.current = null;
+      soloLobbyRoomCodeRef.current = null;
+    };
+
+    if (!isOpen || !isMatch) {
+      clearSoloLobbyScheduling();
+      return;
+    }
+
+    const soloWaitEligible =
+      mp.isHost &&
+      mp.roomStatus === "lobby" &&
+      mp.connected &&
+      Boolean(mp.roomCode) &&
+      mp.players.length === 1;
+
+    if (!soloWaitEligible || soloFallbackStartSentRef.current) {
+      if (!soloWaitEligible) clearSoloLobbyScheduling();
+      return;
+    }
+
+    const skipSoloLobbyWait = stationSlug === "freeplay" || !authUser;
+
+    if (soloLobbyRoomCodeRef.current !== mp.roomCode) {
+      soloLobbyRoomCodeRef.current = mp.roomCode;
+      soloLobbyWaitMsRef.current = skipSoloLobbyWait
+        ? 0
+        : pickSoloLobbyWaitMs();
+    }
+    const waitMs = skipSoloLobbyWait
+      ? 0
+      : (soloLobbyWaitMsRef.current ?? pickSoloLobbyWaitMs());
+    if (!skipSoloLobbyWait) soloLobbyWaitMsRef.current = waitMs;
+
     const t = window.setTimeout(() => {
-      if (soloFallbackStartSentRef.current) return;
-      soloFallbackStartSentRef.current = true;
-      mp.startMatch({ forceSolo: true });
-    }, 10_000);
-    return () => clearTimeout(t);
+      if (!soloFallbackStartSentRef.current) {
+        soloFallbackStartSentRef.current = true;
+        mp.startMatch({ forceSolo: true });
+      }
+    }, waitMs);
+    return () => {
+      window.clearTimeout(t);
+    };
   }, [
     isOpen,
-    gameType,
-    multiplayerOn,
+    isMatch,
     mp.isHost,
     mp.roomStatus,
     mp.connected,
     mp.players.length,
+    mp.roomCode,
     mp.startMatch,
+    stationSlug,
+    authUser,
   ]);
 
   useEffect(() => {
@@ -214,6 +351,15 @@ export default function GameModal({
   }, [isOpen, onClose]);
 
   useEffect(() => {
+    if (isOpen) return;
+    setModalRulesOpen(false);
+    if (postPlayCloseTimerRef.current) {
+      clearTimeout(postPlayCloseTimerRef.current);
+      postPlayCloseTimerRef.current = null;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     const usesShagaiModel = new Set([
       "shagai",
@@ -221,6 +367,8 @@ export default function GameModal({
       "horse-race",
       "shagai-guess",
       "seven-shagai",
+      "twelve-shagai",
+      "berkh-12-shagai",
     ]);
     if (!usesShagaiModel.has(gameType)) return;
     void useGLTF.preload("/models/shagai_model.glb");
@@ -228,93 +376,176 @@ export default function GameModal({
 
   if (!isOpen) return null;
 
+  if (weeklyPlaysRemaining === 0) {
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(10px)" }}
+        onClick={onClose}
+      >
+        <div
+          className="max-w-md rounded-2xl border border-amber-500/30 bg-zinc-950/95 p-5 text-center shadow-2xl sm:p-6"
+          style={{ fontFamily: GAME_UI_FONT_FAMILY }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-balance font-bold leading-tight tracking-tight text-amber-200 text-[clamp(1rem,3.5vw,1.25rem)]">
+            {isMn ? "7 хоногийн тоглолт дууссан" : "Weekly plays used up"}
+          </p>
+          <p className="mt-3 text-xs leading-relaxed text-amber-100/80 sm:text-sm">
+            {isMn
+              ? `«${gameName}»-ыг энэ өртөөнд сүүлийн 7 хоногт ${STATION_GAME_WEEKLY_PLAY_CAP} удаа тоглосон. Дараагийн тоглолт 7 хонгийн дараа шинээр эхэлнэ.`
+              : `You've played this game ${STATION_GAME_WEEKLY_PLAY_CAP} times in the last 7 days at this station. The limit resets on a rolling 7-day window.`}
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-5 w-full rounded-lg border border-amber-500/40 bg-amber-950/50 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-900/40"
+          >
+            {isMn ? "Хаах" : "Close"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const mpSharedBoard = gameType === "puzzle";
   const stoneLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "stone-guess" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const stoneHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "stone-guess" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const fourBonesLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "four-bones" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const fourBonesHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "four-bones" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const horseRaceLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "horse-race" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const horseRaceHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "horse-race" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const shagaiGuessLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "shagai-guess" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const shagaiGuessHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "shagai-guess" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const fourPowersLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "four-powers" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const fourPowersHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "four-powers" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const woodenDiceLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "wooden-dice" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const woodenDiceHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "wooden-dice" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
   const stoneCairnLobbyBlock =
-    multiplayerOn &&
+    isMatch &&
     gameType === "stone-cairn" &&
     mp.roomCode &&
     mp.roomStatus === "lobby";
   const stoneCairnHumanMp =
-    multiplayerOn &&
+    isMatch &&
     gameType === "stone-cairn" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
-  const puzzleMpActive = mpSharedBoard && multiplayerOn;
+  const twelveShagaiLobbyBlock =
+    isMatch &&
+    gameType === "twelve-shagai" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const twelveShagaiHumanMp =
+    isMatch &&
+    gameType === "twelve-shagai" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const berkh12PlayerCount: LocalPlayerCount = useMemo(() => {
+    const n = mp.players.length;
+    if (n >= 4) return 4;
+    if (n === 3) return 3;
+    return 2;
+  }, [mp.players.length]);
+  const berkh12LobbyBlock =
+    isMatch &&
+    gameType === "berkh-12-shagai" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const berkh12HumanMp =
+    isMatch &&
+    gameType === "berkh-12-shagai" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const woodenPuzzleLobbyBlock =
+    isMatch &&
+    gameType === "modon-onis" &&
+    mp.roomCode &&
+    mp.roomStatus === "lobby";
+  const woodenPuzzleHumanMp =
+    isMatch &&
+    gameType === "modon-onis" &&
+    mp.roomStatus === "playing" &&
+    mp.players.length >= 2;
+  const puzzleMpActive = mpSharedBoard && isMatch;
   const mpBlocksSoloStart =
-    puzzleMpActive &&
-    !(mp.roomStatus === "playing" && mp.matchSeed != null);
+    puzzleMpActive && !(mp.roomStatus === "playing" && mp.matchSeed != null);
 
-  async function submit(result: "win" | "lose", progressPct?: number) {
+  const POST_PLAY_CLOSE_MS = 5000;
+
+  function submit(result: "win" | "lose", progressPct?: number) {
+    if (postPlayCloseTimerRef.current) {
+      clearTimeout(postPlayCloseTimerRef.current);
+    }
     const saved = loadPlayer();
-    if (!saved?.name) return;
-    await completeGame({
-      email: saved.name,
-      stationSlug,
-      gameSlug,
-      result,
-      progressPct,
-    });
-    onCompleted?.(result);
+    if (saved?.name) {
+      void (async () => {
+        try {
+          await completeGame({
+            email: saved.name,
+            stationSlug,
+            gameSlug,
+            result,
+            progressPct,
+          });
+        } catch (e) {
+          console.error("completeGame", e);
+        }
+      })();
+    }
+    postPlayCloseTimerRef.current = setTimeout(() => {
+      postPlayCloseTimerRef.current = null;
+      onClose();
+      onCompleted?.(result);
+    }, POST_PLAY_CLOSE_MS);
   }
 
   return (
@@ -334,245 +565,296 @@ export default function GameModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="absolute top-0 left-0 right-0 z-20 flex shrink-0 justify-between items-center px-3 py-2 sm:px-5 sm:py-3"
+          className="flex shrink-0 items-center gap-2 border-b border-amber-900/20 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5"
           style={{
             background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)",
+              "linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.35))",
           }}
         >
+          <h2 className={GAME_MODAL_TITLE_CLASS} title={gameName}>
+            {gameName}
+          </h2>
           <button
             type="button"
-            title={
-              gameType === "puzzle"
-                ? "Өрөө: идэвхтэй (унтраахад зөвхөн ганцаарчилсан)"
-                : "Online — өрөө үүсгэх / нэгдэх"
-            }
             onClick={() => {
               playButtonClick();
-              setMultiplayerOn((v) => !v);
+              setModalRulesOpen(true);
             }}
-            className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors ${
-              multiplayerOn
-                ? "border-amber-400/60 bg-amber-950/55 text-amber-100"
-                : "border-amber-500/25 bg-black/35 text-amber-200/75 hover:border-amber-400/40"
-            }`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-600/35 bg-black/45 text-amber-200/90 transition hover:border-amber-500/50 hover:bg-amber-950/40 hover:text-amber-50"
+            aria-label={isMn ? "Дүрэм" : "Rules"}
+            title={isMn ? "Дүрэм" : "Rules"}
           >
-            <IconUsers className="size-3.5" aria-hidden />
-            {gameType === "puzzle" ? "Өрөө" : "Online"}
+            <CircleHelp className="size-[18px]" aria-hidden />
           </button>
           <button
+            type="button"
             onClick={() => {
               playButtonClick();
               onClose();
             }}
-            style={{
-              width: 24,
-              height: 24,
-              borderRadius: "50%",
-              background: "rgba(0,0,0,0.6)",
-              border: "1px solid rgba(200,160,48,0.2)",
-              color: "#888",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#fff";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(200,160,48,0.2)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color = "#888";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "rgba(0,0,0,0.6)";
-            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-zinc-400 transition hover:border-amber-500/30 hover:bg-amber-950/35 hover:text-white"
+            aria-label={isMn ? "Хаах" : "Close"}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden pt-11 sm:pt-[3.25rem]">
-          {multiplayerOn ? (
-            <MultiplayerMatchPanel
-              mp={mp}
-              enabled={multiplayerOn}
-              supportsSharedBoard={mpSharedBoard}
-              suggestedMatchCode={stationMatchCode}
-              autoMatchmaking={gameType === "puzzle"}
-              homboroiMode={
-                gameType === "shagai" ||
-                gameType === "stone-guess" ||
-                gameType === "four-bones" ||
-                gameType === "horse-race" ||
-                gameType === "shagai-guess" ||
-                gameType === "four-powers" ||
-                gameType === "wooden-dice" ||
-                gameType === "stone-cairn"
-              }
-            />
-          ) : null}
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          <GameModalHowToBanner gameType={gameType} />
-          {gameType === "shagai" && (
-            <ShagaiGame
-              onComplete={(r, pct) => void submit(r, pct)}
-              match={multiplayerOn ? mp : null}
-              multiplayerOn={multiplayerOn}
-            />
-          )}
-          {gameType === "stone-guess" && stoneLobbyBlock && (
-            <StoneGameOnlineLobby />
-          )}
-          {gameType === "stone-guess" && !stoneLobbyBlock && stoneHumanMp && (
-            <StoneGameMulti
-              onComplete={(r) => void submit(r)}
-              mp={mp}
-              lastPeerRelay={mp.lastPeerRelay}
-              sendRelay={mp.sendRelay}
-            />
-          )}
-          {gameType === "stone-guess" &&
-            !stoneLobbyBlock &&
-            !stoneHumanMp && (
-              <StoneGame onComplete={(r) => void submit(r)} />
-            )}
-          {gameType === "alag-melkhii" && (
-            <ComingSoon name="Алаг мэлхий өрөх" />
-          )}
-          {gameType === "four-bones" && fourBonesLobbyBlock && (
-            <FourBonesOnlineLobby />
-          )}
-          {gameType === "four-bones" && !fourBonesLobbyBlock && fourBonesHumanMp && (
-            <FourBonesGameMulti
-              onComplete={(r, pct) => void submit(r, pct)}
-              mp={mp}
-              lastPeerRelay={mp.lastPeerRelay}
-              sendRelay={mp.sendRelay}
-            />
-          )}
-          {gameType === "four-bones" &&
-            !fourBonesLobbyBlock &&
-            !fourBonesHumanMp && (
-              <FourBonesGame onComplete={(r) => void submit(r)} />
-            )}
-          {gameType === "horse-race" && horseRaceLobbyBlock && (
-            <HorseRaceOnlineLobby />
-          )}
-          {gameType === "horse-race" && !horseRaceLobbyBlock && horseRaceHumanMp && (
-            <HorseRaceGameMulti
-              onComplete={(r, pct) => void submit(r, pct)}
-              mp={mp}
-              lastPeerRelay={mp.lastPeerRelay}
-              sendRelay={mp.sendRelay}
-            />
-          )}
-          {gameType === "horse-race" &&
-            !horseRaceLobbyBlock &&
-            !horseRaceHumanMp && (
-              <HorseRaceGame
-                onComplete={(r, pct) => void submit(r, pct)}
-              />
-            )}
-          {gameType === "shagai-guess" && shagaiGuessLobbyBlock && (
-            <ShagaiGuessOnlineLobby />
-          )}
-          {gameType === "shagai-guess" &&
-            !shagaiGuessLobbyBlock &&
-            shagaiGuessHumanMp && (
-              <ShagaiGuessGameMulti
-                onComplete={(r, pct) => void submit(r, pct)}
-                mp={mp}
-                lastPeerRelay={mp.lastPeerRelay}
+        <GameModalSessionProvider value={modalSession}>
+          <div className="relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden">
+            {isMatch && mp.roomCode && showMatchRoomChat && (
+              <MatchRoomChatFab
+                language={language}
+                roomCode={mp.roomCode}
+                playerId={mp.playerId}
+                players={mp.players}
                 sendRelay={mp.sendRelay}
-              />
-            )}
-          {gameType === "shagai-guess" &&
-            !shagaiGuessLobbyBlock &&
-            !shagaiGuessHumanMp && (
-              <ShagaiGuessGame
-                onComplete={(r, pct) => void submit(r, pct)}
-              />
-            )}
-          {gameType === "four-powers" && fourPowersLobbyBlock && (
-            <FourPowersOnlineLobby />
-          )}
-          {gameType === "four-powers" &&
-            !fourPowersLobbyBlock &&
-            fourPowersHumanMp && (
-              <FourPowersGameMulti
-                onComplete={(r, pct) => void submit(r, pct)}
-                mp={mp}
                 lastPeerRelay={mp.lastPeerRelay}
-                sendRelay={mp.sendRelay}
+                myDisplayName={matchDisplayName}
               />
             )}
-          {gameType === "four-powers" &&
-            !fourPowersLobbyBlock &&
-            !fourPowersHumanMp && (
-              <FourPowersGame
-                onComplete={(r, pct) => void submit(r, pct)}
-              />
-            )}
-          {gameType === "wooden-dice" && woodenDiceLobbyBlock && (
-            <WoodenDiceOnlineLobby />
-          )}
-          {gameType === "wooden-dice" &&
-            !woodenDiceLobbyBlock &&
-            woodenDiceHumanMp && (
-              <WoodenDiceGameMulti
-                onComplete={(r, pct) => void submit(r, pct)}
-                mp={mp}
-                lastPeerRelay={mp.lastPeerRelay}
-                sendRelay={mp.sendRelay}
-              />
-            )}
-          {gameType === "wooden-dice" &&
-            !woodenDiceLobbyBlock &&
-            !woodenDiceHumanMp && (
-              <WoodenDiceGame
-                onComplete={(r, pct) => void submit(r, pct)}
-              />
-            )}
-          {gameType === "stone-cairn" && stoneCairnLobbyBlock && (
-            <StoneCairnOnlineLobby />
-          )}
-          {gameType === "stone-cairn" &&
-            !stoneCairnLobbyBlock &&
-            stoneCairnHumanMp && (
-              <StoneCairnMemoryGameMulti
-                onComplete={(r, pct) => void submit(r, pct)}
-                mp={mp}
-                lastPeerRelay={mp.lastPeerRelay}
-                sendRelay={mp.sendRelay}
-              />
-            )}
-          {gameType === "stone-cairn" &&
-            !stoneCairnLobbyBlock &&
-            !stoneCairnHumanMp && (
-              <StoneCairnMemoryGame
-                onComplete={(r, pct) => void submit(r, pct)}
-              />
-            )}
-          {gameType === "seven-shagai" && (
-            <ShagaiSevenGame onComplete={(r, pct) => void submit(r, pct)} />
-          )}
-          {gameType === "uichuur" && <ComingSoon name="Үйчүүр" />}
-          {gameType === "khorol" && <KhorolGame />}
-          {gameType === "puzzle" && (
-            <MemoryMatchGame
-              onComplete={(r, pct) => void submit(r, pct)}
-              multiplayerSeed={puzzleMpActive ? mp.matchSeed : null}
-              multiplayerAwaitingStart={mpBlocksSoloStart}
-            />
-          )}
-          {gameType === "modon-onis" && (
-            <WoodenPuzzleGame onComplete={(r, pct) => void submit(r, pct)} />
-          )}
-          {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {gameType === "shagai" && (
+                <ShagaiGame
+                  onComplete={(r, pct) => void submit(r, pct)}
+                  match={isMatch ? mp : null}
+                />
+              )}
+              {gameType === "stone-guess" && stoneLobbyBlock && (
+                <StoneGameOnlineLobby />
+              )}
+              {gameType === "stone-guess" &&
+                !stoneLobbyBlock &&
+                stoneHumanMp && (
+                  <StoneGameMulti
+                    onComplete={(r) => void submit(r)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "stone-guess" &&
+                !stoneLobbyBlock &&
+                !stoneHumanMp && (
+                  <StoneGame onComplete={(r) => void submit(r)} />
+                )}
+              {gameType === "alag-melkhii" && (
+                <ComingSoon name="Алаг мэлхий өрөх" />
+              )}
+              {gameType === "four-bones" && fourBonesLobbyBlock && (
+                <FourBonesOnlineLobby />
+              )}
+              {gameType === "four-bones" &&
+                !fourBonesLobbyBlock &&
+                fourBonesHumanMp && (
+                  <FourBonesGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "four-bones" &&
+                !fourBonesLobbyBlock &&
+                !fourBonesHumanMp && (
+                  <FourBonesGame onComplete={(r) => void submit(r)} />
+                )}
+              {gameType === "horse-race" && horseRaceLobbyBlock && (
+                <HorseRaceOnlineLobby />
+              )}
+              {gameType === "horse-race" &&
+                !horseRaceLobbyBlock &&
+                horseRaceHumanMp && (
+                  <HorseRaceGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "horse-race" &&
+                !horseRaceLobbyBlock &&
+                !horseRaceHumanMp && (
+                  <HorseRaceGame onComplete={(r, pct) => void submit(r, pct)} />
+                )}
+              {gameType === "shagai-guess" && shagaiGuessLobbyBlock && (
+                <ShagaiGuessOnlineLobby />
+              )}
+              {gameType === "shagai-guess" &&
+                !shagaiGuessLobbyBlock &&
+                shagaiGuessHumanMp && (
+                  <ShagaiGuessGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "shagai-guess" &&
+                !shagaiGuessLobbyBlock &&
+                !shagaiGuessHumanMp && (
+                  <ShagaiGuessGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                  />
+                )}
+              {gameType === "four-powers" && fourPowersLobbyBlock && (
+                <FourPowersOnlineLobby />
+              )}
+              {gameType === "four-powers" &&
+                !fourPowersLobbyBlock &&
+                fourPowersHumanMp && (
+                  <FourPowersGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "four-powers" &&
+                !fourPowersLobbyBlock &&
+                !fourPowersHumanMp && (
+                  <FourPowersGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                  />
+                )}
+              {gameType === "wooden-dice" && woodenDiceLobbyBlock && (
+                <WoodenDiceOnlineLobby />
+              )}
+              {gameType === "wooden-dice" &&
+                !woodenDiceLobbyBlock &&
+                woodenDiceHumanMp && (
+                  <WoodenDiceGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "wooden-dice" &&
+                !woodenDiceLobbyBlock &&
+                !woodenDiceHumanMp && (
+                  <WoodenDiceGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                  />
+                )}
+              {gameType === "stone-cairn" && stoneCairnLobbyBlock && (
+                <StoneCairnOnlineLobby />
+              )}
+              {gameType === "stone-cairn" &&
+                !stoneCairnLobbyBlock &&
+                stoneCairnHumanMp && (
+                  <StoneCairnMemoryGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "stone-cairn" &&
+                !stoneCairnLobbyBlock &&
+                !stoneCairnHumanMp && (
+                  <StoneCairnMemoryGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                  />
+                )}
+              {gameType === "seven-shagai" && (
+                <ShagaiSevenGame onComplete={(r, pct) => void submit(r, pct)} />
+              )}
+              {gameType === "twelve-shagai" && twelveShagaiLobbyBlock && (
+                <ShagaiTwelveOnlineLobby />
+              )}
+              {gameType === "twelve-shagai" &&
+                !twelveShagaiLobbyBlock &&
+                twelveShagaiHumanMp && (
+                  <ShagaiTwelveGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "twelve-shagai" &&
+                !twelveShagaiLobbyBlock &&
+                !twelveShagaiHumanMp && (
+                  <ShagaiTwelveGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    autoPlayVsBotWhenSoloInRoom={
+                      isMatch && mp.players.length < 2
+                    }
+                  />
+                )}
+              {gameType === "berkh-12-shagai" && berkh12LobbyBlock && (
+                <ShagaiBerkh12OnlineLobby />
+              )}
+              {gameType === "berkh-12-shagai" &&
+                !berkh12LobbyBlock &&
+                berkh12HumanMp && (
+                  <ShagaiBerkh12GameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                    playerCount={berkh12PlayerCount}
+                  />
+                )}
+              {gameType === "berkh-12-shagai" &&
+                !berkh12LobbyBlock &&
+                !berkh12HumanMp && (
+                  <ShagaiBerkh12Game
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    autoPlayVsBotWhenSoloInRoom={
+                      isMatch && mp.players.length < 2
+                    }
+                  />
+                )}
+              {gameType === "uichuur" && <ComingSoon name="Үйчүүр" />}
+              {gameType === "khorol" && <KhorolGame />}
+              {gameType === "puzzle" && (
+                <MemoryMatchGame
+                  onComplete={(r, pct) => void submit(r, pct)}
+                  multiplayerSeed={puzzleMpActive ? mp.matchSeed : null}
+                  multiplayerAwaitingStart={mpBlocksSoloStart}
+                />
+              )}
+              {gameType === "modon-onis" && woodenPuzzleLobbyBlock && (
+                <WoodenPuzzleOnlineLobby />
+              )}
+              {gameType === "modon-onis" &&
+                !woodenPuzzleLobbyBlock &&
+                woodenPuzzleHumanMp && (
+                  <WoodenPuzzleGameMulti
+                    onComplete={(r, pct) => void submit(r, pct)}
+                    mp={mp}
+                    lastPeerRelay={mp.lastPeerRelay}
+                    sendRelay={mp.sendRelay}
+                  />
+                )}
+              {gameType === "modon-onis" &&
+                !woodenPuzzleLobbyBlock &&
+                !woodenPuzzleHumanMp && (
+                  <WoodenPuzzleGame
+                    onComplete={(r, pct) => void submit(r, pct)}
+                  />
+                )}
+              {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
+            </div>
           </div>
-        </div>
+        </GameModalSessionProvider>
+
+        <GameRulesSheet
+          open={modalRulesOpen}
+          onClose={() => setModalRulesOpen(false)}
+          title={isMn ? "Дүрэм" : "Rules"}
+        >
+          <GameModalRulesBody
+            gameType={gameType}
+            isMn={isMn}
+            fourPowersVariant={
+              isMatch && gameType === "four-powers" && mp.roomCode
+                ? "online"
+                : "solo"
+            }
+          />
+        </GameRulesSheet>
       </div>
     </div>
   );
@@ -581,23 +863,19 @@ export default function GameModal({
 function ComingSoon({ name }: { name: string }) {
   return (
     <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 16,
-        color: "white",
-        fontFamily: "var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
-      }}
+      className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center text-white"
+      style={{ fontFamily: GAME_UI_FONT_FAMILY }}
     >
-      <div style={{ fontSize: 48 }}>🚧</div>
-      <div style={{ color: "#c8a030", fontSize: 22, letterSpacing: 2 }}>
+      <div className="text-[clamp(1.75rem,6vw,2.25rem)]" aria-hidden>
+        🚧
+      </div>
+      <div
+        className="max-w-[min(100%,20rem)] truncate text-balance font-semibold tracking-tight text-[#c8a030] text-[clamp(0.85rem,2.8vw,1rem)]"
+        title={name}
+      >
         {name}
       </div>
-      <div style={{ color: "#666", fontSize: 14, letterSpacing: 1 }}>
+      <div className="text-xs tracking-wide text-zinc-500 sm:text-[0.8125rem]">
         Удахгүй нээгдэнэ
       </div>
     </div>
