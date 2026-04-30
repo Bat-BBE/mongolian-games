@@ -145,11 +145,19 @@ export function DashboardIntroTour({
     const onResize = () => refresh();
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setDashboardIntroDone();
+        onDismiss();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
+      window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, refresh]);
+  }, [open, refresh, onDismiss]);
 
   useEffect(() => {
     if (open) setStep(0);
@@ -303,7 +311,7 @@ export function DashboardIntroTour({
           <button
             type="button"
             onClick={finish}
-            className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/10"
+            className="rounded-lg border border-rose-400/50 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/25"
           >
             {t.introSkip}
           </button>

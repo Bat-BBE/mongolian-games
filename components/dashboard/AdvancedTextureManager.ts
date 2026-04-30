@@ -17,16 +17,13 @@ export class AdvancedTextureManager {
     canvas.height = 1024;
     const ctx = canvas.getContext("2d")!;
 
-    // Extract base color components
     const r = (baseColor >> 16) & 0xff;
     const g = (baseColor >> 8) & 0xff;
     const b = baseColor & 0xff;
 
-    // Base coat
     ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Hair-like texture with variations
     for (let i = 0; i < 50000; i++) {
       const x = Math.random() * 1024;
       const y = Math.random() * 1024;
@@ -41,7 +38,6 @@ export class AdvancedTextureManager {
       ctx.stroke();
     }
 
-    // Subtle color variation
     const imageData = ctx.getImageData(0, 0, 1024, 1024);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {

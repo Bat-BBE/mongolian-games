@@ -2,11 +2,6 @@ import * as THREE from "three";
 import { materialLibrary } from "./MaterialLibrary";
 import { rand, randInt } from "./sceneHelpers";
 
-/**
- * Animal Model Builder
- * Creates detailed 3D models of animals (horses, camels) with proper UV mapping
- * Uses material library and textures for better visual quality
- */
 export class AnimalModelBuilder {
   private materialLib: typeof materialLibrary;
 
@@ -14,10 +9,6 @@ export class AnimalModelBuilder {
     this.materialLib = matLib;
   }
 
-  /**
-   * Create a horse model with proper geometry and UV mapping
-   * Scale: 1 unit ≈ 1 meter
-   */
   createHorse(
     position: [number, number, number] = [0, 0, 0],
     rotationY = 0,
@@ -32,7 +23,6 @@ export class AnimalModelBuilder {
       Math.max(0x000000, color - 0x220000),
     );
 
-    // Body — using geometry with proper UV
     const bodyGeo = new THREE.BoxGeometry(1.2, 0.7, 2.0, 8, 6, 12);
     this.computeBoxUV(bodyGeo);
     const body = new THREE.Mesh(bodyGeo, hideMat);
@@ -41,7 +31,6 @@ export class AnimalModelBuilder {
     body.receiveShadow = true;
     group.add(body);
 
-    // Neck — rounded transition to head
     const neckGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.8, 12, 4);
     this.computeCylinderUV(neckGeo);
     const neck = new THREE.Mesh(neckGeo, hideMat);
@@ -142,9 +131,6 @@ export class AnimalModelBuilder {
     return group;
   }
 
-  /**
-   * Create a camel model (Bactrian - two-humped)
-   */
   createCamel(
     position: [number, number, number] = [0, 0, 0],
     rotationY = 0,
@@ -266,9 +252,6 @@ export class AnimalModelBuilder {
     return group;
   }
 
-  /**
-   * Compute proper UV coordinates for box geometry
-   */
   private computeBoxUV(geometry: THREE.BoxGeometry): void {
     const uvAttr = geometry.attributes.uv as THREE.BufferAttribute;
     if (!uvAttr) {
@@ -285,9 +268,6 @@ export class AnimalModelBuilder {
     }
   }
 
-  /**
-   * Compute proper UV coordinates for cylinder geometry
-   */
   private computeCylinderUV(geometry: THREE.CylinderGeometry): void {
     const uvAttr = geometry.attributes.uv as THREE.BufferAttribute;
     if (!uvAttr) {
@@ -307,9 +287,6 @@ export class AnimalModelBuilder {
     }
   }
 
-  /**
-   * Compute proper UV coordinates for sphere geometry
-   */
   private computeSphereUV(geometry: THREE.SphereGeometry): void {
     const uvAttr = geometry.attributes.uv as THREE.BufferAttribute;
     if (!uvAttr) {
@@ -328,9 +305,6 @@ export class AnimalModelBuilder {
     }
   }
 
-  /**
-   * Compute proper UV coordinates for cone geometry
-   */
   private computeConeUV(geometry: THREE.ConeGeometry): void {
     const uvAttr = geometry.attributes.uv as THREE.BufferAttribute;
     if (!uvAttr) {
@@ -351,5 +325,4 @@ export class AnimalModelBuilder {
   }
 }
 
-// Export singleton instance
 export const animalModelBuilder = new AnimalModelBuilder(materialLibrary);

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import { LuMessageCircle as MessageCircle } from "react-icons/lu";
 import { LuSend as SendIcon } from "react-icons/lu";
 import { LuX as X } from "react-icons/lu";
@@ -93,7 +99,7 @@ export function MapGlobalChatFab({
           role="presentation"
         >
           <div
-            className="flex w-[min(100%,21rem)] max-h-[min(52dvh,390px)] flex-col rounded-2xl border border-zinc-500/35 bg-zinc-950/98 shadow-[0_20px_60px_-16px_rgba(0,0,0,0.85)]"
+            className="flex w-[min(100%,21rem)] max-h-[min(52dvh,410px)] flex-col rounded-2xl border border-zinc-500/35 bg-zinc-950/98 shadow-[0_20px_60px_-16px_rgba(0,0,0,0.85)]"
             style={{ paddingBottom: "max(10px, env(safe-area-inset-bottom))" }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"

@@ -75,9 +75,6 @@ export class CinematicMongolianScene {
     this.setupResponsiveness();
   }
 
-  /**
-   * Setup cinematographic lighting and atmosphere
-   */
   private setupCinematography(): void {
     // Professional lighting
     this.cinematic.setupCinematicLighting();
@@ -99,9 +96,6 @@ export class CinematicMongolianScene {
     this.cinematic.setupShadows();
   }
 
-  /**
-   * Setup detailed terrain
-   */
   private setupTerrain(): void {
     // Create terrain geometry with proper UV mapping
     const terrainGeo = new THREE.PlaneGeometry(1200, 1000, 256, 256);
@@ -155,9 +149,6 @@ export class CinematicMongolianScene {
     this.scene.add(terrain);
   }
 
-  /**
-   * Setup detailed environment elements
-   */
   private setupEnvironment(): void {
     // Distant mountains (visual depth)
     this.environment.createDistantMountains();
@@ -178,19 +169,12 @@ export class CinematicMongolianScene {
     this.environment.createVegetationPatches(80, 350);
   }
 
-  /**
-   * Place detailed ger in landscape
-   */
   private setupGer(): void {
     const ger = this.gerBuilder.createDetailedGer([0, 0, 0], 1.0, true);
     this.scene.add(ger);
   }
 
-  /**
-   * Place realistic animals
-   */
   private setupAnimals(): void {
-    // Main horse - centered, natural standing pose
     const horse = this.animals.createRealisticHorse(
       [80, 0, -120],
       Math.PI * 0.2,
@@ -198,7 +182,6 @@ export class CinematicMongolianScene {
     );
     this.scene.add(horse);
 
-    // Camel - nearby, grazing position
     const camel = this.animals.createRealisticCamel(
       [-120, 0, 60],
       Math.PI * 1.3,
@@ -206,7 +189,6 @@ export class CinematicMongolianScene {
     );
     this.scene.add(camel);
 
-    // Additional horses for herd feel
     for (let i = 0; i < 3; i++) {
       const angle = (i / 3) * Math.PI * 2 + Math.PI * 0.5;
       const distance = 200 + Math.random() * 100;
@@ -223,11 +205,7 @@ export class CinematicMongolianScene {
     }
   }
 
-  /**
-   * Place decorative landscape elements
-   */
   private setupDecorativeElements(): void {
-    // Scattered rocks near ger
     for (let i = 0; i < 40; i++) {
       const angle = Math.random() * Math.PI * 2;
       const r = Math.random() * 100 + 150;
@@ -252,19 +230,8 @@ export class CinematicMongolianScene {
     }
   }
 
-  /**
-   * Setup post-processing effects (if available)
-   */
-  private setupPostProcessing(): void {
-    // Color grading - warm tones
-    // Depth of field (optional)
-    // This would typically use THREE.EffectComposer with various pass plugins
-    // For now, we use tone mapping for cinematic look
-  }
+  private setupPostProcessing(): void {}
 
-  /**
-   * Setup animation loop with wind effects
-   */
   private setupAnimationLoop(): void {
     let frameCount = 0;
     const animate = () => {
@@ -272,13 +239,12 @@ export class CinematicMongolianScene {
 
       frameCount++;
 
-      // Smooth light rotation for time-of-day effect
       const sunLight = this.scene.children.find(
         (obj) => obj instanceof THREE.DirectionalLight && obj.position.y > 100,
       ) as THREE.DirectionalLight;
 
       if (sunLight) {
-        const timeOfDay = (frameCount % 6000) / 6000; // 100 second day cycle
+        const timeOfDay = (frameCount % 6000) / 6000;
         const sunAngle = timeOfDay * Math.PI * 2;
         sunLight.position.x = Math.cos(sunAngle) * 200;
         sunLight.position.z = Math.sin(sunAngle) * 150;
@@ -287,17 +253,12 @@ export class CinematicMongolianScene {
           Math.sin(sunAngle + Math.PI) * 180 + 120,
         );
       }
-
-      // Subtle wind wave effect on grass
       this.renderer.render(this.scene, this.camera);
     };
 
     animate();
   }
 
-  /**
-   * Handle window resize
-   */
   private setupResponsiveness(): void {
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -306,32 +267,20 @@ export class CinematicMongolianScene {
     });
   }
 
-  /**
-   * Cleanup resources
-   */
   cleanup(): void {
     this.pbrMats.clear();
     this.textures.clear();
     this.renderer.dispose();
   }
 
-  /**
-   * Get scene for further customization
-   */
   getScene(): THREE.Scene {
     return this.scene;
   }
 
-  /**
-   * Get camera for manipulation
-   */
   getCamera(): THREE.PerspectiveCamera {
     return this.camera;
   }
 
-  /**
-   * Get renderer
-   */
   getRenderer(): THREE.WebGLRenderer {
     return this.renderer;
   }

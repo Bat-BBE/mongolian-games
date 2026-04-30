@@ -399,9 +399,7 @@ export async function loadHeroClipsOptional(
       const clip = await loadFbxClip(path);
       clip.name = name;
       out[name] = clip;
-    } catch {
-      /* файл байхгүй */
-    }
+    } catch {}
   }
   return out;
 }
@@ -410,7 +408,6 @@ export function createHeroAnimator(
   root: THREE.Object3D,
   clips: HeroClips,
   opts?: {
-    /** Давтагдах анимац (үлдсэн нь нэг удаа тоглоод idle руу) */
     loopNames?: string[];
     onFiniteEnd?: () => void;
   },
