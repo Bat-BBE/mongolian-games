@@ -34,7 +34,6 @@ import {
   type HeroClips,
 } from "../map3d/heroFbx";
 
-/** Зочны баатрын walk/run — local-тай нэг, cache-ийг урьдчилан дүүргэнэ */
 const MAP_PRESENCE_MOVE_FBX: Parameters<typeof loadHeroClips>[0] = {
   idle: "/models/standing idle 01.fbx",
   walk: "/models/standing walk forward.fbx",
@@ -76,7 +75,6 @@ interface UseThreeSceneOptions {
     ((x: number, z: number, ry: number) => void) | null
   >;
   remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
-  /** Бүжгийн сүлжээ — `useMapPresence` publishMapEmote */
   onLocalMapEmote?: (emoteId: string) => void;
   onStationEnter?: (stationId: string) => void;
 }
@@ -91,7 +89,6 @@ interface CameraTarget {
 const CAMERA_LIMITS = {
   minPhi: 0.16,
   maxPhi: 1.2,
-  // Closer camera for "hero nearby" feel.
   minDist: 14,
   maxDist: 460,
 };
@@ -103,6 +100,23 @@ const clamp = (v: number, min: number, max: number): number =>
 
 const shortestAngleDelta = (from: number, to: number): number =>
   Math.atan2(Math.sin(to - from), Math.cos(to - from));
+
+type FootstepAudioState = {
+  ctx: AudioContext;
+  master: GainNode;
+  noise: AudioBuffer;
+  lastStepAtSec: number;
+};
+
+function makeFootstepNoise(ctx: AudioContext, seconds = 0.16): AudioBuffer {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    data[i] = (Math.random() * 2 - 1) * 0.45;
+  }
+  return buffer;
+}
 
 function getJourneyStartStation(currentId: string): string {
   const idx = JOURNEY_ORDER.indexOf(currentId);
@@ -230,7 +244,8 @@ export function useThreeScene({
   const daylightRef = useRef(1);
 
   const onSelectRef = useRef<UseThreeSceneOptions["onSelectStation"]>(null);
-  const onStationEnterRef = useRef<UseThreeSceneOptions["onStationEnter"]>(null);
+  const onStationEnterRef =
+    useRef<UseThreeSceneOptions["onStationEnter"]>(null);
   const builderRef = useRef<SceneBuilder | null>(null);
   useEffect(() => {
     onSelectRef.current = onSelectStation ?? null;
@@ -298,9 +313,7 @@ export function useThreeScene({
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = MAP_SCENE.toneMappingExposure;
-    renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, MAP_PERF_MAX_DPR),
-    );
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAP_PERF_MAX_DPR));
     container.appendChild(renderer.domElement);
     renderer.domElement.style.display = "block";
 
@@ -360,7 +373,10 @@ export function useThreeScene({
     fill.position.set(-60, 40, -30);
     scene.add(fill);
 
-    const backlight = new THREE.DirectionalLight(MAP_SCENE.back, MAP_SCENE.backInt);
+    const backlight = new THREE.DirectionalLight(
+      MAP_SCENE.back,
+      MAP_SCENE.backInt,
+    );
     backlight.position.set(15, 10, 100);
     scene.add(backlight);
 
@@ -442,8 +458,9 @@ export function useThreeScene({
       slot.userData.remoteHeroMixer = undefined;
       (slot.userData as { remoteHeroPlay?: unknown }).remoteHeroPlay =
         undefined;
-      (slot.userData as { remoteHeroAnimActions?: unknown })
-        .remoteHeroAnimActions = undefined;
+      (
+        slot.userData as { remoteHeroAnimActions?: unknown }
+      ).remoteHeroAnimActions = undefined;
       (slot.userData as { remoteEmoteSt?: unknown }).remoteEmoteSt = undefined;
       while (slot.children.length > 0) {
         const c = slot.children[0]!;
@@ -575,6 +592,66 @@ export function useThreeScene({
     const lastLocomotionAnimRef = { current: "" as string };
     /** `terrainHeightFeet`+зөөлрүүлэлт: телепорт/эхлэлт дээр null болгоно */
     const heroGroundYRef = { current: null as number | null };
+    const footstepAudioRef = { current: null as FootstepAudioState | null };
+    const ensureFootstepAudio = (): FootstepAudioState | null => {
+      if (footstepAudioRef.current) return footstepAudioRef.current;
+      if (typeof window === "undefined" || typeof AudioContext === "undefined") {
+        return null;
+      }
+      if (!window.navigator.userActivation?.hasBeenActive) return null;
+      const ctx = new AudioContext();
+      const master = ctx.createGain();
+      master.gain.value = 0.14;
+      master.connect(ctx.destination);
+      const st: FootstepAudioState = {
+        ctx,
+        master,
+        noise: makeFootstepNoise(ctx),
+        lastStepAtSec: -100,
+      };
+      footstepAudioRef.current = st;
+      return st;
+    };
+    const triggerFootstep = (runMode: boolean, strength: number): void => {
+      const st = ensureFootstepAudio();
+      if (!st) return;
+      const { ctx, master, noise } = st;
+      if (ctx.state === "suspended") void ctx.resume();
+
+      const now = ctx.currentTime;
+      const body = ctx.createOscillator();
+      body.type = "triangle";
+      body.frequency.setValueAtTime(runMode ? 86 : 74, now);
+      body.frequency.exponentialRampToValueAtTime(runMode ? 48 : 42, now + 0.09);
+      const bodyGain = ctx.createGain();
+      const level = (runMode ? 0.08 : 0.055) * clamp(strength, 0.55, 1.2);
+      bodyGain.gain.setValueAtTime(0.0001, now);
+      bodyGain.gain.exponentialRampToValueAtTime(level, now + 0.01);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+      body.connect(bodyGain);
+      bodyGain.connect(master);
+      body.start(now);
+      body.stop(now + 0.12);
+
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = runMode ? 300 : 220;
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = runMode ? 1700 : 1300;
+      const gritGain = ctx.createGain();
+      gritGain.gain.setValueAtTime(0.0001, now);
+      gritGain.gain.exponentialRampToValueAtTime(level * 0.65, now + 0.01);
+      gritGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(gritGain);
+      gritGain.connect(master);
+      src.start(now);
+      src.stop(now + 0.11);
+    };
     let disposed = false;
 
     if (heroModelPath && heroModelPath.trim()) {
@@ -848,11 +925,8 @@ export function useThreeScene({
       lastY: 0,
     };
 
-    // When the player manually drives the hero, keep camera centered on hero for a bit.
     const followHeroUntilRef = { current: 0 };
-    /** Камерын lookAt: XZ баатарт наалдана, Y-г газраас тооцоод зөөлөн дагана (гүйхэд цочирдол багасна). */
     const heroCamPivotSmoothedRef = { current: null as THREE.Vector3 | null };
-    /** Газрын өндрийн лимитийг зөөлөн дагаж, эргүүлэхэд камер гэнэт үсрэхгүй. */
     const cameraFloorSmoothedRef = { current: null as number | null };
 
     const cancelIntro = () => {
@@ -1124,7 +1198,8 @@ export function useThreeScene({
         {
           const runTgt = wantsRun && klenInput > 0.01 ? 1 : 0;
           const s = runIntentSmoothedRef.current;
-          runIntentSmoothedRef.current = s + (runTgt - s) * (1 - Math.exp(-12 * dt));
+          runIntentSmoothedRef.current =
+            s + (runTgt - s) * (1 - Math.exp(-12 * dt));
         }
         const runS = runIntentSmoothedRef.current;
         const runAnimMode = klenInput > 0.01 && runS > 0.5;
@@ -1135,12 +1210,12 @@ export function useThreeScene({
           const hv = heroManualVelRef.current;
           if (klenInput <= 0.01) {
             runIntentSmoothedRef.current *= 1 - Math.min(1, 18 * dt);
-            if (runIntentSmoothedRef.current < 0.02) runIntentSmoothedRef.current = 0;
+            if (runIntentSmoothedRef.current < 0.02)
+              runIntentSmoothedRef.current = 0;
             hv.multiplyScalar(Math.exp(-20 * delta));
             if (hv.lengthSq() < 0.2) hv.set(0, 0, 0);
           }
           if (klenInput > 0.01) {
-            // World units/sec — өмнө нь 12+10 (хэт хурд, хөл/gazr зөрөх) → илүү нийцтүй хурд.
             const baseSpeed = 8.5 + runS * 7.5;
             const localDir = new THREE.Vector3(mvx, 0, mvz);
             const camForward = new THREE.Vector3();
@@ -1186,7 +1261,6 @@ export function useThreeScene({
               );
               const targetY = rawG + 0.02;
               const prev = heroGroundYRef.current;
-              // Зөөлөн дагах: -26 нь бага өндөрт хэт хурд → толгой/газар "цохилт"
               const gy =
                 prev == null
                   ? targetY
@@ -1200,6 +1274,19 @@ export function useThreeScene({
             while (dy > Math.PI) dy -= Math.PI * 2;
             while (dy < -Math.PI) dy += Math.PI * 2;
             rootMove.rotation.y += dy * (1 - Math.exp(-14 * delta));
+
+            const planarSpeed = Math.hypot(hv.x, hv.z);
+            const moving = klenInput > 0.1 && planarSpeed > 0.8 && !paused;
+            if (moving) {
+              const stepGap = runAnimMode ? 0.29 : 0.46;
+              const st = footstepAudioRef.current;
+              const lastAt = st?.lastStepAtSec ?? -100;
+              if (elapsed - lastAt >= stepGap) {
+                triggerFootstep(runAnimMode, planarSpeed / (runAnimMode ? 15 : 9));
+                const cur = footstepAudioRef.current;
+                if (cur) cur.lastStepAtSec = elapsed;
+              }
+            }
 
             if (!heroEmotePlayingRef.current) {
               const wantLoco: "run" | "walk" = runAnimMode ? "run" : "walk";
@@ -1345,7 +1432,6 @@ export function useThreeScene({
               Math.cos(cameraState.currentPhi) *
               cameraState.currentDist,
         );
-        // Keep camera above terrain — зөөлөн дагах (хурц уул/газар дээр гэнэт өсөхгүй).
         const floorRaw = terrainHeight(finalCamPos.x, finalCamPos.z) + 2.55;
         const prevF = cameraFloorSmoothedRef.current;
         const floorBlend = klenInput > 0.01 ? 6.5 : 9;
@@ -1445,7 +1531,9 @@ export function useThreeScene({
                     if (name === "idle") continue;
                     const r = retargetClipToSkeleton(clip, root);
                     const minB =
-                      name === "walk" || name === "run" ? MIN_WALK_BONES : MIN_MOVE_BONES;
+                      name === "walk" || name === "run"
+                        ? MIN_WALK_BONES
+                        : MIN_MOVE_BONES;
                     if (countClipTracksBindingToRig(r, root) >= minB) {
                       retargeted[name] = r;
                     }
@@ -1468,7 +1556,9 @@ export function useThreeScene({
                   }
                   if (!idleClip && ext.idle) {
                     const r = retargetClipToSkeleton(ext.idle, root);
-                    if (countClipTracksBindingToRig(r, root) >= MIN_MOVE_BONES) {
+                    if (
+                      countClipTracksBindingToRig(r, root) >= MIN_MOVE_BONES
+                    ) {
                       idleClip = r;
                     }
                   }
@@ -1484,7 +1574,8 @@ export function useThreeScene({
                     disposeMeshSubtree(root);
                     return;
                   }
-                  const optClips = await loadHeroClipsOptional(MAP_EMOTE_CLIP_FILES);
+                  const optClips =
+                    await loadHeroClipsOptional(MAP_EMOTE_CLIP_FILES);
                   if (disposed || ud.remoteLoadGen !== gen) {
                     disposeMeshSubtree(root);
                     return;
@@ -1517,12 +1608,16 @@ export function useThreeScene({
                   (
                     slot.userData as {
                       remoteHeroPlay?: (n: string, f?: number) => void;
-                      remoteHeroAnimActions?: Map<string, THREE.AnimationAction>;
+                      remoteHeroAnimActions?: Map<
+                        string,
+                        THREE.AnimationAction
+                      >;
                     }
                   ).remoteHeroPlay = play;
                   slot.userData.remoteHeroAnimActions = actions;
-                  (slot.userData as { remoteEmoteSt: { active: boolean } }).remoteEmoteSt =
-                    remoteEmoteSt;
+                  (
+                    slot.userData as { remoteEmoteSt: { active: boolean } }
+                  ).remoteEmoteSt = remoteEmoteSt;
                   play("idle", 0);
                   if (disposed || ud.remoteLoadGen !== gen) {
                     const mx = slot.userData.remoteHeroMixer as
@@ -1533,12 +1628,17 @@ export function useThreeScene({
                       mx.stopAllAction();
                       slot.userData.remoteHeroMixer = undefined;
                     }
-                    (slot.userData as { remoteHeroPlay?: (n: string, f?: number) => void }).remoteHeroPlay =
-                      undefined;
-                    (slot.userData as { remoteHeroAnimActions?: unknown }).remoteHeroAnimActions =
-                      undefined;
-                    (slot.userData as { remoteEmoteSt?: unknown }).remoteEmoteSt =
-                      undefined;
+                    (
+                      slot.userData as {
+                        remoteHeroPlay?: (n: string, f?: number) => void;
+                      }
+                    ).remoteHeroPlay = undefined;
+                    (
+                      slot.userData as { remoteHeroAnimActions?: unknown }
+                    ).remoteHeroAnimActions = undefined;
+                    (
+                      slot.userData as { remoteEmoteSt?: unknown }
+                    ).remoteEmoteSt = undefined;
                     disposeMeshSubtree(root);
                     return;
                   }
@@ -1551,7 +1651,6 @@ export function useThreeScene({
                 }
               })();
             }
-            // Сүлжээ — цэгцгүй, ~4 Гц-ийн throttled pose: шууд set = хоцорсон алхам мэт. Гөлрүүлнэ.
             let sm = ud.remotePosSmooth;
             if (!sm) {
               sm = { x: p.x, z: p.z, ry: p.ry };
@@ -1622,8 +1721,7 @@ export function useThreeScene({
                 const speedFromChase = distToNet * REMOTE_ANIM_GAP_TO_SPEED;
                 const speed = Math.max(speedFromSm, speedFromChase);
                 const prevE = ud.remoteAnimSpeedEma ?? 0;
-                const ema =
-                  prevE + (speed - prevE) * REMOTE_ANIM_EMA;
+                const ema = prevE + (speed - prevE) * REMOTE_ANIM_EMA;
                 ud.remoteAnimSpeedEma = ema;
                 let want: "idle" | "walk" | "run" = "idle";
                 if (ema >= 7.2) want = "run";
@@ -1703,7 +1801,11 @@ export function useThreeScene({
         const now = performance.now();
         if (now - heroBiomeAtRef.current > 280) {
           heroBiomeAtRef.current = now;
-          const rawBiome = terrainBiome(root.position.x, root.position.z, root.position.y);
+          const rawBiome = terrainBiome(
+            root.position.x,
+            root.position.z,
+            root.position.y,
+          );
           const nextBiome =
             rawBiome === "river_plain"
               ? "lake"
@@ -1720,9 +1822,7 @@ export function useThreeScene({
           }
         }
 
-        /** Бүх өртөө — хаалганы энгийн ойртлын дүрс */
         const INNER_R = 58;
-        /** Тоглогчийн гэр: ижил «ойртсон» мэдрэмж өгөхийн тулд трохи том (бусдаар ижил механик) */
         const HOME_INNER_R = 78;
         const OUTER_R = 228;
         const INNER_R2 = INNER_R * INNER_R;
@@ -1752,8 +1852,7 @@ export function useThreeScene({
           nearestId != null && bestD2 <= OUTER_R2 ? nearestId : null;
         let approachAlpha = 0;
         if (labelId != null && nearestId != null) {
-          const innerFade =
-            nearestId === "home" ? HOME_INNER_R : INNER_R;
+          const innerFade = nearestId === "home" ? HOME_INNER_R : INNER_R;
           const atFull =
             bestD2 <= INNER_R2 ||
             (nearestId === "home" && bestD2 <= HOME_INNER_R2);
@@ -1872,12 +1971,14 @@ export function useThreeScene({
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onWindowBlur);
+      if (footstepAudioRef.current) {
+        void footstepAudioRef.current.ctx.close();
+        footstepAudioRef.current = null;
+      }
       renderer.dispose();
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
     };
-    // mapStationsRevision, userEmail: 3D шинэчлэл / тоглогчийн тусдаа гэрийн байр.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapStationsRevision, userEmail, playerHomeKey]);
 
   const homeLivestockKey = homeLivestock
@@ -1885,14 +1986,11 @@ export function useThreeScene({
     : "";
   useEffect(() => {
     builderRef.current?.buildPlayerLivestockNearHome(homeLivestock);
-    // Intentionally keyed by homeLivestockKey only (stable counts fingerprint).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeLivestockKey]);
 
   const homeGerLevelKey = String(homeGerLevel);
   useEffect(() => {
     builderRef.current?.buildPlayerHomeGer(homeGerLevel, homeLivestock);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeGerLevelKey, homeLivestockKey]);
 
   const flyToStation = useCallback((id: string, snap?: boolean) => {

@@ -1,10 +1,5 @@
 import * as THREE from "three";
 
-/**
- * Texture Manager
- * Generates and caches canvas-based textures for terrain and objects
- * Supports grass, stone, soil patterns with proper UV mapping
- */
 export class TextureManager {
   private textureCache = new Map<string, THREE.Texture>();
   private canvasCache = new Map<string, HTMLCanvasElement>();

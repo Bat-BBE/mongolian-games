@@ -115,7 +115,7 @@ export function MapArea({
   const [mapLandscapeHintReady, setMapLandscapeHintReady] = useState(false);
   const [audioOpen, setAudioOpen] = useState(false);
   const [mapAudioMuted, setMapAudioMuted] = useState(false);
-  const [mapAudioVolume, setMapAudioVolume] = useState(0.56);
+  const [mapAudioVolume, setMapAudioVolume] = useState(0.42);
 
   useEffect(() => {
     const onVis = () => setDocHidden(document.hidden);
@@ -740,13 +740,6 @@ export function MapArea({
           }}
           travelLabel={t.mapTravelToStation}
           returnHomeLabel={t.mapReturnHome}
-          isMn={lang === "mn"}
-          mapStationHowToOpen={t.mapStationHowToOpen}
-          mapStationHowToHide={t.mapStationHowToHide}
-          mapStationHowToBack={t.mapStationHowToBack}
-          introNext={t.introNext}
-          introSkip={t.introSkip}
-          introDone={t.introDone}
         />
       )}
 

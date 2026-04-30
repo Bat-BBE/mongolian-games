@@ -953,6 +953,14 @@ export class SceneBuilder {
   ): void {
     const g = new THREE.Group(),
       fm = mkMat(0x9a7840, 0.95);
+    const baseY = terrainHeight(cx, cz);
+    const sinR = Math.sin(rotY);
+    const cosR = Math.cos(rotY);
+    const localTerrainOffsetY = (lx: number, lz: number): number => {
+      const wx = cx + lx * cosR - lz * sinR;
+      const wz = cz + lx * sinR + lz * cosR;
+      return terrainHeight(wx, wz) - baseY;
+    };
     const gateW = 2.85;
     const pts: [number, number][] = [
       [-w / 2, -d / 2],
@@ -994,7 +1002,7 @@ export class SceneBuilder {
               new THREE.CylinderGeometry(0.09, 0.1, 1.35, 6),
               fm,
             );
-            post.position.set(px, 0.68, pz);
+            post.position.set(px, 0.68 + localTerrainOffsetY(px, pz), pz);
             post.castShadow = true;
             g.add(post);
           }
@@ -1002,7 +1010,9 @@ export class SceneBuilder {
             new THREE.BoxGeometry(gateW * 1.02, 0.12, 0.12),
             fm,
           );
-          lintel.position.set(midx, 1.28, midz);
+          const lintelY =
+            (localTerrainOffsetY(gpx, gpz) + localTerrainOffsetY(gqx, gqz)) * 0.5;
+          lintel.position.set(midx, 1.28 + lintelY, midz);
           lintel.rotation.y = Math.atan2(bx - ax, bz - az);
           g.add(lintel);
           return;
@@ -1021,11 +1031,13 @@ export class SceneBuilder {
       const n = Math.max(2, Math.floor(len / 2.8));
       for (let i = 0; i <= n; i++) {
         const tt = i / n;
+        const px = sx + (ex - sx) * tt;
+        const pz = sz + (ez - sz) * tt;
         const post = new THREE.Mesh(
           new THREE.CylinderGeometry(0.065, 0.075, 1.1, 6),
           fm,
         );
-        post.position.set(sx + (ex - sx) * tt, 0.55, sz + (ez - sz) * tt);
+        post.position.set(px, 0.55 + localTerrainOffsetY(px, pz), pz);
         post.castShadow = true;
         g.add(post);
       }
@@ -1035,7 +1047,7 @@ export class SceneBuilder {
         [bx, bz] = pts[s + 1];
       addEdge(ax, az, bx, bz, s === 0);
     }
-    g.position.set(cx, terrainHeight(cx, cz), cz);
+    g.position.set(cx, baseY, cz);
     g.rotation.y = rotY;
     (attachParent ?? this.scene).add(g);
   }
@@ -1867,7 +1879,7 @@ export class SceneBuilder {
       this.scatterGrassClumps(
         cx,
         cz,
-        Math.max(0, Math.floor(p.grassClumps * 0.62)),
+        Math.max(0, Math.floor(p.grassClumps * 0.48)),
         p.grassRadius ?? 34,
       );
 
@@ -3037,9 +3049,13 @@ export class SceneBuilder {
       return m;
     });
 
-    for (let i = 0; i < 720; i++) {
-      const x = rand(-200, 115),
-        z = rand(-65, 68);
+    const spreadX = TERRAIN_W * 0.5 - 10;
+    const spreadZ = TERRAIN_D * 0.5 - 10;
+    for (let i = 0; i < 1480; i++) {
+      const radial = Math.sqrt(Math.random());
+      const ang = rand(0, Math.PI * 2);
+      const x = Math.cos(ang) * spreadX * radial + rand(-16, 16);
+      const z = Math.sin(ang) * spreadZ * radial + rand(-10, 10);
       const h = terrainHeight(x, z);
       if (h > 18 || h < -0.85) continue;
       const g = new THREE.Group();
@@ -3105,6 +3121,16 @@ export class SceneBuilder {
       }
       g.position.set(x, h, z);
       this.scene.add(g);
+    }
+
+    // Sparse filler pass to keep grass visible in otherwise empty areas.
+    for (let i = 0; i < 640; i++) {
+      const x = rand(-spreadX, spreadX);
+      const z = rand(-spreadZ, spreadZ);
+      const h = terrainHeight(x, z);
+      if (h > 20 || h < -0.9) continue;
+      if (terrainBiome(x, z, h) === "high_alpine" && Math.random() > 0.5) continue;
+      this.makeGrassClumpAt(x, z);
     }
   }
 

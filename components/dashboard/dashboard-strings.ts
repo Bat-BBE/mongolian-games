@@ -700,10 +700,10 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
     introWelcomeTitle: "Эхний заавар — 7 алхам",
     introWelcomeBody:
-      "Та одоо Үндсэн хуудас (dashboard) дээр байна. Энэ дэлгэц 3 гол хэсгээс бүрдэнэ:\n\n▸ ЗҮҮН — аялал, даалгавар, эрдэнэс (КП, зоос, эрдэнийн чулуу)\n▸ ТӨВ/БАРУУН — 3D газрын зураг; энд баатраа удирдана\n▸ Гэр: зураг дээрх home өртөө руу очих, эсвэл гэр/малыг зөвхөн цонхоор нээж — гэр, малаа сайжруулна\n\n«Дараагийн» товчоор алхам бүр гарна. Алхам 5–7 дээр цэнхэр хүрээтэй газар нь тухайн товчлуур, хэсгийг заана. Картын доор алхмын нэр гарна.",
+      "Та одоо Үндсэн хуудас (dashboard) дээр байна.\n\n【3 гол хэсэг】\n▸ ЗҮҮН — аялал, даалгавар, эрдэнэс (КП, зоос, эрдэнийн чулуу)\n▸ ТӨВ/БАРУУН — 3D газрын зураг; энд баатраа удирдана\n▸ HOME — гэр/малаа нээж сайжруулах хэсэг\n\n【Яаж үргэлжлүүлэх вэ】\n• «Дараагийн» — дараагийн алхам руу орно\n• «Алгасах · Шууд эхлэх» — зааврыг хаагаад шууд тоглож эхэлнэ",
     introHeroTitle: "Алхам 2. Баатараа хаана, хэрхэн хөдөлгөх вэ",
     introHeroBody:
-      "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар зэрэгцэнэ.\n\n【Хэрхэн】\n• Утас, таб — зүүн доод дугуй (joystick): чирж явуулна; ирмэгт ойртуулахад хурдан\n• Компьютер — WASD эсвэл сум, Shift = гүйх\n\n【Өртөө рүү амралтгүй очих】 Зүүн самбар — «Очих» эсвэл өртөө сонгоод баатар шууд тэнд зөөгнөнө.\n\nДараагийн алхам: өртөө, тоглоомыг хаанаас нээгддэг нь.",
+      "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар байна.\n\n【Хэрхэн】\n• Утас/таб — зүүн доод дугуй (joystick)-г чирж явуулна; ирмэг рүү түлхвэл хурдан явна\n• Компьютер — WASD эсвэл сум; Shift дарвал гүйнэ\n\n【Шууд очих】 Зүүн самбараас «Очих» дарах эсвэл өртөө сонгох — баатар шууд тийш очно.\n\nОдоо турш: joystick/WASD-аар 2-3 алхам хийж үз.\n\nДараагийн алхам: өртөө, тоглоом нээх.",
     introStationsTitle: "Алхам 3. Өртөө сонгож, тоглоом нээх",
     introStationsBody:
       "【Хаана】 3D газрын зураг дээр өөр өөр түүхэн өртөө (тэмдэгтэй).\n\n【Юу хийх】 Өртөө ойртуулж эсвэл нэрийг дар — тоглоомын жагсаалт гарна. Сонгоод нэвтрэх/тоглох.\n\n【Дүрэм】 Нэг тоглоомыг 7 хоногт хамгийн ихдээ 3 удаа. Эхэнд өөрийн эхний өртөөгөөс эхлүүлэх нь зөв.",
@@ -720,7 +720,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     introStepNavBody:
       "Цэнхэр хүрээ — онооны жагсаалт, профайл (баатар/нэр), МН/EN, өнгө. Заавар дахин: профайлын цэс эсвэл тусламж.\n«Ойлголоо» дар — заавар хаагдана. Амжилт! 🌿",
     introNext: "Дараагийн",
-    introSkip: "Алгасах",
+    introSkip: "Алгасах · Шууд эхлэх",
     introDone: "Ойлголоо",
     introStepLabels: [
       "Танилцах · бүтэц",
@@ -1245,10 +1245,10 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapHowToSectionTitle: "How to play",
     introWelcomeTitle: "Onboarding — 7 steps",
     introWelcomeBody:
-      "You are on the home dashboard. It has three main areas:\n\n▸ LEFT — journey, tasks, rewards (KP, coins, bonus gems)\n▸ CENTER/RIGHT — 3D map; move your hero here\n▸ Home/ger: walk to the home stop on the map, or open ger/livestock in its panel to upgrade\n\nUse Next for each step. Steps 5–7 highlight a control with a blue frame. A short line under the card shows the current step name.",
+      "You are on the home dashboard.\n\n【3 main areas】\n▸ LEFT — journey, tasks, rewards (KP, coins, gems)\n▸ CENTER/RIGHT — 3D map; move your hero here\n▸ HOME — ger/livestock upgrade area\n\n【How to continue】\n• “Next” — go to the next step\n• “Skip · Start now” — close this tour and play immediately",
     introHeroTitle: "Step 2. Where the hero is, how to move",
     introHeroBody:
-      "【Where】 The 3D hero is on the red path in the middle; a 2D board sits on the left.\n\n【How】\n• Phone / tablet: lower-left joystick — drag; push toward the edge to run\n• Desktop: WASD or arrows, Shift to sprint\n\n【Jump to a station】 Left panel — “Go” / pick a stop — the hero warps there.\n\nNext: how you open a station and a game.",
+      "【Where】 The 3D hero is on the red path in the middle; a 2D panel is on the left.\n\n【How】\n• Phone/tablet: lower-left joystick — drag to move; push toward edge to move faster\n• Desktop: WASD or arrows; hold Shift to sprint\n\n【Quick travel】 Left panel — tap “Go” or pick a station; hero teleports there.\n\nTry now: move 2-3 steps with joystick/WASD.\n\nNext: open a station and game.",
     introStationsTitle: "Step 3. Choose a stop, open a game",
     introStationsBody:
       "【Where】 Historic stops (markers) on the 3D map.\n\n【What to do】 Walk up or tap the name — a game list opens. Choose and start.\n\n【Rule】 At most 3 plays per game every 7 days. Good to start at your first stop.",
@@ -1265,7 +1265,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     introStepNavBody:
       "Blue frame: leaderboard, profile (name/hero), MN/EN, theme. To replay the tour: profile menu or help.\nTap “Got it” to close. Enjoy! 🌿",
     introNext: "Next",
-    introSkip: "Skip",
+    introSkip: "Skip · Start now",
     introDone: "Got it",
     introStepLabels: [
       "Overview · layout",

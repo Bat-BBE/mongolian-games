@@ -13,7 +13,7 @@ function createNoiseBuffer(ctx: AudioContext, seconds = 2): AudioBuffer {
   const buffer = ctx.createBuffer(1, len, ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < len; i++) {
-    data[i] = (Math.random() * 2 - 1) * 0.45;
+    data[i] = (Math.random() * 2 - 1) * 0.32;
   }
   return buffer;
 }
@@ -79,9 +79,46 @@ export function useMapAmbientAudio({
   const masterRef = useRef<GainNode | null>(null);
   const layersRef = useRef<Record<AmbientBiome, GainNode> | null>(null);
   const initializedRef = useRef(false);
+  const latestStateRef = useRef({
+    enabled,
+    muted,
+    volume,
+    biome: biomeNormalized,
+    daylightFactor: daylightFactor ?? 1,
+  });
+
+  latestStateRef.current = {
+    enabled,
+    muted,
+    volume,
+    biome: biomeNormalized,
+    daylightFactor: daylightFactor ?? 1,
+  };
+
+  const applyCurrentMixRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    const applyCurrentMix = () => {
+      const master = masterRef.current;
+      const layers = layersRef.current;
+      const ctx = ctxRef.current;
+      if (!master || !layers || !ctx) return;
+      const state = latestStateRef.current;
+      const dayMul = 0.68 + clamp01(state.daylightFactor) * 0.42;
+      const targetMaster =
+        state.enabled && !state.muted ? clamp01(state.volume) * 0.52 * dayMul : 0;
+      master.gain.setTargetAtTime(targetMaster, ctx.currentTime, 0.12);
+      for (const k of Object.keys(layers) as AmbientBiome[]) {
+        layers[k].gain.setTargetAtTime(
+          k === state.biome ? 1 : 0,
+          ctx.currentTime,
+          0.28,
+        );
+      }
+    };
+    applyCurrentMixRef.current = applyCurrentMix;
 
     const init = () => {
       if (initializedRef.current) return;
@@ -92,15 +129,15 @@ export function useMapAmbientAudio({
       master.connect(ctx.destination);
 
       const noise = createNoiseBuffer(ctx, 2.2);
-      const steppe = makeNoiseLayer(ctx, noise, { hp: 180, lp: 1400, gain: 0.15 });
-      const forest = makeNoiseLayer(ctx, noise, { hp: 420, lp: 3600, gain: 0.12 });
-      const gobi = makeNoiseLayer(ctx, noise, { hp: 90, lp: 760, gain: 0.2 });
+      const steppe = makeNoiseLayer(ctx, noise, { hp: 210, lp: 1300, gain: 0.1 });
+      const forest = makeNoiseLayer(ctx, noise, { hp: 460, lp: 3200, gain: 0.09 });
+      const gobi = makeNoiseLayer(ctx, noise, { hp: 110, lp: 720, gain: 0.13 });
       const mountain = makeNoiseLayer(ctx, noise, {
-        hp: 240,
-        lp: 2200,
-        gain: 0.12,
+        hp: 280,
+        lp: 1800,
+        gain: 0.09,
       });
-      const lake = makeNoiseLayer(ctx, noise, { hp: 300, lp: 2600, gain: 0.09 });
+      const lake = makeNoiseLayer(ctx, noise, { hp: 340, lp: 2300, gain: 0.07 });
 
       const layers: Record<AmbientBiome, GainNode> = {
         steppe,
@@ -121,12 +158,14 @@ export function useMapAmbientAudio({
       ctxRef.current = ctx;
       masterRef.current = master;
       layersRef.current = layers;
+      applyCurrentMix();
     };
 
     const unlock = () => {
       init();
       const ctx = ctxRef.current;
       if (ctx && ctx.state === "suspended") void ctx.resume();
+      applyCurrentMix();
     };
 
     window.addEventListener("pointerdown", unlock, { passive: true });
@@ -137,6 +176,7 @@ export function useMapAmbientAudio({
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
       window.removeEventListener("touchstart", unlock);
+      applyCurrentMixRef.current = null;
     };
   }, []);
 
@@ -145,8 +185,9 @@ export function useMapAmbientAudio({
     const ctx = ctxRef.current;
     if (!master || !ctx) return;
     const dayMul = 0.68 + clamp01(daylightFactor ?? 1) * 0.42;
-    const target = enabled && !muted ? clamp01(volume) * 0.75 * dayMul : 0;
+    const target = enabled && !muted ? clamp01(volume) * 0.52 * dayMul : 0;
     master.gain.setTargetAtTime(target, ctx.currentTime, 0.2);
+    applyCurrentMixRef.current?.();
   }, [enabled, muted, volume, daylightFactor]);
 
   useEffect(() => {
@@ -156,6 +197,7 @@ export function useMapAmbientAudio({
     for (const k of Object.keys(layers) as AmbientBiome[]) {
       layers[k].gain.setTargetAtTime(k === biomeNormalized ? 1 : 0, ctx.currentTime, 0.45);
     }
+    applyCurrentMixRef.current?.();
   }, [biomeNormalized]);
 
   useEffect(() => {

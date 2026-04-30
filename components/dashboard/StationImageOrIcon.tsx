@@ -9,7 +9,6 @@ type Size = "label" | "popup";
 
 type StationImageOrIconProps = {
   imageUrl?: string | null;
-  /** Emoji fallback when no image or load error */
   icon: string;
   size: Size;
   className?: string;
@@ -17,9 +16,6 @@ type StationImageOrIconProps = {
   alt?: string;
 };
 
-/**
- * Map label / station popup: нэг жишүүрт thumbnail — object-cover, алдаа гарвал ижил хэмжээний icon.
- */
 export function StationImageOrIcon({
   imageUrl,
   icon,
@@ -38,7 +34,8 @@ export function StationImageOrIcon({
         className={cn(
           "relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-primary/20 text-3xl",
           "bg-zinc-950/55 shadow-inner",
-          !showImg && "bg-[url('/images/station-thumb-frame.svg')] bg-cover bg-center",
+          !showImg &&
+            "bg-[url('/images/station-thumb-frame.svg')] bg-cover bg-center",
           className,
         )}
         style={
@@ -71,13 +68,13 @@ export function StationImageOrIcon({
     );
   }
 
-  // label: жижиг map pin — 28×28, харагдац тогтвортой
   return (
     <div
       className={cn(
         "relative flex shrink-0 items-center justify-center overflow-hidden rounded-md border text-lg leading-none",
         "h-7 w-7 min-h-7 min-w-7 border-white/20 bg-zinc-950/50 shadow-sm",
-        !showImg && "bg-[url('/images/station-thumb-frame.svg')] bg-cover bg-center",
+        !showImg &&
+          "bg-[url('/images/station-thumb-frame.svg')] bg-cover bg-center",
         className,
       )}
     >
