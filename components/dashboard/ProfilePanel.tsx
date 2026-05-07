@@ -71,6 +71,13 @@ export function ProfilePanel({
   const [initialNickname, setInitialNickname] = useState("");
   const [cooldownMs, setCooldownMs] = useState(0);
   const [heroRows, setHeroRows] = useState<HeroRow[]>([]);
+  const [livestock, setLivestock] = useState({
+    sheep: 0,
+    goat: 0,
+    cow: 0,
+    horse: 0,
+    camel: 0,
+  });
 
   const heroImageById = useCallback(
     (id: HeroId): string => {
@@ -144,6 +151,13 @@ export function ProfilePanel({
         setTier(bundle.computed.tier ?? "—");
         setLevel(num(prof.level, 1));
         setKp(num(prof.kp, 0));
+        setLivestock({
+          sheep: num((prof as any).sheep, 0),
+          goat: num((prof as any).goat, 0),
+          cow: num((prof as any).cow, 0),
+          horse: num((prof as any).horse, 0),
+          camel: num((prof as any).camel, 0),
+        });
         setXp(num(prog.xp, 0));
         setXpMax(num(prog.xpMax, 100));
         setCurrentStationLabel(bundle.computed.currentStationLabel ?? "—");
@@ -175,6 +189,13 @@ export function ProfilePanel({
         );
         setLevel(num(prof.level, 1));
         setKp(num(prof.kp, 0));
+        setLivestock({
+          sheep: num((prof as any).sheep, 0),
+          goat: num((prof as any).goat, 0),
+          cow: num((prof as any).cow, 0),
+          horse: num((prof as any).horse, 0),
+          camel: num((prof as any).camel, 0),
+        });
         setXp(num(prog.xp, 0));
         setXpMax(num(prog.xpMax, 100));
         const curSid =
@@ -267,31 +288,41 @@ export function ProfilePanel({
     );
   }
 
+  const livestockRows = [
+    { key: "sheep", icon: "🐑", label: lang === "mn" ? "Хонь" : "Sheep", value: livestock.sheep },
+    { key: "goat", icon: "🐐", label: lang === "mn" ? "Ямаа" : "Goat", value: livestock.goat },
+    { key: "cow", icon: "🐄", label: lang === "mn" ? "Үхэр" : "Cow", value: livestock.cow },
+    { key: "horse", icon: "🐎", label: lang === "mn" ? "Адуу" : "Horse", value: livestock.horse },
+    { key: "camel", icon: "🐫", label: lang === "mn" ? "Тэмээ" : "Camel", value: livestock.camel },
+  ];
+  const totalLivestock = livestockRows.reduce((sum, row) => sum + row.value, 0);
+
   return (
-    <div className="space-y-3 pr-1">
-      <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-        <div className="shrink-0 w-22 h-30 rounded-full overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.35)]">
+    <div className="space-y-4 pr-1">
+      <div className="rounded-2xl border border-[color:var(--map-ui-border)] bg-[color-mix(in_srgb,var(--map-ui-base)_50%,transparent)] p-3.5 shadow-[0_14px_40px_-24px_rgba(0,0,0,0.5)]">
+      <div className="flex flex-col sm:flex-row gap-3.5 items-center sm:items-start">
+        <div className="shrink-0 h-20 w-20 rounded-full overflow-hidden border border-[color:var(--map-ui-border-bright)] shadow-[0_0_18px_rgba(212,175,55,0.22)]">
           <img
             src={heroImage || "/images/shikhikhutag.png"}
             alt=""
             className="w-full h-full object-cover"
           />
         </div>
-        <div className="flex-1 text-center sm:text-left space-y-1 min-w-0">
-          <h2 className="font-display text-lg sm:text-xl tracking-wide">
+        <div className="flex-1 text-center sm:text-left space-y-0.5 min-w-0">
+          <h2 className="font-display text-lg tracking-wide text-foreground">
             {heroName}
           </h2>
-          <p className="text-sm text-muted-foreground">{heroTitle}</p>
-          <p className="text-[11px] font-mono text-muted-foreground truncate">
+          <p className="text-xs text-[color:var(--map-gold)]">{heroTitle}</p>
+          <p className="text-[10px] font-mono text-muted-foreground truncate">
             {userEmail}
           </p>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-1.5 pt-1 justify-center sm:justify-start">
             <input
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value.slice(0, 36))}
               placeholder={lang === "mn" ? "Таны nickname" : "Your nickname"}
-              className="h-8 w-full max-w-[260px] rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none focus:border-primary/60"
+              className="h-7 w-full max-w-[230px] rounded-md border border-[color:var(--map-ui-border-subtle)] bg-background/75 px-2 text-[11px] text-foreground outline-none focus:border-[color:var(--map-ui-border-bright)]"
             />
             <Button
               type="button"
@@ -301,37 +332,69 @@ export function ProfilePanel({
                 savingNick || !nickname.trim() || nickname.trim() === initialNickname
               }
               onClick={() => void onSaveNickname()}
+              className="h-7 px-2.5 text-[11px]"
             >
               {savingNick ? "…" : lang === "mn" ? "Хадгалах" : "Save"}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            <span className="text-foreground/80">{t.profileStationLabel}:</span>{" "}
-            {currentStationLabel}
+          <p className="pt-1">
+            <span className="inline-flex items-center rounded-full border border-[color:var(--map-ui-border-subtle)] bg-[color-mix(in_srgb,var(--map-ui-base)_56%,transparent)] px-2 py-0.5 text-[10px] text-muted-foreground">
+              <span className="text-foreground/80 mr-1">{t.profileStationLabel}:</span>
+              {currentStationLabel}
+            </span>
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              {t.profileLevelLabel}
-            </p>
-            <p className="text-xl font-semibold tabular-nums">{level}</p>
+        <div className="w-full sm:w-[19rem] space-y-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
+            <div className="rounded-lg border border-[color:var(--map-ui-border-subtle)] p-2 text-center space-y-0.5 bg-[color-mix(in_srgb,var(--map-ui-base)_56%,transparent)]">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                {t.profileLevelLabel}
+              </p>
+              <p className="text-lg font-semibold tabular-nums leading-none">{level}</p>
+            </div>
+            <div className="rounded-lg border border-[color:var(--map-ui-border-subtle)] p-2 text-center space-y-0.5 bg-[color-mix(in_srgb,var(--map-ui-base)_56%,transparent)]">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                {t.profileXpLabel}
+              </p>
+              <p className="text-[11px] font-semibold tabular-nums leading-tight">
+                {xp} / {xpMax}
+              </p>
+            </div>
+            <div className="rounded-lg border border-[color:var(--map-ui-border-subtle)] p-2 text-center space-y-0.5 bg-[color-mix(in_srgb,var(--map-ui-base)_56%,transparent)]">
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
+                {t.treasury}
+              </p>
+              <p className="text-lg font-semibold tabular-nums leading-none">{kp}</p>
+            </div>
           </div>
-          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              {t.profileXpLabel}
-            </p>
-            <p className="text-sm font-semibold tabular-nums leading-tight">
-              {xp} / {xpMax}
-            </p>
-          </div>
-          <div className="admin-panel rounded-xl p-3 text-center space-y-0.5">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              {t.treasury}
-            </p>
-            <p className="text-xl font-semibold tabular-nums">{kp}</p>
+          <div className="rounded-lg border border-[color:var(--map-ui-border-subtle)] bg-[color-mix(in_srgb,var(--map-ui-base)_52%,transparent)] p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="font-display text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
+                {lang === "mn" ? "Таван хошуу мал" : "Livestock"}
+              </h3>
+              <span className="text-[10px] tabular-nums text-foreground/90">
+                {lang === "mn" ? "Нийт" : "Total"}: {totalLivestock}
+              </span>
+            </div>
+            <div className="h-16 overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-1 sm:grid-cols-5">
+                {livestockRows.map((row) => (
+                  <div
+                    key={row.key}
+                    className="rounded-md border border-[color:var(--map-ui-border-subtle)] bg-[color-mix(in_srgb,var(--map-ui-base)_60%,transparent)] px-1 py-1 text-center"
+                  >
+                    <p className="text-[12px] leading-none">{row.icon}</p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground truncate">
+                      {row.label}
+                    </p>
+                    <p className="text-[10px] font-semibold tabular-nums">{row.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+      </div>
       </div>
 
       <section className="mb-4">

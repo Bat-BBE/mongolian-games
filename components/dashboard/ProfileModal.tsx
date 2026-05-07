@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LuUser as User } from "react-icons/lu";
 import { ProfilePanel } from "./ProfilePanel";
 import type { DashLang, DashStrings } from "./dashboard-strings";
 
@@ -27,8 +26,8 @@ export function ProfileModal({
 }: ProfileModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(100vw-1.5rem,980px)] sm:max-w-4xl max-h-[min(92vh,860px)] overflow-y-auto border border-primary/20 bg-background/98 backdrop-blur-xl p-0 gap-0 shadow-[0_24px_80px_-24px_color-mix(in_oklch,var(--primary)_35%,transparent)]">
-        <DialogHeader className="px-5 pt-5 pb-3 border-b border-primary/15 space-y-1">
+      <DialogContent className="w-[min(100vw-1.25rem,56rem)] sm:max-w-5xl max-h-[min(92vh,860px)] overflow-y-auto border border-[color:var(--map-ui-border)] bg-[color:var(--map-ui-surface-2)] backdrop-blur-xl p-0 gap-0 shadow-[0_24px_70px_-30px_rgba(0,0,0,0.55)]">
+        <DialogHeader className="sticky top-0 z-10 px-5 pt-5 pb-3 border-b border-[color:var(--map-ui-border)] bg-[color-mix(in_srgb,var(--map-ui-base)_78%,transparent)] space-y-1 backdrop-blur-md">
           <DialogTitle className="font-display flex items-center justify-center gap-2 text-lg tracking-wide">
             {t.profilePageTitle}
           </DialogTitle>
@@ -36,7 +35,7 @@ export function ProfileModal({
             {t.profileEmailLabel} · {t.profileLevelLabel} · {t.treasury}
           </p>
         </DialogHeader>
-        <div className="px-5 py-4">
+        <div className="px-4 py-4 sm:px-5 sm:py-5">
           <ProfilePanel
             t={t}
             lang={lang}

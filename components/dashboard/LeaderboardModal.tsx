@@ -367,12 +367,12 @@ export function LeaderboardModal({
         className={cn(
           "w-[min(100vw-1.25rem,56rem)] max-w-none sm:max-w-5xl lg:max-w-6xl",
           "max-h-[min(92vh,760px)] overflow-hidden flex flex-col p-0 gap-0",
-          "border border-primary/30 bg-card/95 backdrop-blur-xl",
-          "shadow-[0_24px_80px_-24px_color-mix(in_oklch,var(--primary)_35%,#0a0c18)]",
-          "ring-1 ring-primary/10",
+          "border border-[color:var(--map-ui-border)] bg-[color:var(--map-ui-surface-2)] backdrop-blur-xl",
+          "shadow-[0_24px_70px_-30px_rgba(0,0,0,0.55)]",
+          "ring-1 ring-[color:var(--map-ui-border-subtle)]",
         )}
       >
-        <DialogHeader className="px-6 sm:px-8 pt-6 pb-4 shrink-0 border-b border-primary/20 bg-gradient-to-br from-primary/[0.12] via-transparent to-[color-mix(in_oklch,oklch(35%_0.08_155)_12%,transparent)]">
+        <DialogHeader className="px-5 sm:px-7 pt-5 pb-3 shrink-0 border-b border-[color:var(--map-ui-border)] bg-[color-mix(in_srgb,var(--map-ui-base)_58%,transparent)]">
           <DialogTitle className="font-display flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-xl sm:text-2xl w-full text-center">
             <span className="flex flex-col items-center gap-1 min-w-0 max-w-xl">
               <span className="leading-tight">{title}</span>

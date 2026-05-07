@@ -1017,3 +1017,194 @@ adminRouter.put("/stations/:slug/games", async (req, res) => {
     client.release();
   }
 });
+
+const onisogoSlugParam = z
+  .string()
+  .min(1)
+  .max(120)
+  .regex(/^[a-z0-9_-]+$/);
+
+const onisogoUpsertBody = z.object({
+  slug: onisogoSlugParam,
+  wx: z.number().int(),
+  wz: z.number().int(),
+  icon: z.string().max(32).optional().default("❓"),
+  title_mn: z.string().min(1).max(4000),
+  title_en: z.string().min(1).max(4000),
+  question_mn: z.string().min(1).max(12000),
+  question_en: z.string().min(1).max(12000),
+  answer_correct_mn: z.string().min(1).max(800),
+  answer_correct_en: z.string().min(1).max(800),
+  wrong_1_mn: z.string().min(1).max(800),
+  wrong_1_en: z.string().min(1).max(800),
+  wrong_2_mn: z.string().min(1).max(800),
+  wrong_2_en: z.string().min(1).max(800),
+  wrong_3_mn: z.string().min(1).max(800),
+  wrong_3_en: z.string().min(1).max(800),
+  coin_reward: z.number().int().min(1).max(999).optional().default(18),
+  sort_order: z.number().int().optional().default(0),
+  is_active: z.boolean().optional().default(true),
+});
+
+const onisogoPatchBody = onisogoUpsertBody.partial().omit({ slug: true });
+
+adminRouter.get("/onisogo", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, slug, wx, wz, icon, title_mn, title_en, question_mn, question_en,
+              answer_correct_mn, answer_correct_en,
+              wrong_1_mn, wrong_1_en, wrong_2_mn, wrong_2_en, wrong_3_mn, wrong_3_en,
+              coin_reward, sort_order, is_active, created_at, updated_at
+       FROM map_onisogo
+       ORDER BY sort_order ASC, slug ASC`,
+    );
+    res.json({ rows: result.rows });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Query failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+adminRouter.post("/onisogo", async (req, res) => {
+  const parsed = onisogoUpsertBody.safeParse(req.body);
+  if (!parsed.success) {
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
+    return;
+  }
+  const b = parsed.data;
+  try {
+    const result = await pool.query(
+      `INSERT INTO map_onisogo (
+         slug, wx, wz, icon, title_mn, title_en, question_mn, question_en,
+         answer_correct_mn, answer_correct_en,
+         wrong_1_mn, wrong_1_en, wrong_2_mn, wrong_2_en, wrong_3_mn, wrong_3_en,
+         coin_reward, sort_order, is_active
+       ) VALUES (
+         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
+       )
+       RETURNING id, slug, wx, wz, icon, title_mn, title_en, question_mn, question_en,
+                 answer_correct_mn, answer_correct_en,
+                 wrong_1_mn, wrong_1_en, wrong_2_mn, wrong_2_en, wrong_3_mn, wrong_3_en,
+                 coin_reward, sort_order, is_active, created_at, updated_at`,
+      [
+        b.slug,
+        b.wx,
+        b.wz,
+        b.icon,
+        b.title_mn,
+        b.title_en,
+        b.question_mn,
+        b.question_en,
+        b.answer_correct_mn,
+        b.answer_correct_en,
+        b.wrong_1_mn,
+        b.wrong_1_en,
+        b.wrong_2_mn,
+        b.wrong_2_en,
+        b.wrong_3_mn,
+        b.wrong_3_en,
+        b.coin_reward,
+        b.sort_order,
+        b.is_active,
+      ],
+    );
+    res.json({ row: result.rows[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Insert failed";
+    if (/unique|duplicate/i.test(msg)) {
+      res.status(409).json({ error: "Slug already exists" });
+      return;
+    }
+    res.status(500).json({ error: msg });
+  }
+});
+
+adminRouter.put("/onisogo/:slug", async (req, res) => {
+  const slug = onisogoSlugParam.safeParse(req.params.slug);
+  if (!slug.success) {
+    res.status(400).json({ error: "Invalid slug" });
+    return;
+  }
+  const parsed = onisogoPatchBody.safeParse(req.body);
+  if (!parsed.success) {
+    res
+      .status(400)
+      .json({ error: "Invalid body", details: parsed.error.flatten() });
+    return;
+  }
+  const p = parsed.data;
+  const fields: string[] = [];
+  const values: unknown[] = [];
+  let n = 1;
+  const push = (col: string, v: unknown) => {
+    fields.push(`${col} = $${n++}`);
+    values.push(v);
+  };
+  if (p.wx !== undefined) push("wx", p.wx);
+  if (p.wz !== undefined) push("wz", p.wz);
+  if (p.icon !== undefined) push("icon", p.icon);
+  if (p.title_mn !== undefined) push("title_mn", p.title_mn);
+  if (p.title_en !== undefined) push("title_en", p.title_en);
+  if (p.question_mn !== undefined) push("question_mn", p.question_mn);
+  if (p.question_en !== undefined) push("question_en", p.question_en);
+  if (p.answer_correct_mn !== undefined)
+    push("answer_correct_mn", p.answer_correct_mn);
+  if (p.answer_correct_en !== undefined)
+    push("answer_correct_en", p.answer_correct_en);
+  if (p.wrong_1_mn !== undefined) push("wrong_1_mn", p.wrong_1_mn);
+  if (p.wrong_1_en !== undefined) push("wrong_1_en", p.wrong_1_en);
+  if (p.wrong_2_mn !== undefined) push("wrong_2_mn", p.wrong_2_mn);
+  if (p.wrong_2_en !== undefined) push("wrong_2_en", p.wrong_2_en);
+  if (p.wrong_3_mn !== undefined) push("wrong_3_mn", p.wrong_3_mn);
+  if (p.wrong_3_en !== undefined) push("wrong_3_en", p.wrong_3_en);
+  if (p.coin_reward !== undefined) push("coin_reward", p.coin_reward);
+  if (p.sort_order !== undefined) push("sort_order", p.sort_order);
+  if (p.is_active !== undefined) push("is_active", p.is_active);
+  if (fields.length === 0) {
+    res.status(400).json({ error: "No fields to update" });
+    return;
+  }
+  fields.push(`updated_at = now()`);
+  values.push(slug.data);
+  try {
+    const result = await pool.query(
+      `UPDATE map_onisogo SET ${fields.join(", ")} WHERE slug = $${n}
+       RETURNING id, slug, wx, wz, icon, title_mn, title_en, question_mn, question_en,
+                 answer_correct_mn, answer_correct_en,
+                 wrong_1_mn, wrong_1_en, wrong_2_mn, wrong_2_en, wrong_3_mn, wrong_3_en,
+                 coin_reward, sort_order, is_active, created_at, updated_at`,
+      values,
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json({ row: result.rows[0] });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Update failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
+adminRouter.delete("/onisogo/:slug", async (req, res) => {
+  const slug = onisogoSlugParam.safeParse(req.params.slug);
+  if (!slug.success) {
+    res.status(400).json({ error: "Invalid slug" });
+    return;
+  }
+  try {
+    const result = await pool.query(`DELETE FROM map_onisogo WHERE slug = $1`, [
+      slug.data,
+    ]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Delete failed";
+    res.status(500).json({ error: msg });
+  }
+});
