@@ -1,7 +1,3 @@
-/**
- * 3×3 cell indices [row, col] 0..2 (standard d6 pips) for values 1…6.
- * Shared by 2D readout and 3D face geometry.
- */
 export const DICE_PIP_CELLS: Record<1 | 2 | 3 | 4 | 5 | 6, [number, number][]> =
   {
     1: [[1, 1]],

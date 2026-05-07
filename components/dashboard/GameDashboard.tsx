@@ -8,16 +8,16 @@ import {
   type DashLang,
   type DashStrings,
 } from "./dashboard-strings";
-import { DashNav } from "./DashNav";
-import { LeftPanel } from "./LeftPanel";
 import { MapArea } from "./MapArea";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer, HEROES } from "@/components/hero-select/hero-data";
 import { normalizeStationId } from "./mapConstants";
 import {
   getDashboardBundle,
+  getOnisogoPoints,
   resolveAssetUrl,
   type MapStationApiRow,
+  type OnisogoMapPoint,
   type StationGameBundleRow,
 } from "@/lib/api";
 import { LeaderboardModal } from "./LeaderboardModal";
@@ -56,6 +56,14 @@ function readStationSteps(
     };
   }
   return out;
+}
+
+function readOnisogoSolvedSlugs(
+  progress: Record<string, unknown>,
+): string[] {
+  const raw = progress.onisogoSolvedSlugs;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x) => String(x)).filter((x) => x.length > 0);
 }
 
 function readStationGameVisits(
@@ -125,6 +133,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         camel: number;
       };
     };
+    onisogoSolvedSlugs?: string[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -136,7 +145,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [playerNickname, setPlayerNickname] = useState("");
   const [stationGames, setStationGames] = useState<StationGameBundleRow[]>([]);
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
-  const [heroMapStationId, setHeroMapStationId] = useState<string | null>(null);
+  const [onisogoPoints, setOnisogoPoints] = useState<OnisogoMapPoint[]>([]);
   const flyHomeRef = useRef<(() => void) | null>(null);
   const [introTourOpen, setIntroTourOpen] = useState(false);
 
@@ -172,6 +181,12 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
       setT(merged);
       setStationGames(bundle?.stationGames ?? []);
       setMapStations(bundle?.mapStations ?? []);
+      try {
+        const og = await getOnisogoPoints(lang);
+        if (!cancelled) setOnisogoPoints(og.points);
+      } catch {
+        if (!cancelled) setOnisogoPoints([]);
+      }
 
       const data = await getUserByEmail(saved.name);
       if (cancelled) return;
@@ -324,6 +339,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
             camel: num(lsRec.camel, 0),
           },
         },
+        onisogoSolvedSlugs: readOnisogoSolvedSlugs(prog),
       });
       setLoading(false);
     }
@@ -358,25 +374,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const openLb = () => setLeaderboardOpen(true);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
-      <DashNav
-        t={t}
-        lang={lang}
-        setLang={setLang}
-        playerName={player.name}
-        playerTitle={player.title}
-        avatarUrl={player.image}
-        level={player.level}
-        userEmail={userEmail}
-        onOpenProfile={() => setProfileOpen(true)}
-        onLogout={() => {
-          clearPlayer();
-          router.push("/");
-        }}
-        onOpenLeaderboard={openLb}
-        onShowIntroTour={() => setIntroTourOpen(true)}
-      />
-
+    <div className="relative h-screen w-full overflow-hidden bg-background">
       <LeaderboardModal
         open={leaderboardOpen}
         onOpenChange={setLeaderboardOpen}
@@ -397,7 +395,28 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         onOpenChange={setHomeOpen}
         t={t}
         lang={lang}
-        onChanged={() => setGameReloadTick((n) => n + 1)}
+        onChanged={(next) => {
+          if (next) {
+            setPlayer((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    kp: next.kp,
+                    homeGerLevel: next.gerLevel,
+                    homeLivestock: next.livestock,
+                    treasury: {
+                      kp: next.kp,
+                      coins: next.coins,
+                      gems: next.gems,
+                      gerLevel: next.gerLevel,
+                      livestock: next.livestock,
+                    },
+                  }
+                : prev,
+            );
+          }
+          setGameReloadTick((n) => n + 1);
+        }}
       />
 
       <DashboardIntroTour
@@ -406,29 +425,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         onDismiss={() => setIntroTourOpen(false)}
       />
 
-      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden relative">
-        <LeftPanel
-          t={t}
-          lang={lang}
-          accentColor={player.accentColor}
-          xp={player.xp}
-          xpMax={player.xpMax}
-          avatarUrl={player.image}
-          journeyDay={player.journeyDay}
-          stationIndex={player.stationIndex}
-          totalStations={player.totalStations}
-          currentStationLabel={player.currentStationLabel}
-          stationGames={stationGames}
-          heroStationId={heroMapStationId}
-          mapStations={mapStations}
-          stationGameVisits={player.stationGameVisits}
-          treasury={player.treasury}
-          userEmail={userEmail}
-          onChestClaimed={() => setGameReloadTick((n) => n + 1)}
-          onTreasuryChanged={() => setGameReloadTick((n) => n + 1)}
-          onOpenLeaderboard={openLb}
-        />
-
+      <div className="absolute inset-0 min-h-0 min-w-0">
         <MapArea
           t={t}
           lang={lang}
@@ -450,7 +447,47 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           onRegisterFlyHome={(fn) => {
             flyHomeRef.current = fn;
           }}
-          onHeroAtStationChange={setHeroMapStationId}
+          mapHudSetLang={setLang}
+          mapHudPlayerName={player.name}
+          mapHudPlayerTitle={player.title}
+          mapHudAvatarUrl={player.image}
+          mapHudLevel={player.level}
+          mapHudUserEmail={userEmail}
+          mapHudCoins={player.treasury?.coins ?? 0}
+          mapHudGems={player.treasury?.gems ?? 0}
+          mapHudGerLevel={
+            player.treasury?.gerLevel ?? player.homeGerLevel ?? 1
+          }
+          mapHudKp={player.treasury?.kp ?? player.kp}
+          mapHudLivestock={
+            player.homeLivestock ?? {
+              sheep: 0,
+              goat: 0,
+              cow: 0,
+              horse: 0,
+              camel: 0,
+            }
+          }
+          mapHudLivestockTotal={
+            (player.homeLivestock?.sheep ?? 0) +
+            (player.homeLivestock?.goat ?? 0) +
+            (player.homeLivestock?.cow ?? 0) +
+            (player.homeLivestock?.horse ?? 0) +
+            (player.homeLivestock?.camel ?? 0)
+          }
+          mapHudOnTreasuryChanged={() => setGameReloadTick((n) => n + 1)}
+          mapHudOnOpenProfile={() => setProfileOpen(true)}
+          mapHudOnLogout={() => {
+            clearPlayer();
+            router.push("/");
+          }}
+          mapHudOnOpenLeaderboard={openLb}
+          mapHudOnShowIntroTour={() => setIntroTourOpen(true)}
+          stationGames={stationGames}
+          currentStationLabel={player.currentStationLabel}
+          onisogoPoints={onisogoPoints}
+          onisogoSolvedSlugs={player.onisogoSolvedSlugs ?? []}
+          onOnisogoSolved={() => setGameReloadTick((n) => n + 1)}
         />
       </div>
     </div>

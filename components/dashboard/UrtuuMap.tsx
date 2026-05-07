@@ -578,7 +578,6 @@ export default function UrtuuMap({
         }}
       />
 
-      {/* Floating dust particles */}
       <svg
         style={{
           position: "absolute",
@@ -602,7 +601,6 @@ export default function UrtuuMap({
         ))}
       </svg>
 
-      {/* Header */}
       <div
         style={{
           position: "absolute",
@@ -627,7 +625,7 @@ export default function UrtuuMap({
               fontWeight: 300,
             }}
           >
-            УРТУУ ЗАМЫН ГАЗРЫН ЗУРАГ
+            ӨРТӨӨ ЗАМЫН ГАЗРЫН ЗУРАГ
           </div>
           <div
             style={{
@@ -675,7 +673,6 @@ export default function UrtuuMap({
         </div>
       </div>
 
-      {/* SVG path layer */}
       <svg
         viewBox="0 0 100 80"
         style={{
@@ -701,7 +698,6 @@ export default function UrtuuMap({
         ))}
       </svg>
 
-      {/* Station nodes */}
       <div style={{ position: "absolute", inset: 0, zIndex: 10 }}>
         {STATIONS.map((station, i) => (
           <StationNode
@@ -716,7 +712,6 @@ export default function UrtuuMap({
         ))}
       </div>
 
-      {/* Detail panel */}
       {selectedStation && (
         <DetailPanel
           station={selectedStation}
@@ -724,7 +719,6 @@ export default function UrtuuMap({
         />
       )}
 
-      {/* Compass rose */}
       <div
         style={{
           position: "absolute",
@@ -787,7 +781,6 @@ export default function UrtuuMap({
         </svg>
       </div>
 
-      {/* Scale bar */}
       <div
         style={{
           position: "absolute",
@@ -814,7 +807,6 @@ export default function UrtuuMap({
         </div>
       </div>
 
-      {/* Bottom status bar */}
       <div
         style={{
           position: "absolute",
@@ -838,14 +830,14 @@ export default function UrtuuMap({
         }}
       >
         <span>
-          📍 Одоогийн буудал:{" "}
+          🗺️ Одоогийн өртөө:{" "}
           <span style={{ color: "#d4b060" }}>
             {currentStation?.name ?? "—"}
           </span>
         </span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>
-          🐴 Нийт зам: <span style={{ color: "#d4b060" }}>{totalDistance}</span>
+          🗾 Нийт зам: <span style={{ color: "#d4b060" }}>{totalDistance}</span>
         </span>
         <span style={{ opacity: 0.4 }}>|</span>
         <span>

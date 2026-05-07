@@ -120,6 +120,12 @@ export interface DashStrings {
   mapHomePinLabel: string;
   /** Sidebar: jump camera to home ger on the 3D map */
   mapGoToGer: string;
+  /** Left panel: «Даалгавар» / «Quests» — газрын зургийн зүүн панелийн гарчиг */
+  questsPanelTitle: string;
+  /** Гэр дээрх даалгаврын хэсгийг хураах (aria) */
+  questsPanelCollapseAria: string;
+  /** Дахин дэлгэх (aria) */
+  questsPanelExpandAria: string;
   /** Left panel: section title when hero is at ger (not «Одоогийн өртөө») */
   sidebarAtHomeSectionTitle: string;
   /** Left panel: status line when at ger */
@@ -134,8 +140,26 @@ export interface DashStrings {
   mapGuideHide: string;
   /** Map: help button label (short) */
   mapGuideShow: string;
+  /** Map: мэдэгдлийн цонхны гарчиг */
+  mapNotificationsTitle: string;
+  mapNotificationsEmpty: string;
+  mapNotificationsClearRead: string;
+  mapNotifWelcomeTitle: string;
+  mapNotifWelcomeBody: string;
+  mapNotifChatTitle: string;
+  mapNotifChatBody: string;
   /** Map: world tidbit near small POI markers (not a station) */
   mapWorldPoiBadge: string;
+  /** Map: onisogo (riddle) marker — badge / modal overline */
+  mapOnisogoBadge: string;
+  mapOnisogoOpenCta: string;
+  mapOnisogoSolvedChip: string;
+  mapOnisogoSolvedToast: string;
+  mapOnisogoPickHint: string;
+  mapOnisogoWrong: string;
+  mapOnisogoClose: string;
+  /** `{n}` = coins awarded */
+  mapOnisogoCoinsEarned: string;
   /** Map: emote menu — accessibility (icon-only) */
   mapHeroEmoteMenuAria: string;
   mapHeroEmoteIdleAria: string;
@@ -154,6 +178,20 @@ export interface DashStrings {
   mapLandscapeHint: string;
   /** Left panel: section title matching map guide */
   mapHowToSectionTitle: string;
+  /** Газрын зураг — эхний удаагийн алхам алхмын заавар (5 алхам) */
+  mapCoachBadge: string;
+  mapCoachBack: string;
+  mapCoachNext: string;
+  mapCoachFinish: string;
+  mapCoachSkipAll: string;
+  mapCoachClose: string;
+  mapCoachProgressAria: string;
+  /** `{n}` одоогийн, `{total}` нийт */
+  mapCoachStepCounter: string;
+  /** Алхам 1 — хэвтээ утасны зөвлөмж */
+  mapCoachLandscapeTip: string;
+  mapCoachStepTitles: readonly [string, string, string, string, string];
+  mapCoachStepBodies: readonly [string, string, string, string, string];
   /** First-visit spotlight tour (dashboard) */
   introWelcomeTitle: string;
   introWelcomeBody: string;
@@ -173,15 +211,7 @@ export interface DashStrings {
   introSkip: string;
   introDone: string;
   /** Short label for each of the 7 intro steps (stepper in UI). */
-  introStepLabels: [
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-    string,
-  ];
+  introStepLabels: [string, string, string, string, string, string, string];
   gamesAtStation: string;
   /** Map popup / sidebar: station lore heading */
   mapStationHistoryTitle: string;
@@ -193,6 +223,20 @@ export interface DashStrings {
   mapStationHowToOpen: string;
   mapStationHowToHide: string;
   mapStationHowToBack: string;
+  /** Station popup: 7 хоногийн лимит — идэвхтэй үед; `{cap}` = тоглоом тоглох дээд хязгаар */
+  stationPopupWeeklyActive: string;
+  /** Station popup: бүх тоглоомын долоо хоногийн оролт дууссан */
+  stationPopupWeeklyExhausted: string;
+  /** Popup: түүхийн блокын доорх нэг мөр тайлбар */
+  mapStationCultureCaption: string;
+  /** Popup: «Юу хийх вэ» алхмуудын гарчиг */
+  stationPopupStepsTitle: string;
+  stationPopupStepTravel: string;
+  stationPopupStepPickGame: string;
+  /** Тоглоомын карт дээрх богино шошго */
+  stationPopupGameAbout: string;
+  /** Товч дээр: тоглоомын 7 хоногийн оролт дууссан — `{cap}`-ийг 2 удаа орлуулна */
+  stationPopupPerGameWeekCap: string;
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
@@ -213,7 +257,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mainQuest: "Үндсэн Даалгавар",
     questTitle: "Талын Элч",
     questDesc:
-      "Орхоны хөндийг гатлан Их Хааны тамгыг хүргэх. Өөрчлөгдөх салхинаас болгоомжил.",
+      "Өртөөг сонгоод «Очих» дар. Өртөөний хаалганд ойртоход тоглоомууд нээгдэнэ.",
     continueJourney: "Аяллыг Үргэлжлүүлэх",
     treasury: "Эрдэнэс",
     treasuryKpLabel: "МО (КП)",
@@ -666,24 +710,47 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Тоглогчийн мэдээлэл олдсонгүй. Нүүр хуудаснаас «Тоглох» товч дээр дарч нэвтэрнэ үү.",
     dialogClose: "Хаах",
     mapRegionLabel: "Бүс нутаг",
-    mapTravelToStation: "Очих",
-    mapReturnHome: "Гэр рүү буцах",
+    mapTravelToStation: "Өртөөнд очих",
+    mapReturnHome: "Гэрт очих",
     mapReturnToPreviousSpot: "Өмнөх байрлал руу",
     mapYourGerTitle: "Таны гэр",
-    mapYourGerSubtitle: "Тоглогчийн суурь · газрын зураг дээрх гэр",
+    mapYourGerSubtitle: "Тоглогчийн байршил · газрын зураг дээрх гэр",
     mapHomePinLabel: "Гэр",
     mapGoToGer: "Гэрт очих",
+    questsPanelTitle: "Чиглүүлэгч:",
+    questsPanelCollapseAria: "Хураах",
+    questsPanelExpandAria: "Нээх",
     sidebarAtHomeSectionTitle: "Таны байршил",
     sidebarAtHomeBadge: "Гэртээ байна",
     sidebarAtHomeHint:
-      "Газрын зурагнаас өртөө сонгоод «Очих» дээр дарахад тэнд очих болно. Эсвэл баатараа удирдаж явах боломжтой. Өртөөн дээр очиход тоглоом нээгдэнэ.",
-    mapGuideTitle: "Юу хийх вэ?",
-    mapGuideStep1: "WASD / сум — явна. Өртөө → «Очих» — шууд очно.",
-    mapGuideStep2: "Өртөө руу ойртвол хаалганы тэмдэг — тоглоом нээгдэнэ.",
-    mapGuideStep3: "Гэр, оноо: зүүн самбар, «Миний гэр».",
+      "Зураг дээр өртөөг сонгоод «Очих» дарах эсвэл өртөө рүү чиглүүлж явж очих боломжтой.",
+    mapGuideTitle: "Газрын зураг дээр юу хийх вэ?",
+    mapGuideStep1:
+      "Өртөөний тэмдэг дээр дарж сонгоно. «Очих» — баатар шууд тийш очно; эсвэл WASD / сум / зүүн доод joystick-оор очоорой.",
+    mapGuideStep2:
+      "Өртөөнд ойртсон эсвэл сонгосон үед доор цонх гарна. Тоглоомын «Тоглох» дарж эхэлнэ.",
+    mapGuideStep3:
+      "КП, зоос, аялал — зүүн самбар. Гэр, мал — газрын зураг дээрх гэр эсвэл «Миний гэр».",
     mapGuideHide: "Хаах",
     mapGuideShow: "Заавар",
+    mapNotificationsTitle: "Мэдэгдэл",
+    mapNotificationsEmpty: "Одоогоор шинэ зүйл алга.",
+    mapNotificationsClearRead: "Бүгдийг уншсан",
+    mapNotifWelcomeTitle: "Газрын зурагт тавтай морил",
+    mapNotifWelcomeBody:
+      "Өртөө сонгоод очоорой — ойртсоноор тоглоом нээгдэнэ. КП, зоос — профайл цонхоос.",
+    mapNotifChatTitle: "Нэгдсэн чат",
+    mapNotifChatBody:
+      "Баруун доод чатын товчоор бусад тоглогчидтой мессеж солилцоно. Joystick-ийн дээр байрлана.",
     mapWorldPoiBadge: "Газрын сонин",
+    mapOnisogoBadge: "Оньсого",
+    mapOnisogoOpenCta: "Нээх",
+    mapOnisogoSolvedChip: "Таасан",
+    mapOnisogoSolvedToast: "Та энэ оньсогыг аль хэдийн таасан байна.",
+    mapOnisogoPickHint: "Дөрвөн хариултаас зөвийг сонгоно уу.",
+    mapOnisogoWrong: "Буруу байна — дахин сонгоно уу.",
+    mapOnisogoClose: "Хаах",
+    mapOnisogoCoinsEarned: "+{n} зоос оллоо!",
     mapHeroEmoteMenuAria: "Баатарын дохио сонгох",
     mapHeroEmoteIdleAria: "Зогсолт",
     mapHeroEmoteWaveAria: "Дохих",
@@ -696,14 +763,38 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapHeroEmotePrayingAria: "Залбирал",
     mapHeroEmoteSillyDanceAria: "Инээдтэй бүжиг",
     mapJoystickMoveAria: "Баатарыг газрын зураг дээр явуулах",
-    mapLandscapeHint: "Газрын зураг илүү тухтай — утсаа хэвтээ болгоно уу.",
+    mapLandscapeHint: "Утсаа хэвтээ болгоно уу.",
     mapHowToSectionTitle: "Хэрхэн тоглох вэ?",
+    mapCoachBadge: "Анхны заавар",
+    mapCoachBack: "Өмнөх",
+    mapCoachNext: "Дараах",
+    mapCoachFinish: "Дуусгах",
+    mapCoachSkipAll: "Алгасах",
+    mapCoachClose: "Хаах",
+    mapCoachProgressAria: "Зааврын алхмууд",
+    mapCoachStepCounter: "Алхам {n} / {total}",
+    mapCoachLandscapeTip:
+      "Зөвлөмж: Утасаа хэвтээ болгож тогловол газар илүү том харагдаж, доод joystick ашиглахад амар.",
+    mapCoachStepTitles: [
+      "1. Баатараа хөдөлгөх",
+      "2. Өртөө сонгох",
+      "3. Тоглоом эхлүүлэх",
+      "4. Дээд мөр ба гэр",
+      "5. Жижиг овоонууд (оньсого)",
+    ],
+    mapCoachStepBodies: [
+      "Утас, таб: доод баруун талын дугуйг чирж баатрыг явуулна. Ирмэгт ойртуулбал хурдан явна. Компьютер: WASD эсвэл сум, Shift = гүйх.",
+      "Газар дээрх өртөөний нэр/тэмдэг дээр дар. Зүүн доод «Чиглүүлэгч» хэсэгт мэдээлэл гарна. «Очих» дарвал баатар шууд тэр өртөө рүү очно.",
+      "Өртөөнд ойртоход доор нээгдсэн цонхноос тоглоомоо сонгоод «Тоглох» дар. Ойртсон ч сонгосон ч тоглоом нээгдэнэ.",
+      "Дээд мөрөнд: хэл солих (MN/EN), зоос ба эрдэнэс, профайл. Газрын зураг дээрх «Гэр» тэмдэг дээр очоод нээнэ.",
+      "Ногоон жижиг овоо — «газрын тайлбар» (товч мэдээлэл). Хөх ягаан өнгийн овоо — оньсого: ойртоход «Нээх» дарж асуултанд хариулж зоос авна.",
+    ],
     introWelcomeTitle: "Эхний заавар — 7 алхам",
     introWelcomeBody:
-      "Та одоо Үндсэн хуудас (dashboard) дээр байна. Энэ дэлгэц 3 гол хэсгээс бүрдэнэ:\n\n▸ ЗҮҮН — аялал, даалгавар, эрдэнэс (КП, зоос, эрдэнийн чулуу)\n▸ ТӨВ/БАРУУН — 3D газрын зураг; энд баатраа удирдана\n▸ Гэр: зураг дээрх home өртөө руу очих, эсвэл гэр/малыг зөвхөн цонхоор нээж — гэр, малаа сайжруулна\n\n«Дараагийн» товчоор алхам бүр гарна. Алхам 5–7 дээр цэнхэр хүрээтэй газар нь тухайн товчлуур, хэсгийг заана. Картын доор алхмын нэр гарна.",
+      "Та одоо Үндсэн хуудас тоглоомын хэсэгт байна.\n\n【3 гол хэсэг】\n▸ ЗҮҮН — аялал, даалгавар, эрдэнэс (КП, зоос, эрдэнийн чулуу)\n▸ ТӨВ/БАРУУН — 3D газрын зураг; энд баатраа удирдана\n▸ HOME — гэр/малаа нээж сайжруулах хэсэг\n\n【Яаж үргэлжлүүлэх вэ】\n• «Дараагийн» — дараагийн алхам руу орно\n• «Алгасах · Шууд эхлэх» — зааврыг хаагаад шууд тоглож эхэлнэ",
     introHeroTitle: "Алхам 2. Баатараа хаана, хэрхэн хөдөлгөх вэ",
     introHeroBody:
-      "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар зэрэгцэнэ.\n\n【Хэрхэн】\n• Утас, таб — зүүн доод дугуй (joystick): чирж явуулна; ирмэгт ойртуулахад хурдан\n• Компьютер — WASD эсвэл сум, Shift = гүйх\n\n【Өртөө рүү амралтгүй очих】 Зүүн самбар — «Очих» эсвэл өртөө сонгоод баатар шууд тэнд зөөгнөнө.\n\nДараагийн алхам: өртөө, тоглоомыг хаанаас нээгддэг нь.",
+      "【Хаана】 Дэлгэцийн төв, улаан зам дээр 3D баатар. Зүүн талд 2D самбар байна.\n\n【Хэрхэн】\n• Утас/таб — зүүн доод дугуй (joystick)-г чирж явуулна; ирмэг рүү түлхвэл хурдан явна\n• Компьютер — WASD эсвэл сум; Shift дарвал гүйнэ\n\n【Шууд очих】 Зүүн самбараас «Очих» дарах эсвэл өртөө сонгох — баатар шууд тийш очно.\n\nОдоо турш: joystick/WASD-аар 2-3 алхам хийж үз.\n\nДараагийн алхам: өртөө, тоглоом нээх.",
     introStationsTitle: "Алхам 3. Өртөө сонгож, тоглоом нээх",
     introStationsBody:
       "【Хаана】 3D газрын зураг дээр өөр өөр түүхэн өртөө (тэмдэгтэй).\n\n【Юу хийх】 Өртөө ойртуулж эсвэл нэрийг дар — тоглоомын жагсаалт гарна. Сонгоод нэвтрэх/тоглох.\n\n【Дүрэм】 Нэг тоглоомыг 7 хоногт хамгийн ихдээ 3 удаа. Эхэнд өөрийн эхний өртөөгөөс эхлүүлэх нь зөв.",
@@ -720,7 +811,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     introStepNavBody:
       "Цэнхэр хүрээ — онооны жагсаалт, профайл (баатар/нэр), МН/EN, өнгө. Заавар дахин: профайлын цэс эсвэл тусламж.\n«Ойлголоо» дар — заавар хаагдана. Амжилт! 🌿",
     introNext: "Дараагийн",
-    introSkip: "Алгасах",
+    introSkip: "Алгасах · Шууд эхлэх",
     introDone: "Ойлголоо",
     introStepLabels: [
       "Танилцах · бүтэц",
@@ -739,6 +830,19 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapStationHowToOpen: "Алхам заавар",
     mapStationHowToHide: "Хураах",
     mapStationHowToBack: "Өмнөх",
+    stationPopupWeeklyActive:
+      "Тоглоом бүр энэ өртөөнд 7 хоногт хамгийн ихдээ {cap} удаа тоголно.",
+    stationPopupWeeklyExhausted:
+      "Энэ өртөөний бүх тоглоомын 7 хоногийн оролт дууссан. Хэсэг хугацааны дараа дахин нээгдэнэ.",
+    mapStationCultureCaption:
+      "Энэ нутаг, түүхийн товч — доорх мэдээллийг уншиад тоглоом руу орно уу.",
+    stationPopupStepsTitle: "Энд яаж үргэлжлүүлэх вэ",
+    stationPopupStepTravel:
+      "Эхлээд «Очих» (эсвэл өөрөө очоод) энэ өртөөнд ирнэ.",
+    stationPopupStepPickGame:
+      "Дараа нь доорх тоглоомын «Тоглох» дарна — шинэ цонхонд нээгдэнэ.",
+    stationPopupGameAbout: "Товч танилцуулга",
+    stationPopupPerGameWeekCap: "{cap}/{cap} · 7 хоног",
   },
 
   en: {
@@ -758,7 +862,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mainQuest: "Main Quest",
     questTitle: "The Steppe Messenger",
     questDesc:
-      "Crossing the Orkhon Valley to deliver the seal of the Great Khan. Beware of the changing winds.",
+      "Pick a station, tap Go there, then walk to the door to open games.",
     continueJourney: "Continue Journey",
     treasury: "Treasury",
     treasuryKpLabel: "KP",
@@ -1217,17 +1321,40 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapYourGerSubtitle: "Your home base on the journey map",
     mapHomePinLabel: "Home",
     mapGoToGer: "Home",
+    questsPanelTitle: "Guide:",
+    questsPanelCollapseAria: "Collapse quests panel",
+    questsPanelExpandAria: "Expand quests panel",
     sidebarAtHomeSectionTitle: "Your base",
     sidebarAtHomeBadge: "At your ger",
     sidebarAtHomeHint:
-      "Pick a station on the map and use Go there. Stand by the door to open games.",
-    mapGuideTitle: "What to do",
-    mapGuideStep1: "WASD / arrows — walk. Station → Go there — fast travel.",
-    mapGuideStep2: "Approach a station — the door prompt opens the games there.",
-    mapGuideStep3: "Ger & stats: left sidebar, My home.",
+      "Choose a station on the map, tap Go there, and move near the door to open games.",
+    mapGuideTitle: "What to do on the map",
+    mapGuideStep1:
+      "Tap a station marker to select it. «Go there» moves your hero instantly—or walk with WASD / arrows / the joystick.",
+    mapGuideStep2:
+      "When you’re close (or after selecting), a panel opens below. Tap «Play» on a game to start it in a new window.",
+    mapGuideStep3:
+      "KP, coins, journey: left sidebar. Home & livestock: your ger on the map or «My home».",
     mapGuideHide: "Close",
     mapGuideShow: "Help",
+    mapNotificationsTitle: "Notifications",
+    mapNotificationsEmpty: "You’re all caught up.",
+    mapNotificationsClearRead: "Mark all read",
+    mapNotifWelcomeTitle: "Welcome to the map",
+    mapNotifWelcomeBody:
+      "Pick a station and go there — games open when you’re close. KP and coins are in your profile.",
+    mapNotifChatTitle: "Map chat",
+    mapNotifChatBody:
+      "Use the chat bubble above the joystick to message other players on this map.",
     mapWorldPoiBadge: "Along the way",
+    mapOnisogoBadge: "Riddle",
+    mapOnisogoOpenCta: "Open",
+    mapOnisogoSolvedChip: "Solved",
+    mapOnisogoSolvedToast: "You already solved this riddle.",
+    mapOnisogoPickHint: "Pick the correct answer from the four choices.",
+    mapOnisogoWrong: "Not quite — try another answer.",
+    mapOnisogoClose: "Close",
+    mapOnisogoCoinsEarned: "+{n} coins earned!",
     mapHeroEmoteMenuAria: "Choose hero gesture",
     mapHeroEmoteIdleAria: "Idle stance",
     mapHeroEmoteWaveAria: "Wave",
@@ -1243,12 +1370,36 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapLandscapeHint:
       "For a more comfortable map, rotate your phone to landscape.",
     mapHowToSectionTitle: "How to play",
+    mapCoachBadge: "Quick start",
+    mapCoachBack: "Back",
+    mapCoachNext: "Next",
+    mapCoachFinish: "Done",
+    mapCoachSkipAll: "Skip",
+    mapCoachClose: "Close",
+    mapCoachProgressAria: "Tutorial steps",
+    mapCoachStepCounter: "Step {n} of {total}",
+    mapCoachLandscapeTip:
+      "Tip: landscape mode gives a wider view and makes the lower-right joystick easier to use.",
+    mapCoachStepTitles: [
+      "1. Move your hero",
+      "2. Pick a station",
+      "3. Start a game",
+      "4. Top bar & home",
+      "5. Small markers (facts & riddles)",
+    ],
+    mapCoachStepBodies: [
+      "Phone/tablet: drag the lower-right joystick. Nudge toward the edge to move faster. Desktop: WASD or arrow keys; hold Shift to sprint.",
+      "Tap a station marker or its label on the map. The guide panel below-left shows details. Tap «Go there» to jump your hero to that station.",
+      "When you’re close (or after selecting a station), a panel opens. Choose a game and tap «Play».",
+      "Use the top bar to switch language, see coins and rewards, and open your profile. Visit the «Home» marker on the map to open your ger.",
+      "Green-ring cairns share short map facts. Purple cairns are riddles: get close, tap «Open», pick the right answer to earn coins.",
+    ],
     introWelcomeTitle: "Onboarding — 7 steps",
     introWelcomeBody:
-      "You are on the home dashboard. It has three main areas:\n\n▸ LEFT — journey, tasks, rewards (KP, coins, bonus gems)\n▸ CENTER/RIGHT — 3D map; move your hero here\n▸ Home/ger: walk to the home stop on the map, or open ger/livestock in its panel to upgrade\n\nUse Next for each step. Steps 5–7 highlight a control with a blue frame. A short line under the card shows the current step name.",
+      "You are on the home dashboard.\n\n【3 main areas】\n▸ LEFT — journey, tasks, rewards (KP, coins, gems)\n▸ CENTER/RIGHT — 3D map; move your hero here\n▸ HOME — ger/livestock upgrade area\n\n【How to continue】\n• “Next” — go to the next step\n• “Skip · Start now” — close this tour and play immediately",
     introHeroTitle: "Step 2. Where the hero is, how to move",
     introHeroBody:
-      "【Where】 The 3D hero is on the red path in the middle; a 2D board sits on the left.\n\n【How】\n• Phone / tablet: lower-left joystick — drag; push toward the edge to run\n• Desktop: WASD or arrows, Shift to sprint\n\n【Jump to a station】 Left panel — “Go” / pick a stop — the hero warps there.\n\nNext: how you open a station and a game.",
+      "【Where】 The 3D hero is on the red path in the middle; a 2D panel is on the left.\n\n【How】\n• Phone/tablet: lower-left joystick — drag to move; push toward edge to move faster\n• Desktop: WASD or arrows; hold Shift to sprint\n\n【Quick travel】 Left panel — tap “Go” or pick a station; hero teleports there.\n\nTry now: move 2-3 steps with joystick/WASD.\n\nNext: open a station and game.",
     introStationsTitle: "Step 3. Choose a stop, open a game",
     introStationsBody:
       "【Where】 Historic stops (markers) on the 3D map.\n\n【What to do】 Walk up or tap the name — a game list opens. Choose and start.\n\n【Rule】 At most 3 plays per game every 7 days. Good to start at your first stop.",
@@ -1265,7 +1416,7 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     introStepNavBody:
       "Blue frame: leaderboard, profile (name/hero), MN/EN, theme. To replay the tour: profile menu or help.\nTap “Got it” to close. Enjoy! 🌿",
     introNext: "Next",
-    introSkip: "Skip",
+    introSkip: "Skip · Start now",
     introDone: "Got it",
     introStepLabels: [
       "Overview · layout",
@@ -1284,6 +1435,19 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
     mapStationHowToOpen: "Step guide",
     mapStationHowToHide: "Hide",
     mapStationHowToBack: "Back",
+    stationPopupWeeklyActive:
+      "Each game at this station can be played up to {cap} times per rolling 7-day window.",
+    stationPopupWeeklyExhausted:
+      "Weekly plays for all games at this station are used up. They unlock again after the window rolls.",
+    mapStationCultureCaption:
+      "About this place — a short note from the steppe relay. Read it, then pick a game.",
+    stationPopupStepsTitle: "What to do here",
+    stationPopupStepTravel:
+      "First use «Go there» (or walk) until you reach this station.",
+    stationPopupStepPickGame:
+      "Then tap «Play» under a game—it opens in the game modal.",
+    stationPopupGameAbout: "About",
+    stationPopupPerGameWeekCap: "{cap}/{cap} · 7-day cap",
   },
 };
 

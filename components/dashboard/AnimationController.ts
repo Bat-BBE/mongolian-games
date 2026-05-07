@@ -17,17 +17,12 @@ interface AnimationControllerOptions {
   labelAnchors: Map<string, THREE.Vector3>;
   doorAnchors?: Map<string, THREE.Vector3>;
   heroMixerRef?: { current: THREE.AnimationMixer | null };
-  /** Screen projection for map overlays (direction arrows from hero). */
   heroRootRef?: { current: THREE.Object3D | null };
-  /**
-   * FBX walk/run нь явагчийн байрлал/эргэлтийг клипээр шилжүүлдэг тул mixer.update()
-   * дараа кодоор тооцсон газар дээр буцаана.
-   */
+
   heroKinematicRef?: {
     current: { pos: THREE.Vector3; ry: number; has: boolean };
   };
   currentStationId: string;
-  /** UI шошгууд өндөр цэг; сум — газар орчмын төсөл. */
   onLabelUpdate: (
     uiPositions: Record<string, LabelPos>,
     arrowPositions: Record<string, LabelPos>,
@@ -38,7 +33,6 @@ interface AnimationControllerOptions {
 export class AnimationController {
   private opts: AnimationControllerOptions;
   private animId = 0;
-  /** When true, the RAF loop keeps scheduling but skips work (e.g. minigame modal open). */
   private paused = false;
   private clock = new THREE.Clock();
   private _tmp = new THREE.Vector3();
