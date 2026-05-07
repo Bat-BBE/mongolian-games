@@ -21,8 +21,10 @@ import {
   GAME_CALLOUT_ERROR,
   GAME_CTA_PRIMARY,
   GAME_CTA_SECONDARY,
+  GAME_PANEL_CHROME_GLASS,
   GAME_TEXT_BODY,
   GAME_TEXT_LEAD,
+  GAME_TEXT_LEAD_MUTED,
   GAME_TEXT_META,
 } from "./gameUiTheme";
 
@@ -45,7 +47,6 @@ type Props = {
   showElimToast?: string | null;
   winner: number | null;
   nameLabels: string[];
-  /** Харагчийн суудал (онлайн/роботод win/lose ялгах). */
   mySeat?: number | null;
   lockMode?: boolean;
   hideModeToggle?: boolean;
@@ -107,11 +108,19 @@ export default function ShagaiBerkh12UI({
       : null;
 
   const mainChrome = narrowUi
-    ? { ...SHAGAI_GAME_PANEL_BASE, ...gamePanelPlayNarrowBottom() }
-    : { ...SHAGAI_GAME_PANEL_BASE, ...gamePanelLeftDesktop(300) };
+    ? {
+        ...SHAGAI_GAME_PANEL_BASE,
+        ...GAME_PANEL_CHROME_GLASS,
+        ...gamePanelPlayNarrowBottom(),
+      }
+    : {
+        ...SHAGAI_GAME_PANEL_BASE,
+        ...GAME_PANEL_CHROME_GLASS,
+        ...gamePanelLeftDesktop(292),
+      };
   const mainPad: CSSProperties = narrowUi
-    ? { padding: "10px 12px 12px" }
-    : { padding: "16px" };
+    ? { padding: "12px 14px 14px" }
+    : { padding: "18px 17px 16px" };
   const ringSeats = Array.from({ length: playerCount }, (_, i) => i);
 
   const playBlock = (
@@ -127,13 +136,13 @@ export default function ShagaiBerkh12UI({
             </p>
           ) : null}
           {!lockMode && !hideModeToggle ? (
-            <div className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-300">
+            <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-zinc-500">
               <button
                 type="button"
-                className={`rounded border px-1.5 py-0.5 ${
+                className={`rounded-lg border px-2.5 py-1 transition ${
                   mode === "local"
-                    ? "border-amber-500/50 bg-amber-950/60"
-                    : "border-zinc-600"
+                    ? "border-white/18 bg-white/[0.08] text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    : "border-white/[0.06] bg-black/20 text-zinc-500 hover:border-white/10 hover:text-zinc-400"
                 }`}
                 onClick={() => onModeChange("local")}
               >
@@ -141,10 +150,10 @@ export default function ShagaiBerkh12UI({
               </button>
               <button
                 type="button"
-                className={`rounded border px-1.5 py-0.5 ${
+                className={`rounded-lg border px-2.5 py-1 transition ${
                   mode === "vsCpu"
-                    ? "border-amber-500/50 bg-amber-950/60"
-                    : "border-zinc-600"
+                    ? "border-white/18 bg-white/[0.08] text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    : "border-white/[0.06] bg-black/20 text-zinc-500 hover:border-white/10 hover:text-zinc-400"
                 }`}
                 onClick={() => onModeChange("vsCpu")}
               >
@@ -155,55 +164,51 @@ export default function ShagaiBerkh12UI({
         </div>
       )}
 
-      <div className="mt-1.5 grid grid-cols-1 gap-1.5 rounded-lg border border-zinc-700/70 bg-zinc-950/55 px-2.5 py-2 text-xs text-zinc-200 sm:grid-cols-2">
-        <p className="flex items-center gap-1.5">
-          <span className="text-amber-300">🐴</span>
+      <div className="mt-2 grid grid-cols-1 gap-2 rounded-2xl border border-white/[0.06] bg-black/20 px-3 py-2.5 text-[0.6875rem] leading-snug text-zinc-400 sm:grid-cols-2">
+        <p className="flex items-center gap-2">
+          <span className="opacity-80 grayscale">🐴</span>
           <span>
             {isEn ? "Take from previous seat" : "Өмнөх хүнээсээ авна"}
           </span>
-          <span className="font-semibold text-amber-200">←</span>
+          <span className="font-medium text-zinc-500">←</span>
         </p>
-        <p className="flex items-center gap-1.5">
-          <span className="text-orange-300">🐫</span>
+        <p className="flex items-center gap-2">
+          <span className="opacity-80 grayscale">🐫</span>
           <span>{isEn ? "Give to next seat" : "Дараагийн хүнд өгнө"}</span>
-          <span className="font-semibold text-orange-200">→</span>
+          <span className="font-medium text-zinc-500">→</span>
         </p>
       </div>
 
-      <div className="mt-1.5 rounded-xl border border-amber-500/25 bg-gradient-to-b from-amber-950/20 to-zinc-950/35 px-2.5 py-2">
-        <p className={`${GAME_TEXT_META} text-center`}>
+      <div className="mt-2 rounded-2xl border border-white/[0.06] bg-black/[0.14] px-3 py-2.5">
+        <p className={`${GAME_TEXT_META} text-center text-zinc-500`}>
           {isEn ? "Seat flow diagram" : "Тоглогчдын тойрог"}
         </p>
-        <div className="mt-1.5 flex items-center justify-center gap-1.5 sm:gap-2">
+        <div className="mt-2 flex items-center justify-center gap-2 sm:gap-2.5">
           {ringSeats.map((seat, idx) => {
             const current = seat === turn && active[seat];
             return (
               <div
                 key={`seat-${seat}`}
-                className="flex items-center gap-1.5 sm:gap-2"
+                className="flex items-center gap-2 sm:gap-2.5"
               >
                 <div
-                  className={`relative flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-[11px] font-semibold transition ${
+                  className={`relative flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-[10px] font-medium transition ${
                     current
-                      ? "border-emerald-400/70 bg-emerald-600/25 text-emerald-100 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                      ? "border-emerald-400/55 bg-emerald-500/15 text-emerald-100 shadow-[0_0_16px_rgba(16,185,129,0.22)]"
                       : !active[seat]
-                        ? "border-zinc-700/70 bg-zinc-900/45 text-zinc-500"
-                        : "border-amber-500/40 bg-amber-900/25 text-amber-100"
+                        ? "border-zinc-700/50 bg-zinc-950/40 text-zinc-600"
+                        : "border-white/[0.08] bg-white/[0.04] text-zinc-400"
                   }`}
                 >
                   {nameLabels[seat] ?? `${t.p}${seat + 1}`}
                   {current ? (
-                    <span className="absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-300 animate-pulse" />
+                    <span className="absolute -top-0.5 -right-0.5 inline-flex h-2 w-2 rounded-full bg-emerald-400/90" />
                   ) : null}
                 </div>
                 {idx < ringSeats.length - 1 ? (
-                  <span className="text-amber-300/85 text-sm animate-[pulse_2.2s_ease-in-out_infinite]">
-                    →
-                  </span>
+                  <span className="text-xs text-zinc-600">→</span>
                 ) : (
-                  <span className="text-amber-300/70 text-sm animate-[pulse_2.2s_ease-in-out_infinite]">
-                    ↺
-                  </span>
+                  <span className="text-xs text-zinc-600">↺</span>
                 )}
               </div>
             );
@@ -220,10 +225,10 @@ export default function ShagaiBerkh12UI({
               type="button"
               disabled={!(phase === "idle" || phase === "result")}
               onClick={() => onPlayerCountChange(c)}
-              className={`rounded border px-1.5 font-bold ${
+              className={`rounded-lg border px-2.5 py-1 text-[0.6875rem] font-semibold transition ${
                 playerCount === c
-                  ? "border-amber-400/70 bg-amber-950/60"
-                  : "border-zinc-600"
+                  ? "border-white/18 bg-white/[0.08] text-zinc-100"
+                  : "border-white/[0.06] bg-black/20 text-zinc-500 hover:border-white/10"
               } ${!(phase === "idle" || phase === "result") ? "opacity-40" : ""}`}
             >
               {c}
@@ -232,47 +237,54 @@ export default function ShagaiBerkh12UI({
         </div>
       ) : null}
 
-      <div className="mt-2 flex flex-wrap items-end justify-end gap-2">
-        <div className="grid w-full max-w-none grid-cols-2 gap-1.5 sm:grid-cols-4">
+      <div className="mt-3 flex flex-wrap items-end justify-end gap-2">
+        <div className="grid w-full max-w-none grid-cols-2 gap-2 sm:grid-cols-4">
           {mories.slice(0, playerCount).map((m, i) => {
+            const isCurrent = i === turn && active[i];
             return (
               <div
                 key={i}
-                className={`rounded border px-2 py-0.5 text-right text-sm ${
-                  i === turn && active[i]
-                    ? "border-emerald-500/50 bg-emerald-950/25"
-                    : "border-zinc-700/80"
+                className={`rounded-xl border px-2.5 py-1.5 text-right ${
+                  isCurrent
+                    ? "border-emerald-500/35 bg-emerald-500/[0.08]"
+                    : "border-white/[0.06] bg-black/15"
                 } ${!active[i] ? "opacity-45" : ""}`}
               >
-                <div className={`${GAME_TEXT_META} uppercase`}>
+                <div className={`${GAME_TEXT_META} uppercase text-zinc-500`}>
                   {nameLabels[i] ?? `${t.p}${i + 1}`}
                   {!active[i] ? ` · ${t.out}` : ""}
                 </div>
-                <span className="text-lg font-bold text-amber-200">{m}</span>
+                <span
+                  className={`text-base font-semibold tabular-nums ${
+                    isCurrent ? "text-zinc-100" : "text-zinc-500"
+                  }`}
+                >
+                  {m}
+                </span>
               </div>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         {showFinalMessage ? (
-          <div
-            className={`w-full rounded-xl border px-3 py-2 text-center ${
-              myResult === "win"
-                ? "border-emerald-400/45 bg-emerald-950/35"
-                : myResult === "lose"
-                  ? "border-rose-400/45 bg-rose-950/30"
-                  : "border-amber-400/35 bg-amber-950/25"
-            }`}
-          >
+            <div
+              className={`w-full rounded-2xl border px-3 py-2.5 text-center ${
+                myResult === "win"
+                  ? "border-emerald-400/30 bg-emerald-950/20"
+                  : myResult === "lose"
+                    ? "border-rose-400/30 bg-rose-950/18"
+                    : "border-white/[0.08] bg-black/20"
+              }`}
+            >
             <p
               className={`${GAME_TEXT_LEAD} ${
                 myResult === "win"
                   ? "text-emerald-200"
                   : myResult === "lose"
                     ? "text-rose-200"
-                    : "text-amber-100"
+                    : "text-zinc-200"
               }`}
             >
               {myResult === "win"
@@ -290,19 +302,27 @@ export default function ShagaiBerkh12UI({
             </p>
           </div>
         ) : null}
-        <p className={GAME_TEXT_LEAD}>
+        <p
+          className={
+            showFinalMessage
+              ? GAME_TEXT_LEAD_MUTED
+              : canThrow
+                ? "font-[family-name:var(--font-inter)] text-xs font-medium leading-snug text-emerald-200/95 sm:text-[0.8125rem]"
+                : GAME_TEXT_LEAD_MUTED
+          }
+        >
           {showFinalMessage
             ? `${t.over}: ${winnerLabel}`
             : canThrow
               ? `${t.yourTurn}: ${nameLabels[turn] ?? t.p + (turn + 1)}`
               : t.wait}
         </p>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           {phase === "matchOver" && !lockMode ? (
             <button
               type="button"
               onClick={onReset}
-              className={`${GAME_CTA_SECONDARY} !min-h-0 py-1.5 normal-case tracking-normal`}
+              className={`${GAME_CTA_SECONDARY} !min-h-0 min-h-[40px] !border-zinc-600/50 !bg-zinc-900/40 px-4 py-2 !font-semibold !normal-case !tracking-normal !text-zinc-300 !shadow-none hover:!border-zinc-500/55 hover:!bg-zinc-800/45`}
             >
               {t.reset}
             </button>
@@ -311,7 +331,7 @@ export default function ShagaiBerkh12UI({
               type="button"
               disabled={!canThrow}
               onClick={onThrow}
-              className={`${GAME_CTA_PRIMARY} !min-h-0 py-2 normal-case tracking-normal`}
+              className={`${GAME_CTA_PRIMARY} !min-h-0 min-h-[40px] px-5 py-2 !font-semibold !normal-case !tracking-normal`}
             >
               {t.throw}
             </button>
@@ -320,22 +340,24 @@ export default function ShagaiBerkh12UI({
       </div>
 
       {lastSides.some((s) => s) && phase !== "throwing" && (
-        <div className="mt-2 space-y-2 border-t border-zinc-800/80 pt-2">
-          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-            <div className="flex min-w-[5.5rem] flex-col items-center rounded-lg border border-amber-500/35 bg-amber-950/35 px-3 py-1.5">
-              <span className="text-lg font-bold tabular-nums text-amber-100">
+        <div className="mt-3 space-y-2.5 border-t border-white/[0.06] pt-3">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+            <div className="flex min-w-[4.5rem] flex-col items-center gap-0.5">
+              <span className="text-sm font-semibold tabular-nums text-zinc-200">
                 {lastHorses}
               </span>
-              <span className={GAME_TEXT_META}>
-                {isEn ? "Horse" : "Морь"} 🐴
+              <span className={`${GAME_TEXT_META} text-zinc-500`}>
+                {isEn ? "Horse" : "Морь"} <span className="opacity-70">🐴</span>
               </span>
             </div>
-            <div className="flex min-w-[5.5rem] flex-col items-center rounded-lg border border-orange-500/35 bg-orange-950/25 px-3 py-1.5">
-              <span className="text-lg font-bold tabular-nums text-orange-100">
+            <div className="hidden h-8 w-px bg-white/[0.08] sm:block" aria-hidden />
+            <div className="flex min-w-[4.5rem] flex-col items-center gap-0.5">
+              <span className="text-sm font-semibold tabular-nums text-zinc-200">
                 {lastCamels}
               </span>
-              <span className={GAME_TEXT_META}>
-                {isEn ? "Camel" : "Тэмээ"} 🐫
+              <span className={`${GAME_TEXT_META} text-zinc-500`}>
+                {isEn ? "Camel" : "Тэмээ"}{" "}
+                <span className="opacity-70">🐫</span>
               </span>
             </div>
           </div>
@@ -408,10 +430,10 @@ export default function ShagaiBerkh12UI({
       </div>
 
       <style>{`
-        .shagai-b12-main-panel::-webkit-scrollbar { width: 6px; }
+        .shagai-b12-main-panel::-webkit-scrollbar { width: 5px; }
         .shagai-b12-main-panel::-webkit-scrollbar-thumb {
-          background: rgba(200,160,48,0.35);
-          border-radius: 3px;
+          background: rgba(113, 113, 122, 0.35);
+          border-radius: 5px;
         }
       `}</style>
     </>

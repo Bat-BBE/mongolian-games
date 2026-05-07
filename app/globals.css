@@ -4,21 +4,106 @@
 @tailwind components;
 @tailwind utilities;
 
-/** Газрын full-bleed — 3D той хол суурилсан сүүдэрт дэвсгэр (a11y: текст overlay дээр) */
+/** Газрын full-bleed — 3D тэнгэр + доод талд нүүдэлчийн ногоон хэв маяг */
 .map-area-root {
   background: linear-gradient(
     168deg,
     var(--map-sky) 0%,
     var(--map-horizon) 42%,
-    oklch(0.2 0.04 70) 100%
+    color-mix(in oklch, var(--steppe) 62%, oklch(0.22 0.028 78)) 100%
   );
+}
+
+/** /home газрын зураг — дээд HUD, зүүн самбар (зурагтай ижил шил + алт) */
+.dash-hud-pill {
+  color: var(--map-ui-text);
+  border: 1px solid var(--map-ui-border-bright);
+  background: color-mix(in srgb, var(--map-ui-base) 76%, transparent);
+  box-shadow:
+    0 6px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
+}
+.dash-hud-pill:hover {
+  border-color: color-mix(in srgb, var(--map-gold) 42%, transparent);
+  background: color-mix(in srgb, var(--map-ui-base) 82%, rgba(255, 255, 255, 0.04));
+}
+.dash-hud-icon-btn {
+  color: var(--map-ui-text);
+  border: 1px solid var(--map-ui-border-bright);
+  background: color-mix(in srgb, var(--map-ui-base) 70%, transparent);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(14px);
+}
+.dash-hud-icon-btn:hover {
+  border-color: color-mix(in srgb, var(--map-gold) 38%, transparent);
+  background: color-mix(in srgb, var(--map-ui-base) 78%, rgba(255, 255, 255, 0.05));
+}
+.dash-sidebar-shell {
+  border-color: var(--map-ui-border);
+  background: color-mix(in srgb, var(--map-ui-base) 70%, transparent);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(22px);
+}
+.dash-map-quest-panel {
+  color: var(--map-ui-text);
+  background: var(--map-ui-surface-2);
+  border: 1px solid var(--map-ui-border);
+  border-radius: 1.35rem;
+  box-shadow:
+    0 14px 44px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(18px);
+}
+.dash-map-minimap {
+  border: 1px dashed color-mix(in srgb, var(--map-gold) 35%, transparent);
+  background: color-mix(in srgb, #0f0e0a 55%, transparent);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+}
+.dash-map-minimap-fence {
+  border: 1px dotted color-mix(in srgb, var(--map-ui-text) 22%, transparent);
+}
+/** Жижиг зураг — зурагтай төстэй цайвар ногоон суурь */
+.dash-map-minimap-terrain {
+  background: color-mix(
+    in srgb,
+    #a8c4a0 38%,
+    color-mix(in srgb, var(--map-ui-base) 72%, #0f0e0c) 100%
+  );
+}
+
+/** Газар дээрх радар (PUBG-тай ойролцох хүрээ) */
+.map-radar-frame {
+  background: color-mix(in srgb, #0c0b08 55%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.map-radar-inner {
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      color-mix(in srgb, #b8d4a8 55%, transparent) 0%,
+      color-mix(in srgb, #5a6b48 35%, #0f0e0c) 62%,
+      #0a0907 100%
+    ),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 3px,
+      rgba(0, 0, 0, 0.06) 3px,
+      rgba(0, 0, 0, 0.06) 4px
+    );
+  opacity: 0.95;
 }
 
 .map-ui-surface {
   color: var(--map-ui-text);
   background: var(--map-ui-surface-2);
   border: 1px solid var(--map-ui-border);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
   backdrop-filter: blur(12px);
 }
 
@@ -30,7 +115,11 @@
   backdrop-filter: blur(10px);
 }
 .map-ui-fab:hover {
-  background: color-mix(in srgb, var(--map-ui-surface) 80%, rgba(255, 255, 255, 0.08));
+  background: color-mix(
+    in srgb,
+    var(--map-ui-surface) 80%,
+    rgba(255, 255, 255, 0.08)
+  );
   border-color: var(--map-ui-border);
 }
 
@@ -72,12 +161,12 @@
   border-color: var(--map-ui-border-bright);
   background: linear-gradient(
     150deg,
-    color-mix(in srgb, var(--map-sky) 12%, #0a1020) 0%,
+    color-mix(in srgb, var(--map-ui-base) 55%, #0f0e0c) 0%,
     var(--map-ui-surface) 100%
   );
   box-shadow:
     0 0 0 1px var(--map-home-ring),
-    0 0 20px color-mix(in srgb, var(--map-sky) 28%, transparent),
+    0 0 18px color-mix(in srgb, var(--map-gold) 22%, transparent),
     0 8px 20px rgba(0, 0, 0, 0.4);
 }
 .map-home-ping {
@@ -92,48 +181,78 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
+/** Dashboard эхний аялал (spotlight) — газрын HUD-тай ижил алт/шилэн хэлбэр */
+.dashboard-intro-tour-card {
+  color: var(--map-ui-text);
+  background: color-mix(in srgb, var(--map-ui-base) 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--map-gold) 38%, transparent);
+  box-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+/** Газрын доод заавар — жижиг/хэвтээ дэлгэцэнд өндөр хязгаарлана */
+@media (max-width: 1023px) {
+  .map-coach-panel {
+    max-height: min(48dvh, 26rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .map-coach-panel {
+    max-height: min(62dvh, 16.5rem);
+  }
+}
+
+/** Dashboard: зүүн самбар, зарим хөл — шилэн blur суурь */
+.glass-panel {
+  -webkit-backdrop-filter: blur(22px);
+  backdrop-filter: blur(22px);
+}
+
 @custom-variant dark (&:is(.dark *));
 
-
 @theme inline {
-  --color-background:           var(--background);
-  --color-foreground:           var(--foreground);
-  --font-sans:                  var(--font-inter);
-  --font-display:               var(--font-playfair);
-  --font-mono:                  ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
-  --color-sidebar-ring:         var(--sidebar-ring);
-  --color-sidebar-border:       var(--sidebar-border);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-playfair);
+  --font-mono: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent:       var(--sidebar-accent);
+  --color-sidebar-accent: var(--sidebar-accent);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary:      var(--sidebar-primary);
-  --color-sidebar-foreground:   var(--sidebar-foreground);
-  --color-sidebar:              var(--sidebar);
-  --color-chart-5:              var(--chart-5);
-  --color-chart-4:              var(--chart-4);
-  --color-chart-3:              var(--chart-3);
-  --color-chart-2:              var(--chart-2);
-  --color-chart-1:              var(--chart-1);
-  --color-ring:                 var(--ring);
-  --color-input:                var(--input);
-  --color-border:               var(--border);
-  --color-destructive:          var(--destructive);
-  --color-accent-foreground:    var(--accent-foreground);
-  --color-accent:               var(--accent);
-  --color-muted-foreground:     var(--muted-foreground);
-  --color-muted:                var(--muted);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary:            var(--secondary);
-  --color-primary-foreground:   var(--primary-foreground);
-  --color-primary:              var(--primary);
-  --color-popover-foreground:   var(--popover-foreground);
-  --color-popover:              var(--popover);
-  --color-card-foreground:      var(--card-foreground);
-  --color-card:                 var(--card);
-  --radius-sm:  calc(var(--radius) - 4px);
-  --radius-md:  calc(var(--radius) - 2px);
-  --radius-lg:  var(--radius);
-  --radius-xl:  calc(var(--radius) + 4px);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
@@ -142,69 +261,92 @@
 :root {
   --radius: 0.75rem;
 
-  --background:         oklch(98% 0.006 70);
-  --foreground:         oklch(0.12 0.018 55);
-  --card:               oklch(0.96 0.010 75);
-  --card-foreground:    oklch(0.12 0.018 55);
-  --popover:            oklch(0.96 0.010 75);
+  --background: oklch(98% 0.006 70);
+  --foreground: oklch(0.12 0.018 55);
+  --card: oklch(0.96 0.01 75);
+  --card-foreground: oklch(0.12 0.018 55);
+  --popover: oklch(0.96 0.01 75);
   --popover-foreground: oklch(0.12 0.018 55);
-  --primary:            oklch(0.70 0.145 75);
+  --primary: oklch(0.7 0.145 75);
   --primary-foreground: oklch(0.08 0.012 50);
-  --secondary:          oklch(0.91 0.028 80);
-  --secondary-foreground: oklch(0.20 0.022 65);
-  --muted:              oklch(0.92 0.015 78);
-  --muted-foreground:   oklch(0.48 0.042 68);
-  --accent:             oklch(0.90 0.022 80);
-  --accent-foreground:  oklch(0.20 0.022 65);
-  --destructive:        oklch(0.44 0.21 22);
-  --border:             oklch(0.83 0.032 78);
-  --input:              oklch(0.85 0.028 78);
-  --ring:               oklch(0.70 0.145 75);
+  --secondary: oklch(0.91 0.028 80);
+  --secondary-foreground: oklch(0.2 0.022 65);
+  --muted: oklch(0.92 0.015 78);
+  --muted-foreground: oklch(0.48 0.042 68);
+  --accent: oklch(0.9 0.022 80);
+  --accent-foreground: oklch(0.2 0.022 65);
+  --destructive: oklch(0.44 0.21 22);
+  --border: oklch(0.83 0.032 78);
+  --input: oklch(0.85 0.028 78);
+  --ring: oklch(0.7 0.145 75);
 
-  --chart-1: oklch(0.70 0.145 75);
+  --chart-1: oklch(0.7 0.145 75);
   --chart-2: oklch(0.44 0.18 22);
-  --chart-3: oklch(0.58 0.10 185);
-  --chart-4: oklch(0.80 0.17 82);
+  --chart-3: oklch(0.58 0.1 185);
+  --chart-4: oklch(0.8 0.17 82);
   --chart-5: oklch(0.53 0.12 290);
 
-  --sidebar:              oklch(0.95 0.012 78);
-  --sidebar-foreground:   oklch(0.20 0.022 65);
-  --sidebar-primary:      oklch(0.70 0.145 75);
+  --sidebar: oklch(0.95 0.012 78);
+  --sidebar-foreground: oklch(0.2 0.022 65);
+  --sidebar-primary: oklch(0.7 0.145 75);
   --sidebar-primary-foreground: oklch(0.08 0.012 50);
-  --sidebar-accent:       oklch(0.89 0.026 80);
-  --sidebar-accent-foreground: oklch(0.20 0.022 65);
-  --sidebar-border:       oklch(0.83 0.032 78);
-  --sidebar-ring:         oklch(0.70 0.145 75);
+  --sidebar-accent: oklch(0.89 0.026 80);
+  --sidebar-accent-foreground: oklch(0.2 0.022 65);
+  --sidebar-border: oklch(0.83 0.032 78);
+  --sidebar-ring: oklch(0.7 0.145 75);
 
-  --gold:          #C9A84C;
-  --gold-bright:   #D4AF37;
-  --gold-light:    #EDD98A;
-  --gold-pale:     #F5EBCA;
-  --gold-dark:     #9A7420;
-  /* Газрын 3D canvas (MAP_SCENE) + floating UI — нэг пастел тэнгэр/манан */
-  --map-sky:       #92c4e8;
-  --map-fog:       #b8d0e8;
-  --map-horizon:   color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
-  --map-ui-border: rgba(130, 185, 220, 0.38);
-  --map-ui-border-subtle: rgba(130, 185, 220, 0.22);
-  --map-ui-border-bright: rgba(190, 220, 245, 0.45);
-  --map-ui-surface: rgba(10, 18, 30, 0.9);
-  --map-ui-surface-2: rgba(12, 24, 40, 0.94);
-  --map-ui-text: rgba(232, 244, 252, 0.97);
-  --map-ui-text-muted: rgba(165, 195, 220, 0.9);
-  --map-overlay-scrim: rgba(5, 10, 18, 0.5);
-  --map-home-ring: rgba(100, 200, 255, 0.42);
-  --crimson:       #8B0000;
-  --crimson-mid:   #A01515;
-  --bg-deep:       #0A0703;
-  --bg-abyss:      #050403;
-  --steppe:        #2B3322;
+  --gold: #c9a84c;
+  --gold-bright: #d4af37;
+  --gold-light: #edd98a;
+  --gold-pale: #f5ebca;
+  --gold-dark: #9a7420;
+  /* Газрын 3D canvas + floating UI — олив / алтан акцент (UI reference) */
+  --map-gold: #e6c16a;
+  --map-ui-base: #2d2d21;
+  --map-sky: #a8c8ec;
+  --map-fog: #c8dae8;
+  --map-horizon: color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
+  --map-ui-border: color-mix(in srgb, var(--map-gold) 24%, transparent);
+  --map-ui-border-subtle: color-mix(in srgb, var(--map-gold) 12%, transparent);
+  --map-ui-border-bright: color-mix(in srgb, var(--map-gold) 38%, transparent);
+  --map-ui-surface: color-mix(in srgb, var(--map-ui-base) 78%, transparent);
+  --map-ui-surface-2: color-mix(in srgb, var(--map-ui-base) 86%, transparent);
+  --map-ui-text: rgba(255, 255, 255, 0.98);
+  --map-ui-text-muted: rgba(230, 213, 170, 0.88);
+  --map-overlay-scrim: rgba(18, 16, 12, 0.52);
+  --map-home-ring: color-mix(in srgb, var(--map-gold) 48%, transparent);
+  --crimson: #8b0000;
+  --crimson-mid: #a01515;
+  --bg-deep: #0a0703;
+  --bg-abyss: #050403;
+  --steppe: #2b3322;
 
-  --grad-gold:     linear-gradient(135deg, #9A7420 0%, #EDD98A 40%, #D4AF37 65%, #9A7420 100%);
-  --grad-gold-h:   linear-gradient(90deg,  #9A7420 0%, #EDD98A 50%, #9A7420 100%);
-  --grad-crimson:  linear-gradient(135deg, #5a0000 0%, #8B0000 50%, #C9A84C 100%);
-  --grad-hero:     linear-gradient(180deg, rgba(10,7,3,0.2) 0%, rgba(10,7,3,0.55) 55%, rgba(5,4,3,1) 100%);
-  --grad-shimmer:  linear-gradient(105deg, transparent 30%, rgba(237,217,138,0.55) 50%, transparent 70%);
+  --grad-gold: linear-gradient(
+    135deg,
+    #9a7420 0%,
+    #edd98a 40%,
+    #d4af37 65%,
+    #9a7420 100%
+  );
+  --grad-gold-h: linear-gradient(90deg, #9a7420 0%, #edd98a 50%, #9a7420 100%);
+  --grad-crimson: linear-gradient(
+    135deg,
+    #5a0000 0%,
+    #8b0000 50%,
+    #c9a84c 100%
+  );
+  --grad-hero: linear-gradient(
+    180deg,
+    rgba(10, 7, 3, 0.2) 0%,
+    rgba(10, 7, 3, 0.55) 55%,
+    rgba(5, 4, 3, 1) 100%
+  );
+  --grad-shimmer: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(237, 217, 138, 0.55) 50%,
+    transparent 70%
+  );
   /**
    * Нүүр hero — Ногоон нутаг, гол (Unsplash, Sodbayar Photography, Сэлэнгэ).
    * https://unsplash.com/photos/a-river-running-through-a-lush-green-countryside-pM6ALGrv7yw
@@ -212,30 +354,30 @@
    */
   --hero-bg-image: url("https://images.unsplash.com/photo-1717489577924-54fbf10ba676?q=85&w=2400&auto=format&fit=crop");
 
-  --glass-bg:     rgba(248, 242, 228, 0.68);
+  --glass-bg: rgba(248, 242, 228, 0.68);
   --glass-border: rgba(201, 168, 76, 0.22);
-  --glass-shadow: 0 8px 40px 0 rgba(0,0,0,0.10);
+  --glass-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.1);
 }
 
 .dark {
-  --background:         oklch(14% 0.014 48);
-  --foreground:         oklch(0.93 0.018 78);
-  --card:               oklch(0.125 0.016 68);
-  --card-foreground:    oklch(0.93 0.018 78);
-  --popover:            oklch(0.125 0.016 68);
+  --background: oklch(14% 0.014 48);
+  --foreground: oklch(0.93 0.018 78);
+  --card: oklch(0.125 0.016 68);
+  --card-foreground: oklch(0.93 0.018 78);
+  --popover: oklch(0.125 0.016 68);
   --popover-foreground: oklch(0.93 0.018 78);
-  --primary:            oklch(0.74 0.155 78);
-  --primary-foreground: oklch(0.07 0.010 55);
-  --secondary:          oklch(0.195 0.026 70);
-  --secondary-foreground: oklch(0.90 0.016 78);
-  --muted:              oklch(0.175 0.020 70);
-  --muted-foreground:   oklch(0.56 0.042 73);
-  --accent:             oklch(0.215 0.026 73);
-  --accent-foreground:  oklch(0.90 0.016 78);
-  --destructive:        oklch(0.53 0.22 22);
-  --border:             oklch(0.27 0.038 72 / 55%);
-  --input:              oklch(0.29 0.038 72 / 38%);
-  --ring:               oklch(0.74 0.155 78);
+  --primary: oklch(0.74 0.155 78);
+  --primary-foreground: oklch(0.07 0.01 55);
+  --secondary: oklch(0.195 0.026 70);
+  --secondary-foreground: oklch(0.9 0.016 78);
+  --muted: oklch(0.175 0.02 70);
+  --muted-foreground: oklch(0.56 0.042 73);
+  --accent: oklch(0.215 0.026 73);
+  --accent-foreground: oklch(0.9 0.016 78);
+  --destructive: oklch(0.53 0.22 22);
+  --border: oklch(0.27 0.038 72 / 55%);
+  --input: oklch(0.29 0.038 72 / 38%);
+  --ring: oklch(0.74 0.155 78);
 
   --chart-1: oklch(0.74 0.155 78);
   --chart-2: oklch(0.53 0.22 22);
@@ -243,68 +385,94 @@
   --chart-4: oklch(0.84 0.18 88);
   --chart-5: oklch(0.58 0.18 290);
 
-  --sidebar:              oklch(0.105 0.013 68);
-  --sidebar-foreground:   oklch(0.87 0.016 78);
-  --sidebar-primary:      oklch(0.74 0.155 78);
-  --sidebar-primary-foreground: oklch(0.07 0.010 55);
-  --sidebar-accent:       oklch(0.175 0.020 70);
+  --sidebar: oklch(0.105 0.013 68);
+  --sidebar-foreground: oklch(0.87 0.016 78);
+  --sidebar-primary: oklch(0.74 0.155 78);
+  --sidebar-primary-foreground: oklch(0.07 0.01 55);
+  --sidebar-accent: oklch(0.175 0.02 70);
   --sidebar-accent-foreground: oklch(0.87 0.016 78);
-  --sidebar-border:       oklch(0.24 0.034 70 / 48%);
-  --sidebar-ring:         oklch(0.74 0.155 78);
+  --sidebar-border: oklch(0.24 0.034 70 / 48%);
+  --sidebar-ring: oklch(0.74 0.155 78);
 
-  --glass-bg:     rgba(8, 6, 4, 0.70);
+  --glass-bg: rgba(8, 6, 4, 0.7);
   --glass-border: rgba(201, 168, 76, 0.16);
-  --glass-shadow: 0 8px 40px 0 rgba(0,0,0,0.75);
+  --glass-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.75);
 
-  /* Газар: гэрэл/3D ижил (өдрийн тэнгэр) */
-  --map-sky:       #92c4e8;
-  --map-fog:       #b8d0e8;
-  --map-horizon:   color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
-  --map-ui-border: rgba(130, 185, 220, 0.38);
-  --map-ui-border-subtle: rgba(130, 185, 220, 0.22);
-  --map-ui-border-bright: rgba(190, 220, 245, 0.45);
-  --map-ui-surface: rgba(10, 18, 30, 0.9);
-  --map-ui-surface-2: rgba(12, 24, 40, 0.94);
-  --map-ui-text: rgba(232, 244, 252, 0.97);
-  --map-ui-text-muted: rgba(165, 195, 220, 0.9);
-  --map-overlay-scrim: rgba(5, 10, 18, 0.5);
-  --map-home-ring: rgba(100, 200, 255, 0.42);
+  /* Газар: 3D тэнгэр + HUD өнгө */
+  --map-gold: #e6c16a;
+  --map-ui-base: #2d2d21;
+  --map-sky: #a8c8ec;
+  --map-fog: #c8dae8;
+  --map-horizon: color-mix(in oklch, var(--map-sky) 50%, var(--map-fog) 50%);
+  --map-ui-border: color-mix(in srgb, var(--map-gold) 24%, transparent);
+  --map-ui-border-subtle: color-mix(in srgb, var(--map-gold) 12%, transparent);
+  --map-ui-border-bright: color-mix(in srgb, var(--map-gold) 38%, transparent);
+  --map-ui-surface: color-mix(in srgb, var(--map-ui-base) 78%, transparent);
+  --map-ui-surface-2: color-mix(in srgb, var(--map-ui-base) 86%, transparent);
+  --map-ui-text: rgba(255, 255, 255, 0.98);
+  --map-ui-text-muted: rgba(230, 213, 170, 0.88);
+  --map-overlay-scrim: rgba(18, 16, 12, 0.52);
+  --map-home-ring: color-mix(in srgb, var(--map-gold) 48%, transparent);
 }
 
 @layer base {
-  * { @apply border-border outline-ring/50; }
+  * {
+    @apply border-border outline-ring/50;
+  }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+  }
 
   body {
     @apply bg-background text-foreground overflow-x-hidden;
     font-family: var(--font-inter);
-    transition: background-color 0.4s ease, color 0.4s ease;
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+    transition:
+      background-color 0.4s ease,
+      color 0.4s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
   }
 
-  ::-webkit-scrollbar       { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
   ::-webkit-scrollbar-thumb {
     background: var(--gold-bright);
     border-radius: 99px;
     opacity: 0.5;
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--gold-light); }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-light);
+  }
 
   ::selection {
     background: color-mix(in oklch, var(--primary) 28%, transparent);
     color: var(--foreground);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-playfair);
   }
 
-  .font-display   { font-family: var(--font-playfair); }
-  .font-heritage  { font-family: var(--font-playfair); font-style: italic; }
-  .font-body      { font-family: var(--font-inter); }
+  .font-display {
+    font-family: var(--font-playfair);
+  }
+  .font-heritage {
+    font-family: var(--font-playfair);
+    font-style: italic;
+  }
+  .font-body {
+    font-family: var(--font-inter);
+  }
 }
 
 @layer components {
@@ -314,7 +482,10 @@
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    transition:
+      border-color 0.3s ease,
+      box-shadow 0.3s ease,
+      transform 0.3s ease;
   }
   .glass:hover {
     border-color: color-mix(in oklch, var(--primary) 38%, transparent);
@@ -331,21 +502,23 @@
     border: 1px solid color-mix(in oklch, var(--primary) 16%, var(--border));
     box-shadow:
       0 4px 28px -4px color-mix(in oklch, var(--primary) 10%, transparent),
-      inset 0 1px 0 color-mix(in oklch, var(--gold-light, #EDD98A) 18%, transparent);
+      inset 0 1px 0
+        color-mix(in oklch, var(--gold-light, #edd98a) 18%, transparent);
     transition: all 0.35s cubic-bezier(0.23, 1, 0.32, 1);
   }
   .glass-card:hover {
     border-color: color-mix(in oklch, var(--primary) 40%, transparent);
     box-shadow:
       0 16px 56px -8px color-mix(in oklch, var(--primary) 22%, transparent),
-      inset 0 1px 0 color-mix(in oklch, #EDD98A 30%, transparent);
+      inset 0 1px 0 color-mix(in oklch, #edd98a 30%, transparent);
     transform: translateY(-4px) scale(1.01);
   }
 
   /* Dashboard зүүн самбар — глобал алтан scrollbar-аас зөөлөн, шилэн фонд илүү тохино */
   .dashboard-left-scroll {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklch, var(--primary) 38%, transparent) transparent;
+    scrollbar-color: color-mix(in oklch, var(--primary) 38%, transparent)
+      transparent;
   }
   .dashboard-left-scroll::-webkit-scrollbar {
     width: 5px;
@@ -361,7 +534,6 @@
     background: color-mix(in oklch, var(--primary) 58%, transparent);
   }
 
-  /* Админ — нүүрний glass-card-тай ижил хүрээ + сүүдэр (тогтмол card, blurгүй) */
   .admin-panel {
     border-radius: var(--radius);
     background: var(--card);
@@ -369,7 +541,8 @@
     border: 1px solid color-mix(in oklch, var(--primary) 16%, var(--border));
     box-shadow:
       0 4px 28px -4px color-mix(in oklch, var(--primary) 10%, transparent),
-      inset 0 1px 0 color-mix(in oklch, var(--gold-light, #EDD98A) 18%, transparent);
+      inset 0 1px 0
+        color-mix(in oklch, var(--gold-light, #edd98a) 18%, transparent);
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
@@ -382,7 +555,8 @@
     background: var(--muted);
     color: var(--foreground);
     border: 1px solid var(--border);
-    box-shadow: 0 2px 12px -2px color-mix(in oklch, var(--primary) 6%, transparent);
+    box-shadow: 0 2px 12px -2px
+      color-mix(in oklch, var(--primary) 6%, transparent);
     transition:
       background-color 0.2s ease,
       border-color 0.2s ease,
@@ -419,13 +593,16 @@
     border: none;
     position: relative;
     overflow: hidden;
-    transition: transform 0.25s ease, box-shadow 0.25s ease, background-position 0.5s ease;
+    transition:
+      transform 0.25s ease,
+      box-shadow 0.25s ease,
+      background-position 0.5s ease;
     box-shadow:
       0 6px 28px color-mix(in oklch, var(--primary) 38%, transparent),
-      inset 0 1px 0 rgba(255,255,255,0.22);
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
   .btn-gold::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: var(--grad-shimmer);
@@ -435,11 +612,14 @@
   }
   .btn-gold:hover {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 14px 44px color-mix(in oklch, var(--primary) 48%, transparent),
-                inset 0 1px 0 rgba(255,255,255,0.3);
+    box-shadow:
+      0 14px 44px color-mix(in oklch, var(--primary) 48%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
     background-position: 100% 0;
   }
-  .btn-gold:active { transform: translateY(0) scale(0.98); }
+  .btn-gold:active {
+    transform: translateY(0) scale(0.98);
+  }
 
   .btn-outline-gold {
     background: transparent;
@@ -462,18 +642,28 @@
 
   .divider-gold {
     height: 1px;
-    background: linear-gradient(90deg, transparent 0%, var(--gold-bright) 50%, transparent 100%);
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--gold-bright) 50%,
+      transparent 100%
+    );
     opacity: 0.35;
   }
   .divider-gold-solid {
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--gold-bright), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--gold-bright),
+      transparent
+    );
     opacity: 0.55;
   }
 
   .ornament::before,
   .ornament::after {
-    content: '❖';
+    content: "❖";
     font-size: 0.55em;
     color: var(--gold-bright);
     opacity: 0.65;
@@ -482,27 +672,33 @@
   }
 
   .icon-vessel {
-    background: radial-gradient(ellipse at 28% 28%,
+    background: radial-gradient(
+      ellipse at 28% 28%,
       color-mix(in oklch, var(--primary) 22%, transparent),
-      color-mix(in oklch, var(--primary) 7%, transparent));
+      color-mix(in oklch, var(--primary) 7%, transparent)
+    );
     border: 1px solid color-mix(in oklch, var(--primary) 28%, transparent);
     box-shadow:
-      inset 0 1px 0 color-mix(in oklch, #EDD98A 18%, transparent),
+      inset 0 1px 0 color-mix(in oklch, #edd98a 18%, transparent),
       0 2px 12px color-mix(in oklch, var(--primary) 12%, transparent);
-    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    transition:
+      transform 0.35s ease,
+      box-shadow 0.35s ease;
   }
   .icon-vessel:hover,
   .group:hover .icon-vessel {
-    transform: scale(1.10) rotate(-4deg);
+    transform: scale(1.1) rotate(-4deg);
     box-shadow:
       0 8px 28px color-mix(in oklch, var(--primary) 32%, transparent),
-      inset 0 1px 0 color-mix(in oklch, #EDD98A 28%, transparent);
+      inset 0 1px 0 color-mix(in oklch, #edd98a 28%, transparent);
   }
 
   .step-num {
-    background: radial-gradient(ellipse at 30% 25%,
+    background: radial-gradient(
+      ellipse at 30% 25%,
       color-mix(in oklch, var(--primary) 20%, var(--card)) 0%,
-      var(--card) 100%);
+      var(--card) 100%
+    );
     border: 2px solid color-mix(in oklch, var(--primary) 55%, transparent);
     box-shadow:
       0 0 0 5px color-mix(in oklch, var(--primary) 9%, transparent),
@@ -512,9 +708,7 @@
   }
 
   .hero-section {
-    background:
-      var(--grad-hero),
-      var(--hero-bg-image);
+    background: var(--grad-hero), var(--hero-bg-image);
     background-size: cover;
     background-position: center 38%;
     background-repeat: no-repeat;
@@ -525,7 +719,8 @@
     background: color-mix(in oklch, var(--background) 72%, transparent);
     backdrop-filter: blur(22px) saturate(1.6);
     -webkit-backdrop-filter: blur(22px) saturate(1.6);
-    border-bottom: 1px solid color-mix(in oklch, var(--primary) 14%, var(--border));
+    border-bottom: 1px solid
+      color-mix(in oklch, var(--primary) 14%, var(--border));
     box-shadow: 0 1px 0 color-mix(in oklch, var(--primary) 8%, transparent);
   }
 
@@ -539,7 +734,7 @@
     position: relative;
   }
   .nav-link::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -3px;
     left: 0;
@@ -548,8 +743,12 @@
     background: var(--gold-bright);
     transition: width 0.3s ease;
   }
-  .nav-link:hover { color: var(--gold-bright); }
-  .nav-link:hover::after { width: 100%; }
+  .nav-link:hover {
+    color: var(--gold-bright);
+  }
+  .nav-link:hover::after {
+    width: 100%;
+  }
 
   .ambient-glow {
     position: absolute;
@@ -571,8 +770,15 @@
   }
 
   @keyframes ambient-pulse-mobile {
-    0%, 100% { opacity: 0.42; transform: scale(1); }
-    50%       { opacity: 0.58; transform: scale(1.02); }
+    0%,
+    100% {
+      opacity: 0.42;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.58;
+      transform: scale(1.02);
+    }
   }
 
   .card-top-line {
@@ -581,7 +787,12 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--primary) 45%, transparent), transparent);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--primary) 45%, transparent),
+      transparent
+    );
   }
 
   .footer-link {
@@ -594,7 +805,7 @@
     position: relative;
   }
   .footer-link::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: -2px;
     left: 0;
@@ -603,8 +814,12 @@
     background: var(--gold-bright);
     transition: width 0.3s ease;
   }
-  .footer-link:hover { color: var(--gold-bright); }
-  .footer-link:hover::after { width: 100%; }
+  .footer-link:hover {
+    color: var(--gold-bright);
+  }
+  .footer-link:hover::after {
+    width: 100%;
+  }
 
   .parallax-inner {
     animation: heroZoom 28s ease-in-out infinite alternate;
@@ -613,74 +828,161 @@
 }
 
 @keyframes gold-shimmer {
-  0%   { background-position: 0%   50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0%   50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 @keyframes shimmer-pass {
-  0%   { background-position: -220% 0; }
-  100% { background-position:  220% 0; }
+  0% {
+    background-position: -220% 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: translateY(0);    }
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.90); }
-  to   { opacity: 1; transform: scale(1);    }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes slide-right {
-  from { opacity: 0; transform: translateX(-20px); }
-  to   { opacity: 1; transform: translateX(0);     }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 14px color-mix(in oklch, var(--primary) 24%, transparent); }
-  50%       { box-shadow: 0 0 32px color-mix(in oklch, var(--primary) 44%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 14px color-mix(in oklch, var(--primary) 24%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 32px color-mix(in oklch, var(--primary) 44%, transparent);
+  }
 }
 
 @keyframes ambient-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1);    }
-  50%       { opacity: 0.8; transform: scale(1.08); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
 }
 
 @keyframes heroZoom {
-  0%   { transform: scale(1);    }
-  100% { transform: scale(1.07); }
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.07);
+  }
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0);    }
-  50%       { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.animate-fade-up   { animation: fade-up   0.65s ease forwards; }
-.animate-fade-in   { animation: fade-in   0.5s  ease forwards; }
-.animate-scale-in  { animation: scale-in  0.55s ease forwards; }
-.animate-slide-right { animation: slide-right 0.5s ease forwards; }
-.animate-glow      { animation: glow-pulse 2.8s ease infinite; }
-.animate-float     { animation: float 4s ease-in-out infinite; }
-.animate-spin-slow { animation: spin-slow 20s linear infinite; }
+.animate-fade-up {
+  animation: fade-up 0.65s ease forwards;
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+.animate-scale-in {
+  animation: scale-in 0.55s ease forwards;
+}
+.animate-slide-right {
+  animation: slide-right 0.5s ease forwards;
+}
+.animate-glow {
+  animation: glow-pulse 2.8s ease infinite;
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
 
-.delay-0  { animation-delay: 0s;    }
-.delay-1  { animation-delay: 0.1s;  }
-.delay-2  { animation-delay: 0.2s;  }
-.delay-3  { animation-delay: 0.3s;  }
-.delay-4  { animation-delay: 0.4s;  }
-.delay-5  { animation-delay: 0.55s; }
-.delay-6  { animation-delay: 0.7s;  }
-.delay-7  { animation-delay: 0.85s; }
+.delay-0 {
+  animation-delay: 0s;
+}
+.delay-1 {
+  animation-delay: 0.1s;
+}
+.delay-2 {
+  animation-delay: 0.2s;
+}
+.delay-3 {
+  animation-delay: 0.3s;
+}
+.delay-4 {
+  animation-delay: 0.4s;
+}
+.delay-5 {
+  animation-delay: 0.55s;
+}
+.delay-6 {
+  animation-delay: 0.7s;
+}
+.delay-7 {
+  animation-delay: 0.85s;
+}

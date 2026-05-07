@@ -251,32 +251,125 @@ export const PLAYER_HOME_WZ = -330;
 export const PLAYER_HOME_X = PLAYER_HOME_WX * WORLD_SCALE * STATION_SPREAD;
 export const PLAYER_HOME_Z = PLAYER_HOME_WZ * WORLD_SCALE * STATION_SPREAD;
 
+function fnv1a32(key: string): number {
+  const k = key.trim().toLowerCase() || "local";
+  let h = 2166136261;
+  for (let i = 0; i < k.length; i++) {
+    h ^= k.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Ганц seed-ээс хоёр тусгаарлагдсан [0,1) утга — өнцөг ба радиус давхардахгүй. */
+function hashToUnit2(seed: number): [number, number] {
+  let x = seed >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x7feb352d) >>> 0;
+  const u0 = x / 4294967296;
+  x ^= x >>> 15;
+  x = Math.imul(x, 0x846ca68b) >>> 0;
+  const u1 = x / 4294967296;
+  return [u0, u1];
+}
+
+function rehashSeed(seed: number, round: number): number {
+  let x = (seed + round * 0x9e3779b9) >>> 0;
+  x ^= x >>> 16;
+  x = Math.imul(x, 0x7feb352d) >>> 0;
+  x ^= x >>> 15;
+  x = Math.imul(x, 0x846ca68b) >>> 0;
+  return x >>> 0;
+}
+
+let stationWorldCentersCache: Array<{ x: number; z: number }> | null = null;
+function allStationWorldCenters(): Array<{ x: number; z: number }> {
+  if (!stationWorldCentersCache) {
+    stationWorldCentersCache = Object.values(STATION_CONFIGS).map((c) =>
+      stationWorldXZ(c.wx, c.wz),
+    );
+  }
+  return stationWorldCentersCache;
+}
+
+/** Тоглогчийн гэрийн төв → `STATION_CONFIGS` өртөөний гол цэгээс дор хаяж ийм зайтай. */
+const PLAYER_HOME_MIN_CLEAR_FROM_STATION = 112;
+const PLAYER_HOME_MIN_CLEAR_FROM_STATION_SQ =
+  PLAYER_HOME_MIN_CLEAR_FROM_STATION * PLAYER_HOME_MIN_CLEAR_FROM_STATION;
+
+function isPlayerHomeClearOfStations(x: number, z: number): boolean {
+  const stations = allStationWorldCenters();
+  for (let i = 0; i < stations.length; i++) {
+    const s = stations[i];
+    const dx = x - s.x;
+    const dz = z - s.z;
+    if (dx * dx + dz * dz < PLAYER_HOME_MIN_CLEAR_FROM_STATION_SQ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Бүх оролдлого татгалзсан бол: гадаад тойрог дээр өртөөнөөс хамгийн хол цэг. */
+function playerHomeFallbackFurthestOnRing(): { x: number; z: number } {
+  const stations = allStationWorldCenters();
+  const rOuter = 268;
+  let bestA = 0;
+  let bestMinD2 = -1;
+  for (let k = 0; k < 36; k++) {
+    const ang = (k / 36) * Math.PI * 2;
+    const x = PLAYER_HOME_X + Math.cos(ang) * rOuter;
+    const z = PLAYER_HOME_Z + Math.sin(ang) * rOuter;
+    let minD2 = Infinity;
+    for (let i = 0; i < stations.length; i++) {
+      const s = stations[i];
+      const dx = x - s.x;
+      const dz = z - s.z;
+      minD2 = Math.min(minD2, dx * dx + dz * dz);
+    }
+    if (minD2 > bestMinD2) {
+      bestMinD2 = minD2;
+      bestA = ang;
+    }
+  }
+  return {
+    x: PLAYER_HOME_X + Math.cos(bestA) * rOuter,
+    z: PLAYER_HOME_Z + Math.sin(bestA) * rOuter,
+  };
+}
+
 /**
- * Тоглогч бүрт тогтмол (hash) гэрийн төв — нэг world дээр олон тоглогчийн base гэр
- * нэг coordinates дээр давхцахгүй, хооронд нь ажилтай зайтай.
+ * Тоглогч бүрт тогтмол (hash) гэрийн төв — нэг world дээр олон тоглогчийн гэр/хашаа
+ * ижил цэг дээр багтахгүй, хоорондоо ойрхон давхцах магадлалыг бууруулах зорилготой.
+ *
+ * Мөн `STATION_CONFIGS` дээрх өртөө/газрын цэгүүдийн гол байрлалтай давхцахгүй (замын гэртэй
+ * нэг дор гаргахгүй) — ойрын оролдлогоор дахин сонгоно.
+ *
+ * Анхаар: олон тоглогчийн хоорондын давхцал — санамсаргүй тархалт (100% баталгаа биш).
  */
 export function playerHomeWorldAnchor(userKey: string): {
   x: number;
   z: number;
 } {
-  const key = userKey.trim().toLowerCase() || "local";
-  let h = 2166136261;
-  for (let i = 0; i < key.length; i++) {
-    h ^= key.charCodeAt(i);
-    h = Math.imul(h, 16777619);
+  let seed = fnv1a32(userKey);
+  /** Том хашааны хагас тэнхлэг ~70+ — төв хоорондын зай ихэвчлэн 130–160+ байх ёстой */
+  const rInner = 108;
+  const rOuter = 268;
+  const r2In = rInner * rInner;
+  const r2Out = rOuter * rOuter;
+  for (let attempt = 0; attempt < 56; attempt++) {
+    const [u, v] = hashToUnit2(seed);
+    /** Цаган хоолойд талбайн хувьд тэгш: P(r) ∝ r */
+    const r = Math.sqrt(u * (r2Out - r2In) + r2In);
+    const theta = v * Math.PI * 2;
+    const x = PLAYER_HOME_X + Math.cos(theta) * r;
+    const z = PLAYER_HOME_Z + Math.sin(theta) * r;
+    if (isPlayerHomeClearOfStations(x, z)) {
+      return { x, z };
+    }
+    seed = rehashSeed(seed, attempt + 1);
   }
-  const u = (h >>> 0) / 4294967296;
-  const h2 = (h * 1009) ^ (h >>> 16);
-  const v = (h2 >>> 0) / 4294967296;
-  /** ~20 гэрийн зайтай тойрог — өмнөхөөс илүү өргөн нягтралгүй */
-  const ringR = 98 + u * 118;
-  const arcStart = -Math.PI * 0.44;
-  const arcEnd = Math.PI * 0.56;
-  const ang = arcStart + v * (arcEnd - arcStart);
-  return {
-    x: PLAYER_HOME_X + Math.cos(ang) * ringR,
-    z: PLAYER_HOME_Z + Math.sin(ang) * ringR,
-  };
+  return playerHomeFallbackFurthestOnRing();
 }
 
 // ── НАР ЗҮҮНЭЭС ГАРЧ БАРУУН ТИЙШ — 15 өртөө (гүйцэтгэл / аяллын тоолуур) ──

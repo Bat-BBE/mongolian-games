@@ -48,7 +48,11 @@ import { completeGame, tryGetAppUserByEmail } from "@/lib/api";
 import { playButtonClick } from "@/lib/uiSounds";
 import { useMatchRoom } from "@/hooks/useMatchRoom";
 import { GameModalRulesBody } from "./gameModalRulesBody";
-import { GAME_MODAL_TITLE_CLASS, GAME_UI_FONT_FAMILY } from "./gameUiTheme";
+import {
+  GAME_MODAL_TITLE_CLASS,
+  GAME_MODAL_TITLE_IMMERSIVE_CLASS,
+  GAME_UI_FONT_FAMILY,
+} from "./gameUiTheme";
 import { STATION_GAME_WEEKLY_PLAY_CAP } from "@/lib/stationWeeklyPlayCap";
 import { deriveStationGameMatchCode } from "@/lib/stationMatchCode";
 import { useAuth } from "@/components/AuthContext";
@@ -75,6 +79,15 @@ const MATCH_ROOM_GAME_TYPES = new Set<string>([
 function usesMatchRoom(gt: string) {
   return MATCH_ROOM_GAME_TYPES.has(gt);
 }
+
+/** Canvas + зүүн панел — модалын толгойг нимгэн, тунгалаг болгоно */
+const IMMERSIVE_CANVAS_MODAL_HEADER = new Set<string>([
+  "berkh-12-shagai",
+  "twelve-shagai",
+  "seven-shagai",
+  "shagai",
+  "shagai-guess",
+]);
 
 const SOLO_LOBBY_WAIT_MIN_MS = 10_000;
 const SOLO_LOBBY_WAIT_MAX_MS = 15_000;
@@ -374,6 +387,16 @@ export default function GameModal({
     void useGLTF.preload("/models/shagai_model.glb");
   }, [isOpen, gameType]);
 
+  const berkh12PlayerCount: LocalPlayerCount = useMemo(() => {
+    const n = mp.players.length;
+    if (n >= 4) return 4;
+    if (n === 3) return 3;
+    return 2;
+  }, [mp.players.length]);
+
+  const immersiveModalHeader =
+    IMMERSIVE_CANVAS_MODAL_HEADER.has(gameType);
+
   if (!isOpen) return null;
 
   if (weeklyPlaysRemaining === 0) {
@@ -489,12 +512,6 @@ export default function GameModal({
     gameType === "twelve-shagai" &&
     mp.roomStatus === "playing" &&
     mp.players.length >= 2;
-  const berkh12PlayerCount: LocalPlayerCount = useMemo(() => {
-    const n = mp.players.length;
-    if (n >= 4) return 4;
-    if (n === 3) return 3;
-    return 2;
-  }, [mp.players.length]);
   const berkh12LobbyBlock =
     isMatch &&
     gameType === "berkh-12-shagai" &&
@@ -565,13 +582,31 @@ export default function GameModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div
-          className="flex shrink-0 items-center gap-2 border-b border-amber-900/20 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.35))",
-          }}
+          className={
+            immersiveModalHeader
+              ? "flex shrink-0 items-center gap-2 border-b border-white/[0.06] px-3 py-1.5 sm:gap-2.5 sm:px-3 sm:py-1.5"
+              : "flex shrink-0 items-center gap-2 border-b border-amber-900/20 px-3 py-2 sm:gap-3 sm:px-4 sm:py-2.5"
+          }
+          style={
+            immersiveModalHeader
+              ? {
+                  background:
+                    "linear-gradient(to bottom, rgba(0,0,0,0.42), rgba(0,0,0,0.18))",
+                }
+              : {
+                  background:
+                    "linear-gradient(to bottom, rgba(0,0,0,0.75), rgba(0,0,0,0.35))",
+                }
+          }
         >
-          <h2 className={GAME_MODAL_TITLE_CLASS} title={gameName}>
+          <h2
+            className={
+              immersiveModalHeader
+                ? GAME_MODAL_TITLE_IMMERSIVE_CLASS
+                : GAME_MODAL_TITLE_CLASS
+            }
+            title={gameName}
+          >
             {gameName}
           </h2>
           <button
@@ -580,11 +615,18 @@ export default function GameModal({
               playButtonClick();
               setModalRulesOpen(true);
             }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-600/35 bg-black/45 text-amber-200/90 transition hover:border-amber-500/50 hover:bg-amber-950/40 hover:text-amber-50"
+            className={
+              immersiveModalHeader
+                ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-zinc-400 transition hover:border-white/15 hover:bg-white/[0.08] hover:text-zinc-200"
+                : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-amber-600/35 bg-black/45 text-amber-200/90 transition hover:border-amber-500/50 hover:bg-amber-950/40 hover:text-amber-50"
+            }
             aria-label={isMn ? "Дүрэм" : "Rules"}
             title={isMn ? "Дүрэм" : "Rules"}
           >
-            <CircleHelp className="size-[18px]" aria-hidden />
+            <CircleHelp
+              className={immersiveModalHeader ? "size-4" : "size-[18px]"}
+              aria-hidden
+            />
           </button>
           <button
             type="button"
@@ -592,10 +634,14 @@ export default function GameModal({
               playButtonClick();
               onClose();
             }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-zinc-400 transition hover:border-amber-500/30 hover:bg-amber-950/35 hover:text-white"
+            className={
+              immersiveModalHeader
+                ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-zinc-500 transition hover:border-white/12 hover:bg-white/[0.06] hover:text-zinc-200"
+                : "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-zinc-400 transition hover:border-amber-500/30 hover:bg-amber-950/35 hover:text-white"
+            }
             aria-label={isMn ? "Хаах" : "Close"}
           >
-            <X size={18} />
+            <X size={immersiveModalHeader ? 16 : 18} />
           </button>
         </div>
 

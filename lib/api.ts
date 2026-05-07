@@ -1111,3 +1111,172 @@ export async function tryGetAppUserByEmail(
   if (!data.user) return null;
   return data.user;
 }
+
+export type OnisogoMapPoint = {
+  slug: string;
+  wx: number;
+  wz: number;
+  icon: string;
+  title: string;
+  question: string;
+  choices: string[];
+  coinReward: number;
+};
+
+export async function getOnisogoPoints(
+  lang: "mn" | "en",
+): Promise<{ points: OnisogoMapPoint[] }> {
+  const res = await apiFetch(
+    `/api/content/onisogo?${new URLSearchParams({ lang }).toString()}`,
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    points?: OnisogoMapPoint[];
+  };
+  if (!res.ok) {
+    throw new Error(data.error ?? `onisogo list failed (${res.status})`);
+  }
+  if (!data.points) throw new Error("onisogo: missing points");
+  return { points: data.points };
+}
+
+export async function solveOnisogo(body: {
+  email: string;
+  slug: string;
+  answer: string;
+  lang: "mn" | "en";
+}): Promise<{
+  ok: boolean;
+  coinsAwarded: number;
+  user: AppUserRow;
+  alreadySolved?: boolean;
+}> {
+  const res = await apiFetch("/api/game/onisogo-solve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    ok?: boolean;
+    coinsAwarded?: number;
+    user?: AppUserRow;
+    alreadySolved?: boolean;
+  };
+  if (res.status === 409 && data.alreadySolved) {
+    throw new Error(data.error ?? "Already solved");
+  }
+  if (!res.ok) {
+    throw new Error(data.error ?? `onisogo solve failed (${res.status})`);
+  }
+  if (!data.user || data.coinsAwarded === undefined) {
+    throw new Error("onisogo solve: incomplete response");
+  }
+  return {
+    ok: !!data.ok,
+    coinsAwarded: data.coinsAwarded,
+    user: data.user,
+    alreadySolved: data.alreadySolved,
+  };
+}
+
+export type MapOnisogoAdminRow = {
+  id: string;
+  slug: string;
+  wx: number;
+  wz: number;
+  icon: string;
+  title_mn: string;
+  title_en: string;
+  question_mn: string;
+  question_en: string;
+  answer_correct_mn: string;
+  answer_correct_en: string;
+  wrong_1_mn: string;
+  wrong_1_en: string;
+  wrong_2_mn: string;
+  wrong_2_en: string;
+  wrong_3_mn: string;
+  wrong_3_en: string;
+  coin_reward: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function adminListOnisogo(
+  token: string,
+): Promise<{ rows: MapOnisogoAdminRow[] }> {
+  const res = await apiFetch("/api/admin/onisogo", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    rows?: MapOnisogoAdminRow[];
+  };
+  if (!res.ok)
+    throw new Error(data.error ?? `onisogo admin list (${res.status})`);
+  if (!data.rows) throw new Error("missing rows");
+  return { rows: data.rows };
+}
+
+export async function adminCreateOnisogo(
+  token: string,
+  body: Omit<MapOnisogoAdminRow, "id" | "created_at" | "updated_at">,
+): Promise<{ row: MapOnisogoAdminRow }> {
+  const res = await apiFetch("/api/admin/onisogo", {
+    method: "POST",
+    headers: adminBearerHeaders(token),
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    row?: MapOnisogoAdminRow;
+  };
+  if (!res.ok)
+    throw new Error(data.error ?? `onisogo create (${res.status})`);
+  if (!data.row) throw new Error("missing row");
+  return { row: data.row };
+}
+
+export async function adminUpdateOnisogo(
+  token: string,
+  slug: string,
+  body: Partial<
+    Omit<MapOnisogoAdminRow, "id" | "slug" | "created_at" | "updated_at">
+  >,
+): Promise<{ row: MapOnisogoAdminRow }> {
+  const res = await apiFetch(
+    `/api/admin/onisogo/${encodeURIComponent(slug)}`,
+    {
+      method: "PUT",
+      headers: adminBearerHeaders(token),
+      body: JSON.stringify(body),
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    row?: MapOnisogoAdminRow;
+  };
+  if (!res.ok)
+    throw new Error(data.error ?? `onisogo update (${res.status})`);
+  if (!data.row) throw new Error("missing row");
+  return { row: data.row };
+}
+
+export async function adminDeleteOnisogo(
+  token: string,
+  slug: string,
+): Promise<void> {
+  const res = await apiFetch(
+    `/api/admin/onisogo/${encodeURIComponent(slug)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok)
+    throw new Error(data.error ?? `onisogo delete (${res.status})`);
+}

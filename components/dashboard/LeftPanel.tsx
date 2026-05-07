@@ -3,6 +3,9 @@
 import {
   LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
+  LuChevronDown,
+  LuChevronUp,
+  LuCheck,
   LuMap as Map,
   LuGem as Gem,
   LuTrendingUp as TrendingUp,
@@ -23,6 +26,7 @@ import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
 import { gameWeeklyPlaysRemaining } from "./mapConstants";
 import { cn } from "@/lib/utils";
+import { MapWorldRadar } from "./MapWorldRadar";
 
 type MobileSheetId = "quest" | "treasury" | "progress";
 
@@ -70,7 +74,7 @@ function TreasuryRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-muted/25 px-2.5 py-1.5">
+    <div className="flex items-center justify-between gap-2 rounded-xl border border-border/35 bg-background/35 px-2.5 py-1.5 backdrop-blur-sm dark:border-white/8 dark:bg-black/25">
       <span className="text-[11px] font-medium text-muted-foreground">
         {label}
       </span>
@@ -88,7 +92,7 @@ function TreasuryRow({
 
 export function LeftPanel({
   t,
-  accentColor,
+  accentColor: _accentColor,
   xp,
   xpMax,
   avatarUrl,
@@ -119,25 +123,14 @@ export function LeftPanel({
   const [isMobile, setIsMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileSheet, setMobileSheet] = useState<MobileSheetId | null>(null);
+  /** Гэр дээр: даалгавар + жижиг зургийн хэсгийг хураах (зурагтай ижил) */
+  const [homeQuestOpen, setHomeQuestOpen] = useState(true);
   const activeStationId = heroStationId ?? "home";
 
   const stationInfo = useMemo(
     () => mapStations.find((s) => s.id === activeStationId),
     [mapStations, activeStationId],
   );
-
-  /** Тухайн өртөөний quest_hint / quest_desc (API), байхгүй бол нэгдсэн aяллын t.quest* */
-  const stationStoryText = useMemo(() => {
-    if (activeStationId === "home") return { title: "", desc: "" };
-    const row = mapStations.find((s) => s.id === activeStationId);
-    const title = (
-      row?.quest_hint?.trim() ||
-      t.questTitle?.trim() ||
-      ""
-    ).trim();
-    const desc = (row?.quest_desc?.trim() || t.questDesc?.trim() || "").trim();
-    return { title, desc };
-  }, [activeStationId, mapStations, t.questTitle, t.questDesc]);
 
   const displayGames: StationGameBundleRow[] = useMemo(() => {
     if (activeStationId === "home") return [];
@@ -172,6 +165,19 @@ export function LeftPanel({
   }, []);
 
   const gemCount = treasury?.gems ?? 0;
+  const stationName = (stationInfo?.name || currentStationLabel || activeStationId).trim();
+  const statusTitle =
+    activeStationId === "home"
+      ? t.sidebarAtHomeBadge
+      : lang === "mn"
+        ? `Одоо: ${stationName}`
+        : `Now at: ${stationName}`;
+  const statusHint =
+    activeStationId === "home"
+      ? t.sidebarAtHomeHint
+      : lang === "mn"
+        ? "Эндээс тоглоом сонгоод нээнэ. Өөр өртөө рүү явах бол зураг дээр дараад «Очих» ашиглана."
+        : "Open a game from this station. To move, pick another station on the map and tap Go there.";
 
   async function exchangeGems(qty: number) {
     const em = userEmail?.trim();
@@ -228,22 +234,38 @@ export function LeftPanel({
       >
         {show("quest") ? (
           <div className="flex shrink-0 flex-col gap-2">
-            {sheetFilter == null ? (
-              <SectionTitle>
-                {activeStationId === "home"
-                  ? t.sidebarAtHomeSectionTitle
-                  : t.currentExpedition}
-              </SectionTitle>
+            {sheetFilter == null && activeStationId !== "home" ? (
+              <SectionTitle>{t.currentExpedition}</SectionTitle>
             ) : null}
-            <div
-              className="relative shrink-0 overflow-hidden rounded-2xl border border-primary/20 bg-background/80 shadow-sm ring-1 ring-black/[0.04] dark:bg-background/60 dark:ring-white/[0.06]"
-              style={{
-                boxShadow: `0 0 0 1px color-mix(in oklch, ${accentColor} 12%, transparent), 0 8px 24px -12px color-mix(in oklch, ${accentColor} 25%, transparent)`,
-              }}
-            >
+            <div className="dash-map-quest-panel relative shrink-0 overflow-hidden">
+              {activeStationId === "home" ? (
+                <div className="flex items-center justify-between gap-2 border-b border-[color:var(--map-ui-border)] px-3 py-2 sm:px-3.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[color:var(--map-ui-text-muted)] sm:text-[12px]">
+                    {t.questsPanelTitle}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setHomeQuestOpen((o) => !o)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[color:var(--map-ui-border-subtle)] text-[color:var(--map-ui-text-muted)] transition hover:border-[color:var(--map-ui-border-bright)] hover:text-[color:var(--map-gold)]"
+                    aria-expanded={homeQuestOpen}
+                    aria-label={
+                      homeQuestOpen
+                        ? t.questsPanelCollapseAria
+                        : t.questsPanelExpandAria
+                    }
+                  >
+                    {homeQuestOpen ? (
+                      <LuChevronUp className="size-4" aria-hidden />
+                    ) : (
+                      <LuChevronDown className="size-4" aria-hidden />
+                    )}
+                  </button>
+                </div>
+              ) : null}
               <div
                 className={cn(
                   "flex flex-col gap-2.5 p-3",
+                  activeStationId === "home" && !homeQuestOpen && "hidden",
                   activeStationId !== "home" &&
                     sheetFilter == null &&
                     "max-h-[min(38vh,280px)] overflow-y-auto",
@@ -322,15 +344,40 @@ export function LeftPanel({
                         ) : null}
                       </div>
                     ) : ( */}
-                    <p
-                      className={cn(
-                        "text-muted-foreground",
-                        tx("text-[12px]", "text-sm"),
-                      )}
-                    >
-                      {t.questDesc}
-                    </p>
-                    {/* )} */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
+                      {(sheetFilter == null || sheetFilter === "quest") ? (
+                        <MapWorldRadar className="shrink-0 self-center sm:mt-0.5 sm:self-start" />
+                      ) : null}
+                      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                        <span
+                          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-500/45 bg-emerald-500/15"
+                          aria-hidden
+                        >
+                          <LuCheck
+                            className="size-3.5 text-emerald-400"
+                            strokeWidth={2.75}
+                          />
+                        </span>
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <p
+                            className={cn(
+                              "font-display font-semibold leading-snug text-[color:var(--map-ui-text)]",
+                              tx("text-sm", "text-base"),
+                            )}
+                          >
+                            {statusTitle}
+                          </p>
+                          <p
+                            className={cn(
+                              "leading-relaxed text-[color:var(--map-ui-text-muted)]",
+                              tx("text-[12px]", "text-sm"),
+                            )}
+                          >
+                            {statusHint}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </>
                 ) : activeStationId !== "home" ? (
                   <>
@@ -355,23 +402,41 @@ export function LeftPanel({
                     </p>
                   </>
                 ) : (
-                  <div className="space-y-1.5">
-                    <p
-                      className={cn(
-                        "font-display font-semibold text-foreground",
-                        tx("text-sm", "text-base"),
-                      )}
-                    >
-                      {t.sidebarAtHomeBadge}
-                    </p>
-                    <p
-                      className={cn(
-                        "leading-relaxed text-muted-foreground",
-                        tx("text-[12px]", "text-sm"),
-                      )}
-                    >
-                      {t.sidebarAtHomeHint}
-                    </p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-3">
+                      {(sheetFilter == null || sheetFilter === "quest") ? (
+                        <MapWorldRadar className="shrink-0 self-center sm:mt-0.5 sm:self-start" />
+                      ) : null}
+                      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                        <div className="flex items-start gap-2.5">
+                          <span
+                            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-500/45 bg-emerald-500/15"
+                            aria-hidden
+                          >
+                            <LuCheck
+                              className="size-3.5 text-emerald-400"
+                              strokeWidth={2.75}
+                            />
+                          </span>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p
+                              className={cn(
+                                "font-display font-semibold leading-snug text-[color:var(--map-ui-text)]",
+                                tx("text-sm", "text-base"),
+                              )}
+                            >
+                              {statusTitle}
+                            </p>
+                            <p
+                              className={cn(
+                                "leading-relaxed text-[color:var(--map-ui-text-muted)]",
+                                tx("text-[12px]", "text-sm"),
+                              )}
+                            >
+                              {statusHint}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                   </div>
                 )}
                 {/* {activeStationId !== "home" &&
@@ -769,7 +834,7 @@ export function LeftPanel({
   const mobileSheetTitle =
     mobileSheet === "quest"
       ? activeStationId === "home"
-        ? t.sidebarAtHomeSectionTitle
+        ? t.questsPanelTitle
         : t.currentExpedition
       : mobileSheet === "treasury"
         ? t.treasury
@@ -782,7 +847,7 @@ export function LeftPanel({
       <>
         <div
           data-tour-anchor="dashboard-sidebar"
-          className="fixed bottom-0 left-0 z-30 flex h-[78px] w-full shrink-0 justify-around border-t border-primary/20 bg-background/95 py-2.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-md"
+          className="fixed bottom-0 left-0 z-30 flex h-[78px] w-full shrink-0 justify-around border-t border-[color:var(--map-ui-border)] bg-[color-mix(in_srgb,var(--map-ui-base)_74%,transparent)] py-2.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] backdrop-blur-2xl"
         >
           {NAV_ITEMS.map(({ id, Icon, label }) => (
             <button
@@ -797,7 +862,7 @@ export function LeftPanel({
                 else if (id === "treasury") setMobileSheet("treasury");
                 else if (id === "progress") setMobileSheet("progress");
               }}
-              className="flex min-w-0 max-w-[25%] flex-col items-center justify-center px-1.5 text-primary/80 transition-colors hover:text-primary active:scale-[0.98]"
+              className="flex min-w-0 max-w-[25%] flex-col items-center justify-center px-1.5 text-[color:var(--map-ui-text-muted)] transition-colors hover:text-[color:var(--map-gold)] active:scale-[0.98]"
             >
               <Icon className="mb-0.5 size-5 shrink-0" aria-hidden />
               <span className="max-w-full truncate text-[8px] font-semibold uppercase leading-tight tracking-wide sm:text-[9px]">
@@ -841,7 +906,7 @@ export function LeftPanel({
     <>
       <aside
         data-tour-anchor="dashboard-sidebar"
-        className={`glass-panel z-20 flex h-full min-h-0 shrink-0 flex-col border-r border-border/40 bg-background/40 transition-all duration-300 dark:bg-background/25 ${
+        className={`dash-sidebar-shell z-20 flex h-full min-h-0 shrink-0 flex-col border-r transition-all duration-300 ${
           collapsed
             ? "w-24 p-2"
             : "w-[22rem] min-w-[20rem] max-w-[min(22rem,92vw)] p-4"
@@ -852,13 +917,13 @@ export function LeftPanel({
         >
           <button
             type="button"
-            className="rounded-md border border-primary/30 bg-background/80 p-1.5 shadow-md transition-all hover:bg-primary/20 hover:text-primary"
+            className="dash-hud-icon-btn flex h-9 w-9 items-center justify-center rounded-full p-0 transition-colors"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
-              <ChevronRight className="size-4 text-primary" />
+              <ChevronRight className="size-4 text-[color:var(--map-gold)]" />
             ) : (
-              <ChevronLeft className="size-4 text-primary" />
+              <ChevronLeft className="size-4 text-[color:var(--map-gold)]" />
             )}
           </button>
         </div>
@@ -874,9 +939,9 @@ export function LeftPanel({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-display mb-0 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-primary/90">
+    <h3 className="mb-0 flex items-center gap-2 font-[family-name:var(--font-inter)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--map-ui-text-muted)] sm:text-[12px]">
       {children}
-      <span className="h-px flex-1 bg-border/80" />
+      <span className="h-px flex-1 bg-[color:var(--map-ui-border)]" />
     </h3>
   );
 }

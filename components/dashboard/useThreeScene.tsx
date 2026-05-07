@@ -77,6 +77,8 @@ interface UseThreeSceneOptions {
   remotePeersRef?: React.MutableRefObject<MapPresencePeer[]>;
   onLocalMapEmote?: (emoteId: string) => void;
   onStationEnter?: (stationId: string) => void;
+  /** Газрын оньсого — байвал энэ тэмдэгүүд л зурна (газрын сонингууд орлогдоно). */
+  onisogoMarkers?: { slug: string; wx: number; wz: number }[];
 }
 
 interface CameraTarget {
@@ -85,6 +87,9 @@ interface CameraTarget {
   phi: number;
   theta: number;
 }
+
+type RadarPoint = { x: number; y: number };
+type RadarPointsById = Record<string, RadarPoint>;
 
 const CAMERA_LIMITS = {
   minPhi: 0.16,
@@ -201,6 +206,7 @@ export function useThreeScene({
   remotePeersRef,
   onLocalMapEmote,
   onStationEnter,
+  onisogoMarkers = [],
 }: UseThreeSceneOptions) {
   const onLocalMapEmoteRef = useRef(onLocalMapEmote);
   onLocalMapEmoteRef.current = onLocalMapEmote;
@@ -213,6 +219,11 @@ export function useThreeScene({
     stationId: string | null;
     alpha: number;
   }>({ stationId: null, alpha: 0 });
+  const [heroRadarPoint, setHeroRadarPoint] = useState<RadarPoint | null>(null);
+  const [stationRadarPoints, setStationRadarPoints] = useState<RadarPointsById>(
+    {},
+  );
+  const [peerRadarPoints, setPeerRadarPoints] = useState<RadarPoint[]>([]);
   const orbitCameraDistRef = useRef(120);
   const homeGerLevelMapRef = useRef(homeGerLevel);
   homeGerLevelMapRef.current = homeGerLevel;
@@ -228,16 +239,18 @@ export function useThreeScene({
     stationId: string | null;
     alpha: number;
   }>({ stationId: null, alpha: -1 });
-  const [worldPoiUi, setWorldPoiUi] = useState<{
-    id: string;
-    alpha: number;
-  } | null>(null);
+  const [worldPoiUi, setWorldPoiUi] = useState<
+    | { kind: "tidbit"; id: string; alpha: number }
+    | { kind: "quiz"; slug: string; alpha: number }
+    | null
+  >(null);
   const [heroBiome, setHeroBiome] = useState<string>("steppe");
   const [daylightFactor, setDaylightFactor] = useState(1);
-  const worldPoiUiThrottleRef = useRef<{
-    id: string;
-    alpha: number;
-  } | null>(null);
+  const worldPoiUiThrottleRef = useRef<
+    | { kind: "tidbit"; id: string; alpha: number }
+    | { kind: "quiz"; slug: string; alpha: number }
+    | null
+  >(null);
   const heroBiomeRef = useRef<string>("steppe");
   const heroBiomeAtRef = useRef(0);
   const daylightAtRef = useRef(0);
@@ -410,10 +423,21 @@ export function useThreeScene({
     builder.buildRocks();
     builder.buildRoads(stations);
     builder.buildStationGers(stations);
-    const worldPoiForBuilder = MAP_WORLD_POIS.map((p) => {
-      const w = stationWorldXZ(p.wx, p.wz);
-      return { id: p.id, x: w.x, z: w.z };
-    });
+    const useOnisogo = onisogoMarkers.length > 0;
+    const worldPoiForBuilder = useOnisogo
+      ? onisogoMarkers.map((m) => {
+          const w = stationWorldXZ(m.wx, m.wz);
+          return { id: `quiz:${m.slug}`, x: w.x, z: w.z, quiz: true as const };
+        })
+      : MAP_WORLD_POIS.map((p) => {
+          const w = stationWorldXZ(p.wx, p.wz);
+          return {
+            id: `tidbit:${p.id}`,
+            x: w.x,
+            z: w.z,
+            quiz: false as const,
+          };
+        });
     builder.buildWorldPoiMarkers(worldPoiForBuilder);
     builder.buildGerCamps();
     builder.buildNomadDetails();
@@ -422,7 +446,57 @@ export function useThreeScene({
     builder.buildClouds();
     builder.buildBirds();
     builder.buildPlayerHomeGer(homeGerLevel, homeLivestock);
-    builder.buildPlayerLivestockNearHome(homeLivestock);
+    builder.buildPlayerLivestockNearHome(homeLivestock, homeGerLevel);
+
+    const radarBounds = (() => {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minZ = Infinity;
+      let maxZ = -Infinity;
+      builder.doorAnchors.forEach((door) => {
+        minX = Math.min(minX, door.x);
+        maxX = Math.max(maxX, door.x);
+        minZ = Math.min(minZ, door.z);
+        maxZ = Math.max(maxZ, door.z);
+      });
+      if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+        minX = -520;
+        maxX = 520;
+      }
+      if (!Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
+        minZ = -520;
+        maxZ = 520;
+      }
+      const marginX = Math.max(40, (maxX - minX) * 0.08);
+      const marginZ = Math.max(40, (maxZ - minZ) * 0.08);
+      return {
+        minX: minX - marginX,
+        maxX: maxX + marginX,
+        minZ: minZ - marginZ,
+        maxZ: maxZ + marginZ,
+      };
+    })();
+    const radarPointThrottleRef = { current: { x: -1, y: -1 } };
+    const radarPeerThrottleRef = { at: 0, sig: "" };
+    const radarStationThrottleRef = { at: 0, sig: "" };
+    const stationRadarInit: RadarPointsById = {};
+    builder.doorAnchors.forEach((door, id) => {
+      stationRadarInit[id] = {
+        x: clamp(
+          (door.x - radarBounds.minX) /
+            Math.max(1, radarBounds.maxX - radarBounds.minX),
+          0,
+          1,
+        ),
+        y: clamp(
+          (door.z - radarBounds.minZ) /
+            Math.max(1, radarBounds.maxZ - radarBounds.minZ),
+          0,
+          1,
+        ),
+      };
+    });
+    setStationRadarPoints({});
 
     const remotePeerGroup = new THREE.Group();
     remotePeerGroup.name = "remote_peers";
@@ -1871,6 +1945,84 @@ export function useThreeScene({
           if (innerId) onStationEnterRef.current?.(innerId);
         }
 
+        const nx = clamp(
+          (root.position.x - radarBounds.minX) /
+            Math.max(1, radarBounds.maxX - radarBounds.minX),
+          0,
+          1,
+        );
+        const ny = clamp(
+          (root.position.z - radarBounds.minZ) /
+            Math.max(1, radarBounds.maxZ - radarBounds.minZ),
+          0,
+          1,
+        );
+        const rt = radarPointThrottleRef.current;
+        if (Math.abs(rt.x - nx) > 0.006 || Math.abs(rt.y - ny) > 0.006) {
+          radarPointThrottleRef.current = { x: nx, y: ny };
+          setHeroRadarPoint({ x: nx, y: ny });
+        }
+
+        const nowRadar = performance.now();
+        if (nowRadar - radarStationThrottleRef.at > 130) {
+          const ST_NEAR_R = 285;
+          const ST_NEAR_R2 = ST_NEAR_R * ST_NEAR_R;
+          const visibleStations: RadarPointsById = {};
+          builder.doorAnchors.forEach((door, id) => {
+            const dx = root.position.x - door.x;
+            const dz = root.position.z - door.z;
+            const d2 = dx * dx + dz * dz;
+            if (d2 <= ST_NEAR_R2 || id === labelId) {
+              const pt = stationRadarInit[id];
+              if (pt) visibleStations[id] = pt;
+            }
+          });
+          const sigS = Object.entries(visibleStations)
+            .map(([id, pt]) => `${id}:${pt.x.toFixed(3)}:${pt.y.toFixed(3)}`)
+            .sort()
+            .join("|");
+          if (sigS !== radarStationThrottleRef.sig) {
+            radarStationThrottleRef.sig = sigS;
+            setStationRadarPoints(visibleStations);
+          }
+          radarStationThrottleRef.at = nowRadar;
+        }
+
+        if (nowRadar - radarPeerThrottleRef.at > 120) {
+          const PEER_NEAR_R = 250;
+          const PEER_NEAR_R2 = PEER_NEAR_R * PEER_NEAR_R;
+          const list = remotePeersRef?.current ?? [];
+          const points = list
+            .filter((p) => {
+              const dx = root.position.x - p.x;
+              const dz = root.position.z - p.z;
+              return dx * dx + dz * dz <= PEER_NEAR_R2;
+            })
+            .map((p) => ({
+              x: clamp(
+                (p.x - radarBounds.minX) /
+                  Math.max(1, radarBounds.maxX - radarBounds.minX),
+                0,
+                1,
+              ),
+              y: clamp(
+                (p.z - radarBounds.minZ) /
+                  Math.max(1, radarBounds.maxZ - radarBounds.minZ),
+                0,
+                1,
+              ),
+            }))
+            .slice(0, 12);
+          const sigP = points
+            .map((pt) => `${pt.x.toFixed(3)}:${pt.y.toFixed(3)}`)
+            .join("|");
+          if (sigP !== radarPeerThrottleRef.sig) {
+            radarPeerThrottleRef.sig = sigP;
+            setPeerRadarPoints(points);
+          }
+          radarPeerThrottleRef.at = nowRadar;
+        }
+
         const th = labelUiThrottleRef.current;
         if (
           th.stationId !== labelId ||
@@ -1906,7 +2058,10 @@ export function useThreeScene({
             }
           }
           const wDist = Math.sqrt(wBestD2);
-          let wCur: { id: string; alpha: number } | null = null;
+          let wCur:
+            | { kind: "tidbit"; id: string; alpha: number }
+            | { kind: "quiz"; slug: string; alpha: number }
+            | null = null;
           if (wBestId != null && wBestD2 < W_OUT2) {
             let wAlpha = 0;
             if (wBestD2 <= W_IN2) wAlpha = 1;
@@ -1915,15 +2070,32 @@ export function useThreeScene({
                 0,
                 Math.min(1, (W_OUTER - wDist) / (W_OUTER - W_INNER)),
               );
-            if (wAlpha > 0.04) wCur = { id: wBestId, alpha: wAlpha };
+            if (wAlpha > 0.04) {
+              if (wBestId.startsWith("quiz:")) {
+                wCur = {
+                  kind: "quiz",
+                  slug: wBestId.slice(5),
+                  alpha: wAlpha,
+                };
+              } else if (wBestId.startsWith("tidbit:")) {
+                wCur = {
+                  kind: "tidbit",
+                  id: wBestId.slice(7),
+                  alpha: wAlpha,
+                };
+              } else {
+                wCur = { kind: "tidbit", id: wBestId, alpha: wAlpha };
+              }
+            }
           }
           const wth0 = worldPoiUiThrottleRef.current;
-          if (
-            (wCur == null && wth0 != null) ||
-            (wCur != null &&
-              (wth0?.id !== wCur.id ||
-                Math.abs((wth0?.alpha ?? 0) - wCur.alpha) > 0.035))
-          ) {
+          const wSig = (x: typeof wCur) =>
+            x == null
+              ? "n"
+              : x.kind === "quiz"
+                ? `q:${x.slug}:${x.alpha.toFixed(3)}`
+                : `t:${x.id}:${x.alpha.toFixed(3)}`;
+          if (wSig(wCur) !== wSig(wth0)) {
             worldPoiUiThrottleRef.current = wCur;
             setWorldPoiUi(wCur);
           }
@@ -1979,16 +2151,27 @@ export function useThreeScene({
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
     };
-  }, [mapStationsRevision, userEmail, playerHomeKey]);
+  }, [
+    mapStationsRevision,
+    userEmail,
+    playerHomeKey,
+    onisogoMarkers
+      .map((m) => `${m.slug}:${m.wx}:${m.wz}`)
+      .sort()
+      .join("|"),
+  ]);
 
   const homeLivestockKey = homeLivestock
     ? `${homeLivestock.sheep},${homeLivestock.goat},${homeLivestock.cow},${homeLivestock.horse},${homeLivestock.camel}`
     : "";
-  useEffect(() => {
-    builderRef.current?.buildPlayerLivestockNearHome(homeLivestock);
-  }, [homeLivestockKey]);
-
   const homeGerLevelKey = String(homeGerLevel);
+  useEffect(() => {
+    builderRef.current?.buildPlayerLivestockNearHome(
+      homeLivestock,
+      homeGerLevel,
+    );
+  }, [homeLivestockKey, homeGerLevelKey]);
+
   useEffect(() => {
     builderRef.current?.buildPlayerHomeGer(homeGerLevel, homeLivestock);
   }, [homeGerLevelKey, homeLivestockKey]);
@@ -2020,6 +2203,9 @@ export function useThreeScene({
     travelToStation,
     heroAtStationId,
     labelUi,
+    heroRadarPoint,
+    stationRadarPoints,
+    peerRadarPoints,
     labelZoomScale,
     showAllMapLabels,
     mapHeroEmoteIds,

@@ -599,46 +599,58 @@ export class SceneBuilder {
     const gerLift = 0.14 * Math.min(s, 2.2) + 0.04;
     const g = new THREE.Group();
     if (objectName) g.name = objectName;
-    const base = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.8 * s, 2.9 * s, 0.3 * s, 24),
-      mkMat(0x9a8860, 0.95),
+
+    /** Жинхэнэ гэр: нам дээвэр, цагаан дэвсгэр */
+    const wallH = 2.12 * s;
+    const roofH = 0.9 * s;
+    const baseTop = 0.3;
+    const wallTop = baseTop + wallH;
+    const roofTopY = wallTop + roofH;
+    const roofCenterY = wallTop + roofH * 0.5;
+    const wallR = 2.72 * s;
+
+    const stoneBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(wallR + 0.16 * s, wallR + 0.2 * s, 0.11 * s, 26),
+      mkMat(0x8a8e92, 0.92),
     );
-    base.position.y = 0.15;
-    g.add(base);
+    stoneBase.position.y = 0.055 * s;
+    g.add(stoneBase);
+    const skirting = new THREE.Mesh(
+      new THREE.CylinderGeometry(wallR + 0.04 * s, wallR + 0.02 * s, 0.09 * s, 26),
+      mkMat(0xc4a574, 0.9),
+    );
+    skirting.position.y = baseTop + 0.045 * s;
+    g.add(skirting);
 
     const cv = document.createElement("canvas");
     cv.width = 512;
     cv.height = 256;
     const ctx = cv.getContext("2d")!;
-    const fg = ctx.createLinearGradient(0, 0, 0, 256);
-    fg.addColorStop(0, "#f6eed8");
-    fg.addColorStop(0.5, "#ebe0c8");
-    fg.addColorStop(1, "#d4c4a0");
-    ctx.fillStyle = fg;
+    ctx.fillStyle = "#e8e8e2";
     ctx.fillRect(0, 0, 512, 256);
     const feltNoise = ctx.getImageData(0, 0, 512, 256);
     for (let i = 0; i < feltNoise.data.length; i += 4) {
-      const n = (Math.random() - 0.5) * 22;
-      feltNoise.data[i] += n;
-      feltNoise.data[i + 1] += n * 0.92;
-      feltNoise.data[i + 2] += n * 0.78;
+      const n = (Math.random() - 0.5) * 14;
+      feltNoise.data[i] = Math.min(255, 228 + n);
+      feltNoise.data[i + 1] = Math.min(255, 228 + n * 0.98);
+      feltNoise.data[i + 2] = Math.min(255, 224 + n * 0.94);
     }
     ctx.putImageData(feltNoise, 0, 0);
-    ctx.strokeStyle = "rgba(150, 118, 72, 0.38)";
-    ctx.lineWidth = 1.25;
-    for (let i = 0; i < 52; i++) {
-      const ox = (i % 7) * 0.15;
+    ctx.strokeStyle = "rgba(90, 90, 88, 0.12)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 40; i++) {
       ctx.beginPath();
-      ctx.moveTo(i * 9.85 + ox, 0);
-      ctx.lineTo(i * 9.85 + ox * 0.5, 256);
+      ctx.moveTo(i * 12.8, 0);
+      ctx.lineTo(i * 12.8 + 4, 256);
       ctx.stroke();
     }
-    ctx.strokeStyle = "rgba(110, 88, 52, 0.2)";
-    ctx.lineWidth = 0.9;
-    for (let j = 0; j < 14; j++) {
+    ctx.strokeStyle = "rgba(30, 55, 120, 0.55)";
+    ctx.lineWidth = 5;
+    for (let t = 0; t < 512; t += 28) {
       ctx.beginPath();
-      ctx.moveTo(0, j * 18.5 + 3);
-      ctx.lineTo(512, j * 18.5 + 1.5);
+      ctx.moveTo(t, 18);
+      ctx.lineTo(t + 14, 10);
+      ctx.lineTo(t + 28, 18);
       ctx.stroke();
     }
     const tex = new THREE.CanvasTexture(cv);
@@ -656,7 +668,7 @@ export class SceneBuilder {
       for (let x = 0; x < 256; x++) {
         const i = (y * 256 + x) * 4;
         const v =
-          112 + (Math.random() - 0.5) * 42 + Math.sin(x * 0.12 + y * 0.08) * 18;
+          118 + (Math.random() - 0.5) * 28 + Math.sin(x * 0.14 + y * 0.09) * 14;
         bd.data[i] = v;
         bd.data[i + 1] = v;
         bd.data[i + 2] = v;
@@ -668,97 +680,227 @@ export class SceneBuilder {
     bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
     bumpTex.repeat.set(5, 1);
 
+    const canvasMat = new THREE.MeshStandardMaterial({
+      color: 0xf0f0ea,
+      roughness: 0.62,
+      metalness: 0.02,
+      map: tex,
+      bumpMap: bumpTex,
+      bumpScale: 0.032,
+      envMapIntensity: 0.42,
+    });
+
     const wall = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.7 * s, 2.7 * s, 2.2 * s, 32, 1, true),
-      new THREE.MeshStandardMaterial({
-        color:
-          stationId === "home" ? 0xfffaf2 : isStation ? 0xfff6ea : 0xede0c8,
-        roughness: stationId === "home" ? 0.4 : 0.54,
-        metalness: 0.03,
-        map: tex,
-        bumpMap: bumpTex,
-        bumpScale: 0.042,
-        envMapIntensity: 0.5,
-      }),
+      new THREE.CylinderGeometry(wallR, wallR, wallH, 36, 1, true),
+      canvasMat,
     );
-    wall.position.y = 1.1 * s + 0.3;
+    wall.position.y = baseTop + wallH * 0.5;
     g.add(wall);
 
-    const roofColor = isStation
-      ? stationId === "home"
-        ? 0xf2c12e
-        : stationId === this.currentStationId
-          ? 0x22cc66
-          : this.doneStationIds.includes(stationId)
-            ? 0xffaa00
-            : 0xcc4422
-      : [0xc8724a, 0xb86838, 0xd47a50][randInt(0, 2)];
+    const toonoOpenR = 0.32 * s;
     const roof = new THREE.Mesh(
-      new THREE.ConeGeometry(2.8 * s, 1.6 * s, 28),
-      new THREE.MeshStandardMaterial({
-        color: roofColor,
-        roughness: 0.66,
-        metalness: 0.06,
-        envMapIntensity: 0.45,
-      }),
+      new THREE.CylinderGeometry(toonoOpenR, 2.78 * s, roofH, 30, 1, true),
+      canvasMat,
     );
-    roof.position.y = (2.2 + 0.8) * s + 0.3;
+    roof.position.y = roofCenterY;
     g.add(roof);
 
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(0.4 * s, 0.12 * s, 14, 40),
-      mkMat(0xd89030, 0.45, 0.42),
+    const eaveRound = new THREE.Mesh(
+      new THREE.TorusGeometry(wallR - 0.02 * s, 0.052 * s, 10, 40),
+      new THREE.MeshStandardMaterial({
+        color: 0xecece6,
+        roughness: 0.58,
+        bumpMap: bumpTex,
+        bumpScale: 0.02,
+      }),
     );
-    ring.position.y = (2.2 + 1.6) * s + 0.3;
-    ring.rotation.x = Math.PI / 2;
-    g.add(ring);
+    eaveRound.rotation.x = Math.PI / 2;
+    eaveRound.position.y = wallTop;
+    g.add(eaveRound);
 
-    for (let i = 0; i < 10; i++) {
-      const angle = (i / 10) * Math.PI * 2;
-      const rp = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.025, 0.025, 2.8, 4),
-        mkMat(0xc8a058, 0.9),
+    const kheeBand = new THREE.Mesh(
+      new THREE.CylinderGeometry(
+        wallR - 0.03 * s,
+        wallR - 0.03 * s,
+        0.055 * s,
+        40,
+        1,
+        true,
+      ),
+      new THREE.MeshStandardMaterial({
+        color: 0x1a3a7a,
+        roughness: 0.45,
+        metalness: 0.08,
+        emissive: 0x0a1a40,
+        emissiveIntensity: 0.12,
+      }),
+    );
+    kheeBand.position.y = wallTop - 0.04 * s;
+    g.add(kheeBand);
+
+    for (let si = 0; si < 3; si++) {
+      const strap = new THREE.Mesh(
+        new THREE.TorusGeometry(wallR - 0.025 * s, 0.038 * s, 8, 48),
+        mkMat(0x1a1a1a, 0.88),
       );
-      rp.position.set(
-        Math.sin(angle) * 1.5 * s,
-        (2.2 + 0.8) * s + 0.3,
-        Math.cos(angle) * 1.5 * s,
-      );
-      rp.rotation.z = Math.sin(angle) * 0.55;
-      rp.rotation.x = -Math.cos(angle) * 0.55;
-      g.add(rp);
+      strap.rotation.x = Math.PI / 2;
+      strap.position.y = baseTop + wallH * (0.22 + si * 0.28);
+      g.add(strap);
     }
 
-    const door = new THREE.Mesh(
-      new THREE.BoxGeometry(0.9 * s, 1.7 * s, 0.1 * s),
-      mkMat(0x6a3a10, 0.8),
+    const toonoWood = mkMat(0xb87840, 0.72, 0.15);
+    const toonoRim = new THREE.Mesh(
+      new THREE.TorusGeometry(toonoOpenR + 0.025 * s, 0.044 * s, 12, 32),
+      toonoWood,
     );
-    door.position.set(0, 0.85 * s + 0.3, 2.72 * s);
-    g.add(door);
-    const frame = new THREE.Mesh(
-      new THREE.BoxGeometry(1.05 * s, 1.85 * s, 0.06 * s),
-      mkMat(0xd09030, 0.65, 0.15),
-    );
-    frame.position.set(0, 0.92 * s + 0.3, 2.75 * s);
-    g.add(frame);
-
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2 + 0.8;
-      const pat = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6 * s, 0.12 * s, 0.06 * s),
-        mkMat(
-          isStation ? (stationId === "home" ? 0xffe8a0 : 0xf0c020) : 0xe05030,
-          0.8,
-        ),
+    toonoRim.rotation.x = Math.PI / 2;
+    toonoRim.position.y = roofTopY - 0.02 * s;
+    g.add(toonoRim);
+    for (let sp = 0; sp < 8; sp++) {
+      const ang = (sp / 8) * Math.PI * 2;
+      const spoke = new THREE.Mesh(
+        new THREE.BoxGeometry(0.62 * s, 0.035 * s, 0.05 * s),
+        toonoWood,
       );
-      pat.position.set(
-        Math.sin(angle) * 2.72 * s,
-        1.8 * s + 0.3,
-        Math.cos(angle) * 2.72 * s,
+      spoke.position.set(
+        Math.sin(ang) * (toonoOpenR - 0.03 * s),
+        roofTopY - 0.02 * s,
+        Math.cos(ang) * (toonoOpenR - 0.03 * s),
       );
-      pat.rotation.y = -angle;
-      g.add(pat);
+      spoke.rotation.y = -ang;
+      g.add(spoke);
     }
+    const toonoShadow = new THREE.Mesh(
+      new THREE.CircleGeometry(toonoOpenR - 0.055 * s, 20),
+      new THREE.MeshBasicMaterial({
+        color: 0x1a1a1a,
+        transparent: true,
+        opacity: 0.42,
+        side: THREE.DoubleSide,
+      }),
+    );
+    toonoShadow.rotation.x = -Math.PI / 2;
+    toonoShadow.position.y = roofTopY - 0.08 * s;
+    g.add(toonoShadow);
+
+    // Хаалганы төвийг доошлуулж, суурьтай бодит өндөрт тааруулна.
+    const doorY = baseTop + 0.73 * s;
+    const doorThick = 0.06 * s;
+    const doorZ = wallR - doorThick * 0.5;
+    const doorWoodMat = new THREE.MeshStandardMaterial({
+      color: 0x8d857a,
+      roughness: 0.68,
+      metalness: 0.08,
+    });
+    const doorPanel = new THREE.Mesh(
+      new THREE.BoxGeometry(0.76 * s, 1.42 * s, doorThick),
+      doorWoodMat,
+    );
+    doorPanel.position.set(0, doorY, doorZ);
+    g.add(doorPanel);
+    const grooveMat = mkMat(0x5f5950, 0.8);
+    for (let gi = 0; gi < 3; gi++) {
+      const groove = new THREE.Mesh(
+        new THREE.BoxGeometry(0.02 * s, 1.24 * s, doorThick * 1.05),
+        grooveMat,
+      );
+      groove.position.set((gi - 1) * 0.19 * s, doorY, doorZ + 0.004 * s);
+      g.add(groove);
+    }
+    const cross = new THREE.Mesh(
+      new THREE.BoxGeometry(0.68 * s, 0.03 * s, doorThick * 1.04),
+      grooveMat,
+    );
+    cross.position.set(0, doorY - 0.24 * s, doorZ + 0.004 * s);
+    g.add(cross);
+    const knob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.038 * s, 10, 10),
+      mkMat(0x2a2420, 0.35),
+    );
+    knob.position.set(0.27 * s, doorY - 0.03 * s, doorZ + doorThick * 0.55);
+    g.add(knob);
+    const door = doorPanel;
+    const frameDepth = 0.048 * s;
+    const frameZ = wallR - frameDepth * 0.5 + 0.006 * s;
+    const frameSideW = 0.065 * s;
+    const frameMat = new THREE.MeshStandardMaterial({
+      color: 0x78736a,
+      roughness: 0.62,
+      metalness: 0.09,
+    });
+    const doorH = 1.56 * s;
+    const doorHalfW = 0.41 * s;
+    [-doorHalfW - frameSideW * 0.45, doorHalfW + frameSideW * 0.45].forEach(
+      (fx) => {
+        const post = new THREE.Mesh(
+          new THREE.BoxGeometry(frameSideW, doorH, frameDepth),
+          frameMat,
+        );
+        post.position.set(fx, doorY + 0.06 * s, frameZ);
+        g.add(post);
+      },
+    );
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        doorHalfW * 2 + frameSideW * 2.4,
+        0.085 * s,
+        frameDepth,
+      ),
+      frameMat,
+    );
+    lintel.position.set(0, doorY + doorH * 0.5 + 0.02 * s, frameZ);
+    g.add(lintel);
+    const sill = new THREE.Mesh(
+      new THREE.BoxGeometry(
+        doorHalfW * 2 + frameSideW * 1.15,
+        0.055 * s,
+        frameDepth * 1.05,
+      ),
+      mkMat(0x706a60, 0.78),
+    );
+    sill.position.set(0, doorY - doorH * 0.5 + 0.025 * s, frameZ);
+    g.add(sill);
+
+    const ulziiCanvas = document.createElement("canvas");
+    ulziiCanvas.width = 128;
+    ulziiCanvas.height = 128;
+    const ux = ulziiCanvas.getContext("2d")!;
+    ux.strokeStyle = "#1e4080";
+    ux.lineWidth = 7;
+    ux.lineJoin = "round";
+    ux.beginPath();
+    ux.arc(64, 64, 28, 0, Math.PI * 2);
+    ux.stroke();
+    ux.beginPath();
+    ux.moveTo(36, 64);
+    ux.bezierCurveTo(36, 40, 92, 40, 92, 64);
+    ux.bezierCurveTo(92, 88, 36, 88, 36, 64);
+    ux.stroke();
+    const ulziiTex = new THREE.CanvasTexture(ulziiCanvas);
+    ulziiTex.colorSpace = THREE.SRGBColorSpace;
+    const ulziiPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.52 * s, 0.52 * s),
+      new THREE.MeshStandardMaterial({
+        map: ulziiTex,
+        transparent: true,
+        roughness: 0.65,
+        depthWrite: false,
+      }),
+    );
+    ulziiPlane.position.set(0, doorY + 0.95 * s, wallR + 0.012 * s);
+    g.add(ulziiPlane);
+
+    [
+      [-wallR * 0.92, -0.12 * s],
+      [wallR * 0.92, -0.1 * s],
+    ].forEach(([sx, szOff]) => {
+      const anchor = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.22 * s, 0),
+        mkMat(0x7a7a78, 0.9),
+      );
+      anchor.position.set(sx, baseTop + 0.04 * s, szOff);
+      g.add(anchor);
+    });
 
     if (isStation) {
       const mc =
@@ -788,7 +930,7 @@ export class SceneBuilder {
         markerMat,
       );
       marker.userData.stationId = stationId;
-      marker.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
+      marker.position.y = roofTopY + 0.9 * s;
       marker.rotation.x = Math.PI / 2;
       g.add(marker);
       this.markerMeshes.set(stationId, marker);
@@ -810,12 +952,12 @@ export class SceneBuilder {
                 : 0.11,
         }),
       );
-      glow.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
+      glow.position.y = roofTopY + 0.9 * s;
       g.add(glow);
 
       if (stationId === "home") {
         const halo = new THREE.Mesh(
-          new THREE.TorusGeometry(2.72 * s, 0.1 * s, 10, 48),
+          new THREE.TorusGeometry(wallR + 0.02 * s, 0.1 * s, 10, 48),
           new THREE.MeshStandardMaterial({
             color: 0xffeeaa,
             emissive: 0xffeeaa,
@@ -826,7 +968,7 @@ export class SceneBuilder {
             opacity: 0.9,
           }),
         );
-        halo.position.y = (2.2 + 1.6 + 0.9) * s + 0.3;
+        halo.position.y = roofTopY + 0.9 * s;
         halo.rotation.x = Math.PI / 2;
         g.add(halo);
         const beamHome = new THREE.Mesh(
@@ -837,7 +979,7 @@ export class SceneBuilder {
             opacity: 0.34,
           }),
         );
-        beamHome.position.y = (2.2 + 1.6 + 7) * s + 0.3;
+        beamHome.position.y = roofTopY + 7 * s;
         g.add(beamHome);
       } else if (stationId === this.currentStationId) {
         const beam = new THREE.Mesh(
@@ -848,7 +990,7 @@ export class SceneBuilder {
             opacity: 0.18,
           }),
         );
-        beam.position.y = (2.2 + 1.6 + 5.5) * s + 0.3;
+        beam.position.y = roofTopY + 5.5 * s;
         g.add(beam);
       }
 
@@ -856,7 +998,7 @@ export class SceneBuilder {
         stationId,
         new THREE.Vector3(
           x,
-          hy + gerLift + (2.2 + 1.6 + 0.9 + 0.42) * s + 0.3,
+          hy + gerLift + roofTopY + (0.9 + 0.42) * s,
           z,
         ),
       );
@@ -1214,13 +1356,16 @@ export class SceneBuilder {
     this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
-  buildPlayerLivestockNearHome(livestock?: {
-    sheep: number;
-    goat: number;
-    cow: number;
-    horse: number;
-    camel: number;
-  }): void {
+  buildPlayerLivestockNearHome(
+    livestock?: {
+      sheep: number;
+      goat: number;
+      cow: number;
+      horse: number;
+      camel: number;
+    },
+    homeGerLevel = 1,
+  ): void {
     const prev = this.scene.getObjectByName("playerHomeLivestock");
     if (prev) this.scene.remove(prev);
 
@@ -1243,8 +1388,36 @@ export class SceneBuilder {
     const cowMat = mkMat(0x5c4030, 0.9);
     const hoofMat = mkMat(0x2a1508, 0.9);
 
-    const yardOx = () => rand(-9, 9);
-    const yardOz = () => rand(4, 11);
+    const lv = Math.max(1, Math.min(30, Math.floor(homeGerLevel)));
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    /** Хашааны дотор үлдээх зай (хашлааснаас мал алдалгүй) */
+    const fencePad = 2.65;
+    const maxX = Math.max(2.8, halfW - fencePad);
+    const maxZ = Math.max(2.8, halfD - fencePad);
+    /** Гол гэрээс тодорхой зай — мал нь гэр дээр шахуу биш, хашааны дунд хэсэгт */
+    let minR = Math.max(11.2, Math.min(halfW, halfD) * 0.195);
+    const reach = Math.hypot(maxX, maxZ);
+    if (minR > reach * 0.58) {
+      minR = Math.max(7.5, reach * 0.38);
+    }
+
+    const sampleYardOffset = (): { ox: number; oz: number } => {
+      for (let attempt = 0; attempt < 64; attempt++) {
+        const ox = rand(-maxX, maxX);
+        const oz = rand(-maxZ, maxZ);
+        const r2 = ox * ox + oz * oz;
+        if (r2 >= minR * minR) {
+          return { ox, oz };
+        }
+      }
+      const ang = rand(0, Math.PI * 2);
+      const rad = Math.min(
+        Math.min(maxX, maxZ) * (0.52 + rand(0, 0.28)),
+        reach - 0.5,
+      );
+      const rr = Math.max(minR * 0.92, rad);
+      return { ox: Math.cos(ang) * rr, oz: Math.sin(ang) * rr };
+    };
 
     const addRuminant = (
       ox: number,
@@ -1311,14 +1484,15 @@ export class SceneBuilder {
     };
 
     for (let i = 0; i < sheepN; i++) {
-      addRuminant(yardOx(), yardOz(), 1.12, sheepMat, false, true);
+      const { ox, oz } = sampleYardOffset();
+      addRuminant(ox, oz, 1.12, sheepMat, false, true);
     }
     for (let i = 0; i < goatN; i++) {
-      addRuminant(yardOx(), yardOz(), 0.94, goatMat, true, false);
+      const { ox, oz } = sampleYardOffset();
+      addRuminant(ox, oz, 0.94, goatMat, true, false);
     }
     for (let i = 0; i < cowN; i++) {
-      const ox = yardOx();
-      const oz = yardOz();
+      const { ox, oz } = sampleYardOffset();
       const sc = 1.38;
       const y = terrainHeight(x + ox, z + oz);
       const g = new THREE.Group();
@@ -1350,9 +1524,10 @@ export class SceneBuilder {
     }
 
     for (let i = 0; i < horseN; i++) {
+      const { ox, oz } = sampleYardOffset();
       this.makeHorse(
-        x + rand(-8, 8),
-        z + rand(3.5, 10),
+        x + ox,
+        z + oz,
         rand(0, Math.PI * 2),
         [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
         false,
@@ -1365,12 +1540,8 @@ export class SceneBuilder {
     }
 
     for (let i = 0; i < camelN; i++) {
-      this.makeCamel(
-        x + rand(-9, 9),
-        z + rand(4, 11),
-        rand(0, Math.PI * 2),
-        root,
-      );
+      const { ox, oz } = sampleYardOffset();
+      this.makeCamel(x + ox, z + oz, rand(0, Math.PI * 2), root);
     }
   }
 
@@ -1379,7 +1550,7 @@ export class SceneBuilder {
    * `x, z` нь `stationWorldXZ`-аас (азотын өндөр: terrain).
    */
   buildWorldPoiMarkers(
-    pois: { id: string; x: number; z: number }[],
+    pois: { id: string; x: number; z: number; quiz?: boolean }[],
   ): void {
     const prev = this.scene.getObjectByName("worldPoiMarkers");
     if (prev) {
@@ -1401,19 +1572,20 @@ export class SceneBuilder {
       if (y > 85) continue;
       const g = new THREE.Group();
       g.name = `world_poi_${p.id}`;
+      const quiz = !!p.quiz;
       const base = new THREE.Mesh(
-        new THREE.ConeGeometry(0.65, 0.95, 5),
-        mkMat(0x6a5340, 0.9),
+        new THREE.ConeGeometry(quiz ? 0.72 : 0.65, quiz ? 1.05 : 0.95, 5),
+        mkMat(quiz ? 0x4c3d6b : 0x6a5340, 0.9),
       );
       base.position.y = 0.48;
       const mid = new THREE.Mesh(
         new THREE.CylinderGeometry(0.38, 0.48, 0.7, 6),
-        mkMat(0x8a7048, 0.88),
+        mkMat(quiz ? 0x6b5a9a : 0x8a7048, 0.88),
       );
       mid.position.y = 1.05;
       const cap = new THREE.Mesh(
         new THREE.SphereGeometry(0.4, 7, 5),
-        mkMat(0xc9a86c, 0.85),
+        mkMat(quiz ? 0xd4b8ff : 0xc9a86c, quiz ? 0.82 : 0.85),
       );
       cap.position.y = 1.52;
       g.add(base, mid, cap);
@@ -1422,9 +1594,9 @@ export class SceneBuilder {
       const rim = new THREE.Mesh(
         new THREE.TorusGeometry(0.9, 0.06, 5, 16),
         new THREE.MeshBasicMaterial({
-          color: 0x9acd32,
+          color: quiz ? 0xb794f6 : 0x9acd32,
           transparent: true,
-          opacity: 0.32,
+          opacity: quiz ? 0.42 : 0.32,
         }),
       );
       rim.rotation.x = Math.PI / 2;
@@ -2651,13 +2823,13 @@ export class SceneBuilder {
     snout.castShadow = true;
     g.add(snout);
     const eyeMat = mkMat(0x1a1208, 0.25);
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.034, 10, 10), eyeMat);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 10), eyeMat);
     eye.position.set(0.79, 1.41, 0.12);
     g.add(eye);
     const eye2 = eye.clone();
     eye2.position.z = -0.12;
     g.add(eye2);
-    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 8), hm);
+    const earL = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.15, 8), hm);
     earL.position.set(0.62, 1.52, 0.1);
     earL.rotation.set(0.35, 0, -0.45);
     g.add(earL);
@@ -2696,41 +2868,39 @@ export class SceneBuilder {
       legGroups.push(lg);
     });
     (g as THREE.Group & { _legGroups?: THREE.Group[] })._legGroups = legGroups;
-    // Tail: segmented + tuft for clearer horse silhouette.
     const tailRoot = new THREE.Group();
-    tailRoot.position.set(-0.56, 1.0, 0);
-    tailRoot.rotation.z = 1.25;
+    tailRoot.position.set(-0.56, 1.02, 0);
+    /** Зогсож буй морины сүүл — ардаа доош унжсан энгийн хэлбэр */
     const tailBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.034, 0.36, 8),
+      new THREE.CylinderGeometry(0.04, 0.036, 0.32, 8),
       hm,
     );
-    tailBase.position.y = -0.17;
+    tailBase.position.y = -0.16;
     tailBase.castShadow = true;
     tailRoot.add(tailBase);
     const tailMid = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.035, 0.026, 0.34, 8),
+      new THREE.CylinderGeometry(0.034, 0.026, 0.44, 8),
       dk,
     );
-    tailMid.position.y = -0.43;
+    tailMid.position.y = -0.5;
     tailMid.castShadow = true;
     tailRoot.add(tailMid);
-    const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.36, 9), dk);
-    tailTip.position.y = -0.73;
-    tailTip.rotation.z = 0.04;
+    const tailTip = new THREE.Mesh(new THREE.ConeGeometry(0.072, 0.5, 9), dk);
+    tailTip.position.y = -0.92;
     tailTip.castShadow = true;
     tailRoot.add(tailTip);
     g.add(tailRoot);
-    for (let m = 0; m < 7; m++) {
+    for (let m = 0; m < 8; m++) {
       const maneStrand = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.026, 0.038, 0.2 + m * 0.04, 6),
+        new THREE.CylinderGeometry(0.022, 0.034, 0.18 + m * 0.035, 6),
         dk,
       );
       maneStrand.position.set(
-        0.26 + m * 0.045,
-        1.16 + m * 0.045,
-        (m % 2 === 0 ? 1 : -1) * 0.07,
+        0.28 + m * 0.042,
+        1.2 + m * 0.038,
+        (m % 2 === 0 ? 1 : -1) * 0.065,
       );
-      maneStrand.rotation.z = -0.5 - m * 0.045;
+      maneStrand.rotation.z = -0.48 - m * 0.038;
       maneStrand.castShadow = true;
       g.add(maneStrand);
     }

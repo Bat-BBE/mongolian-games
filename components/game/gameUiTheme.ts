@@ -9,6 +9,10 @@ export const GAME_UI_FONT_FAMILY =
 export const GAME_MODAL_TITLE_CLASS =
   "min-w-0 flex-1 truncate text-left font-[family-name:var(--font-inter)] font-semibold tracking-tight text-amber-100/95 text-[clamp(0.78rem,2.6vw,0.9rem)] leading-tight";
 
+/** 3D / Canvas тоглоом — толгой мөрийг саармаг, бага анхаарал татах */
+export const GAME_MODAL_TITLE_IMMERSIVE_CLASS =
+  "min-w-0 flex-1 truncate text-left font-[family-name:var(--font-inter)] font-medium tracking-tight text-zinc-200/95 text-[clamp(0.78rem,2.6vw,0.9rem)] leading-tight";
+
 /** Панелийн дээд жижиг overline (жиш. «ШАГАЙ НААДАМ») */
 export const GAME_PANEL_OVERLINE_CLASS =
   "block w-full truncate text-center font-[family-name:var(--font-inter)] text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-zinc-500";
@@ -43,6 +47,18 @@ export const GAME_PANEL_CHROME = {
   fontFamily: GAME_UI_FONT_FAMILY,
 } as const;
 
+/** 3D сцен дээр — илүү тунгалаг «glass», саармаг ирмэг, UI-г сценээс салгахгүй */
+export const GAME_PANEL_CHROME_GLASS = {
+  background: "rgba(15, 15, 18, 0.52)",
+  border: "1px solid rgba(255, 255, 255, 0.09)",
+  borderRadius: 22,
+  backdropFilter: "blur(22px) saturate(1.15)",
+  WebkitBackdropFilter: "blur(22px) saturate(1.15)",
+  boxShadow:
+    "0 16px 48px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.05)",
+  fontFamily: GAME_UI_FONT_FAMILY,
+} as const;
+
 /** Панел доторх суурь өнгө (inline `color`-той хослуулна) */
 export const GAME_PANEL_TEXT_COLOR = "rgba(228, 228, 231, 0.94)";
 
@@ -67,6 +83,10 @@ export const GAME_TEXT_MONO_META =
 /** Алтлаг заавар (lead) */
 export const GAME_TEXT_LEAD =
   "font-[family-name:var(--font-inter)] text-xs leading-snug text-amber-100/88 sm:text-[0.8125rem]";
+
+/** Идэвхгүй төлөв / хүлээлт — lead-тэй ижил хэмжээ, саармаг */
+export const GAME_TEXT_LEAD_MUTED =
+  "font-[family-name:var(--font-inter)] text-xs leading-snug text-zinc-500 sm:text-[0.8125rem]";
 
 /** Панелийн H2 гарчиг */
 export const GAME_PANEL_HEADING_CLASS =

@@ -6,7 +6,6 @@ import { StationImageOrIcon } from "./StationImageOrIcon";
 import type { UrtuuStation } from "./UrtuuNode";
 import {
   gameWeeklyPlaysRemaining,
-  STATION_GAME_WEEKLY_PLAY_CAP,
   stationAllGamesWeeklyLocked,
 } from "./mapConstants";
 
@@ -27,6 +26,14 @@ interface StationPopupProps {
   playLabel: string;
   lockedHint: string;
   doneHint: string;
+  weeklyActiveHint: string;
+  weeklyExhaustedHint: string;
+  cultureCaption: string;
+  stepsTitle: string;
+  stepTravel: string;
+  stepPickGame: string;
+  gameAboutLabel: string;
+  perGameWeekCapLabel: string;
   canPlay?: boolean;
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
   stationGameVisits?: Record<string, Record<string, number[]>>;
@@ -49,6 +56,14 @@ export function StationPopup({
   playLabel,
   lockedHint,
   doneHint,
+  weeklyActiveHint,
+  weeklyExhaustedHint,
+  cultureCaption,
+  stepsTitle,
+  stepTravel,
+  stepPickGame,
+  gameAboutLabel,
+  perGameWeekCapLabel,
   canPlay = true,
   stationSteps,
   stationGameVisits,
@@ -136,27 +151,41 @@ export function StationPopup({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 pt-2">
           {hasStory ? (
-            <section className="mb-3 rounded-xl border border-sky-500/15 bg-sky-950/20 px-2.5 py-2">
-              <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-sky-200/90">
+            <section
+              className="mb-3 rounded-2xl border border-amber-500/18 px-3 py-2.5"
+              style={{
+                background:
+                  "linear-gradient(165deg, rgba(41,37,32,0.55) 0%, rgba(12,10,8,0.72) 100%)",
+              }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-200/85">
                 {historyTitle}
               </p>
+              <p className="mt-1 text-[10px] leading-snug text-muted-foreground/95">
+                {cultureCaption}
+              </p>
               {hintText ? (
-                <p className="text-[11px] font-medium leading-snug text-foreground/95">
+                <p className="mt-2 text-[12px] font-medium leading-snug text-foreground/95">
                   {hintText}
                 </p>
               ) : null}
               {storyText ? (
-                <p
-                  className={cn(
-                    "text-[10px] leading-relaxed text-muted-foreground",
-                    hintText ? "mt-1.5" : "",
-                  )}
-                >
+                <p className="mt-2 text-[11px] leading-relaxed text-foreground/80">
                   {storyText}
                 </p>
               ) : null}
             </section>
           ) : null}
+
+          {/* <section className="mb-3 rounded-xl border border-white/[0.08] bg-black/22 px-2.5 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary/85">
+              {stepsTitle}
+            </p>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4 text-[10px] leading-snug text-foreground/90 sm:text-[11px]">
+              <li>{stepTravel}</li>
+              <li>{stepPickGame}</li>
+            </ol>
+          </section> */}
 
           {onTravel || onReturnHome ? (
             <div className="mb-2 flex flex-wrap gap-1.5">
@@ -194,10 +223,8 @@ export function StationPopup({
           <p className="mb-1 text-[9px] font-semibold uppercase tracking-wider text-primary/80">
             {gamesSectionLabel}
           </p>
-          <p className="mb-2 text-[9px] leading-snug text-muted-foreground/90">
-            {stationWeeklyExhausted
-              ? "7 хоногийн лимит дууссан."
-              : `Тоглоом бүр 7 хоногт хамгийн ихдээ ${STATION_GAME_WEEKLY_PLAY_CAP} удаа тоголно.`}
+          <p className="mb-2 text-[10px] leading-snug text-muted-foreground/90">
+            {stationWeeklyExhausted ? weeklyExhaustedHint : weeklyActiveHint}
           </p>
 
           <div className="grid grid-cols-2 gap-2">
@@ -215,25 +242,36 @@ export function StationPopup({
               const statusText = progressionLocked
                 ? lockedHint
                 : gameRem <= 0
-                  ? `${STATION_GAME_WEEKLY_PLAY_CAP}/${STATION_GAME_WEEKLY_PLAY_CAP} — 7 хоног`
+                  ? perGameWeekCapLabel
                   : isDone
                     ? doneHint
                     : lockedHint;
 
+              const desc = g.desc?.trim();
               return (
                 <div
                   key={`${station.id}-${g.slug || g.name}`}
-                  className="flex flex-col rounded-lg border border-white/10 bg-black/25 p-2"
+                  className="flex flex-col rounded-xl border border-white/10 bg-black/28 p-2"
                 >
-                  <div className="flex justify-between">
-                    <p className="line-clamp-1 min-h-[1.25rem] text-[10px] font-semibold leading-tight text-foreground">
+                  <div className="flex justify-between gap-1">
+                    <p className="line-clamp-2 min-h-[1.25rem] text-[10px] font-semibold leading-tight text-foreground">
                       {g.name}
                     </p>
-                    <p className="flex items-center gap-0.5 text-[9px] font-medium text-primary/90">
+                    <p className="flex max-w-[42%] shrink-0 items-center gap-0.5 text-[9px] font-medium text-primary/90">
                       <Star className="size-2.5 shrink-0" />
                       <span className="truncate">{g.reward}</span>
                     </p>
                   </div>
+                  {/* {desc ? (
+                    <div className="mt-1.5 border-t border-white/[0.06] pt-1.5">
+                      <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/90">
+                        {gameAboutLabel}
+                      </p>
+                      <p className="mt-0.5 line-clamp-4 text-[9px] leading-snug text-muted-foreground">
+                        {desc}
+                      </p>
+                    </div>
+                  ) : null} */}
                   <button
                     type="button"
                     disabled={!canStart}

@@ -32,8 +32,27 @@ const claimRankChestBody = z.object({
   email: z.string().min(3),
 });
 
+const onisogoSolveBody = z.object({
+  email: z.string().min(3),
+  slug: z.string().min(1).max(120),
+  answer: z.string().min(1).max(500),
+  lang: z.enum(["mn", "en"]).optional().default("mn"),
+});
+
 /** lib/homeEconomy.ts WEALTH_COINS_PER_GEM-тэй ижил байх ёстой */
 const GEMS_TO_COINS_EXCHANGE_RATE = 25;
+
+function normRiddleAnswer(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function readOnisogoSolvedSlugs(
+  progress: Record<string, unknown>,
+): string[] {
+  const raw = progress.onisogoSolvedSlugs;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((x) => String(x)).filter((x) => x.length > 0);
+}
 
 function emailUid(email: string): string {
   return `local:${email.trim().toLowerCase()}`;
@@ -148,7 +167,6 @@ function livestockCost(
   return { coins: unit * q };
 }
 
-/** Ялагчид олгох үндсэн шагнал. Эрдэнийн чулууг зөвхөн өртөөний 2 тоглоомыг анх бүрэн ялсны урамшууллаар өгнө. */
 function rewardFor(gameSlug: string): {
   xp: number;
   kp: number;
@@ -372,7 +390,102 @@ gameRouter.post("/complete", async (req, res) => {
   }
 });
 
-/** Урамшууллын хувь (xp / xpMax) 100% хүрмэгц авдар — 1 эрдэнэ эсвэл КП эсвэл зоос */
+gameRouter.post("/onisogo-solve", async (req, res) => {
+  const parsed = onisogoSolveBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid body" });
+    return;
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  const slug = parsed.data.slug.trim();
+  const answer = parsed.data.answer;
+  const lang = parsed.data.lang;
+  const uid = emailUid(email);
+
+  try {
+    const userRes = await pool.query(
+      `SELECT id, email, display_name, hero_id, profile, progress, created_at, updated_at
+       FROM app_users WHERE firebase_uid = $1`,
+      [uid],
+    );
+    if (userRes.rowCount === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    const row0 = userRes.rows[0] as {
+      profile: unknown;
+      progress: unknown;
+    };
+    const profile = isPlainRecord(row0.profile)
+      ? { ...(row0.profile as Record<string, unknown>) }
+      : {};
+    const progress = isPlainRecord(row0.progress)
+      ? { ...(row0.progress as Record<string, unknown>) }
+      : {};
+
+    const solved = readOnisogoSolvedSlugs(progress);
+    if (solved.includes(slug)) {
+      res.status(409).json({ error: "Already solved", alreadySolved: true });
+      return;
+    }
+
+    const og = await pool.query(
+      `SELECT slug, answer_correct_mn, answer_correct_en, coin_reward, is_active
+       FROM map_onisogo WHERE slug = $1`,
+      [slug],
+    );
+    if (og.rowCount === 0) {
+      res.status(404).json({ error: "Riddle not found" });
+      return;
+    }
+    const r = og.rows[0] as {
+      slug: string;
+      answer_correct_mn: string;
+      answer_correct_en: string;
+      coin_reward: number;
+      is_active: boolean;
+    };
+    if (!r.is_active) {
+      res.status(404).json({ error: "Riddle not available" });
+      return;
+    }
+
+    const expected =
+      lang === "mn" ? r.answer_correct_mn : r.answer_correct_en;
+    if (normRiddleAnswer(answer) !== normRiddleAnswer(expected)) {
+      res.status(400).json({ error: "Wrong answer", correct: false });
+      return;
+    }
+
+    const reward = Math.max(1, Math.min(999, Math.floor(num(r.coin_reward, 18))));
+    const inv = isPlainRecord(profile.inventory)
+      ? { ...(profile.inventory as Record<string, unknown>) }
+      : {};
+    inv.coins = num(inv.coins, 0) + reward;
+    profile.inventory = inv;
+    progress.onisogoSolvedSlugs = [...solved, slug];
+    profile.wealthScore = computeWealthScore(profile);
+
+    const upd = await pool.query(
+      `UPDATE app_users
+       SET profile = $2::jsonb, progress = $3::jsonb, updated_at = now()
+       WHERE firebase_uid = $1
+       RETURNING id, firebase_uid, email, display_name, hero_id, profile, progress, created_at, updated_at`,
+      [uid, JSON.stringify(profile), JSON.stringify(progress)],
+    );
+
+    res.json({
+      ok: true,
+      coinsAwarded: reward,
+      user: upd.rows[0],
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Onisogo solve failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
 gameRouter.post("/claim-rank-chest", async (req, res) => {
   const parsed = claimRankChestBody.safeParse(req.body);
   if (!parsed.success) {

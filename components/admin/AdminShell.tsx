@@ -16,6 +16,7 @@ import {
   LuX as X,
   LuLogOut as LogOut,
   LuGem as Gem,
+  LuCircleHelp as HelpCircleIcon,
 } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -45,6 +46,12 @@ const nav = [
     href: "/admin/stations",
     label: "Өртөөнүүд",
     icon: StationsIcon,
+    match: "prefix" as const,
+  },
+  {
+    href: "/admin/onisogo",
+    label: "Оньсого",
+    icon: HelpCircleIcon,
     match: "prefix" as const,
   },
   {

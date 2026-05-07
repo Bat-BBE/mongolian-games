@@ -47,6 +47,78 @@ contentRouter.get("/stations", async (_req, res) => {
   }
 });
 
+function shuffleArray<T>(items: T[]): T[] {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j]!, a[i]!];
+  }
+  return a;
+}
+
+contentRouter.get("/onisogo", async (req, res) => {
+  const lang = z.enum(["mn", "en"]).safeParse(req.query.lang ?? "mn");
+  if (!lang.success) {
+    res.status(400).json({ error: "Invalid lang" });
+    return;
+  }
+  try {
+    const result = await pool.query(
+      `SELECT slug, wx, wz, icon, title_mn, title_en, question_mn, question_en,
+              answer_correct_mn, answer_correct_en,
+              wrong_1_mn, wrong_1_en, wrong_2_mn, wrong_2_en, wrong_3_mn, wrong_3_en,
+              coin_reward, sort_order
+       FROM map_onisogo
+       WHERE is_active = true
+       ORDER BY sort_order ASC, slug ASC`,
+    );
+    type Row = {
+      slug: string;
+      wx: number;
+      wz: number;
+      icon: string;
+      title_mn: string;
+      title_en: string;
+      question_mn: string;
+      question_en: string;
+      answer_correct_mn: string;
+      answer_correct_en: string;
+      wrong_1_mn: string;
+      wrong_1_en: string;
+      wrong_2_mn: string;
+      wrong_2_en: string;
+      wrong_3_mn: string;
+      wrong_3_en: string;
+      coin_reward: number;
+      sort_order: number;
+    };
+    const L = lang.data;
+    const points = (result.rows as Row[]).map((r) => {
+      const title = L === "mn" ? r.title_mn : r.title_en;
+      const question = L === "mn" ? r.question_mn : r.question_en;
+      const ok = L === "mn" ? r.answer_correct_mn : r.answer_correct_en;
+      const w1 = L === "mn" ? r.wrong_1_mn : r.wrong_1_en;
+      const w2 = L === "mn" ? r.wrong_2_mn : r.wrong_2_en;
+      const w3 = L === "mn" ? r.wrong_3_mn : r.wrong_3_en;
+      const choices = shuffleArray([ok, w1, w2, w3]);
+      return {
+        slug: r.slug,
+        wx: r.wx,
+        wz: r.wz,
+        icon: r.icon,
+        title,
+        question,
+        choices,
+        coinReward: r.coin_reward,
+      };
+    });
+    res.json({ points });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Query failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
 contentRouter.get("/stations/:slug/games", async (req, res) => {
   const slug = z.string().min(1).safeParse(req.params.slug);
   if (!slug.success) {

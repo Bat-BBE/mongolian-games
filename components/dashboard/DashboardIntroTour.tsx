@@ -60,28 +60,29 @@ function measureHole(step: number): Hole | null {
 
 function tooltipStyle(step: number, hole: Hole | null): CSSProperties {
   const maxW = "min(22rem, calc(100vw - 2rem))";
+  const centered = (): CSSProperties => ({
+    position: "fixed",
+    left: "50%",
+    top: "50%",
+    transform: "translate(-50%, -50%)",
+    maxWidth: maxW,
+    maxHeight: "min(85dvh, 36rem)",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    zIndex: 260,
+  });
   if (typeof window === "undefined") {
-    return {
-      position: "fixed",
-      left: "50%",
-      top: "50%",
-      transform: "translate(-50%, -50%)",
-      maxWidth: maxW,
-      zIndex: 260,
-    };
-  }
-  if (step <= 3 || (step > 3 && !hole)) {
-    return {
-      position: "fixed",
-      left: "50%",
-      top: "50%",
-      transform: "translate(-50%, -50%)",
-      maxWidth: maxW,
-      zIndex: 260,
-    };
+    return centered();
   }
   const vh = window.innerHeight;
   const vw = window.innerWidth;
+  const shortViewport = vh < 520 || (vh < 420 && vw > vh);
+  if (shortViewport) {
+    return centered();
+  }
+  if (step <= 3 || (step > 3 && !hole)) {
+    return centered();
+  }
   const cardApprox = 280;
   let top = hole!.y + hole!.h + 16;
   if (top + cardApprox > vh - 20) {
@@ -96,6 +97,9 @@ function tooltipStyle(step: number, hole: Hole | null): CSSProperties {
     top,
     transform: "translateX(-50%)",
     maxWidth: maxW,
+    maxHeight: "min(80dvh, 32rem)",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
     zIndex: 260,
   };
 }
@@ -240,7 +244,7 @@ export function DashboardIntroTour({
           <rect
             width={w}
             height={h}
-            fill="rgba(0,0,0,0.72)"
+            fill="rgba(10,8,6,0.78)"
             mask={`url(#${maskId})`}
           />
         </svg>
@@ -248,18 +252,19 @@ export function DashboardIntroTour({
 
       {showHole ? (
         <div
-          className="pointer-events-none fixed z-[250] rounded-xl border-2 border-sky-400/85 shadow-[0_0_0_3px_rgba(56,189,248,0.2)]"
+          className="pointer-events-none fixed z-[250] rounded-xl border-2 shadow-[0_0_0_3px_rgba(200,160,48,0.22)]"
           style={{
             left: hole!.x,
             top: hole!.y,
             width: hole!.w,
             height: hole!.h,
+            borderColor: "color-mix(in srgb, var(--map-gold) 72%, transparent)",
           }}
         />
       ) : null}
 
       <div
-        className="fixed z-[260] rounded-2xl border border-sky-500/25 bg-gradient-to-b from-slate-950/98 to-slate-900/95 p-4 shadow-2xl backdrop-blur-md ring-1 ring-white/10"
+        className="dashboard-intro-tour-card fixed z-[260] rounded-2xl p-4 ring-1 ring-white/10"
         style={{
           ...tooltipStyle(step, hole),
           maxWidth:
@@ -270,13 +275,15 @@ export function DashboardIntroTour({
       >
         <p
           id="dashboard-intro-title"
-          className="font-display text-base font-semibold tracking-wide text-sky-100 sm:text-lg"
+          className="font-display text-base font-semibold tracking-wide sm:text-lg"
+          style={{ color: "var(--map-ui-text)" }}
         >
           {titleBody.title}
         </p>
         <p
-          className="mt-1.5 text-xs font-medium text-sky-300/90"
+          className="mt-1.5 text-xs font-medium"
           id="dashboard-intro-step-label"
+          style={{ color: "color-mix(in srgb, var(--map-gold) 75%, var(--map-ui-text))" }}
         >
           {t.introStepLabels[step]}
         </p>
@@ -292,19 +299,23 @@ export function DashboardIntroTour({
               className={[
                 "h-2 w-2 rounded-full transition-colors",
                 i === step
-                  ? "bg-sky-400 shadow-[0_0_0_1px_rgba(56,189,248,0.5)]"
-                  : "bg-slate-600/80",
+                  ? "bg-[color-mix(in_srgb,var(--map-gold)_88%,white)] shadow-[0_0_0_1px_rgba(200,160,48,0.45)]"
+                  : "bg-white/25",
               ].join(" ")}
             />
           ))}
         </div>
         <p
           id="dashboard-intro-desc"
-          className="mt-3 text-sm leading-relaxed text-slate-100/95 whitespace-pre-line sm:text-[15px] sm:leading-[1.55]"
+          className="mt-3 text-sm leading-relaxed whitespace-pre-line sm:text-[15px] sm:leading-[1.55]"
+          style={{ color: "var(--map-ui-text)" }}
         >
           {titleBody.body}
         </p>
-        <p className="mt-4 text-xs tabular-nums text-slate-400">
+        <p
+          className="mt-4 text-xs tabular-nums"
+          style={{ color: "var(--map-ui-text-muted)" }}
+        >
           {step + 1} / {lastStep + 1}
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
@@ -319,7 +330,7 @@ export function DashboardIntroTour({
             <button
               type="button"
               onClick={() => setStep((s) => Math.min(lastStep, s + 1))}
-              className="rounded-lg border border-sky-500/45 bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-sky-500"
+              className="rounded-lg border border-[color-mix(in_srgb,var(--map-gold)_55%,transparent)] bg-[color-mix(in_srgb,var(--map-gold)_25%,#0c0b08)] px-4 py-2 text-sm font-semibold text-amber-50 shadow-md hover:brightness-110"
             >
               {t.introNext}
             </button>
@@ -327,7 +338,7 @@ export function DashboardIntroTour({
             <button
               type="button"
               onClick={finish}
-              className="rounded-lg border border-sky-500/45 bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-sky-500"
+              className="rounded-lg border border-[color-mix(in_srgb,var(--map-gold)_55%,transparent)] bg-[color-mix(in_srgb,var(--map-gold)_28%,#0c0b08)] px-4 py-2 text-sm font-semibold text-amber-50 shadow-md hover:brightness-110"
             >
               {t.introDone}
             </button>

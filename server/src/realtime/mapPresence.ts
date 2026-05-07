@@ -91,6 +91,26 @@ function parseChatText(raw: unknown): string {
   return raw.replace(/\s+/g, " ").trim().slice(0, MAX_CHAT_LEN);
 }
 
+function hashString(input: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    h ^= input.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function spawnPoseForPeer(id: string): PresencePose {
+  const h = hashString(id);
+  const radius = 18 + (h % 28); // 18..45
+  const angle = ((h % 360) * Math.PI) / 180;
+  return {
+    x: Math.cos(angle) * radius,
+    z: Math.sin(angle) * radius,
+    ry: angle + Math.PI,
+  };
+}
+
 function parseLivestock(body: Record<string, unknown>): PresenceLivestock {
   const raw = body.livestock;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -227,7 +247,7 @@ export class MapPresenceHub {
         // Эхний pose-оос өмнө `last` байхгүй тул бусад нь `snapshot`/`peer_pose`-оор
         // харагдаагүй байсан. `hello` ирмэгц placeholder байрлал өгч зарлана.
         if (!rec.last) {
-          rec.last = { x: 0, z: 0, ry: 0 };
+          rec.last = spawnPoseForPeer(id);
         }
         this.broadcastPeerState(id);
         return;
