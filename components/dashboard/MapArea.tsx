@@ -22,10 +22,7 @@ import {
   type StationGameBundleRow,
 } from "@/lib/api";
 import { MapOnisogoModal } from "./MapOnisogoModal";
-import {
-  MapFirstVisitCoach,
-  readMapCoachDone,
-} from "./MapFirstVisitCoach";
+import { MapFirstVisitCoach, readMapCoachDone } from "./MapFirstVisitCoach";
 import { MapFloatingTopBar } from "./MapFloatingTopBarRestored";
 import { MapFloatingQuestPanel } from "./MapFloatingQuestPanel";
 import type { IconType } from "react-icons";
@@ -264,7 +261,9 @@ export function MapArea({
     mapLandscapeHintReady &&
     !mapLandscapeHintDismissed &&
     mapLandscapePortraitNarrow &&
-    !selectedGame;
+    !selectedGame &&
+    mapCoachDone &&
+    !mapCoachReplay;
 
   const showMapGuideChrome =
     mapGuideReady &&
@@ -284,10 +283,6 @@ export function MapArea({
 
   const stationWeeklyActiveHint = t.stationPopupWeeklyActive.replace(
     "{cap}",
-    String(STATION_GAME_WEEKLY_PLAY_CAP),
-  );
-  const perGameWeekCapLabel = t.stationPopupPerGameWeekCap.replace(
-    /\{cap\}/g,
     String(STATION_GAME_WEEKLY_PLAY_CAP),
   );
 
@@ -779,6 +774,7 @@ export function MapArea({
 
         {showMapFirstCoach ? (
           <MapFirstVisitCoach
+            key={mapCoachReplay ? "replay" : "first"}
             t={t}
             mode={mapCoachReplay ? "replay" : "first"}
             onCompleteFirst={() => {
@@ -797,7 +793,10 @@ export function MapArea({
             )}
             style={{ color: "var(--map-ui-text)" }}
           >
-            <LuBookOpen className="size-4 text-[color:var(--map-gold)]" aria-hidden />
+            <LuBookOpen
+              className="size-4 text-[color:var(--map-gold)]"
+              aria-hidden
+            />
             {t.mapGuideShow}
           </button>
         ) : null}
@@ -942,18 +941,9 @@ export function MapArea({
             }}
           >
             <p
-              className="text-[0.6rem] font-semibold uppercase tracking-wide text-violet-200/90"
-              style={{ color: "var(--map-ui-text-muted)" }}
-            >
-              {t.mapOnisogoBadge}
-            </p>
-            <p
               className="mt-0.5 flex items-baseline gap-1.5 text-sm font-semibold leading-snug"
               style={{ color: "var(--map-ui-text)" }}
             >
-              <span className="text-base" aria-hidden>
-                {worldPoiQuiz.point.icon}
-              </span>
               <span className="min-w-0">{worldPoiQuiz.point.title}</span>
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -1042,14 +1032,23 @@ export function MapArea({
           stepTravel={t.stationPopupStepTravel}
           stepPickGame={t.stationPopupStepPickGame}
           gameAboutLabel={t.stationPopupGameAbout}
-          perGameWeekCapLabel={perGameWeekCapLabel}
-          canPlay
+          gameQuotaActive={t.stationPopupGameQuotaActive}
+          gameQuotaLocked={t.stationPopupGameQuotaLocked}
+          gameButtonWeekLocked={t.stationPopupGameButtonWeekLocked}
+          canPlay={
+            Boolean(heroModelPath?.trim()) &&
+            heroAtStationId === selectedStation.id
+          }
           stationSteps={stationSteps}
           stationGameVisits={stationGameVisits}
-          onTravel={() => {
-            travelToStation(selectedStation.id);
-            setSelectedId(null);
-          }}
+          onTravel={
+            heroAtStationId === selectedStation.id
+              ? undefined
+              : () => {
+                  travelToStation(selectedStation.id);
+                  setSelectedId(null);
+                }
+          }
           onReturnHome={() => {
             goToHomeGer();
             setSelectedId(null);

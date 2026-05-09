@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { DashStrings } from "./dashboard-strings";
 import { LuBookOpen, LuChevronLeft, LuChevronRight, LuX } from "react-icons/lu";
@@ -42,10 +42,6 @@ export function MapFirstVisitCoach({
 }: MapFirstVisitCoachProps) {
   const [step, setStep] = useState(0);
 
-  useEffect(() => {
-    setStep(0);
-  }, [mode]);
-
   const titles = t.mapCoachStepTitles;
   const bodies = t.mapCoachStepBodies;
 
@@ -53,14 +49,6 @@ export function MapFirstVisitCoach({
     setMapCoachDone();
     onCompleteFirst();
   }, [onCompleteFirst]);
-
-  const skipOrClose = useCallback(() => {
-    if (mode === "first") {
-      finishFirst();
-    } else {
-      onCloseReplay();
-    }
-  }, [finishFirst, mode, onCloseReplay]);
 
   const isLast = step >= STEP_COUNT - 1;
 
@@ -93,15 +81,17 @@ export function MapFirstVisitCoach({
             {t.mapHowToSectionTitle}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={skipOrClose}
-          className="map-ui-ghost-btn shrink-0 rounded-lg p-1.5"
-          aria-label={t.mapCoachClose}
-          title={t.mapCoachClose}
-        >
-          <LuX className="size-4" aria-hidden />
-        </button>
+        {mode === "replay" ? (
+          <button
+            type="button"
+            onClick={onCloseReplay}
+            className="map-ui-ghost-btn shrink-0 rounded-lg p-1.5"
+            aria-label={t.mapCoachClose}
+            title={t.mapCoachClose}
+          >
+            <LuX className="size-4" aria-hidden />
+          </button>
+        ) : null}
       </div>
 
       <div className="px-2.5 pb-2 pt-2 sm:px-3 sm:pb-2.5 sm:pt-2.5">
@@ -147,15 +137,22 @@ export function MapFirstVisitCoach({
           </p>
         ) : null}
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => (mode === "first" ? finishFirst() : onCloseReplay())}
-            className="text-[10px] font-semibold underline-offset-2 hover:underline sm:text-[11px]"
-            style={{ color: "var(--map-ui-text-muted)" }}
-          >
-            {mode === "first" ? t.mapCoachSkipAll : t.mapCoachClose}
-          </button>
+        <div
+          className={cn(
+            "mt-3 flex flex-wrap items-center gap-2",
+            mode === "replay" ? "justify-between" : "justify-end",
+          )}
+        >
+          {mode === "replay" ? (
+            <button
+              type="button"
+              onClick={onCloseReplay}
+              className="text-[10px] font-semibold underline-offset-2 hover:underline sm:text-[11px]"
+              style={{ color: "var(--map-ui-text-muted)" }}
+            >
+              {t.mapCoachClose}
+            </button>
+          ) : null}
           <div className="flex items-center gap-1.5">
             <button
               type="button"

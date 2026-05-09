@@ -147,7 +147,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
   const [onisogoPoints, setOnisogoPoints] = useState<OnisogoMapPoint[]>([]);
   const flyHomeRef = useRef<(() => void) | null>(null);
-  const [introTourOpen, setIntroTourOpen] = useState(false);
+  /** Танилцах аяллыг цэснээс дахин нээсэн */
+  const [introReplayOpen, setIntroReplayOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -349,12 +350,6 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     };
   }, [lang, profileReloadTick, gameReloadTick]);
 
-  useEffect(() => {
-    if (loading || !player) return;
-    if (readDashboardIntroDone()) return;
-    setIntroTourOpen(true);
-  }, [loading, player]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -370,6 +365,10 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
       </div>
     );
   }
+
+  const introMandatoryOpen = !readDashboardIntroDone();
+  const introTourOpen = introMandatoryOpen || introReplayOpen;
+  const introTourAllowSkip = introReplayOpen && !introMandatoryOpen;
 
   const openLb = () => setLeaderboardOpen(true);
 
@@ -422,7 +421,8 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
       <DashboardIntroTour
         t={t}
         open={introTourOpen}
-        onDismiss={() => setIntroTourOpen(false)}
+        allowSkip={introTourAllowSkip}
+        onDismiss={() => setIntroReplayOpen(false)}
       />
 
       <div className="absolute inset-0 min-h-0 min-w-0">
@@ -482,7 +482,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
             router.push("/");
           }}
           mapHudOnOpenLeaderboard={openLb}
-          mapHudOnShowIntroTour={() => setIntroTourOpen(true)}
+          mapHudOnShowIntroTour={() => setIntroReplayOpen(true)}
           stationGames={stationGames}
           currentStationLabel={player.currentStationLabel}
           onisogoPoints={onisogoPoints}
