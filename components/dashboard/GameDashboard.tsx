@@ -149,6 +149,18 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const flyHomeRef = useRef<(() => void) | null>(null);
   /** Танилцах аяллыг цэснээс дахин нээсэн */
   const [introReplayOpen, setIntroReplayOpen] = useState(false);
+  /**
+   * localStorage + React: анхны заавал танилцуулга дуусахад `setIntroReplayOpen(false)` нь
+   * аль хэдийн false тул state өөрчлөгдөхгүй, re-render үүсэхгүй — «Ойлголоо» дарахад хаагдахгүй.
+   * Энэ төлөв нь заавал танилцуулгыг хаасны дараа шинэчлэгдэнэ.
+   */
+  const [introCompleted, setIntroCompleted] = useState(() =>
+    readDashboardIntroDone(),
+  );
+
+  useEffect(() => {
+    setIntroCompleted(readDashboardIntroDone());
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -366,7 +378,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     );
   }
 
-  const introMandatoryOpen = !readDashboardIntroDone();
+  const introMandatoryOpen = !introCompleted;
   const introTourOpen = introMandatoryOpen || introReplayOpen;
   const introTourAllowSkip = introReplayOpen && !introMandatoryOpen;
 
@@ -422,7 +434,11 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         t={t}
         open={introTourOpen}
         allowSkip={introTourAllowSkip}
-        onDismiss={() => setIntroReplayOpen(false)}
+        onDismiss={() => {
+          setIntroReplayOpen(false);
+          // Хаасан = дууссан. localStorage + зөвхөн setIntroReplayOpen(false) re-render үүсгэхгүй байсан алдааг засна.
+          setIntroCompleted(true);
+        }}
       />
 
       <div className="absolute inset-0 min-h-0 min-w-0">

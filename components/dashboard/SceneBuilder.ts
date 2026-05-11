@@ -652,13 +652,23 @@ export class SceneBuilder {
     const wallR = 2.72 * s;
 
     const stoneBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(wallR + 0.16 * s, wallR + 0.2 * s, 0.11 * s, 26),
+      new THREE.CylinderGeometry(
+        wallR + 0.16 * s,
+        wallR + 0.2 * s,
+        0.11 * s,
+        26,
+      ),
       mkMat(0x8a8e92, 0.92),
     );
     stoneBase.position.y = 0.055 * s;
     g.add(stoneBase);
     const skirting = new THREE.Mesh(
-      new THREE.CylinderGeometry(wallR + 0.04 * s, wallR + 0.02 * s, 0.09 * s, 26),
+      new THREE.CylinderGeometry(
+        wallR + 0.04 * s,
+        wallR + 0.02 * s,
+        0.09 * s,
+        26,
+      ),
       mkMat(0xc4a574, 0.9),
     );
     skirting.position.y = baseTop + 0.045 * s;
@@ -1038,11 +1048,7 @@ export class SceneBuilder {
 
       this.labelAnchors.set(
         stationId,
-        new THREE.Vector3(
-          x,
-          hy + gerLift + roofTopY + (0.9 + 0.42) * s,
-          z,
-        ),
+        new THREE.Vector3(x, hy + gerLift + roofTopY + (0.9 + 0.42) * s, z),
       );
     }
 
@@ -1238,7 +1244,12 @@ export class SceneBuilder {
           [-legW, legW].forEach((lx) => {
             [-0.14, 0.14].forEach((lz) => {
               const leg = new THREE.Mesh(
-                new THREE.CylinderGeometry(0.042 * sc, 0.048 * sc, 0.32 * sc, 6),
+                new THREE.CylinderGeometry(
+                  0.042 * sc,
+                  0.048 * sc,
+                  0.32 * sc,
+                  6,
+                ),
                 hoofMat,
               );
               leg.position.set(lx * sc, 0.17 * sc, lz);
@@ -1381,7 +1392,8 @@ export class SceneBuilder {
             fm,
           );
           const lintelY =
-            (localTerrainOffsetY(gpx, gpz) + localTerrainOffsetY(gqx, gqz)) * 0.5;
+            (localTerrainOffsetY(gpx, gpz) + localTerrainOffsetY(gqx, gqz)) *
+            0.5;
           lintel.position.set(midx, 1.28 + lintelY, midz);
           lintel.rotation.y = Math.atan2(bx - ax, bz - az);
           g.add(lintel);
@@ -2154,10 +2166,7 @@ export class SceneBuilder {
   ): void {
     for (let i = 0; i < count; i++) {
       const a = rand(0, Math.PI * 2);
-      const r = rand(
-        Math.max(radius * 0.36, innerClear * 0.9),
-        radius * 0.95,
-      );
+      const r = rand(Math.max(radius * 0.36, innerClear * 0.9), radius * 0.95);
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r;
       if (Math.hypot(x - cx, z - cz) < innerClear) continue;
@@ -3547,7 +3556,8 @@ export class SceneBuilder {
       const z = rand(-spreadZ, spreadZ);
       const h = terrainHeight(x, z);
       if (h > 20 || h < -0.9) continue;
-      if (terrainBiome(x, z, h) === "high_alpine" && Math.random() > 0.5) continue;
+      if (terrainBiome(x, z, h) === "high_alpine" && Math.random() > 0.5)
+        continue;
       this.makeGrassClumpAt(x, z);
     }
   }
@@ -3610,7 +3620,6 @@ export class SceneBuilder {
       polygonOffsetFactor: -2,
     });
 
-    // Гол замууд л үлдээж, салаа/урт сегментийг цөөлнө (mesh + roadPaths хөнгөн).
     const ROUTES: string[][] = [
       [
         "khovd",
