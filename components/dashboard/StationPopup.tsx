@@ -6,6 +6,7 @@ import { StationImageOrIcon } from "./StationImageOrIcon";
 import type { UrtuuStation } from "./UrtuuNode";
 import {
   gameWeeklyPlaysRemaining,
+  STATION_GAME_WEEKLY_PLAY_CAP,
   stationAllGamesWeeklyLocked,
 } from "./mapConstants";
 
@@ -33,7 +34,11 @@ interface StationPopupProps {
   stepTravel: string;
   stepPickGame: string;
   gameAboutLabel: string;
-  perGameWeekCapLabel: string;
+  /** `{remaining}`, `{cap}` */
+  gameQuotaActive: string;
+  /** `{cap}` */
+  gameQuotaLocked: string;
+  gameButtonWeekLocked: string;
   canPlay?: boolean;
   stationSteps?: Record<string, { completedGameSlugs: string[] }>;
   stationGameVisits?: Record<string, Record<string, number[]>>;
@@ -63,7 +68,9 @@ export function StationPopup({
   stepTravel,
   stepPickGame,
   gameAboutLabel,
-  perGameWeekCapLabel,
+  gameQuotaActive,
+  gameQuotaLocked,
+  gameButtonWeekLocked,
   canPlay = true,
   stationSteps,
   stationGameVisits,
@@ -96,6 +103,10 @@ export function StationPopup({
   const nextRequired =
     list.map((g) => g.slug).find((slug) => slug && !completed.has(slug)) ??
     null;
+
+  const capStr = String(STATION_GAME_WEEKLY_PLAY_CAP);
+  const fillQuota = (tpl: string, remaining: number) =>
+    tpl.replace(/\{remaining\}/g, String(remaining)).replace(/\{cap\}/g, capStr);
 
   const hintText = station.questHint?.trim();
   const storyText = station.questDesc?.trim();
@@ -234,15 +245,20 @@ export function StationPopup({
               const gameRem = slug
                 ? gameWeeklyPlaysRemaining(station.id, slug, stationGameVisits)
                 : 0;
+              const usedThisWeek = Math.max(
+                0,
+                STATION_GAME_WEEKLY_PLAY_CAP - gameRem,
+              );
               const progressionLocked =
                 Boolean(slug) && !completed.has(slug) && slug !== nextRequired;
+              const weekLocked = Boolean(slug) && gameRem <= 0;
               const canStart =
                 canPlay && Boolean(slug) && gameRem > 0 && !progressionLocked;
 
               const statusText = progressionLocked
                 ? lockedHint
-                : gameRem <= 0
-                  ? perGameWeekCapLabel
+                : weekLocked
+                  ? gameButtonWeekLocked
                   : isDone
                     ? doneHint
                     : lockedHint;
@@ -262,6 +278,44 @@ export function StationPopup({
                       <span className="truncate">{g.reward}</span>
                     </p>
                   </div>
+                  {slug ? (
+                    <div className="mt-1.5 space-y-1">
+                      <div
+                        className="flex h-2 gap-0.5"
+                        role="img"
+                        aria-label={fillQuota(gameQuotaActive, gameRem)}
+                      >
+                        {Array.from(
+                          { length: STATION_GAME_WEEKLY_PLAY_CAP },
+                          (_, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                "min-h-0 flex-1 rounded-sm transition-colors",
+                                i < usedThisWeek
+                                  ? weekLocked
+                                    ? "bg-rose-500/55"
+                                    : "bg-amber-400/70"
+                                  : "bg-emerald-500/50",
+                              )}
+                            />
+                          ),
+                        )}
+                      </div>
+                      <p
+                        className={cn(
+                          "text-[9px] font-semibold leading-snug",
+                          weekLocked
+                            ? "text-rose-200/90"
+                            : "text-emerald-100/90",
+                        )}
+                      >
+                        {weekLocked
+                          ? fillQuota(gameQuotaLocked, gameRem)
+                          : fillQuota(gameQuotaActive, gameRem)}
+                      </p>
+                    </div>
+                  ) : null}
                   {/* {desc ? (
                     <div className="mt-1.5 border-t border-white/[0.06] pt-1.5">
                       <p className="text-[8px] font-semibold uppercase tracking-wide text-muted-foreground/90">
@@ -277,7 +331,7 @@ export function StationPopup({
                     disabled={!canStart}
                     onClick={() => canStart && g.slug && onPlay(g.slug, g.name)}
                     className={cn(
-                      "mt-1 w-full rounded-lg py-1.5 text-[9px] font-bold uppercase transition-all",
+                      "mt-1.5 w-full rounded-lg py-1.5 text-[9px] font-bold uppercase transition-all",
                       canStart
                         ? "text-white/90 bg-primary/10 border border-primary/30 hover:bg-primary/30"
                         : "cursor-not-allowed bg-muted/70 text-muted-foreground opacity-70",
@@ -301,21 +355,33 @@ export function StationPopup({
                       stationGameVisits,
                     )
                   : 0;
+                const usedThisWeek = Math.max(
+                  0,
+                  STATION_GAME_WEEKLY_PLAY_CAP - gameRem,
+                );
                 const progressionLocked =
                   Boolean(slug) &&
                   !completed.has(slug) &&
                   slug !== nextRequired;
+                const weekLocked = Boolean(slug) && gameRem <= 0;
                 const canStart =
                   canPlay && Boolean(slug) && gameRem > 0 && !progressionLocked;
+                const btnLabel = canStart
+                  ? playLabel
+                  : progressionLocked
+                    ? lockedHint
+                    : weekLocked
+                      ? gameButtonWeekLocked
+                      : "—";
                 return (
                   <li
                     key={`${station.id}-more-${g.slug || g.name}`}
-                    className="flex items-center justify-between gap-2 text-[10px]"
+                    className="flex flex-col gap-1 rounded-lg border border-white/8 bg-black/20 px-2 py-1.5 text-[10px]"
                   >
-                    <span className="min-w-0 truncate text-muted-foreground">
-                      {g.name}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium text-foreground/90">
+                        {g.name}
+                      </span>
                       <button
                         type="button"
                         disabled={!canStart}
@@ -323,15 +389,49 @@ export function StationPopup({
                           canStart && g.slug && onPlay(g.slug, g.name)
                         }
                         className={cn(
-                          "rounded-md px-2 py-0.5 text-[9px] font-semibold uppercase",
+                          "shrink-0 rounded-md px-2 py-0.5 text-[9px] font-semibold uppercase",
                           canStart
                             ? "bg-primary/85 text-primary-foreground"
-                            : "opacity-50",
+                            : "opacity-60",
                         )}
                       >
-                        {canStart ? playLabel : "—"}
+                        {btnLabel}
                       </button>
                     </div>
+                    {slug ? (
+                      <div className="space-y-0.5">
+                        <div className="flex h-1.5 gap-0.5">
+                          {Array.from(
+                            { length: STATION_GAME_WEEKLY_PLAY_CAP },
+                            (_, i) => (
+                              <div
+                                key={i}
+                                className={cn(
+                                  "min-h-0 flex-1 rounded-[2px]",
+                                  i < usedThisWeek
+                                    ? weekLocked
+                                      ? "bg-rose-500/55"
+                                      : "bg-amber-400/70"
+                                    : "bg-emerald-500/50",
+                                )}
+                              />
+                            ),
+                          )}
+                        </div>
+                        <p
+                          className={cn(
+                            "text-[8px] font-semibold leading-snug",
+                            weekLocked
+                              ? "text-rose-200/85"
+                              : "text-emerald-100/85",
+                          )}
+                        >
+                          {weekLocked
+                            ? fillQuota(gameQuotaLocked, gameRem)
+                            : fillQuota(gameQuotaActive, gameRem)}
+                        </p>
+                      </div>
+                    ) : null}
                   </li>
                 );
               })}

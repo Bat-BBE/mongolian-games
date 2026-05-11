@@ -19,14 +19,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { claimRankChest, homeExchangeGemsForCoins } from "@/lib/api";
+import {
+  claimRankChest,
+  homeExchangeGemsForCoins,
+} from "@/lib/api";
 import { WEALTH_COINS_PER_GEM } from "@/lib/homeEconomy";
 import type { DashStrings, DashLang } from "./dashboard-strings";
 import type { MapStationApiRow, StationGameBundleRow } from "@/lib/api";
 import { useState, useEffect, useMemo } from "react";
-import { gameWeeklyPlaysRemaining } from "./mapConstants";
+import {
+  gameWeeklyPlaysRemaining,
+  STATION_GAME_WEEKLY_PLAY_CAP,
+} from "./mapConstants";
 import { cn } from "@/lib/utils";
 import { MapWorldRadar } from "./MapWorldRadar";
+import {
+  RewardChestDialog,
+  type RewardChestItem,
+} from "@/components/ui/reward-chest-dialog";
 
 type MobileSheetId = "quest" | "treasury" | "progress";
 
@@ -111,12 +121,19 @@ export function LeftPanel({
   onOpenLeaderboard,
   lang,
 }: LeftPanelProps) {
-  const safeMax = Math.max(1, xpMax);
-  const xpPct = Math.min(100, Math.round((xp / safeMax) * 100));
-  const chestReady = xp >= safeMax;
+  const [rankXp, setRankXp] = useState(() => Math.max(0, Math.floor(xp)));
+  const [rankXpMax, setRankXpMax] = useState(() =>
+    Math.max(1, Math.floor(xpMax)),
+  );
+  const safeMax = Math.max(1, rankXpMax);
+  const xpPct = Math.min(100, Math.round((rankXp / safeMax) * 100));
+  const chestReady = rankXp >= safeMax;
   const [chestBusy, setChestBusy] = useState(false);
   const [chestDialogOpen, setChestDialogOpen] = useState(false);
-  const [chestMessage, setChestMessage] = useState("");
+  const [chestItems, setChestItems] = useState<RewardChestItem[]>([]);
+  const [chestIntroText, setChestIntroText] = useState<string | undefined>(
+    undefined,
+  );
   const [gemExchangeOpen, setGemExchangeOpen] = useState(false);
   const [gemExBusy, setGemExBusy] = useState(false);
   const [gemExErr, setGemExErr] = useState<string | null>(null);
@@ -163,6 +180,11 @@ export function LeftPanel({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  useEffect(() => {
+    setRankXp(Math.max(0, Math.floor(xp)));
+    setRankXpMax(Math.max(1, Math.floor(xpMax)));
+  }, [xp, xpMax]);
 
   const gemCount = treasury?.gems ?? 0;
   const stationName = (stationInfo?.name || currentStationLabel || activeStationId).trim();
@@ -497,15 +519,16 @@ export function LeftPanel({
                                 g.slug,
                                 stationGameVisits,
                               )
-                            : 2;
+                            : STATION_GAME_WEEKLY_PLAY_CAP;
+                        const cap = STATION_GAME_WEEKLY_PLAY_CAP;
                         const wkLabel =
                           wkRem <= 0
                             ? lang === "mn"
-                              ? "7х ✕"
-                              : "Cap"
+                              ? `7 хоногийн лимит (${cap})`
+                              : `Weekly cap (${cap})`
                             : lang === "mn"
-                              ? `${wkRem}/2`
-                              : `${wkRem}/2`;
+                              ? `Үлдсэн: ${wkRem} / ${cap}`
+                              : `Left: ${wkRem} / ${cap}`;
 
                         return (
                           <div
@@ -626,7 +649,7 @@ export function LeftPanel({
                   {t.rankTitle}
                 </span>
                 <span className="tabular-nums font-medium text-foreground">
-                  {xp.toLocaleString()} / {xpMax.toLocaleString()}
+                  {rankXp.toLocaleString()} / {safeMax.toLocaleString()}
                 </span>
               </div>
               <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
@@ -667,25 +690,70 @@ export function LeftPanel({
                       const em = userEmail?.trim();
                       if (!em) return;
                       setChestBusy(true);
+                      setChestIntroText(
+                        lang === "mn"
+                          ? "Rank дүүрлээ. Авдрыг нээгээд шагналаа авна уу."
+                          : "Rank is full. Open the chest to claim your reward.",
+                      );
                       try {
-                        const { reward } = await claimRankChest({ email: em });
-                        const msg =
-                          reward.kind === "gem"
-                            ? t.rankChestResultGem
-                            : reward.kind === "kp"
-                              ? t.rankChestResultKp.replace(
-                                  "{n}",
-                                  String(reward.amount),
-                                )
-                              : t.rankChestResultCoins.replace(
-                                  "{n}",
-                                  String(reward.amount),
-                                );
-                        setChestMessage(msg);
+                        const { reward, user } = await claimRankChest({
+                          email: em,
+                        });
+                        const item: RewardChestItem = {
+                          icon:
+                            reward.kind === "gem"
+                              ? "💎"
+                              : reward.kind === "kp"
+                                ? "⭐"
+                                : "🪙",
+                          label:
+                            reward.kind === "gem"
+                              ? lang === "mn"
+                                ? "Эрдэнийн чулуу"
+                                : "Gems"
+                              : reward.kind === "kp"
+                                ? "KP"
+                                : lang === "mn"
+                                  ? "Зоос"
+                                  : "Coins",
+                          value: `+${reward.amount.toLocaleString()}`,
+                          tone: "positive",
+                        };
+                        setChestItems([item]);
                         setChestDialogOpen(true);
-                        window.setTimeout(() => onChestClaimed?.(), 500);
-                      } catch {
-                        /* ignore */
+                        const prog =
+                          user && typeof user.progress === "object" && user.progress
+                            ? (user.progress as Record<string, unknown>)
+                            : {};
+                        const nextXp = Number(prog.xp);
+                        const nextXpMax = Number(prog.xpMax);
+                        if (Number.isFinite(nextXp)) {
+                          setRankXp(Math.max(0, Math.floor(nextXp)));
+                        }
+                        if (Number.isFinite(nextXpMax) && nextXpMax > 0) {
+                          setRankXpMax(Math.max(1, Math.floor(nextXpMax)));
+                        }
+                        window.setTimeout(() => onChestClaimed?.(), 450);
+                      } catch (e) {
+                        const msg = e instanceof Error ? e.message : "";
+                        setChestItems([
+                          {
+                            icon: "⚠️",
+                            label: lang === "mn" ? "Алдаа" : "Error",
+                            value:
+                              msg ||
+                              (lang === "mn"
+                                ? "Шагнал авахад алдаа гарлаа"
+                                : "Failed to claim reward"),
+                            tone: "negative",
+                          },
+                        ]);
+                        setChestIntroText(
+                          lang === "mn"
+                            ? "Авдар нээх үед алдаа гарлаа."
+                            : "There was an issue opening the chest.",
+                        );
+                        setChestDialogOpen(true);
                       } finally {
                         setChestBusy(false);
                       }
@@ -747,18 +815,16 @@ export function LeftPanel({
 
   const sharedDialogs = (
     <>
-      <Dialog open={chestDialogOpen} onOpenChange={setChestDialogOpen}>
-        <DialogContent className="sm:max-w-sm border-primary/20">
-          <DialogHeader>
-            <DialogTitle className="font-display text-base">
-              {lang === "mn" ? "Шагнал" : "Reward"}
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-foreground/90 leading-relaxed">
-            {chestMessage}
-          </p>
-        </DialogContent>
-      </Dialog>
+      {chestDialogOpen ? (
+        <RewardChestDialog
+          open={chestDialogOpen}
+          onOpenChange={setChestDialogOpen}
+          lang={lang}
+          title={lang === "mn" ? "Rank авдар" : "Rank chest"}
+          introText={chestIntroText}
+          items={chestItems}
+        />
+      ) : null}
 
       <Dialog
         open={gemExchangeOpen}

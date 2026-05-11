@@ -172,6 +172,22 @@ export function useMapPresence(opts: {
     w.send(JSON.stringify({ type: "chat", text }));
   }, []);
 
+  const publishHelloNow = useCallback(() => {
+    const w = wsRef.current;
+    if (!w || w.readyState !== WebSocket.OPEN) return;
+    const ls = livestockRef.current;
+    w.send(
+      JSON.stringify({
+        type: "hello",
+        displayName: nameRef.current?.trim() || "Тоглогч",
+        heroModelPath: heroPathRef.current,
+        gerLevel: gerLevelRef.current,
+        livestock: ls,
+        homeKey: homeKeyRef.current?.trim() || "",
+      }),
+    );
+  }, []);
+
   const flushList = () => {
     remotePeersRef.current = Array.from(othersRef.current.values());
   };
@@ -371,5 +387,6 @@ export function useMapPresence(opts: {
     publishMapChat,
     mapChatLinesRef,
     setOnMapChatLine,
+    publishHelloNow,
   };
 }

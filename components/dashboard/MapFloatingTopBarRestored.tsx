@@ -12,6 +12,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  RewardChestDialog,
+  type RewardChestItem,
+} from "@/components/ui/reward-chest-dialog";
 import { homeExchangeGemsForCoins } from "@/lib/api";
 import { WEALTH_COINS_PER_GEM } from "@/lib/homeEconomy";
 import type { DashLang, DashStrings } from "./dashboard-strings";
@@ -78,7 +82,24 @@ export function MapFloatingTopBar({
   const [opened, setOpened] = useState<StatKey | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [claimedChests, setClaimedChests] = useState<Set<string>>(new Set());
+  const [localBonus, setLocalBonus] = useState<{
+    coins: number;
+    kp: number;
+    livestock: Record<LivestockKind, number>;
+  }>({
+    coins: 0,
+    kp: 0,
+    livestock: { sheep: 0, goat: 0, cow: 0, horse: 0, camel: 0 },
+  });
   const [chestMessage, setChestMessage] = useState<string | null>(null);
+  const [chestDialogOpen, setChestDialogOpen] = useState(false);
+  const [chestDialogItems, setChestDialogItems] = useState<RewardChestItem[]>([]);
+  const [chestDialogTitle, setChestDialogTitle] = useState<string | undefined>(
+    undefined,
+  );
+  const [chestDialogIntro, setChestDialogIntro] = useState<string | undefined>(
+    undefined,
+  );
   const [dismissedNotifs, setDismissedNotifs] = useState<Set<NotifId>>(
     () => new Set(),
   );
@@ -115,15 +136,37 @@ export function MapFloatingTopBar({
     }
   }, []);
 
-  function chestKey(stat: ChestStatKey, sub?: LivestockKind) {
-    return sub
-      ? `${stat}:${sub}:lv${safeLevel}`
-      : `${stat}:lv${safeLevel}`;
+  function targetForClaimCount(base: number, claimCount: number) {
+    if (claimCount <= 0) return Math.max(1, base);
+    return Math.max(1, Math.round(base * Math.pow(2, claimCount)));
+  }
+
+  function targetAfterClaims(base: number, stat: ChestStatKey, sub?: LivestockKind) {
+    const prefix = sub ? `${stat}:${sub}:` : `${stat}:`;
+    const claims = Array.from(claimedChests).filter((k) =>
+      k.startsWith(prefix),
+    ).length;
+    return targetForClaimCount(base, claims);
   }
 
   function claimLocalChest(stat: ChestStatKey, sub?: LivestockKind) {
-    const key = chestKey(stat, sub);
-    if (claimedChests.has(key)) return;
+    const key = sub
+      ? `${stat}:${sub}:${Date.now()}`
+      : `${stat}:${Date.now()}`;
+    const prefix = sub ? `${stat}:${sub}:` : `${stat}:`;
+    const priorClaims = Array.from(claimedChests).filter((k) =>
+      k.startsWith(prefix),
+    ).length;
+
+    const baseTarget =
+      stat === "coins"
+        ? statTargets.coins
+        : stat === "kp"
+          ? statTargets.kp
+          : statTargets.livestock[sub ?? "sheep"];
+    const prevTarget = targetForClaimCount(baseTarget, priorClaims);
+    const nextTarget = targetForClaimCount(baseTarget, priorClaims + 1);
+
     const next = new Set(claimedChests);
     next.add(key);
     setClaimedChests(next);
@@ -140,6 +183,103 @@ export function MapFloatingTopBar({
       ? "Chest opened! Next level will require more."
       : "Chest opened! Requirements rise next level.";
     setChestMessage(lang === "mn" ? msgMn : msgEn);
+
+    const label =
+      stat === "coins"
+        ? lang === "mn"
+          ? "Зоос"
+          : "Coins"
+        : stat === "kp"
+          ? "KP"
+          : sub === "sheep"
+            ? lang === "mn"
+              ? "Хонь"
+              : "Sheep"
+            : sub === "goat"
+              ? lang === "mn"
+                ? "Ямаа"
+                : "Goat"
+              : sub === "cow"
+                ? lang === "mn"
+                  ? "Үхэр"
+                  : "Cow"
+                : sub === "horse"
+                  ? lang === "mn"
+                    ? "Морь"
+                    : "Horse"
+                  : lang === "mn"
+                    ? "Тэмээ"
+                    : "Camel";
+    const icon =
+      stat === "coins"
+        ? "🪙"
+        : stat === "kp"
+          ? "⭐"
+          : sub === "sheep"
+            ? "🐑"
+            : sub === "goat"
+              ? "🐐"
+              : sub === "cow"
+                ? "🐄"
+                : sub === "horse"
+                  ? "🐎"
+                  : "🐫";
+
+    const rewardText =
+      stat === "coins"
+        ? `+${Math.max(10, Math.round(prevTarget * 0.12)).toLocaleString()} ${
+            lang === "mn" ? "зоос" : "coins"
+          }`
+        : stat === "kp"
+          ? `+${Math.max(5, Math.round(prevTarget * 0.1)).toLocaleString()} KP`
+          : `+1 ${label}`;
+    const rewardAmount =
+      stat === "coins"
+        ? Math.max(10, Math.round(prevTarget * 0.12))
+        : stat === "kp"
+          ? Math.max(5, Math.round(prevTarget * 0.1))
+          : 1;
+
+    setLocalBonus((prev) => {
+      if (stat === "coins") {
+        return { ...prev, coins: prev.coins + rewardAmount };
+      }
+      if (stat === "kp") {
+        return { ...prev, kp: prev.kp + rewardAmount };
+      }
+      const k = sub ?? "sheep";
+      return {
+        ...prev,
+        livestock: {
+          ...prev.livestock,
+          [k]: prev.livestock[k] + rewardAmount,
+        },
+      };
+    });
+
+    setChestDialogTitle(
+      lang === "mn" ? "Авдар нээгдлээ" : "Chest opened",
+    );
+    setChestDialogIntro(
+      lang === "mn"
+        ? "Шагналаа харна уу. Дараагийн зорилтын босго өссөн."
+        : "See your result. The next target has increased.",
+    );
+    setChestDialogItems([
+      {
+        icon,
+        label: lang === "mn" ? "Авсан шагнал" : "Reward received",
+        value: rewardText,
+        tone: "positive",
+      },
+      {
+        icon: "🎯",
+        label: lang === "mn" ? "Шинэ зорилт" : "New target",
+        value: `${prevTarget.toLocaleString()} → ${nextTarget.toLocaleString()}`,
+        tone: "neutral",
+      },
+    ]);
+    setChestDialogOpen(true);
   }
 
   const livestockRows = useMemo(
@@ -148,34 +288,44 @@ export function MapFloatingTopBar({
         kind: "sheep" as const,
         icon: "🐑",
         label: lang === "mn" ? "Хонь" : "Sheep",
-        value: livestock?.sheep ?? 0,
+        value: (livestock?.sheep ?? 0) + (localBonus.livestock.sheep ?? 0),
       },
       {
         kind: "goat" as const,
         icon: "🐐",
         label: lang === "mn" ? "Ямаа" : "Goat",
-        value: livestock?.goat ?? 0,
+        value: (livestock?.goat ?? 0) + (localBonus.livestock.goat ?? 0),
       },
       {
         kind: "cow" as const,
         icon: "🐄",
         label: lang === "mn" ? "Үхэр" : "Cow",
-        value: livestock?.cow ?? 0,
+        value: (livestock?.cow ?? 0) + (localBonus.livestock.cow ?? 0),
       },
       {
         kind: "horse" as const,
         icon: "🐎",
         label: lang === "mn" ? "Адуу" : "Horse",
-        value: livestock?.horse ?? 0,
+        value: (livestock?.horse ?? 0) + (localBonus.livestock.horse ?? 0),
       },
       {
         kind: "camel" as const,
         icon: "🐫",
         label: lang === "mn" ? "Тэмээ" : "Camel",
-        value: livestock?.camel ?? 0,
+        value: (livestock?.camel ?? 0) + (localBonus.livestock.camel ?? 0),
       },
     ],
-    [lang, livestock],
+    [lang, localBonus.livestock, livestock],
+  );
+  const displayCoins = coins + localBonus.coins;
+  const displayKp = kp + localBonus.kp;
+  const displayLivestockTotal = useMemo(
+    () =>
+      livestockRows.reduce(
+        (sum, row) => sum + Math.max(0, Math.floor(Number(row.value) || 0)),
+        0,
+      ),
+    [livestockRows],
   );
 
   async function exchangeGems(qty: number) {
@@ -243,7 +393,7 @@ export function MapFloatingTopBar({
               <PopoverTrigger asChild>
                 <button type="button" className={statBtn} onClick={(e) => e.stopPropagation()}>
                   <LuCoins className="size-3.5 text-[color:var(--map-gold)]" />
-                  {coins.toLocaleString()}
+                  {displayCoins.toLocaleString()}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="map-ui-surface w-[14rem] border p-2.5">
@@ -254,39 +404,43 @@ export function MapFloatingTopBar({
                       {lang === "mn" ? "Таны зоос" : "Your coins"}
                     </span>
                     <span className="font-semibold tabular-nums text-[color:var(--map-gold)]">
-                      🪙 {coins.toLocaleString()}
+                      🪙 {displayCoins.toLocaleString()}
                     </span>
                   </div>
+                  {(() => {
+                    const coinsTarget = targetAfterClaims(
+                      statTargets.coins,
+                      "coins",
+                    );
+                    return (
+                      <>
                   <div className="mt-2 h-1.5 rounded-full bg-white/10">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-amber-400/80 to-yellow-300/80"
                       style={{
                         width: `${Math.min(
                           100,
-                          Math.round((coins / Math.max(1, statTargets.coins)) * 100),
+                          Math.round((displayCoins / Math.max(1, coinsTarget)) * 100),
                         )}%`,
                       }}
                     />
                   </div>
                   <p className="mt-1 text-[10px] text-[color:var(--map-ui-text-muted)]">
-                    {lang === "mn" ? "Зорилт" : "Target"}: {coins.toLocaleString()} /{" "}
-                    {statTargets.coins.toLocaleString()}
+                    {lang === "mn" ? "Зорилт" : "Target"}: {displayCoins.toLocaleString()} /{" "}
+                    {coinsTarget.toLocaleString()}
                   </p>
-                  {coins >= statTargets.coins ? (
-                    claimedChests.has(chestKey("coins")) ? (
-                      <p className="mt-1 text-[10px] text-emerald-200">
-                        {lang === "mn" ? "✅ Энэ түвшний авдар нээгдсэн" : "✅ Chest opened for this level"}
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => claimLocalChest("coins")}
-                        className="mt-1.5 w-full rounded-md border border-amber-300/35 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-100"
-                      >
-                        {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
-                      </button>
-                    )
+                  {displayCoins >= coinsTarget ? (
+                    <button
+                      type="button"
+                      onClick={() => claimLocalChest("coins")}
+                      className="mt-1.5 w-full rounded-md border border-amber-300/35 bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-100"
+                    >
+                      {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
+                    </button>
                   ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-[color:var(--map-ui-text-muted)]">
                   {lang === "mn"
@@ -323,7 +477,7 @@ export function MapFloatingTopBar({
               <PopoverTrigger asChild>
                 <button type="button" className={statBtn} onClick={(e) => e.stopPropagation()}>
                   <span className="text-[13px] leading-none">💠</span>
-                  {lang === "mn" ? "МО" : "KP"} {kp.toLocaleString()}
+                  {lang === "mn" ? "МО" : "KP"} {displayKp.toLocaleString()}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="map-ui-surface w-[14rem] border p-2.5">
@@ -331,42 +485,43 @@ export function MapFloatingTopBar({
                 <div className="mt-2 rounded-lg border border-white/10 bg-white/[0.03] p-2">
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-[color:var(--map-ui-text-muted)]">
-                      {lang === "mn" ? "Таны KP" : "Your KP"}
+                  {lang === "mn" ? "Таны KP" : "Your KP"}
                     </span>
                     <span className="font-semibold tabular-nums text-[color:var(--map-gold)]">
-                      💠 {kp.toLocaleString()}
+                      💠 {displayKp.toLocaleString()}
                     </span>
                   </div>
+                  {(() => {
+                    const kpTarget = targetAfterClaims(statTargets.kp, "kp");
+                    return (
+                      <>
                   <div className="mt-2 h-1.5 rounded-full bg-white/10">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-violet-400/80 to-sky-300/80"
                       style={{
                         width: `${Math.min(
                           100,
-                          Math.round((kp / Math.max(1, statTargets.kp)) * 100),
+                          Math.round((displayKp / Math.max(1, kpTarget)) * 100),
                         )}%`,
                       }}
                     />
                   </div>
                   <p className="mt-1 text-[10px] text-[color:var(--map-ui-text-muted)]">
-                    {lang === "mn" ? "Зорилт" : "Target"}: {kp.toLocaleString()} /{" "}
-                    {statTargets.kp.toLocaleString()}
+                    {lang === "mn" ? "Зорилт" : "Target"}: {displayKp.toLocaleString()} /{" "}
+                    {kpTarget.toLocaleString()}
                   </p>
-                  {kp >= statTargets.kp ? (
-                    claimedChests.has(chestKey("kp")) ? (
-                      <p className="mt-1 text-[10px] text-emerald-200">
-                        {lang === "mn" ? "✅ Энэ түвшний авдар нээгдсэн" : "✅ Chest opened for this level"}
-                      </p>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => claimLocalChest("kp")}
-                        className="mt-1.5 w-full rounded-md border border-violet-300/35 bg-violet-500/10 px-2 py-1 text-[10px] font-semibold text-violet-100"
-                      >
-                        {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
-                      </button>
-                    )
+                  {displayKp >= kpTarget ? (
+                    <button
+                      type="button"
+                      onClick={() => claimLocalChest("kp")}
+                      className="mt-1.5 w-full rounded-md border border-violet-300/35 bg-violet-500/10 px-2 py-1 text-[10px] font-semibold text-violet-100"
+                    >
+                      {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
+                    </button>
                   ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-[color:var(--map-ui-text-muted)]">
                   {lang === "mn"
@@ -431,7 +586,7 @@ export function MapFloatingTopBar({
               <PopoverTrigger asChild>
                 <button type="button" className={statBtn} onClick={(e) => e.stopPropagation()}>
                   <span className="text-[13px] leading-none">🐄</span>
-                  {livestockTotal.toLocaleString()}
+                  {displayLivestockTotal.toLocaleString()}
                 </button>
               </PopoverTrigger>
               <PopoverContent className="map-ui-surface w-[17rem] border p-2.5">
@@ -442,7 +597,7 @@ export function MapFloatingTopBar({
                       {lang === "mn" ? "Нийт мал" : "Total livestock"}
                     </span>
                     <span className="font-semibold tabular-nums text-[color:var(--map-gold)]">
-                      🐾 {livestockTotal.toLocaleString()}
+                      🐾 {displayLivestockTotal.toLocaleString()}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 rounded-full bg-white/10">
@@ -452,7 +607,7 @@ export function MapFloatingTopBar({
                         width: `${Math.min(
                           100,
                           Math.round(
-                            (livestockTotal /
+                            (displayLivestockTotal /
                               Math.max(
                                 1,
                                 Object.values(statTargets.livestock).reduce(
@@ -480,12 +635,15 @@ export function MapFloatingTopBar({
                 </div>
                 <div className="mt-2 space-y-1.5">
                   {livestockRows.map((row) => {
-                    const target = statTargets.livestock[row.kind];
+                    const target = targetAfterClaims(
+                      statTargets.livestock[row.kind],
+                      "livestock",
+                      row.kind,
+                    );
                     const pct = Math.min(
                       100,
                       Math.round((row.value / Math.max(1, target)) * 100),
                     );
-                    const chestId = chestKey("livestock", row.kind);
                     return (
                       <div key={row.label} className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs">
                         <div className="flex items-center justify-between">
@@ -501,19 +659,13 @@ export function MapFloatingTopBar({
                           />
                         </div>
                         {pct >= 100 ? (
-                          claimedChests.has(chestId) ? (
-                            <p className="mt-1 text-[10px] text-emerald-200">
-                              {lang === "mn" ? "✅ Авдар нээгдсэн" : "✅ Chest opened"}
-                            </p>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => claimLocalChest("livestock", row.kind)}
-                              className="mt-1 w-full rounded-md border border-emerald-300/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-100"
-                            >
-                              {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
-                            </button>
-                          )
+                          <button
+                            type="button"
+                            onClick={() => claimLocalChest("livestock", row.kind)}
+                            className="mt-1 w-full rounded-md border border-emerald-300/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-100"
+                          >
+                            {lang === "mn" ? "🧰 Авдар нээх" : "🧰 Open chest"}
+                          </button>
                         ) : null}
                       </div>
                     );
@@ -600,6 +752,16 @@ export function MapFloatingTopBar({
           </div>
         </div>
       </div>
+      {chestDialogOpen ? (
+        <RewardChestDialog
+          open={chestDialogOpen}
+          onOpenChange={setChestDialogOpen}
+          lang={lang}
+          title={chestDialogTitle}
+          introText={chestDialogIntro}
+          items={chestDialogItems}
+        />
+      ) : null}
     </div>
   );
 }

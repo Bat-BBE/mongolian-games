@@ -39,6 +39,48 @@ function disposeRemoteCampSubtree(obj: THREE.Object3D): void {
   });
 }
 
+function createSeededRng(seedSource: string): {
+  f: (a: number, b: number) => number;
+  i: (a: number, b: number) => number;
+} {
+  let seed = 2166136261 >>> 0;
+  for (let i = 0; i < seedSource.length; i++) {
+    seed ^= seedSource.charCodeAt(i);
+    seed = Math.imul(seed, 16777619) >>> 0;
+  }
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return seed / 4294967296;
+  };
+  return {
+    f: (a: number, b: number) => a + next() * (b - a),
+    i: (a: number, b: number) => Math.floor(a + next() * (b - a + 1)),
+  };
+}
+
+function makeHomeLayoutSeed(
+  x: number,
+  z: number,
+  lv: number,
+  yardW: number,
+  yardD: number,
+  scale: number,
+  herdKey: string,
+): string {
+  return [
+    x.toFixed(2),
+    z.toFixed(2),
+    lv,
+    yardW.toFixed(1),
+    yardD.toFixed(1),
+    scale.toFixed(2),
+    herdKey,
+  ].join("|");
+}
+
 /** Цэгээс хэсэг хоёр цэгийн хоорондох хамгийн бага зай (x/z). */
 function distPointSegment2D(
   px: number,
@@ -1044,6 +1086,15 @@ export class SceneBuilder {
   ): void {
     const safeName = `remote_visit_camp_${peerId.replace(/[^a-zA-Z0-9_-]+/g, "_")}`;
     const lv = Math.max(1, Math.min(30, Math.floor(meta?.gerLevel ?? 1)));
+    const herd = {
+      sheep: Math.max(0, Math.min(14, Math.floor(meta?.livestock?.sheep ?? 0))),
+      goat: Math.max(0, Math.min(12, Math.floor(meta?.livestock?.goat ?? 0))),
+      cow: Math.max(0, Math.min(8, Math.floor(meta?.livestock?.cow ?? 0))),
+      horse: Math.max(0, Math.min(5, Math.floor(meta?.livestock?.horse ?? 0))),
+      camel: Math.max(0, Math.min(4, Math.floor(meta?.livestock?.camel ?? 0))),
+    };
+    const herdCount =
+      herd.sheep + herd.goat + herd.cow + herd.horse + herd.camel;
 
     const step = Math.min(lv, 5);
     const earlyScale = 0.5 + (step - 1) * 0.095;
@@ -1060,7 +1111,11 @@ export class SceneBuilder {
     const { x: gx, z: gz } = playerHomeWorldAnchor(anchorKey);
     const campYaw = 0;
     const layoutKey = `${lv}|${yardW.toFixed(1)}|${yardD.toFixed(1)}|${s.toFixed(2)}`;
-    const metaKey = `B|${anchorKey.slice(0, 64)}|${layoutKey}`;
+    const herdKey = `${herd.sheep},${herd.goat},${herd.cow},${herd.horse},${herd.camel}`;
+    const metaKey = `B|${anchorKey.slice(0, 64)}|${layoutKey}|${herdKey}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(gx, gz, lv, yardW, yardD, s, herdKey),
+    );
 
     const existing = campByPeer.get(peerId);
     const needsRebuild =
@@ -1077,9 +1132,182 @@ export class SceneBuilder {
       const campRoot = new THREE.Group();
       campRoot.name = safeName;
       campRoot.userData.campMeta = metaKey;
+      campRoot.userData.fadeAlpha = 0;
       container.add(campRoot);
       this.makeGer(gx, gz, campYaw, s, false, "", campRoot, `${safeName}_ger`);
+      const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+      const satelliteFrac =
+        0.64 + Math.min(lv, 22) * 0.0075 + (extraGers >= 4 ? 0.03 : 0);
+      if (extraGers > 0) {
+        const ringR = 13.2 + Math.min(lv * 0.45, 10);
+        for (let i = 0; i < extraGers; i++) {
+          const ang = (i / extraGers) * Math.PI * 2 + seeded.f(-0.06, 0.06);
+          const extraS = s * satelliteFrac + seeded.f(0, 0.07);
+          this.makeGer(
+            gx + Math.cos(ang) * ringR,
+            gz + Math.sin(ang) * ringR,
+            seeded.f(0, Math.PI * 2),
+            extraS,
+            false,
+            "",
+            campRoot,
+            `${safeName}_ger_extra_${i}`,
+          );
+        }
+      }
       this.makeFence(gx, gz, yardW, yardD, 0, false, campRoot);
+      if (herdCount > 0) {
+        const herdRoot = new THREE.Group();
+        herdRoot.name = `${safeName}_livestock`;
+        campRoot.add(herdRoot);
+        const sheepMat = mkMat(0xf1e7d5, 0.92);
+        const goatMat = mkMat(0xe8dcc8, 0.9);
+        const cowMat = mkMat(0x5c4030, 0.9);
+        const hoofMat = mkMat(0x2a1508, 0.9);
+        const fencePad = 2.65;
+        const maxX = Math.max(2.8, yardW * 0.5 - fencePad);
+        const maxZ = Math.max(2.8, yardD * 0.5 - fencePad);
+        let minR = Math.max(11.2, Math.min(yardW * 0.5, yardD * 0.5) * 0.195);
+        const reach = Math.hypot(maxX, maxZ);
+        if (minR > reach * 0.58) minR = Math.max(7.5, reach * 0.38);
+        const sampleYardOffset = (): { ox: number; oz: number } => {
+          for (let attempt = 0; attempt < 64; attempt++) {
+            const ox = seeded.f(-maxX, maxX);
+            const oz = seeded.f(-maxZ, maxZ);
+            if (ox * ox + oz * oz >= minR * minR) return { ox, oz };
+          }
+          const ang = seeded.f(0, Math.PI * 2);
+          const rad = Math.max(
+            minR * 0.92,
+            Math.min(
+              Math.min(maxX, maxZ) * (0.52 + seeded.f(0, 0.28)),
+              reach - 0.5,
+            ),
+          );
+          return { ox: Math.cos(ang) * rad, oz: Math.sin(ang) * rad };
+        };
+        const addRuminant = (
+          ox: number,
+          oz: number,
+          sc: number,
+          bodyMat: THREE.MeshStandardMaterial,
+          withHorns: boolean,
+          withFluffyEars: boolean,
+        ) => {
+          const y = terrainHeight(gx + ox, gz + oz);
+          const g = new THREE.Group();
+          const body = new THREE.Mesh(
+            new THREE.SphereGeometry(0.38 * sc, 12, 10),
+            bodyMat,
+          );
+          body.scale.set(1.22, 1.05, 1.15);
+          body.position.y = 0.48 * sc;
+          g.add(body);
+          const head = new THREE.Mesh(
+            new THREE.SphereGeometry(0.19 * sc, 10, 10),
+            mkMat(0x6a3a10, 0.9),
+          );
+          head.position.set(0.42 * sc, 0.58 * sc, 0);
+          g.add(head);
+          if (withFluffyEars) {
+            const earL = new THREE.Mesh(
+              new THREE.ConeGeometry(0.06 * sc, 0.14 * sc, 6),
+              bodyMat,
+            );
+            earL.position.set(0.38 * sc, 0.68 * sc, 0.12 * sc);
+            earL.rotation.z = 0.5;
+            g.add(earL);
+            const earR = earL.clone();
+            earR.position.z = -0.12 * sc;
+            earR.rotation.z = -0.5;
+            g.add(earR);
+          }
+          if (withHorns) {
+            [-1, 1].forEach((sg) => {
+              const horn = new THREE.Mesh(
+                new THREE.ConeGeometry(0.035 * sc, 0.22 * sc, 6),
+                mkMat(0x3a2a18, 0.9),
+              );
+              horn.position.set(0.36 * sc, 0.78 * sc, sg * 0.1 * sc);
+              horn.rotation.z = sg * 0.65;
+              horn.rotation.x = 0.35;
+              g.add(horn);
+            });
+          }
+          const legW = 0.22;
+          [-legW, legW].forEach((lx) => {
+            [-0.14, 0.14].forEach((lz) => {
+              const leg = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.042 * sc, 0.048 * sc, 0.32 * sc, 6),
+                hoofMat,
+              );
+              leg.position.set(lx * sc, 0.17 * sc, lz);
+              g.add(leg);
+            });
+          });
+          g.position.set(gx + ox, y + 0.04, gz + oz);
+          g.rotation.y = seeded.f(0, Math.PI * 2);
+          herdRoot.add(g);
+        };
+        for (let i = 0; i < herd.sheep; i++) {
+          const { ox, oz } = sampleYardOffset();
+          addRuminant(ox, oz, 1.12, sheepMat, false, true);
+        }
+        for (let i = 0; i < herd.goat; i++) {
+          const { ox, oz } = sampleYardOffset();
+          addRuminant(ox, oz, 0.94, goatMat, true, false);
+        }
+        for (let i = 0; i < herd.cow; i++) {
+          const { ox, oz } = sampleYardOffset();
+          const sc = 1.38;
+          const y = terrainHeight(gx + ox, gz + oz);
+          const g = new THREE.Group();
+          const body = new THREE.Mesh(
+            new THREE.BoxGeometry(0.95 * sc, 0.62 * sc, 1.15 * sc),
+            cowMat,
+          );
+          body.position.y = 0.55 * sc;
+          g.add(body);
+          const head = new THREE.Mesh(
+            new THREE.BoxGeometry(0.42 * sc, 0.38 * sc, 0.52 * sc),
+            mkMat(0x4a3228, 0.88),
+          );
+          head.position.set(0.62 * sc, 0.62 * sc, 0);
+          g.add(head);
+          [-0.32, 0.32].forEach((lx) => {
+            [-0.22, 0.22].forEach((lz) => {
+              const leg = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.055 * sc, 0.06 * sc, 0.38 * sc, 6),
+                hoofMat,
+              );
+              leg.position.set(lx * sc, 0.2 * sc, lz);
+              g.add(leg);
+            });
+          });
+          g.position.set(gx + ox, y + 0.04, gz + oz);
+          g.rotation.y = seeded.f(0, Math.PI * 2);
+          herdRoot.add(g);
+        }
+        for (let i = 0; i < herd.horse; i++) {
+          const { ox, oz } = sampleYardOffset();
+          this.makeHorse(
+            gx + ox,
+            gz + oz,
+            seeded.f(0, Math.PI * 2),
+            [0x6b3a1f, 0x8a6030, 0xc8a060][seeded.i(0, 2)],
+            false,
+            0,
+            0,
+            5,
+            0,
+            herdRoot,
+          );
+        }
+        for (let i = 0; i < herd.camel; i++) {
+          const { ox, oz } = sampleYardOffset();
+          this.makeCamel(gx + ox, gz + oz, seeded.f(0, Math.PI * 2), herdRoot);
+        }
+      }
       campByPeer.set(peerId, campRoot);
     }
   }
@@ -1322,6 +1550,20 @@ export class SceneBuilder {
     const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
     const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
     const s = earlyScale * midBoost * highBoost * 1.86;
+    const herd = {
+      sheep: Math.max(0, Math.min(14, Math.floor(livestock?.sheep ?? 0))),
+      goat: Math.max(0, Math.min(12, Math.floor(livestock?.goat ?? 0))),
+      cow: Math.max(0, Math.min(8, Math.floor(livestock?.cow ?? 0))),
+      horse: Math.max(0, Math.min(5, Math.floor(livestock?.horse ?? 0))),
+      camel: Math.max(0, Math.min(4, Math.floor(livestock?.camel ?? 0))),
+    };
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
+    const herdKey = `${herd.sheep},${herd.goat},${herd.cow},${herd.horse},${herd.camel}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(x, z, lv, yardW, yardD, s, herdKey),
+    );
     const root = new THREE.Group();
     root.name = "playerHomeGer";
     this.scene.add(root);
@@ -1329,20 +1571,18 @@ export class SceneBuilder {
     this.makeGer(x, z, 0, s, true, "home", root);
 
     const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
-    let ringSpan = 12.5;
     // Нэмэлт гэр: гол гэрийн хэмжээтэй илүү ойролцоо (өмнө ~38% → одоо ~64–82%).
     const satelliteFrac =
       0.64 + Math.min(lv, 22) * 0.0075 + (extraGers >= 4 ? 0.03 : 0);
     if (extraGers > 0) {
       const ringR = 13.2 + Math.min(lv * 0.45, 10);
-      ringSpan = ringR + 7;
       for (let i = 0; i < extraGers; i++) {
-        const ang = (i / extraGers) * Math.PI * 2 + rand(-0.06, 0.06);
-        const extraS = s * satelliteFrac + rand(0, 0.07);
+        const ang = (i / extraGers) * Math.PI * 2 + seeded.f(-0.06, 0.06);
+        const extraS = s * satelliteFrac + seeded.f(0, 0.07);
         this.makeGer(
           x + Math.cos(ang) * ringR,
           z + Math.sin(ang) * ringR,
-          rand(0, Math.PI * 2),
+          seeded.f(0, Math.PI * 2),
           extraS,
           false,
           "",
@@ -1350,9 +1590,6 @@ export class SceneBuilder {
         );
       }
     }
-    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
-    const yardW = halfW * 2;
-    const yardD = halfD * 2;
     this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
@@ -1389,7 +1626,18 @@ export class SceneBuilder {
     const hoofMat = mkMat(0x2a1508, 0.9);
 
     const lv = Math.max(1, Math.min(30, Math.floor(homeGerLevel)));
+    const step = Math.min(lv, 5);
+    const earlyScale = 0.5 + (step - 1) * 0.095;
+    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
+    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
+    const homeScale = earlyScale * midBoost * highBoost * 1.86;
     const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
+    const herdKey = `${sheepN},${goatN},${cowN},${horseN},${camelN}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(x, z, lv, yardW, yardD, homeScale, herdKey),
+    );
     /** Хашааны дотор үлдээх зай (хашлааснаас мал алдалгүй) */
     const fencePad = 2.65;
     const maxX = Math.max(2.8, halfW - fencePad);
@@ -1403,16 +1651,16 @@ export class SceneBuilder {
 
     const sampleYardOffset = (): { ox: number; oz: number } => {
       for (let attempt = 0; attempt < 64; attempt++) {
-        const ox = rand(-maxX, maxX);
-        const oz = rand(-maxZ, maxZ);
+        const ox = seeded.f(-maxX, maxX);
+        const oz = seeded.f(-maxZ, maxZ);
         const r2 = ox * ox + oz * oz;
         if (r2 >= minR * minR) {
           return { ox, oz };
         }
       }
-      const ang = rand(0, Math.PI * 2);
+      const ang = seeded.f(0, Math.PI * 2);
       const rad = Math.min(
-        Math.min(maxX, maxZ) * (0.52 + rand(0, 0.28)),
+        Math.min(maxX, maxZ) * (0.52 + seeded.f(0, 0.28)),
         reach - 0.5,
       );
       const rr = Math.max(minR * 0.92, rad);
@@ -1479,7 +1727,7 @@ export class SceneBuilder {
         });
       });
       g.position.set(x + ox, y + 0.04, z + oz);
-      g.rotation.y = rand(0, Math.PI * 2);
+      g.rotation.y = seeded.f(0, Math.PI * 2);
       root.add(g);
     };
 
@@ -1519,7 +1767,7 @@ export class SceneBuilder {
         });
       });
       g.position.set(x + ox, y + 0.04, z + oz);
-      g.rotation.y = rand(0, Math.PI * 2);
+      g.rotation.y = seeded.f(0, Math.PI * 2);
       root.add(g);
     }
 
@@ -1528,8 +1776,8 @@ export class SceneBuilder {
       this.makeHorse(
         x + ox,
         z + oz,
-        rand(0, Math.PI * 2),
-        [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
+        seeded.f(0, Math.PI * 2),
+        [0x6b3a1f, 0x8a6030, 0xc8a060][seeded.i(0, 2)],
         false,
         0,
         0,
@@ -1541,7 +1789,7 @@ export class SceneBuilder {
 
     for (let i = 0; i < camelN; i++) {
       const { ox, oz } = sampleYardOffset();
-      this.makeCamel(x + ox, z + oz, rand(0, Math.PI * 2), root);
+      this.makeCamel(x + ox, z + oz, seeded.f(0, Math.PI * 2), root);
     }
   }
 

@@ -237,6 +237,12 @@ export interface DashStrings {
   stationPopupGameAbout: string;
   /** Товч дээр: тоглоомын 7 хоногийн оролт дууссан — `{cap}`-ийг 2 удаа орлуулна */
   stationPopupPerGameWeekCap: string;
+  /** Тоглоомын карт: үлдсэн — `{remaining}`, `{cap}` */
+  stationPopupGameQuotaActive: string;
+  /** Тоглоомын карт: лимит дууссан — `{cap}` */
+  stationPopupGameQuotaLocked: string;
+  /** «Тоглох» товч: 7 хоногийн лимитээр түгжигдсөн */
+  stationPopupGameButtonWeekLocked: string;
 }
 
 export const DASH_STRINGS: Record<DashLang, DashStrings> = {
@@ -843,6 +849,11 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Дараа нь доорх тоглоомын «Тоглох» дарна — шинэ цонхонд нээгдэнэ.",
     stationPopupGameAbout: "Товч танилцуулга",
     stationPopupPerGameWeekCap: "{cap}/{cap} · 7 хоног",
+    stationPopupGameQuotaActive:
+      "7 хоногийн цонхонд үлдсэн тоглолт: {remaining} / {cap}",
+    stationPopupGameQuotaLocked:
+      "Энэ 7 хоногт {cap} удаа тоглосон — одоо түгжигдсэн",
+    stationPopupGameButtonWeekLocked: "Түгжигдсэн",
   },
 
   en: {
@@ -1448,6 +1459,10 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
       "Then tap «Play» under a game—it opens in the game modal.",
     stationPopupGameAbout: "About",
     stationPopupPerGameWeekCap: "{cap}/{cap} · 7-day cap",
+    stationPopupGameQuotaActive:
+      "Plays left this rolling week: {remaining} / {cap}",
+    stationPopupGameQuotaLocked: "All {cap} weekly plays used — locked for now",
+    stationPopupGameButtonWeekLocked: "Locked",
   },
 };
 

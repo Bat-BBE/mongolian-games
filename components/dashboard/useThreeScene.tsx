@@ -558,6 +558,24 @@ export function useThreeScene({
       });
     }
 
+    function setGroupOpacity(root: THREE.Object3D, alpha: number): void {
+      const a = clamp(alpha, 0, 1);
+      root.traverse((o) => {
+        if (!(o instanceof THREE.Mesh)) return;
+        const apply = (m: THREE.Material) => {
+          const mat = m as THREE.MeshStandardMaterial;
+          mat.transparent = a < 0.999;
+          mat.opacity = a;
+          mat.needsUpdate = true;
+        };
+        if (Array.isArray(o.material)) {
+          o.material.forEach((m) => apply(m));
+        } else if (o.material) {
+          apply(o.material);
+        }
+      });
+    }
+
     type RemotePosSmooth = { x: number; z: number; ry: number };
     const REMOTE_PEER_POS_RATE = 12;
     const REMOTE_PEER_ANG_RATE = 15;
@@ -1843,6 +1861,16 @@ export function useThreeScene({
                 },
               },
             );
+            const camp = remoteCampById.get(p.id);
+            if (camp) {
+              const cur =
+                typeof camp.userData.fadeAlpha === "number"
+                  ? (camp.userData.fadeAlpha as number)
+                  : 1;
+              const next = Math.min(1, cur + dt * 4.5);
+              camp.userData.fadeAlpha = next;
+              setGroupOpacity(camp, next);
+            }
           }
           for (const [pid, grp] of remoteAvatarById) {
             if (!seen.has(pid)) {

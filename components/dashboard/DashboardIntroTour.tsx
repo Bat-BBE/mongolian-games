@@ -37,9 +37,7 @@ export function readDashboardIntroDone(): boolean {
 export function setDashboardIntroDone(): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, "1");
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
 function measureHole(step: number): Hole | null {
@@ -108,12 +106,15 @@ interface DashboardIntroTourProps {
   t: DashStrings;
   open: boolean;
   onDismiss: () => void;
+  /** Анхны автоматаар нээгдэхэд false — алхмуудыг заавал дуусгана */
+  allowSkip?: boolean;
 }
 
 export function DashboardIntroTour({
   t,
   open,
   onDismiss,
+  allowSkip = true,
 }: DashboardIntroTourProps) {
   const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState(0);
@@ -150,7 +151,7 @@ export function DashboardIntroTour({
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && allowSkip) {
         setDashboardIntroDone();
         onDismiss();
       }
@@ -161,7 +162,7 @@ export function DashboardIntroTour({
       window.removeEventListener("scroll", onResize, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, refresh, onDismiss]);
+  }, [allowSkip, open, refresh, onDismiss]);
 
   useEffect(() => {
     if (open) setStep(0);
@@ -283,7 +284,10 @@ export function DashboardIntroTour({
         <p
           className="mt-1.5 text-xs font-medium"
           id="dashboard-intro-step-label"
-          style={{ color: "color-mix(in srgb, var(--map-gold) 75%, var(--map-ui-text))" }}
+          style={{
+            color:
+              "color-mix(in srgb, var(--map-gold) 75%, var(--map-ui-text))",
+          }}
         >
           {t.introStepLabels[step]}
         </p>
@@ -319,13 +323,15 @@ export function DashboardIntroTour({
           {step + 1} / {lastStep + 1}
         </p>
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={finish}
-            className="rounded-lg border border-rose-400/50 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/25"
-          >
-            {t.introSkip}
-          </button>
+          {allowSkip ? (
+            <button
+              type="button"
+              onClick={finish}
+              className="rounded-lg border border-rose-400/50 bg-rose-500/15 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/25"
+            >
+              {t.introSkip}
+            </button>
+          ) : null}
           {step < lastStep ? (
             <button
               type="button"

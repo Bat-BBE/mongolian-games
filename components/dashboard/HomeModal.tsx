@@ -131,8 +131,9 @@ export function HomeModal({
       const prof = isPlainRecord(user.profile)
         ? (user.profile as Record<string, unknown>)
         : {};
+      const next = snapshotFromProfile(prof);
       applyProfileFromUser(prof);
-      onChanged?.(snapshotFromProfile(prof));
+      onChanged?.(next);
       onOpenChange(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Алдаа");
@@ -150,8 +151,9 @@ export function HomeModal({
       const prof = isPlainRecord(user.profile)
         ? (user.profile as Record<string, unknown>)
         : {};
+      const next = snapshotFromProfile(prof);
       applyProfileFromUser(prof);
-      onChanged?.(snapshotFromProfile(prof));
+      onChanged?.(next);
       onOpenChange(false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Алдаа");
@@ -176,8 +178,9 @@ export function HomeModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[min(100vw-1.25rem,56rem)] max-h-[min(92vh,760px)] overflow-hidden flex flex-col p-0 gap-0 border border-[color:var(--map-ui-border)] bg-[color:var(--map-ui-surface-2)] backdrop-blur-xl shadow-[0_24px_70px_-30px_rgba(0,0,0,0.55)]">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-[min(100vw-1.25rem,56rem)] max-h-[min(92vh,760px)] overflow-hidden flex flex-col p-0 gap-0 border border-[color:var(--map-ui-border)] bg-[color:var(--map-ui-surface-2)] backdrop-blur-xl shadow-[0_24px_70px_-30px_rgba(0,0,0,0.55)]">
         <DialogHeader className="px-5 pt-5 pb-3 border-b border-[color:var(--map-ui-border)] bg-[color-mix(in_srgb,var(--map-ui-base)_58%,transparent)]">
           <DialogTitle className="font-display tracking-wide flex items-center justify-center gap-2 text-center text-[color:var(--map-ui-text)]">
             {title}
@@ -316,8 +319,9 @@ export function HomeModal({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
