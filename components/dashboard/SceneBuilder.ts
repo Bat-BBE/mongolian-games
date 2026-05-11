@@ -39,6 +39,48 @@ function disposeRemoteCampSubtree(obj: THREE.Object3D): void {
   });
 }
 
+function createSeededRng(seedSource: string): {
+  f: (a: number, b: number) => number;
+  i: (a: number, b: number) => number;
+} {
+  let seed = 2166136261 >>> 0;
+  for (let i = 0; i < seedSource.length; i++) {
+    seed ^= seedSource.charCodeAt(i);
+    seed = Math.imul(seed, 16777619) >>> 0;
+  }
+  const next = () => {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    return seed / 4294967296;
+  };
+  return {
+    f: (a: number, b: number) => a + next() * (b - a),
+    i: (a: number, b: number) => Math.floor(a + next() * (b - a + 1)),
+  };
+}
+
+function makeHomeLayoutSeed(
+  x: number,
+  z: number,
+  lv: number,
+  yardW: number,
+  yardD: number,
+  scale: number,
+  herdKey: string,
+): string {
+  return [
+    x.toFixed(2),
+    z.toFixed(2),
+    lv,
+    yardW.toFixed(1),
+    yardD.toFixed(1),
+    scale.toFixed(2),
+    herdKey,
+  ].join("|");
+}
+
 /** Цэгээс хэсэг хоёр цэгийн хоорондох хамгийн бага зай (x/z). */
 function distPointSegment2D(
   px: number,
@@ -1071,6 +1113,9 @@ export class SceneBuilder {
     const layoutKey = `${lv}|${yardW.toFixed(1)}|${yardD.toFixed(1)}|${s.toFixed(2)}`;
     const herdKey = `${herd.sheep},${herd.goat},${herd.cow},${herd.horse},${herd.camel}`;
     const metaKey = `B|${anchorKey.slice(0, 64)}|${layoutKey}|${herdKey}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(gx, gz, lv, yardW, yardD, s, herdKey),
+    );
 
     const existing = campByPeer.get(peerId);
     const needsRebuild =
@@ -1090,6 +1135,26 @@ export class SceneBuilder {
       campRoot.userData.fadeAlpha = 0;
       container.add(campRoot);
       this.makeGer(gx, gz, campYaw, s, false, "", campRoot, `${safeName}_ger`);
+      const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
+      const satelliteFrac =
+        0.64 + Math.min(lv, 22) * 0.0075 + (extraGers >= 4 ? 0.03 : 0);
+      if (extraGers > 0) {
+        const ringR = 13.2 + Math.min(lv * 0.45, 10);
+        for (let i = 0; i < extraGers; i++) {
+          const ang = (i / extraGers) * Math.PI * 2 + seeded.f(-0.06, 0.06);
+          const extraS = s * satelliteFrac + seeded.f(0, 0.07);
+          this.makeGer(
+            gx + Math.cos(ang) * ringR,
+            gz + Math.sin(ang) * ringR,
+            seeded.f(0, Math.PI * 2),
+            extraS,
+            false,
+            "",
+            campRoot,
+            `${safeName}_ger_extra_${i}`,
+          );
+        }
+      }
       this.makeFence(gx, gz, yardW, yardD, 0, false, campRoot);
       if (herdCount > 0) {
         const herdRoot = new THREE.Group();
@@ -1107,14 +1172,17 @@ export class SceneBuilder {
         if (minR > reach * 0.58) minR = Math.max(7.5, reach * 0.38);
         const sampleYardOffset = (): { ox: number; oz: number } => {
           for (let attempt = 0; attempt < 64; attempt++) {
-            const ox = rand(-maxX, maxX);
-            const oz = rand(-maxZ, maxZ);
+            const ox = seeded.f(-maxX, maxX);
+            const oz = seeded.f(-maxZ, maxZ);
             if (ox * ox + oz * oz >= minR * minR) return { ox, oz };
           }
-          const ang = rand(0, Math.PI * 2);
+          const ang = seeded.f(0, Math.PI * 2);
           const rad = Math.max(
             minR * 0.92,
-            Math.min(Math.min(maxX, maxZ) * (0.52 + rand(0, 0.28)), reach - 0.5),
+            Math.min(
+              Math.min(maxX, maxZ) * (0.52 + seeded.f(0, 0.28)),
+              reach - 0.5,
+            ),
           );
           return { ox: Math.cos(ang) * rad, oz: Math.sin(ang) * rad };
         };
@@ -1178,7 +1246,7 @@ export class SceneBuilder {
             });
           });
           g.position.set(gx + ox, y + 0.04, gz + oz);
-          g.rotation.y = rand(0, Math.PI * 2);
+          g.rotation.y = seeded.f(0, Math.PI * 2);
           herdRoot.add(g);
         };
         for (let i = 0; i < herd.sheep; i++) {
@@ -1217,7 +1285,7 @@ export class SceneBuilder {
             });
           });
           g.position.set(gx + ox, y + 0.04, gz + oz);
-          g.rotation.y = rand(0, Math.PI * 2);
+          g.rotation.y = seeded.f(0, Math.PI * 2);
           herdRoot.add(g);
         }
         for (let i = 0; i < herd.horse; i++) {
@@ -1225,8 +1293,8 @@ export class SceneBuilder {
           this.makeHorse(
             gx + ox,
             gz + oz,
-            rand(0, Math.PI * 2),
-            [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
+            seeded.f(0, Math.PI * 2),
+            [0x6b3a1f, 0x8a6030, 0xc8a060][seeded.i(0, 2)],
             false,
             0,
             0,
@@ -1237,7 +1305,7 @@ export class SceneBuilder {
         }
         for (let i = 0; i < herd.camel; i++) {
           const { ox, oz } = sampleYardOffset();
-          this.makeCamel(gx + ox, gz + oz, rand(0, Math.PI * 2), herdRoot);
+          this.makeCamel(gx + ox, gz + oz, seeded.f(0, Math.PI * 2), herdRoot);
         }
       }
       campByPeer.set(peerId, campRoot);
@@ -1482,6 +1550,20 @@ export class SceneBuilder {
     const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
     const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
     const s = earlyScale * midBoost * highBoost * 1.86;
+    const herd = {
+      sheep: Math.max(0, Math.min(14, Math.floor(livestock?.sheep ?? 0))),
+      goat: Math.max(0, Math.min(12, Math.floor(livestock?.goat ?? 0))),
+      cow: Math.max(0, Math.min(8, Math.floor(livestock?.cow ?? 0))),
+      horse: Math.max(0, Math.min(5, Math.floor(livestock?.horse ?? 0))),
+      camel: Math.max(0, Math.min(4, Math.floor(livestock?.camel ?? 0))),
+    };
+    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
+    const herdKey = `${herd.sheep},${herd.goat},${herd.cow},${herd.horse},${herd.camel}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(x, z, lv, yardW, yardD, s, herdKey),
+    );
     const root = new THREE.Group();
     root.name = "playerHomeGer";
     this.scene.add(root);
@@ -1489,20 +1571,18 @@ export class SceneBuilder {
     this.makeGer(x, z, 0, s, true, "home", root);
 
     const extraGers = Math.min(6, Math.max(0, Math.floor((lv - 3) / 2)));
-    let ringSpan = 12.5;
     // Нэмэлт гэр: гол гэрийн хэмжээтэй илүү ойролцоо (өмнө ~38% → одоо ~64–82%).
     const satelliteFrac =
       0.64 + Math.min(lv, 22) * 0.0075 + (extraGers >= 4 ? 0.03 : 0);
     if (extraGers > 0) {
       const ringR = 13.2 + Math.min(lv * 0.45, 10);
-      ringSpan = ringR + 7;
       for (let i = 0; i < extraGers; i++) {
-        const ang = (i / extraGers) * Math.PI * 2 + rand(-0.06, 0.06);
-        const extraS = s * satelliteFrac + rand(0, 0.07);
+        const ang = (i / extraGers) * Math.PI * 2 + seeded.f(-0.06, 0.06);
+        const extraS = s * satelliteFrac + seeded.f(0, 0.07);
         this.makeGer(
           x + Math.cos(ang) * ringR,
           z + Math.sin(ang) * ringR,
-          rand(0, Math.PI * 2),
+          seeded.f(0, Math.PI * 2),
           extraS,
           false,
           "",
@@ -1510,9 +1590,6 @@ export class SceneBuilder {
         );
       }
     }
-    const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
-    const yardW = halfW * 2;
-    const yardD = halfD * 2;
     this.makeFence(x, z, yardW, yardD, 0, false, root);
   }
 
@@ -1549,7 +1626,18 @@ export class SceneBuilder {
     const hoofMat = mkMat(0x2a1508, 0.9);
 
     const lv = Math.max(1, Math.min(30, Math.floor(homeGerLevel)));
+    const step = Math.min(lv, 5);
+    const earlyScale = 0.5 + (step - 1) * 0.095;
+    const midBoost = lv > 5 ? 1 + (Math.min(lv, 14) - 5) * 0.05 : 1;
+    const highBoost = lv > 14 ? 1 + (lv - 14) * 0.03 : 1;
+    const homeScale = earlyScale * midBoost * highBoost * 1.86;
     const { halfW, halfD } = getPlayerHomeYardHalfAxes(lv, livestock);
+    const yardW = halfW * 2;
+    const yardD = halfD * 2;
+    const herdKey = `${sheepN},${goatN},${cowN},${horseN},${camelN}`;
+    const seeded = createSeededRng(
+      makeHomeLayoutSeed(x, z, lv, yardW, yardD, homeScale, herdKey),
+    );
     /** Хашааны дотор үлдээх зай (хашлааснаас мал алдалгүй) */
     const fencePad = 2.65;
     const maxX = Math.max(2.8, halfW - fencePad);
@@ -1563,16 +1651,16 @@ export class SceneBuilder {
 
     const sampleYardOffset = (): { ox: number; oz: number } => {
       for (let attempt = 0; attempt < 64; attempt++) {
-        const ox = rand(-maxX, maxX);
-        const oz = rand(-maxZ, maxZ);
+        const ox = seeded.f(-maxX, maxX);
+        const oz = seeded.f(-maxZ, maxZ);
         const r2 = ox * ox + oz * oz;
         if (r2 >= minR * minR) {
           return { ox, oz };
         }
       }
-      const ang = rand(0, Math.PI * 2);
+      const ang = seeded.f(0, Math.PI * 2);
       const rad = Math.min(
-        Math.min(maxX, maxZ) * (0.52 + rand(0, 0.28)),
+        Math.min(maxX, maxZ) * (0.52 + seeded.f(0, 0.28)),
         reach - 0.5,
       );
       const rr = Math.max(minR * 0.92, rad);
@@ -1639,7 +1727,7 @@ export class SceneBuilder {
         });
       });
       g.position.set(x + ox, y + 0.04, z + oz);
-      g.rotation.y = rand(0, Math.PI * 2);
+      g.rotation.y = seeded.f(0, Math.PI * 2);
       root.add(g);
     };
 
@@ -1679,7 +1767,7 @@ export class SceneBuilder {
         });
       });
       g.position.set(x + ox, y + 0.04, z + oz);
-      g.rotation.y = rand(0, Math.PI * 2);
+      g.rotation.y = seeded.f(0, Math.PI * 2);
       root.add(g);
     }
 
@@ -1688,8 +1776,8 @@ export class SceneBuilder {
       this.makeHorse(
         x + ox,
         z + oz,
-        rand(0, Math.PI * 2),
-        [0x6b3a1f, 0x8a6030, 0xc8a060][randInt(0, 2)],
+        seeded.f(0, Math.PI * 2),
+        [0x6b3a1f, 0x8a6030, 0xc8a060][seeded.i(0, 2)],
         false,
         0,
         0,
@@ -1701,7 +1789,7 @@ export class SceneBuilder {
 
     for (let i = 0; i < camelN; i++) {
       const { ox, oz } = sampleYardOffset();
-      this.makeCamel(x + ox, z + oz, rand(0, Math.PI * 2), root);
+      this.makeCamel(x + ox, z + oz, seeded.f(0, Math.PI * 2), root);
     }
   }
 

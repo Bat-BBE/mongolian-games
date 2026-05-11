@@ -37,9 +37,7 @@ export function readDashboardIntroDone(): boolean {
 export function setDashboardIntroDone(): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, "1");
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
 function measureHole(step: number): Hole | null {
@@ -286,7 +284,10 @@ export function DashboardIntroTour({
         <p
           className="mt-1.5 text-xs font-medium"
           id="dashboard-intro-step-label"
-          style={{ color: "color-mix(in srgb, var(--map-gold) 75%, var(--map-ui-text))" }}
+          style={{
+            color:
+              "color-mix(in srgb, var(--map-gold) 75%, var(--map-ui-text))",
+          }}
         >
           {t.introStepLabels[step]}
         </p>
