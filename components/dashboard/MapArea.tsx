@@ -404,6 +404,7 @@ export function MapArea({
     publishMapChat,
     mapChatLinesRef,
     setOnMapChatLine,
+    publishHelloNow,
   } = useMapPresence({
     displayName: playerDisplayName?.trim() || userEmail?.trim() || "Тоглогч",
     homeKey: presenceHomeKey,
@@ -413,6 +414,11 @@ export function MapArea({
     livestock: presenceLivestock,
   });
   presencePublishRef.current = publishPose;
+
+  useEffect(() => {
+    // Home economy/profile өөрчлөгдөхөд refresh-гүйгээр peer-д шууд sync.
+    publishHelloNow();
+  }, [publishHelloNow, homeGerLevel, presenceLivestock, playerDisplayName, userEmail]);
 
   function handleStationFocus(id: string) {
     if (id === "home") {
