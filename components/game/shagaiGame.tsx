@@ -611,9 +611,23 @@ function ShagaiGameSolo({ onComplete }: ShagaiGameProps) {
 }
 
 export default function ShagaiGame({ onComplete, match = null }: ShagaiGameProps) {
-  const lobbyBlock =
-    Boolean(match?.roomCode) && match?.roomStatus === "lobby";
-  if (lobbyBlock) {
+  /**
+   * Өмнө нь зөвхөн `roomCode && lobby` үед л хүлээдэг байсан тул match WS холбогдож,
+   * өрөө үүсэх хүртэлх хугацаанд `roomCode` хоосон байхад шууд ShagaiGameSolo (робот)
+   * руу орж, хоёр тоглогч хэзээ ч нэгдэхгүй харагддаг байсан.
+   */
+  if (
+    match &&
+    !match.roomCode &&
+    !match.connected &&
+    match.error === "connection_failed"
+  ) {
+    return <ShagaiGameSolo onComplete={onComplete} />;
+  }
+  const waitingForMatchRoom =
+    match &&
+    (!match.roomCode || match.roomStatus === "lobby");
+  if (waitingForMatchRoom) {
     return <ShagaiLobbyWait />;
   }
   const humanMp =

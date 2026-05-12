@@ -44,7 +44,11 @@ import WoodenPuzzleGameMulti, {
   WoodenPuzzleOnlineLobby,
 } from "./woodenPuzzleGameMulti";
 import { loadPlayer } from "@/components/hero-select/hero-data";
-import { completeGame, tryGetAppUserByEmail } from "@/lib/api";
+import {
+  completeGame,
+  tryGetAppUserByEmail,
+  type AppUserRow,
+} from "@/lib/api";
 import { playButtonClick } from "@/lib/uiSounds";
 import { useMatchRoom } from "@/hooks/useMatchRoom";
 import { GameModalRulesBody } from "./gameModalRulesBody";
@@ -78,6 +82,98 @@ const MATCH_ROOM_GAME_TYPES = new Set<string>([
 
 function usesMatchRoom(gt: string) {
   return MATCH_ROOM_GAME_TYPES.has(gt);
+}
+
+/** Match WS-ээр өрөөний код ирэх / lobby хүртэл хүлээх — өмнө нь зөвхөн `roomCode && lobby` байсан тул код хоосон үед робот руу унадаг байсан. */
+function matchLobbyWaiting(mp: {
+  roomCode: string | null;
+  roomStatus: "lobby" | "playing" | null;
+  connected: boolean;
+  error: string | null;
+}): boolean {
+  if (
+    !mp.roomCode &&
+    !mp.connected &&
+    mp.error === "connection_failed"
+  ) {
+    return false;
+  }
+  return !mp.roomCode || mp.roomStatus === "lobby";
+}
+
+/**
+ * Өрөөнд ороогүй атлаа join/create алдаатай — бусад тоглоомууд ч гэсэн shagai-тай адил
+ * «хүлээж байна» биш тодорхой мессеж (эсвэл буруугаар solo руу унахгүй).
+ */
+function matchJoinBlockingError(mp: {
+  roomCode: string | null;
+  error: string | null;
+}): string | null {
+  if (mp.roomCode) return null;
+  const e = mp.error;
+  if (!e || e === "connection_failed") return null;
+  return e;
+}
+
+function isEmailLike(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+/.test(s.trim());
+}
+
+/** Match өрөөнд илгээгдэх нэр: Postgres display_name, profile.name, биш бол имэйлийн @ өмнөх хэсэг. */
+function matchDisplayNameFromAppUser(
+  row: AppUserRow | null,
+  email: string | undefined,
+  savedName: string | undefined,
+): string {
+  const dn = row?.display_name?.trim();
+  if (dn) return dn;
+  const prof = row?.profile;
+  if (prof && typeof prof === "object" && prof !== null) {
+    const n = (prof as Record<string, unknown>)["name"];
+    if (typeof n === "string") {
+      const t = n.trim();
+      if (t) return t;
+    }
+  }
+  const saved = savedName?.trim();
+  if (saved && !isEmailLike(saved)) return saved;
+  const mail =
+    email?.trim() || (saved && isEmailLike(saved) ? saved : undefined);
+  if (mail?.includes("@")) {
+    const local = mail.split("@")[0]!.trim();
+    if (local) return local;
+  }
+  if (saved) return saved;
+  return "Player";
+}
+
+function MatchRoomJoinError({
+  error,
+  isMn,
+}: {
+  error: string;
+  isMn: boolean;
+}) {
+  const msg =
+    error === "match_already_started"
+      ? isMn
+        ? "Тоглолт аль хэдийн эхэлсэн тул өрөөнд нэгдэж чадсангүй. Цонхыг хаагаад хамт дахин нээнэ үү, эсвэл нөгөө тоглогч дуусах хүртэл хүлээнэ үү."
+        : "This match has already started, so you could not join the room. Close this window and open the game again together, or wait until the other player finishes."
+      : error === "room_not_found"
+        ? isMn
+          ? "Ийм өрөө олдсонгүй. Ижил өртөөнөөс ижил тоглоомыг хамт нээнэ үү."
+          : "No room with that code was found. Make sure you open the same game from the same station."
+        : isMn
+          ? `Өрөөнд нэгдэж чадсангүй (${error}). Цонхыг хаагаад дахин оролдоно уу.`
+          : `Could not join the match room (${error}). Try closing and opening again.`;
+  return (
+    <div
+      className="flex h-full w-full items-center justify-center px-6 py-5 text-center text-[14px] leading-relaxed text-white/85"
+      style={{ fontFamily: GAME_UI_FONT_FAMILY }}
+    >
+      <p className="max-w-md text-balance">{msg}</p>
+    </div>
+  );
 }
 
 /** Canvas + зүүн панел — модалын толгойг нимгэн, тунгалаг болгоно */
@@ -121,8 +217,12 @@ export default function GameModal({
   const { language } = useApp();
   const { user: authUser, authConfigured } = useAuth();
   const [appUserInPostgres, setAppUserInPostgres] = useState(false);
-  const [matchDisplayName, setMatchDisplayName] = useState(
-    loadPlayer()?.name?.trim() || "Player",
+  const [matchDisplayName, setMatchDisplayName] = useState(() =>
+    matchDisplayNameFromAppUser(
+      null,
+      undefined,
+      loadPlayer()?.name?.trim(),
+    ),
   );
   const isMn = language === "mn";
 
@@ -156,10 +256,12 @@ export default function GameModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    const fallback = loadPlayer()?.name?.trim() || "Player";
+    const saved = loadPlayer()?.name?.trim();
     const email = authUser?.email?.trim();
     if (!authConfigured || !email) {
-      setMatchDisplayName(fallback);
+      setMatchDisplayName(
+        matchDisplayNameFromAppUser(null, undefined, saved),
+      );
       return;
     }
     let cancelled = false;
@@ -167,10 +269,13 @@ export default function GameModal({
       try {
         const row = await tryGetAppUserByEmail(email);
         if (cancelled) return;
-        const nick = row?.display_name?.trim();
-        setMatchDisplayName(nick || fallback);
+        setMatchDisplayName(matchDisplayNameFromAppUser(row, email, saved));
       } catch {
-        if (!cancelled) setMatchDisplayName(fallback);
+        if (!cancelled) {
+          setMatchDisplayName(
+            matchDisplayNameFromAppUser(null, email, saved),
+          );
+        }
       }
     })();
     return () => {
@@ -218,6 +323,8 @@ export default function GameModal({
           ? 4
           : undefined,
   });
+
+  const matchJoinErr = isMatch ? matchJoinBlockingError(mp) : null;
 
   const showMatchRoomChat =
     isMatch &&
@@ -314,18 +421,17 @@ export default function GameModal({
       return;
     }
 
-    const skipSoloLobbyWait = stationSlug === "freeplay" || !authUser;
-
+    /**
+     * Өмнө нь freeplay / guest-д 0 мс байсан тул эзэн шууд forceSolo хийгээд өрөө
+     * playing болдог. Хоёр дахь хүн join хийхэд match_already_started, roomCode ирэхгүй
+     * хэвээр «хүлээж байна» дээр үлдэж, эзэн роботтой тоглож байгаа харагддаг байсан.
+     */
     if (soloLobbyRoomCodeRef.current !== mp.roomCode) {
       soloLobbyRoomCodeRef.current = mp.roomCode;
-      soloLobbyWaitMsRef.current = skipSoloLobbyWait
-        ? 0
-        : pickSoloLobbyWaitMs();
+      soloLobbyWaitMsRef.current = pickSoloLobbyWaitMs();
     }
-    const waitMs = skipSoloLobbyWait
-      ? 0
-      : (soloLobbyWaitMsRef.current ?? pickSoloLobbyWaitMs());
-    if (!skipSoloLobbyWait) soloLobbyWaitMsRef.current = waitMs;
+    const waitMs = soloLobbyWaitMsRef.current ?? pickSoloLobbyWaitMs();
+    soloLobbyWaitMsRef.current = waitMs;
 
     const t = window.setTimeout(() => {
       if (!soloFallbackStartSentRef.current) {
@@ -346,7 +452,6 @@ export default function GameModal({
     mp.roomCode,
     mp.startMatch,
     stationSlug,
-    authUser,
   ]);
 
   useEffect(() => {
@@ -435,8 +540,7 @@ export default function GameModal({
   const stoneLobbyBlock =
     isMatch &&
     gameType === "stone-guess" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const stoneHumanMp =
     isMatch &&
     gameType === "stone-guess" &&
@@ -445,8 +549,7 @@ export default function GameModal({
   const fourBonesLobbyBlock =
     isMatch &&
     gameType === "four-bones" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const fourBonesHumanMp =
     isMatch &&
     gameType === "four-bones" &&
@@ -455,8 +558,7 @@ export default function GameModal({
   const horseRaceLobbyBlock =
     isMatch &&
     gameType === "horse-race" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const horseRaceHumanMp =
     isMatch &&
     gameType === "horse-race" &&
@@ -465,8 +567,7 @@ export default function GameModal({
   const shagaiGuessLobbyBlock =
     isMatch &&
     gameType === "shagai-guess" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const shagaiGuessHumanMp =
     isMatch &&
     gameType === "shagai-guess" &&
@@ -475,8 +576,7 @@ export default function GameModal({
   const fourPowersLobbyBlock =
     isMatch &&
     gameType === "four-powers" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const fourPowersHumanMp =
     isMatch &&
     gameType === "four-powers" &&
@@ -485,8 +585,7 @@ export default function GameModal({
   const woodenDiceLobbyBlock =
     isMatch &&
     gameType === "wooden-dice" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const woodenDiceHumanMp =
     isMatch &&
     gameType === "wooden-dice" &&
@@ -495,8 +594,7 @@ export default function GameModal({
   const stoneCairnLobbyBlock =
     isMatch &&
     gameType === "stone-cairn" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const stoneCairnHumanMp =
     isMatch &&
     gameType === "stone-cairn" &&
@@ -505,8 +603,7 @@ export default function GameModal({
   const twelveShagaiLobbyBlock =
     isMatch &&
     gameType === "twelve-shagai" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const twelveShagaiHumanMp =
     isMatch &&
     gameType === "twelve-shagai" &&
@@ -515,8 +612,7 @@ export default function GameModal({
   const berkh12LobbyBlock =
     isMatch &&
     gameType === "berkh-12-shagai" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const berkh12HumanMp =
     isMatch &&
     gameType === "berkh-12-shagai" &&
@@ -525,8 +621,7 @@ export default function GameModal({
   const woodenPuzzleLobbyBlock =
     isMatch &&
     gameType === "modon-onis" &&
-    mp.roomCode &&
-    mp.roomStatus === "lobby";
+    matchLobbyWaiting(mp);
   const woodenPuzzleHumanMp =
     isMatch &&
     gameType === "modon-onis" &&
@@ -659,6 +754,10 @@ export default function GameModal({
               />
             )}
             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {matchJoinErr ? (
+                <MatchRoomJoinError error={matchJoinErr} isMn={isMn} />
+              ) : (
+                <>
               {gameType === "shagai" && (
                 <ShagaiGame
                   onComplete={(r, pct) => void submit(r, pct)}
@@ -882,6 +981,8 @@ export default function GameModal({
                   />
                 )}
               {gameType === "teveg" && <ComingSoon name="Тэвэг өшиглөх" />}
+                </>
+              )}
             </div>
           </div>
         </GameModalSessionProvider>
