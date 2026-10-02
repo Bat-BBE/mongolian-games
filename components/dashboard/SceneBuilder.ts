@@ -3530,7 +3530,6 @@ export class SceneBuilder {
           blade.position.set(bx, rand(0.08, 0.26), bz);
           blade.rotation.z = rand(-0.42, 0.42);
           blade.rotation.x = rand(-0.22, 0.22);
-          // Grass casting shadows is very expensive; let terrain/trees carry shadows.
           blade.castShadow = false;
           g.add(blade);
         } else {

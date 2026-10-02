@@ -1,8 +1,7 @@
-import { detectShagaiSide, weightedTraditionalSide } from "./shagai";
 
 export type ShagaiSide = "horse" | "sheep" | "goat" | "camel";
 
-export type RoundTurn = "player" | "robot";
+type RoundTurn = "player" | "robot";
 
 export interface RoundResult {
   turn: RoundTurn;
@@ -21,7 +20,7 @@ export interface RoundResult {
   instantMatchWin?: boolean;
 }
 
-export type MatchPhase =
+type MatchPhase =
   | "idle"
   | "throwing"
   | "settling"
@@ -97,10 +96,6 @@ export function sideName(side: ShagaiSide, language: "mn" | "en"): string {
   return language === "en" ? SHAGAI_INFO[side].nameEn : SHAGAI_INFO[side].nameMn;
 }
 
-export function detectSide(rotX: number, rotZ: number): ShagaiSide {
-  return detectShagaiSide(rotX, rotZ);
-}
-
 /**
  * Scoring table for the "Target 32" (Homboroi) mode.
  *
@@ -147,12 +142,6 @@ export function scoreTarget(sides: ShagaiSide[]): {
   }
 
   return { points: 0, labelKey: "", instantMatchWin: false };
-}
-
-/** Generate a 4-shagai roll for the robot using the shared weighted
- *  traditional probabilities so the robot's throws "feel" like a real human's. */
-export function rollRobotSides(): ShagaiSide[] {
-  return [0, 1, 2, 3].map(() => weightedTraditionalSide() as ShagaiSide);
 }
 
 /** Exact score required to win. Over this value = bust. */

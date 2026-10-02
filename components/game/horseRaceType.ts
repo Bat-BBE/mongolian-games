@@ -4,7 +4,7 @@ export type { ShagaiSide };
 
 export type Racer = "player" | "robot";
 
-export type MatchPhase =
+type MatchPhase =
   | "idle"
   | "throwing"
   | "settling"
@@ -53,14 +53,3 @@ export function countHorses(sides: ShagaiSide[]): number {
   return sides.filter((s) => s === "horse").length;
 }
 
-export function rollHorseRaceSide(): ShagaiSide {
-  const r = Math.random();
-  if (r < 0.3) return "horse";
-  if (r < 0.55) return "sheep";
-  if (r < 0.85) return "goat";
-  return "camel";
-}
-
-export function rollHorseRaceSides(): ShagaiSide[] {
-  return [0, 1, 2, 3].map(() => rollHorseRaceSide());
-}

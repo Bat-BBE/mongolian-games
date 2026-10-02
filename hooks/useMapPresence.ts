@@ -19,21 +19,14 @@ export type MapPresenceLivestock = {
 export type MapPresencePeer = {
   id: string;
   displayName: string;
-  /** Алсын баатрын загварын зам (жишээ нь /models/hero-22.fbx). */
   heroModelPath: string;
-  /**
-   * `mapConstants.playerHomeWorldAnchor`-тай нэг key — бүх үзэгч нэг тогтмол
-   * газрын нэгтэй гэрийг нэг харагдуулна.
-   */
   homeKey: string;
   x: number;
   z: number;
   ry: number;
   gerLevel: number;
   livestock: MapPresenceLivestock;
-  /** Сүүлийн эможын төрөл (серверийн whitelist). */
   emote: string;
-  /** Дахин дарагдсан эсэх — өөрчлөгдөхөд л алинд нь play хийнэ. */
   emoteGen: number;
 };
 
@@ -65,7 +58,9 @@ function normalizeHeroPath(raw: string | null | undefined): string {
   return t ? t : DEFAULT_HERO;
 }
 
-function parseLivestockFromRow(row: Record<string, unknown>): MapPresenceLivestock {
+function parseLivestockFromRow(
+  row: Record<string, unknown>,
+): MapPresenceLivestock {
   const raw = row.livestock;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ...ZERO_LS };
@@ -107,7 +102,9 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
     x,
     z,
     ry,
-    gerLevel: Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1,
+    gerLevel: Number.isFinite(gl)
+      ? Math.max(1, Math.min(30, Math.floor(gl)))
+      : 1,
     livestock: parseLivestockFromRow(row),
     emote: emoteGen > 0 ? emoteRaw.slice(0, 32) : "",
     emoteGen,
@@ -116,7 +113,6 @@ function peerFromRow(row: Record<string, unknown>): MapPresencePeer | null {
 
 export function useMapPresence(opts: {
   displayName: string;
-  /** useThree `playerHomeWorldAnchor`-тай ижил утга (email|нэр / guest) */
   homeKey: string;
   enabled: boolean;
   heroModelPath?: string | null;
@@ -148,7 +144,6 @@ export function useMapPresence(opts: {
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN) return;
     const now = performance.now();
-    // ~6.5 Гц — гэрийн сүлжээнд ч target илүү ойрхон; клиент дээр гөлрүүлдэг.
     if (now - lastPublishRef.current < 150) return;
     lastPublishRef.current = now;
     w.send(JSON.stringify({ type: "pose", x, z, ry }));
@@ -165,7 +160,10 @@ export function useMapPresence(opts: {
   }, []);
 
   const publishMapChat = useCallback((textRaw: string) => {
-    const text = textRaw.replace(/\s+/g, " ").trim().slice(0, MAX_MAP_CHAT_CHARS);
+    const text = textRaw
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, MAX_MAP_CHAT_CHARS);
     if (!text) return;
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN) return;
@@ -329,7 +327,10 @@ export function useMapPresence(opts: {
                 ? msg.sentAt
                 : Date.now(),
           };
-          mapChatLinesRef.current = [...mapChatLinesRef.current.slice(-119), line];
+          mapChatLinesRef.current = [
+            ...mapChatLinesRef.current.slice(-119),
+            line,
+          ];
           onMapChatLineRef.current?.(line);
         }
       };

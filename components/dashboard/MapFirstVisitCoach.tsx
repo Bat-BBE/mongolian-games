@@ -16,7 +16,7 @@ export function readMapCoachDone(): boolean {
   }
 }
 
-export function setMapCoachDone(): void {
+function setMapCoachDone(): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, "1");
   } catch {

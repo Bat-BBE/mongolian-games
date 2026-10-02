@@ -105,7 +105,6 @@ type SceneProps = {
   isThrown: boolean;
   settledSides: (ShagaiSide | null)[];
   onSettle: (id: number, side: ShagaiSide) => void;
-  /** 4 ширхэг — тогтоосон талууд (робот/peer replay). null = ердийн физик. */
   forceSettleSides?: ShagaiSide[] | null;
 };
 
@@ -153,11 +152,10 @@ export type ShagaiBerkh12GameProps = {
   autoPlayVsBotWhenSoloInRoom?: boolean;
 };
 
-export { Berkh12GameScene, ThrowMat, PhysicsFloor };
+export { Berkh12GameScene, PhysicsFloor };
 
 const emptyThrowSlots = (): (ShagaiSide | null)[] =>
   Array.from({ length: BERKH12_THROW_COUNT }, () => null);
-
 
 export default function ShagaiBerkh12Game({
   onComplete,
@@ -188,14 +186,12 @@ export default function ShagaiBerkh12Game({
   );
   const [settledSides, setSettledSides] =
     useState<(ShagaiSide | null)[]>(emptyThrowSlots());
-  const [lastSides, setLastSides] = useState<(ShagaiSide | null)[]>(
-    emptyThrowSlots(),
-  );
+  const [lastSides, setLastSides] =
+    useState<(ShagaiSide | null)[]>(emptyThrowSlots());
   const [lastHorses, setLastHorses] = useState(0);
   const [lastCamels, setLastCamels] = useState(0);
-  const [lastTransfer, setLastTransfer] = useState<Berkh12TransferSummary | null>(
-    null,
-  );
+  const [lastTransfer, setLastTransfer] =
+    useState<Berkh12TransferSummary | null>(null);
   const [winner, setWinner] = useState<number | null>(null);
   const [elimToast, setElimToast] = useState<string | null>(null);
   const [totalThrows, setTotalThrows] = useState(0);
@@ -352,7 +348,9 @@ export default function ShagaiBerkh12Game({
       settledRef.current = e;
       setSettledSides([...e]);
       setThrowParams(
-        Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+        Array.from({ length: BERKH12_THROW_COUNT }, () =>
+          getShagaiThrowParams(),
+        ),
       );
       setPhase("throwing");
       setIsThrown(false);
@@ -456,7 +454,9 @@ export default function ShagaiBerkh12Game({
       centerRef.current = 0;
       setIsThrown(false);
       setThrowParams(
-        Array.from({ length: BERKH12_THROW_COUNT }, () => getShagaiThrowParams()),
+        Array.from({ length: BERKH12_THROW_COUNT }, () =>
+          getShagaiThrowParams(),
+        ),
       );
       setSettledSides(emptyThrowSlots());
       setLastSides(emptyThrowSlots());

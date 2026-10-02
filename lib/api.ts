@@ -22,7 +22,6 @@ export function getApiBaseUrl(): string {
   return base.replace(/\/$/, "");
 }
 
-/** WebSocket URL for realtime match rooms (`/ws/match`). */
 export function getMatchWsUrl(): string {
   try {
     const u = new URL(getApiBaseUrl());
@@ -37,7 +36,6 @@ export function getMatchWsUrl(): string {
   }
 }
 
-/** Газрын зураг дээр бусад тоглогчдын байрлал (`/ws/map-presence`). */
 export function getMapPresenceWsUrl(): string {
   try {
     const u = new URL(getApiBaseUrl());
@@ -52,20 +50,13 @@ export function getMapPresenceWsUrl(): string {
   }
 }
 
-/**
- * Зөвхөн browser дээр дуудна. Хуудас `https:` боловч API `http://` (удалсан host) бол
- * WebSocket «mixed content»-оор блоклогдоно — оношлоход тусална.
- */
 export function warnIfRealtimeWebSocketLikelyBlocked(): void {
   if (typeof window === "undefined") return;
   if (window.location.protocol !== "https:") return;
   const base = getApiBaseUrl();
   if (!base.startsWith("http://")) return;
   const hostish = base.replace(/^https?:\/\//, "").split("/")[0] ?? "";
-  if (
-    hostish.startsWith("localhost:") ||
-    hostish.startsWith("127.0.0.1:")
-  ) {
+  if (hostish.startsWith("localhost:") || hostish.startsWith("127.0.0.1:")) {
     return;
   }
   console.error(
@@ -84,7 +75,7 @@ export function resolveAssetUrl(raw: unknown): string {
   return s;
 }
 
-export async function apiFetch(
+async function apiFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
@@ -347,31 +338,6 @@ export async function completeGame(body: {
   return { user: data.user };
 }
 
-export type RankChestReward =
-  | { kind: "gem"; amount: number }
-  | { kind: "kp"; amount: number }
-  | { kind: "coins"; amount: number };
-
-export async function claimRankChest(body: {
-  email: string;
-}): Promise<{ user: AppUserRow; reward: RankChestReward }> {
-  const res = await apiFetch("/api/game/claim-rank-chest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    user?: AppUserRow;
-    reward?: RankChestReward;
-  };
-  if (!res.ok) {
-    throw new Error(data.error ?? `claim chest failed (${res.status})`);
-  }
-  if (!data.user || !data.reward) throw new Error("claim chest: incomplete");
-  return { user: data.user, reward: data.reward };
-}
-
 export async function homeUpgradeGer(body: {
   email: string;
 }): Promise<{ user: AppUserRow }> {
@@ -480,9 +446,6 @@ export async function getContentHeroes(): Promise<{ heroes: HeroRow[] }> {
   return { heroes: data.heroes };
 }
 
-// Backward compat for accidental misspelling in older code.
-export const getContentHer24oes = getContentHeroes;
-
 export type ContentStationListRow = {
   slug: string;
   name_mn: string;
@@ -521,13 +484,6 @@ export type MapStationRow = {
   quest_desc_en?: string | null;
   created_at: string;
   updated_at: string;
-};
-
-export type UiStringRow = {
-  id: number;
-  key: string;
-  locale: string;
-  value: string;
 };
 
 /** sessionStorage key — must match AdminAuthContext */
@@ -575,42 +531,6 @@ export async function adminListGames(
   }
   if (!data.games) throw new Error("missing games");
   return { games: data.games };
-}
-
-export async function adminListUsers(
-  token: string,
-): Promise<{ users: AppUserRow[] }> {
-  const res = await apiFetch("/api/admin/users", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    users?: AppUserRow[];
-  };
-  if (!res.ok) {
-    throw new Error(data.error ?? `admin users failed (${res.status})`);
-  }
-  if (!data.users) throw new Error("missing users");
-  return { users: data.users };
-}
-
-export async function adminListUsersV2(
-  token: string,
-  opts?: { includeLocal?: boolean },
-): Promise<{ users: AppUserRow[] }> {
-  const q = opts?.includeLocal ? "?includeLocal=true" : "";
-  const res = await apiFetch(`/api/admin/users${q}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    users?: AppUserRow[];
-  };
-  if (!res.ok) {
-    throw new Error(data.error ?? `admin users failed (${res.status})`);
-  }
-  if (!data.users) throw new Error("missing users");
-  return { users: data.users };
 }
 
 export async function adminGetTreasury(token: string): Promise<{
@@ -732,20 +652,6 @@ export async function adminUpdateGame(
   if (!res.ok) throw new Error(data.error ?? `update failed (${res.status})`);
   if (!data.game) throw new Error("missing game");
   return { game: data.game };
-}
-
-export async function adminDeleteGame(
-  token: string,
-  id: string,
-): Promise<void> {
-  const res = await apiFetch(`/api/admin/games/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(data.error ?? `delete failed (${res.status})`);
-  }
 }
 
 export async function adminUploadGameImage(
@@ -923,23 +829,11 @@ export async function adminUploadStationImage(
     station?: { slug: string; image_url: string | null };
   };
   if (!res.ok)
-    throw new Error(data.error ?? `station image upload failed (${res.status})`);
+    throw new Error(
+      data.error ?? `station image upload failed (${res.status})`,
+    );
   if (!data.station) throw new Error("missing station");
   return { station: data.station };
-}
-
-export async function adminDeleteUser(
-  token: string,
-  userId: string,
-): Promise<void> {
-  const res = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (res.status === 204) return;
-  const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok)
-    throw new Error(data.error ?? `user delete failed (${res.status})`);
 }
 
 export async function adminGetStationGames(
@@ -997,43 +891,6 @@ export async function adminPutStationGames(
   return { ok: !!data.ok, games: data.games ?? [] };
 }
 
-export async function adminListUiStrings(
-  token: string,
-  locale?: "mn" | "en",
-): Promise<{ strings: UiStringRow[] }> {
-  const q = locale ? `?locale=${locale}` : "";
-  const res = await apiFetch(`/api/admin/ui-strings${q}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    strings?: UiStringRow[];
-  };
-  if (!res.ok)
-    throw new Error(data.error ?? `ui-strings failed (${res.status})`);
-  if (!data.strings) throw new Error("missing strings");
-  return { strings: data.strings };
-}
-
-export async function adminPutUiString(
-  token: string,
-  body: { key: string; locale: "mn" | "en"; value: string },
-): Promise<{ string: UiStringRow }> {
-  const res = await apiFetch("/api/admin/ui-strings", {
-    method: "PUT",
-    headers: adminBearerHeaders(token),
-    body: JSON.stringify(body),
-  });
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    string?: UiStringRow;
-  };
-  if (!res.ok)
-    throw new Error(data.error ?? `ui-string put failed (${res.status})`);
-  if (!data.string) throw new Error("missing string");
-  return { string: data.string };
-}
-
 /** Админ: хэрэглэгчийн профайл/прогресс (оноо, зоос, мал г.м.) */
 export type AdminUserPatchBody = {
   displayName?: string;
@@ -1067,32 +924,6 @@ export async function adminPatchUser(
   if (!res.ok)
     throw new Error(data.error ?? `user patch failed (${res.status})`);
   if (!data.user) throw new Error("missing user");
-  return { user: data.user };
-}
-
-export async function adminPatchUserDisplayName(
-  token: string,
-  userId: string,
-  displayName: string,
-): Promise<{ user: AppUserRow }> {
-  return adminPatchUser(token, userId, { displayName });
-}
-
-export async function getAppUserByEmail(
-  email: string,
-): Promise<{ user: AppUserRow }> {
-  const q = encodeURIComponent(email.trim());
-  const res = await apiFetch(`/api/users/simple-me?email=${q}`);
-  const data = (await res.json().catch(() => ({}))) as {
-    error?: string;
-    user?: AppUserRow;
-  };
-  if (!res.ok) {
-    throw new Error(data.error ?? `simple-me failed (${res.status})`);
-  }
-  if (!data.user) {
-    throw new Error("simple-me: missing user in response");
-  }
   return { user: data.user };
 }
 
@@ -1234,8 +1065,7 @@ export async function adminCreateOnisogo(
     error?: string;
     row?: MapOnisogoAdminRow;
   };
-  if (!res.ok)
-    throw new Error(data.error ?? `onisogo create (${res.status})`);
+  if (!res.ok) throw new Error(data.error ?? `onisogo create (${res.status})`);
   if (!data.row) throw new Error("missing row");
   return { row: data.row };
 }
@@ -1247,20 +1077,16 @@ export async function adminUpdateOnisogo(
     Omit<MapOnisogoAdminRow, "id" | "slug" | "created_at" | "updated_at">
   >,
 ): Promise<{ row: MapOnisogoAdminRow }> {
-  const res = await apiFetch(
-    `/api/admin/onisogo/${encodeURIComponent(slug)}`,
-    {
-      method: "PUT",
-      headers: adminBearerHeaders(token),
-      body: JSON.stringify(body),
-    },
-  );
+  const res = await apiFetch(`/api/admin/onisogo/${encodeURIComponent(slug)}`, {
+    method: "PUT",
+    headers: adminBearerHeaders(token),
+    body: JSON.stringify(body),
+  });
   const data = (await res.json().catch(() => ({}))) as {
     error?: string;
     row?: MapOnisogoAdminRow;
   };
-  if (!res.ok)
-    throw new Error(data.error ?? `onisogo update (${res.status})`);
+  if (!res.ok) throw new Error(data.error ?? `onisogo update (${res.status})`);
   if (!data.row) throw new Error("missing row");
   return { row: data.row };
 }
@@ -1269,14 +1095,10 @@ export async function adminDeleteOnisogo(
   token: string,
   slug: string,
 ): Promise<void> {
-  const res = await apiFetch(
-    `/api/admin/onisogo/${encodeURIComponent(slug)}`,
-    {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    },
-  );
+  const res = await apiFetch(`/api/admin/onisogo/${encodeURIComponent(slug)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok)
-    throw new Error(data.error ?? `onisogo delete (${res.status})`);
+  if (!res.ok) throw new Error(data.error ?? `onisogo delete (${res.status})`);
 }

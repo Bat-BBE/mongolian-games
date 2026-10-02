@@ -141,16 +141,9 @@ export default function AdminStationsPage() {
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8 pb-24 text-[var(--admin-text,#fafafa)]">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          {/* <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
-            Өртөө
-          </p> */}
           <h1 className="font-display text-2xl md:text-3xl tracking-wide flex items-center gap-2 text-[var(--admin-text)]">
             Өртөөнүүд
           </h1>
-          {/* <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
-            Тоглоомын дарааллыг доорх жагсаалаар тохируулна — эхнийх нь газрын
-            зурагны шошго, popup-д эхэлж гарна. Quest нь sidebar текст.
-          </p> */}
         </div>
         <Button
           type="button"
@@ -255,9 +248,6 @@ export default function AdminStationsPage() {
               <p className="font-display text-lg text-[var(--admin-text,#fafafa)]">
                 {selectedStation ? selectedStation.name_mn : "—"}
               </p>
-              {/* <p className="text-xs text-[var(--admin-muted)] font-mono">
-                {selectedStation?.slug ?? ""}
-              </p> */}
             </div>
           </div>
 
@@ -282,7 +272,7 @@ export default function AdminStationsPage() {
                   Тоглоом тохируулах
                 </p>
                 <p className="text-[10px] text-[var(--admin-muted)]">
-                  Дараалал: 1 = эхний шошго/тоглоом. Дээш/доош дарж солино.
+                  Дараалал: 1 = эхний тоглоом. Дээш/доош дарж солино.
                 </p>
               </div>
 
@@ -556,7 +546,7 @@ function StationDetailEditor({
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--admin-subtle)] mb-1">
-            Икон (fallback)
+            ICON (fallback)
           </p>
           <input
             className="w-full rounded-lg border border-[var(--admin-border)] bg-[var(--admin-elevated)] px-2 py-1.5 text-xs text-[var(--admin-text)]"

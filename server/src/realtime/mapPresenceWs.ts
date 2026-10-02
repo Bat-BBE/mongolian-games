@@ -1,7 +1,6 @@
 import type { WebSocket } from "ws";
 import { WebSocketServer } from "ws";
 
-/** `noServer: true` — HTTP `upgrade`-ийг `index.ts` дээр нэг газраас дамжуулна (Express-тай зөрчилгүй). */
 export function createMapPresenceWebSocketServer(router: {
   addConnection(ws: WebSocket): void;
 }): WebSocketServer {

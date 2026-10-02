@@ -58,9 +58,7 @@ function readStationSteps(
   return out;
 }
 
-function readOnisogoSolvedSlugs(
-  progress: Record<string, unknown>,
-): string[] {
+function readOnisogoSolvedSlugs(progress: Record<string, unknown>): string[] {
   const raw = progress.onisogoSolvedSlugs;
   if (!Array.isArray(raw)) return [];
   return raw.map((x) => String(x)).filter((x) => x.length > 0);
@@ -147,13 +145,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
   const [mapStations, setMapStations] = useState<MapStationApiRow[]>([]);
   const [onisogoPoints, setOnisogoPoints] = useState<OnisogoMapPoint[]>([]);
   const flyHomeRef = useRef<(() => void) | null>(null);
-  /** Танилцах аяллыг цэснээс дахин нээсэн */
   const [introReplayOpen, setIntroReplayOpen] = useState(false);
-  /**
-   * localStorage + React: анхны заавал танилцуулга дуусахад `setIntroReplayOpen(false)` нь
-   * аль хэдийн false тул state өөрчлөгдөхгүй, re-render үүсэхгүй — «Ойлголоо» дарахад хаагдахгүй.
-   * Энэ төлөв нь заавал танилцуулгыг хаасны дараа шинэчлэгдэнэ.
-   */
   const [introCompleted, setIntroCompleted] = useState(() =>
     readDashboardIntroDone(),
   );
@@ -185,7 +177,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
         };
         setUserEmail(String(bundle.user.email ?? saved.name));
         setPlayerNickname(
-          String(bundle.user.display_name ?? bundle.user.email ?? saved.name ?? ""),
+          String(
+            bundle.user.display_name ?? bundle.user.email ?? saved.name ?? "",
+          ),
         );
       } catch {
         /* Хэрэглэгч зөвхөн Firebase эсвэл API уншихгүй */
@@ -471,9 +465,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           mapHudUserEmail={userEmail}
           mapHudCoins={player.treasury?.coins ?? 0}
           mapHudGems={player.treasury?.gems ?? 0}
-          mapHudGerLevel={
-            player.treasury?.gerLevel ?? player.homeGerLevel ?? 1
-          }
+          mapHudGerLevel={player.treasury?.gerLevel ?? player.homeGerLevel ?? 1}
           mapHudKp={player.treasury?.kp ?? player.kp}
           mapHudLivestock={
             player.homeLivestock ?? {

@@ -26,7 +26,11 @@
 }
 .dash-hud-pill:hover {
   border-color: color-mix(in srgb, var(--map-gold) 42%, transparent);
-  background: color-mix(in srgb, var(--map-ui-base) 82%, rgba(255, 255, 255, 0.04));
+  background: color-mix(
+    in srgb,
+    var(--map-ui-base) 82%,
+    rgba(255, 255, 255, 0.04)
+  );
 }
 .dash-hud-icon-btn {
   color: var(--map-ui-text);
@@ -37,7 +41,11 @@
 }
 .dash-hud-icon-btn:hover {
   border-color: color-mix(in srgb, var(--map-gold) 38%, transparent);
-  background: color-mix(in srgb, var(--map-ui-base) 78%, rgba(255, 255, 255, 0.05));
+  background: color-mix(
+    in srgb,
+    var(--map-ui-base) 78%,
+    rgba(255, 255, 255, 0.05)
+  );
 }
 .dash-sidebar-shell {
   border-color: var(--map-ui-border);
@@ -300,7 +308,6 @@
   --gold-light: #edd98a;
   --gold-pale: #f5ebca;
   --gold-dark: #9a7420;
-  /* Газрын 3D canvas + floating UI — олив / алтан акцент (UI reference) */
   --map-gold: #e6c16a;
   --map-ui-base: #2d2d21;
   --map-sky: #a8c8ec;
@@ -347,11 +354,6 @@
     rgba(237, 217, 138, 0.55) 50%,
     transparent 70%
   );
-  /**
-   * Нүүр hero — Ногоон нутаг, гол (Unsplash, Sodbayar Photography, Сэлэнгэ).
-   * https://unsplash.com/photos/a-river-running-through-a-lush-green-countryside-pM6ALGrv7yw
-   * Өөрийн зураг: public/images/hero-bg.jpg → --hero-bg-image: url("/images/hero-bg.jpg");
-   */
   --hero-bg-image: url("https://images.unsplash.com/photo-1717489577924-54fbf10ba676?q=85&w=2400&auto=format&fit=crop");
 
   --glass-bg: rgba(248, 242, 228, 0.68);
@@ -398,7 +400,6 @@
   --glass-border: rgba(201, 168, 76, 0.16);
   --glass-shadow: 0 8px 40px 0 rgba(0, 0, 0, 0.75);
 
-  /* Газар: 3D тэнгэр + HUD өнгө */
   --map-gold: #e6c16a;
   --map-ui-base: #2d2d21;
   --map-sky: #a8c8ec;
@@ -514,7 +515,6 @@
     transform: translateY(-4px) scale(1.01);
   }
 
-  /* Dashboard зүүн самбар — глобал алтан scrollbar-аас зөөлөн, шилэн фонд илүү тохино */
   .dashboard-left-scroll {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklch, var(--primary) 38%, transparent)
@@ -758,7 +758,6 @@
     animation: ambient-pulse 6s ease-in-out infinite;
   }
 
-  /* Гар утас: хэт том blur + pulse нь хэсгүүдийн өнгийг холилдуулна — зөөлрүүлэх */
   @media (max-width: 639px) {
     .ambient-glow {
       filter: blur(34px);

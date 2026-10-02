@@ -3,8 +3,6 @@ import { PMREMGenerator } from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 
-export const HERO_STUDIO_HDR_EXAMPLE = "/hdr/hero-studio.hdr";
-
 function hdrPathFromOptionsOrEnv(explicit?: string | null): string {
   const t = (explicit ?? "").trim();
   if (t) return t;
@@ -14,7 +12,7 @@ function hdrPathFromOptionsOrEnv(explicit?: string | null): string {
   return "";
 }
 
-export async function attachEquirectHdrToHeroScene(
+async function attachEquirectHdrToHeroScene(
   scene: THREE.Scene,
   renderer: THREE.WebGLRenderer,
   url: string,
@@ -63,7 +61,7 @@ export async function tryAttachHeroIbl(
  * "жинхэнэ" PBR-ийн сүүдэр/гэрлийн задрал авахын тулд энгийн "өрөө"
  * (RoomEnvironment) ашигладаг.
  */
-export function attachRoomIblToHeroScene(
+function attachRoomIblToHeroScene(
   scene: THREE.Scene,
   renderer: THREE.WebGLRenderer,
   sigma: number = 0.04,

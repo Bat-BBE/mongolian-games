@@ -2,7 +2,6 @@ import type { WebSocket } from "ws";
 
 const PING_MS = 25_000;
 
-/** Railway зэрэг прокси idle TCP таслахаас сэргийлнэ */
 export function attachWsKeepAlive(ws: WebSocket, label: string): void {
   const t = setInterval(() => {
     if (ws.readyState !== ws.OPEN) return;

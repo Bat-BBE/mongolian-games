@@ -66,7 +66,7 @@ export function TwelveShagaiRulesStrip({
   );
 }
 
-export function Berkh12RulesStrip({
+function Berkh12RulesStrip({
   isEn,
   className = "",
 }: {

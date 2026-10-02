@@ -34,7 +34,7 @@ export function readDashboardIntroDone(): boolean {
   return window.localStorage.getItem(STORAGE_KEY) === "1";
 }
 
-export function setDashboardIntroDone(): void {
+function setDashboardIntroDone(): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, "1");
   } catch {}

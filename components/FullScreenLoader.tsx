@@ -8,15 +8,12 @@ type Props = {
   className?: string;
 };
 
-/**
- * Full-view loading: navigation / Suspense fallbacks. Copy explains wait is normal.
- */
 export default function FullScreenLoader({ className }: Props) {
   const { language } = useApp();
   const title = language === "mn" ? "Ачаалж байна" : "Loading";
   const sub =
     language === "mn"
-      ? "Өгөгдөл ачаалж байна, түрхэн хүлээнэ үү…"
+      ? "Өгөгдөл ачаалж байна, түр хүлээнэ үү…"
       : "Preparing the page, please wait…";
 
   return (

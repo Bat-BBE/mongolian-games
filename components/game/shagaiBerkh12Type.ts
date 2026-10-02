@@ -28,14 +28,6 @@ export function countCamels(sides: ShagaiSide[]): number {
   return sides.filter((s) => s === "camel").length;
 }
 
-export function counterSunOrder(nPlayers: number, p: number): number[] {
-  const o: number[] = [];
-  for (let k = 1; k < nPlayers; k++) {
-    o.push((p - k + nPlayers * 4) % nPlayers);
-  }
-  return o;
-}
-
 export function nextClockwiseActive(
   nPlayers: number,
   from: number,
@@ -168,11 +160,7 @@ export function hasFullWin(
   return (mories[p] ?? 0) >= total;
 }
 
-export function countActivePlayers(active: boolean[]): number {
-  return active.filter(Boolean).length;
-}
-
-export function rollBerkh12Side(): ShagaiSide {
+function rollBerkh12Side(): ShagaiSide {
   const r = Math.random();
   if (r < 0.25) return "horse";
   if (r < 0.5) return "sheep";

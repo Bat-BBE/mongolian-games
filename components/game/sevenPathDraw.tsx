@@ -10,7 +10,7 @@ const PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.06);
 const RAY_TARGET = new THREE.Vector3();
 const NDC = new THREE.Vector2();
 
-export function SevenPathLine({ points }: { points: [number, number][] }) {
+function SevenPathLine({ points }: { points: [number, number][] }) {
   const geo = useMemo(() => {
     const g = new THREE.BufferGeometry();
     if (points.length < 2) return g;

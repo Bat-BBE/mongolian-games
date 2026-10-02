@@ -1467,36 +1467,3 @@ export const DASH_STRINGS: Record<DashLang, DashStrings> = {
 };
 
 /** API `ui_strings.key` → DashStrings field (left sidebar + rank labels). */
-const SIDEBAR_STRING_KEYS: Record<string, keyof DashStrings> = {
-  "sidebar.currentExpedition": "currentExpedition",
-  "sidebar.mainQuest": "mainQuest",
-  "sidebar.questTitle": "questTitle",
-  "sidebar.questDesc": "questDesc",
-  "sidebar.continueJourney": "continueJourney",
-  "sidebar.treasury": "treasury",
-  "sidebar.rank": "rank",
-  "sidebar.rankTitle": "rankTitle",
-  "sidebar.leaderboard": "leaderboard",
-  "sidebar.activeBonus": "activeBonus",
-  "sidebar.journeyDayLabel": "journeyDayLabel",
-  "sidebar.topPlayersLabel": "topPlayersLabel",
-  "sidebar.urtuuCounter": "urtuuCounter",
-};
-
-export function mergeDashboardSidebar(
-  base: DashStrings,
-  apiStrings: Record<string, string>,
-  computed?: Partial<Pick<DashStrings, "questTitle" | "questDesc">>,
-): DashStrings {
-  const next: DashStrings = { ...base };
-  const mut = next as unknown as Record<string, string>;
-  for (const [apiKey, field] of Object.entries(SIDEBAR_STRING_KEYS)) {
-    const v = apiStrings[apiKey];
-    if (typeof v === "string" && v.length > 0) {
-      mut[field] = v;
-    }
-  }
-  if (computed?.questTitle) next.questTitle = computed.questTitle;
-  if (computed?.questDesc) next.questDesc = computed.questDesc;
-  return next;
-}

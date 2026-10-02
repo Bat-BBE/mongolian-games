@@ -2,13 +2,13 @@ import type { WebSocket } from "ws";
 import { randomUUID } from "node:crypto";
 import { attachWsKeepAlive } from "./wsKeepAlive.js";
 
-export type PresencePose = {
+type PresencePose = {
   x: number;
   z: number;
   ry: number;
 };
 
-export type PresenceLivestock = {
+type PresenceLivestock = {
   sheep: number;
   goat: number;
   cow: number;
@@ -23,7 +23,6 @@ type Peer = {
   homeKey: string;
   gerLevel: number;
   livestock: PresenceLivestock;
-  /** `components/dashboard/useThreeScene` MAP_EMOTE_CLIP_FILES-ийн түлхүүрүүд */
   emote: string;
   emoteGen: number;
   ws: WebSocket;
@@ -38,7 +37,6 @@ const MAX_HERO_PATH_LEN = 280;
 const MAX_HOME_KEY_LEN = 200;
 
 const POSE_MIN_INTERVAL_MS = 240;
-/** Ижил эмож дахин дарах, спам */
 const EMOTE_MIN_INTERVAL_MS = 420;
 const MAX_DISPLAY = 36;
 const CLAMP = 6500;
@@ -236,16 +234,15 @@ export class MapPresenceHub {
             : "";
         rec.heroModelPath = hp || DEFAULT_HERO_PATH;
         const gl = Number(body.gerLevel);
-        rec.gerLevel =
-          Number.isFinite(gl) ? Math.max(1, Math.min(30, Math.floor(gl))) : 1;
+        rec.gerLevel = Number.isFinite(gl)
+          ? Math.max(1, Math.min(30, Math.floor(gl)))
+          : 1;
         rec.livestock = parseLivestock(body);
         const hkr =
           typeof body.homeKey === "string"
             ? body.homeKey.slice(0, MAX_HOME_KEY_LEN).trim()
             : "";
         rec.homeKey = hkr;
-        // Эхний pose-оос өмнө `last` байхгүй тул бусад нь `snapshot`/`peer_pose`-оор
-        // харагдаагүй байсан. `hello` ирмэгц placeholder байрлал өгч зарлана.
         if (!rec.last) {
           rec.last = spawnPoseForPeer(id);
         }

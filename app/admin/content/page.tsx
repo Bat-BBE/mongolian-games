@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LuBookMarked as BookMarked, LuArrowRight as ArrowRight } from "react-icons/lu";
+import {
+  LuBookMarked as BookMarked,
+  LuArrowRight as ArrowRight,
+} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 
 export default function AdminContentIndexPage() {
@@ -23,7 +26,7 @@ export default function AdminContentIndexPage() {
       <div className="grid sm:grid-cols-2 gap-4">
         <Card
           title="Баатрууд"
-          desc="Нэр, зэрэг, бонус зэрэг."
+          desc="Нэр, зэрэг, бонус гэх мэт."
           href="/admin/heroes"
         />
         <Card
@@ -36,13 +39,23 @@ export default function AdminContentIndexPage() {
   );
 }
 
-function Card({ title, desc, href }: { title: string; desc: string; href: string }) {
+function Card({
+  title,
+  desc,
+  href,
+}: {
+  title: string;
+  desc: string;
+  href: string;
+}) {
   return (
     <div className="admin-panel p-5 space-y-3">
       <div className="font-display text-sm tracking-[0.2em] uppercase text-[var(--admin-text)]">
         {title}
       </div>
-      <p className="text-xs text-[var(--admin-muted)] leading-relaxed">{desc}</p>
+      <p className="text-xs text-[var(--admin-muted)] leading-relaxed">
+        {desc}
+      </p>
       <Button asChild variant="secondary" size="sm" className="gap-1.5">
         <Link href={href}>
           Нээх

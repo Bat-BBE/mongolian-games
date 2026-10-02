@@ -1,16 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  LuBookMarked as BookMarked,
-  LuRefreshCw as RefreshCw,
-  LuPencil as Pencil,
-} from "react-icons/lu";
+import Image from "next/image";
+import { LuRefreshCw as RefreshCw, LuPencil as Pencil } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -111,16 +108,9 @@ export default function AdminHeroesPage() {
     <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8 pb-24 text-[var(--admin-text,#fafafa)]">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          {/* <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)]">
-            Баатар
-          </p> */}
           <h1 className="font-display text-2xl md:text-3xl tracking-wide flex items-center gap-2">
-            {/* <BookMarked className="size-7 text-[var(--admin-muted)] stroke-[1.5]" /> */}
             Баатрууд
           </h1>
-          {/* <p className="text-sm text-[var(--admin-muted)] max-w-2xl leading-relaxed">
-            Баатарын тухай дэлгэрэнгүй мэдээллийг эндээс засна.
-          </p> */}
         </div>
         <Button
           type="button"
@@ -148,7 +138,6 @@ export default function AdminHeroesPage() {
               <th className="p-3 w-auto">Түлхүүр</th>
               <th className="p-3 w-auto">Нэр (MN/EN)</th>
               <th className="p-3 w-auto">Цол (MN/EN)</th>
-              {/* <th className="p-3 w-24">Эрэмбэ</th> */}
               <th className="p-3 w-28">Төлөв</th>
               <th className="p-3 font-medium w-10 text-right">Засах</th>
             </tr>
@@ -176,9 +165,6 @@ export default function AdminHeroesPage() {
                     {h.title_en}
                   </div>
                 </td>
-                {/* <td className="p-3 tabular-nums text-[var(--admin-muted)]">
-                  {h.sort_order}
-                </td> */}
                 <td className="p-3">
                   <span
                     className={
@@ -386,9 +372,12 @@ export default function AdminHeroesPage() {
                     </div>
                     {editing.image_url?.trim() ? (
                       <div className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-elevated)] p-2">
-                        <img
+                        <Image
                           src={previewUrl(editing.image_url)}
                           alt=""
+                          width={640}
+                          height={160}
+                          unoptimized
                           className="w-full h-40 object-contain rounded-lg"
                         />
                       </div>
@@ -407,46 +396,7 @@ export default function AdminHeroesPage() {
                     className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                   />
                 </div>
-                {/* <div className="space-y-1.5">
-                  <Label>color</Label>
-                  <Input
-                    value={editing.color}
-                    onChange={(e) =>
-                      setEditing((p) =>
-                        p ? { ...p, color: e.target.value } : p,
-                      )
-                    }
-                    className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
-                    placeholder="#ffd559"
-                  />
-                </div> */}
-                {/* <div className="space-y-1.5">
-                  <Label>emissive</Label>
-                  <Input
-                    value={editing.emissive ?? ""}
-                    onChange={(e) =>
-                      setEditing((p) =>
-                        p ? { ...p, emissive: e.target.value } : p,
-                      )
-                    }
-                    className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
-                    placeholder="#D4AF37"
-                  />
-                </div> */}
               </div>
-
-              {/* <div className="flex items-center gap-2">
-                <Checkbox
-                  id="e_avail"
-                  checked={editing.is_available}
-                  onCheckedChange={(v) =>
-                    setEditing((p) =>
-                      p ? { ...p, is_available: v === true } : p,
-                    )
-                  }
-                />
-                <Label htmlFor="e_avail">Нээлттэй (is_available)</Label>
-              </div> */}
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">

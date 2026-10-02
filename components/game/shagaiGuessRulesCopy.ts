@@ -1,7 +1,7 @@
 import { TOTAL_SHAGAI } from "./shagaiGuessType";
 
-export type ShagaiGuessRuleStep = { n: string; t: string; d: string };
-export type ShagaiGuessScoreRow = { label: string; pts: string };
+type ShagaiGuessRuleStep = { n: string; t: string; d: string };
+type ShagaiGuessScoreRow = { label: string; pts: string };
 
 export type ShagaiGuessRulesStrings = {
   // howToSectionTitle: string;

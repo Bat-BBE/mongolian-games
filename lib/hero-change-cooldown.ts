@@ -1,8 +1,7 @@
 const STORAGE_KEY = "mongol_hero_change_unlock_at";
-/** Баатар солих хоорондын хугацаа (24 цаг). */
-export const HERO_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const HERO_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
-export function getHeroChangeUnlockAt(): number | null {
+function getHeroChangeUnlockAt(): number | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -18,11 +17,9 @@ export function setHeroChangeCooldownFromNow(): void {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      String(Date.now() + HERO_CHANGE_COOLDOWN_MS)
+      String(Date.now() + HERO_CHANGE_COOLDOWN_MS),
     );
-  } catch {
-    /* ignore */
-  }
+  } catch {}
 }
 
 export function getHeroChangeRemainingMs(): number {

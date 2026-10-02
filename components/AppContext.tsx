@@ -403,8 +403,6 @@ const en: Translations = {
   },
 };
 
-////////////////////////////////////////////////////
-
 const translations = { mn, en };
 
 interface AppContextType {

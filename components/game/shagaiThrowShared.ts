@@ -33,7 +33,7 @@ export function getTwelveThrowStartPositions(
 
 const BERKH12 = SHAGAI_HORSE_RACE_THROW_START_POSITIONS;
 /** 12 бэрх: 3×4 сүлжээний бүх байрлал (урт шидэлтэнд). */
-export function getBerkhTwelveThrowStartPositions(): [number, number, number][] {
+function getBerkhTwelveThrowStartPositions(): [number, number, number][] {
   const out: [number, number, number][] = [];
   for (let row = 0; row < 3; row++) {
     for (let c = 0; c < 4; c++) {

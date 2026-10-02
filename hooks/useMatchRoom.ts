@@ -26,13 +26,11 @@ export function useMatchRoom(opts: {
   gameType: string;
   gameSlug: string;
   displayName: string;
-  /** Эзлэх өрөөний дээд хязгаар (жишээ нь Homboroi: 4). */
   maxRoomPlayers?: number;
 }) {
   const wsRef = useRef<WebSocket | null>(null);
   const nameRef = useRef(opts.displayName);
   nameRef.current = opts.displayName;
-  /** «Өрөө нээх» дээр сонгосон кодыг code_taken бол join руу шилжүүлнэ. */
   const pendingJoinOnCodeTakenRef = useRef<string | null>(null);
 
   const [connected, setConnected] = useState(false);
@@ -61,8 +59,7 @@ export function useMatchRoom(opts: {
     (preferredCode?: string) => {
       setError(null);
       const raw = preferredCode?.trim().toUpperCase() ?? "";
-      pendingJoinOnCodeTakenRef.current =
-        raw.length === 6 ? raw : null;
+      pendingJoinOnCodeTakenRef.current = raw.length === 6 ? raw : null;
       send({
         type: "create",
         displayName: nameRef.current?.trim() || "Player",
@@ -116,12 +113,15 @@ export function useMatchRoom(opts: {
     [send],
   );
 
-  const startMatch = useCallback((opts?: { forceSolo?: boolean }) => {
-    send({
-      type: "start_match",
-      ...(opts?.forceSolo ? { forceSolo: true } : {}),
-    });
-  }, [send]);
+  const startMatch = useCallback(
+    (opts?: { forceSolo?: boolean }) => {
+      send({
+        type: "start_match",
+        ...(opts?.forceSolo ? { forceSolo: true } : {}),
+      });
+    },
+    [send],
+  );
 
   const resetRoomLobby = useCallback(() => {
     send({ type: "reset_room" });

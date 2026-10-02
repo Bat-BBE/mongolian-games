@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  /** Production: суурь аюулгүйн header-ууд (reverse proxy-аас илүү сул тохиргоо нэмнэ). */
   async headers() {
     return [
       {

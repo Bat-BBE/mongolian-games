@@ -1,11 +1,6 @@
 import pg from "pg";
 import { env } from "./config.js";
 
-/**
- * Алсын Postgres (Neon г.м.) дээр libpq/pg-ийн «sslmode ил тод биш» анхааруулгыг
- * багасгахын тулд URL-д `sslmode` байхгүй бол `require` нэмнэ.
- * Local: `localhost` / `127.0.0.1` — өөрчлөхгүй.
- */
 function databaseUrlWithExplicitSslMode(urlStr: string): string {
   try {
     const u = new URL(urlStr);

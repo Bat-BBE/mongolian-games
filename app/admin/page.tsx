@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   LuActivity as Activity,
-  LuBookMarked as BookMarked,
   LuGem as Gem,
   LuGamepad2 as Gamepad2,
   LuArrowRight as ArrowRight,
@@ -29,7 +28,6 @@ export default function AdminDashboardPage() {
   const [gameCount, setGameCount] = useState<number | null>(null);
   const [heroCount, setHeroCount] = useState<number | null>(null);
   const [stationCount, setStationCount] = useState<number | null>(null);
-  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,11 +44,10 @@ export default function AdminDashboardPage() {
           setGameCount(games.length);
           setHeroCount(heroes.length);
           setStationCount(stations.length);
-          setErr(null);
+          // setErr(null);
         }
-      } catch (e) {
+      } catch {
         if (!cancelled) {
-          setErr(e instanceof Error ? e.message : "Алдаа");
           setHealth(null);
           setGameCount(null);
           setHeroCount(null);
@@ -69,19 +66,7 @@ export default function AdminDashboardPage() {
         <h1 className="font-display text-2xl md:text-3xl tracking-wide">
           Хяналтын самбар
         </h1>
-        {/* <p className="text-sm text-[var(--admin-muted)] max-w-xl leading-relaxed">
-          Тоглоом, өртөө, баатар, контент — PostgreSQL-оос динамик тоо. Доорх
-          картуудаас засварлах холбоосууд руу шилжинэ.
-        </p> */}
       </header>
-      {/* {err && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Холболтын алдаа: {err}.{" "}
-          <code className="text-xs">NEXT_PUBLIC_API_URL</code> болон Express
-          сервер асаасан эсэхийг шалгана уу.
-        </div>
-      )} */}
-
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl">
         <div className="admin-panel p-5 space-y-3">
           <div className="flex items-center gap-2 text-[var(--admin-muted)]">
@@ -93,9 +78,6 @@ export default function AdminDashboardPage() {
           <p className="text-3xl font-semibold tabular-nums">
             {gameCount === null ? "—" : gameCount}
           </p>
-          {/* <p className="text-xs text-[var(--admin-muted)]">
-            EndPoint (`/api/games`)
-          </p> */}
           <Button
             asChild
             variant="secondary"
@@ -119,9 +101,6 @@ export default function AdminDashboardPage() {
           <p className="text-3xl font-semibold tabular-nums">
             {stationCount === null ? "—" : stationCount}
           </p>
-          {/* <p className="text-xs text-[var(--admin-muted)]">
-            EndPoint (`/api/content/stations`)
-          </p> */}
           <Button
             asChild
             variant="secondary"
@@ -145,9 +124,6 @@ export default function AdminDashboardPage() {
           <p className="text-3xl font-semibold tabular-nums">
             {heroCount === null ? "—" : heroCount}
           </p>
-          {/* <p className="text-xs text-[var(--admin-muted)]">
-            EndPoint (`/api/content/heroes`)
-          </p> */}
           <Button
             asChild
             variant="secondary"
@@ -198,37 +174,8 @@ export default function AdminDashboardPage() {
                 : "Шалгаж байна…"}
             </span>
           </div>
-          {/* <p className="text-xs text-[var(--admin-muted)]">
-            {health
-              ? `Firebase Admin: ${health.firebaseAdmin ? "тохируулсан" : "үйлдэлгүй"}`
-              : ""}
-          </p> */}
         </div>
       </div>
-      {/* <section className="admin-panel p-6 space-y-3">
-        <h2 className="font-display text-sm tracking-[0.15em] text-[var(--admin-subtle)] uppercase">
-          Тохиргоо
-        </h2>
-        <ol className="list-decimal list-inside text-sm text-[var(--admin-muted)] space-y-2 leading-relaxed">
-          <li>
-            <code className="text-[var(--admin-text)]">server/.env</code>:{" "}
-            <code className="text-[var(--admin-text)]">ADMIN_USERNAME</code>,{" "}
-            <code className="text-[var(--admin-text)]">ADMIN_PASSWORD</code>,{" "}
-            <code className="text-[var(--admin-text)]">JWT_SECRET</code>{" "}
-            (хамгийн багадаа 32 тэмдэгт).
-          </li>
-          <li>
-            <Link
-              href="/admin/login"
-              className="text-[var(--admin-text)] underline underline-offset-2 hover:text-[var(--admin-muted)]"
-            >
-              /admin/login
-            </Link>{" "}
-            — зөвхөн эдгээр нэр / нууц үгээр нэвтэрнэ.
-          </li>
-          <li>Цаашид энд шинэ картууд, тайлан, контентын модуль нэмж болно.</li>
-        </ol>
-      </section> */}
     </div>
   );
 }

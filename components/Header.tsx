@@ -13,11 +13,95 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+const getActiveLinkFromScroll = () => {
+  const hrefs = ["#", "#what-is", "#games", "#how-it-works", "#features"];
+  const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+
+  if (scrollY < 100) {
+    return "#";
+  }
+
+  for (const href of hrefs.slice(1)) {
+    const el = document.querySelector<HTMLElement>(href);
+    if (!el) continue;
+
+    const rect = el.getBoundingClientRect();
+    if (rect.top <= window.innerHeight / 2 && rect.bottom >= 0) {
+      return href;
+    }
+  }
+
+  return "#";
+};
+
+const langBtnStyle = (active: boolean): CSSProperties =>
+  active
+    ? {
+        background: "var(--grad-gold)",
+        backgroundSize: "200% 200%",
+        animation: "gold-shimmer 5s ease infinite",
+        color: "oklch(0.108 0.018 52)",
+        boxShadow:
+          "0 3px 12px color-mix(in oklch, var(--primary) 36%, transparent)",
+        padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
+        fontSize: "clamp(0.6rem,0.8vw,0.7rem)",
+        letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
+        borderRadius: "999px",
+        fontWeight: 700,
+        border: "none",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+      }
+    : {
+        background: "transparent",
+        color: "color-mix(in oklch, var(--primary) 65%, transparent)",
+        padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
+        fontSize: "clamp(0.65rem,0.8vw,0.8rem)",
+        letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
+        borderRadius: "999px",
+        fontWeight: 700,
+        border: "none",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+      };
+
+function LangToggle({
+  language,
+  setLanguage,
+}: {
+  language: "mn" | "en";
+  setLanguage: (lng: "mn" | "en") => void;
+}) {
+  return (
+    <div
+      className="flex items-center gap-0.5 rounded-full p-0.5"
+      style={{
+        background: "color-mix(in oklch, var(--background) 35%, transparent)",
+        border:
+          "1px solid color-mix(in oklch, var(--primary) 20%, var(--border))",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      {(["mn", "en"] as const).map((lng) => (
+        <button
+          key={lng}
+          onClick={() => setLanguage(lng)}
+          aria-pressed={language === lng}
+          style={langBtnStyle(language === lng)}
+          className="font-display transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          {lng === "mn" ? "МН" : "EN"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Header() {
   const { t, language, setLanguage } = useApp();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeLink, setActiveLink] = useState("#");
+  const [activeLink, setActiveLink] = useState(() => getActiveLinkFromScroll());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const [menuPortalEl, setMenuPortalEl] = useState<HTMLElement | null>(null);
 
@@ -47,10 +131,6 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    setMenuPortalEl(document.body);
-  }, []);
-
-  useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
@@ -58,31 +138,11 @@ export default function Header() {
   }, [isMobileMenuOpen]);
 
   const detectActive = useCallback(() => {
-    const hrefs = ["#", "#what-is", "#games", "#how-it-works", "#features"];
-    let current = "#";
-    for (const href of hrefs) {
-      if (href === "#") {
-        if (window.scrollY < 100) {
-          current = "#";
-          break;
-        }
-        continue;
-      }
-      const el = document.querySelector<HTMLElement>(href);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        if (rect.top <= window.innerHeight / 2 && rect.bottom >= 0) {
-          current = href;
-        }
-      }
-    }
-    
-    setActiveLink(current);
+    setActiveLink(getActiveLinkFromScroll());
   }, []);
 
   useEffect(() => {
     window.addEventListener("scroll", detectActive, { passive: true });
-    detectActive();
     return () => window.removeEventListener("scroll", detectActive);
   }, [detectActive]);
 
@@ -99,12 +159,12 @@ export default function Header() {
     e.preventDefault();
     setActiveLink(href);
     setIsMobileMenuOpen(false);
-    
+
     if (href === "#") {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    
+
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: "smooth" });
@@ -120,67 +180,12 @@ export default function Header() {
     animation: "gold-shimmer 5s ease infinite",
   };
 
-  const langBtnStyle = (active: boolean): CSSProperties =>
-    active
-      ? {
-          background: "var(--grad-gold)",
-          backgroundSize: "200% 200%",
-          animation: "gold-shimmer 5s ease infinite",
-          color: "oklch(0.108 0.018 52)",
-          boxShadow:
-            "0 3px 12px color-mix(in oklch, var(--primary) 36%, transparent)",
-          padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
-          fontSize: "clamp(0.6rem,0.8vw,0.7rem)",
-          letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
-          borderRadius: "999px",
-          fontWeight: 700,
-          border: "none",
-          cursor: "pointer",
-          transition: "all 0.3s ease",
-        }
-      : {
-          background: "transparent",
-          color: "color-mix(in oklch, var(--primary) 65%, transparent)",
-          padding: "clamp(4px,0.6vw,6px) clamp(8px,1vw,12px)",
-          fontSize: "clamp(0.65rem,0.8vw,0.8rem)",
-          letterSpacing: "clamp(0.05em,0.2vw,0.1em)",
-          borderRadius: "999px",
-          fontWeight: 700,
-          border: "none",
-          cursor: "pointer",
-          transition: "all 0.3s ease",
-        };
-
-  const LangToggle = () => (
-    <div
-      className="flex items-center gap-0.5 rounded-full p-0.5"
-      style={{
-        background: "color-mix(in oklch, var(--background) 35%, transparent)",
-        border: "1px solid color-mix(in oklch, var(--primary) 20%, var(--border))",
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      {(["mn", "en"] as const).map((lng) => (
-        <button
-          key={lng}
-          onClick={() => setLanguage(lng)}
-          aria-pressed={language === lng}
-          style={langBtnStyle(language === lng)}
-          className="font-display transition-all duration-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        >
-          {lng === "mn" ? "МН" : "EN"}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <header
       className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         isScrolled ? "py-2" : "py-3 md:py-5"
       }`}
       style={{
-        // Softer dark header: less blue, warmer ink.
         background: isScrolled
           ? "color-mix(in oklch, var(--background) 86%, transparent)"
           : "color-mix(in oklch, var(--background) 68%, transparent)",
@@ -213,7 +218,10 @@ export default function Header() {
           <div className="relative flex-shrink-0">
             <div
               className="absolute inset-0 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-              style={{ background: "color-mix(in oklch, var(--primary) 28%, transparent)" }}
+              style={{
+                background:
+                  "color-mix(in oklch, var(--primary) 28%, transparent)",
+              }}
             />
             <div className="relative px-1.5 py-0.5">
               <span
@@ -234,7 +242,10 @@ export default function Header() {
               />
               <span
                 className="font-display font-black tracking-tighter select-none"
-                style={{ fontSize: "clamp(1.3rem, 3vw, 1.5rem)", ...goldTextStyle }}
+                style={{
+                  fontSize: "clamp(1.3rem, 3vw, 1.5rem)",
+                  ...goldTextStyle,
+                }}
               >
                 MTGA
               </span>
@@ -242,7 +253,8 @@ export default function Header() {
             <div
               className="absolute -bottom-0.5 left-0 right-0 h-px origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500 pointer-events-none"
               style={{
-                background: "linear-gradient(90deg, var(--gold-dark), var(--gold-light), var(--gold-dark))",
+                background:
+                  "linear-gradient(90deg, var(--gold-dark), var(--gold-light), var(--gold-dark))",
               }}
             />
           </div>
@@ -250,7 +262,8 @@ export default function Header() {
           <div
             className="hidden md:block w-px h-7 flex-shrink-0"
             style={{
-              background: "linear-gradient(to bottom, transparent, var(--gold-bright) 50%, transparent)",
+              background:
+                "linear-gradient(to bottom, transparent, var(--gold-bright) 50%, transparent)",
               opacity: 0.28,
             }}
           />
@@ -277,8 +290,10 @@ export default function Header() {
             style={{
               left: indicatorStyle.left,
               width: indicatorStyle.width || 0,
-              background: "color-mix(in oklch, var(--primary) 10%, transparent)",
-              border: "1px solid color-mix(in oklch, var(--primary) 22%, transparent)",
+              background:
+                "color-mix(in oklch, var(--primary) 10%, transparent)",
+              border:
+                "1px solid color-mix(in oklch, var(--primary) 22%, transparent)",
               opacity: indicatorStyle.width ? 1 : 0,
             }}
           />
@@ -306,7 +321,7 @@ export default function Header() {
               {activeLink === link.href && (
                 <span
                   className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
-                style={{ background: "var(--gold-bright)" }}
+                  style={{ background: "var(--gold-bright)" }}
                 />
               )}
             </a>
@@ -314,7 +329,7 @@ export default function Header() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-2.5">
-          <LangToggle />
+          <LangToggle language={language} setLanguage={setLanguage} />
           <ModeToggle />
 
           <button
@@ -326,7 +341,8 @@ export default function Header() {
               background: isMobileMenuOpen
                 ? "color-mix(in oklch, var(--primary) 18%, transparent)"
                 : "color-mix(in oklch, var(--primary) 8%, transparent)",
-              border: "1px solid color-mix(in oklch, var(--primary) 24%, var(--border))",
+              border:
+                "1px solid color-mix(in oklch, var(--primary) 24%, var(--border))",
             }}
           >
             <span className="relative w-4 h-3 flex flex-col justify-between">
@@ -334,7 +350,9 @@ export default function Header() {
                 className="block h-px w-full rounded-full transition-all duration-300 origin-center"
                 style={{
                   background: "var(--gold-bright)",
-                  transform: isMobileMenuOpen ? "rotate(45deg) translate(2px, 5px)" : "none",
+                  transform: isMobileMenuOpen
+                    ? "rotate(45deg) translate(2px, 5px)"
+                    : "none",
                 }}
               />
               <span
@@ -349,7 +367,9 @@ export default function Header() {
                 className="block h-px w-full rounded-full transition-all duration-300 origin-center"
                 style={{
                   background: "var(--gold-bright)",
-                  transform: isMobileMenuOpen ? "rotate(-45deg) translate(2px, -5px)" : "none",
+                  transform: isMobileMenuOpen
+                    ? "rotate(-45deg) translate(2px, -5px)"
+                    : "none",
                 }}
               />
             </span>
@@ -384,9 +404,7 @@ export default function Header() {
                 className="pointer-events-none absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-amber-600/90 via-amber-500/70 to-amber-700/85 dark:from-amber-500/80 dark:via-amber-400/50 dark:to-amber-600/75"
                 aria-hidden
               />
-              <div
-                className="flex items-center justify-between border-b border-border/80 bg-gradient-to-r from-card via-card to-muted/30 px-5 pt-6 pb-4 pl-6 dark:from-card dark:via-card dark:to-muted/20"
-              >
+              <div className="flex items-center justify-between border-b border-border/80 bg-gradient-to-r from-card via-card to-muted/30 px-5 pt-6 pb-4 pl-6 dark:from-card dark:via-card dark:to-muted/20">
                 <span className="font-display text-sm font-semibold uppercase tracking-[0.26em] text-card-foreground">
                   {t.nav.title}
                 </span>
@@ -460,7 +478,7 @@ export default function Header() {
               </ul>
             </nav>
           </>,
-          menuPortalEl
+          menuPortalEl,
         )}
     </header>
   );

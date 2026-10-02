@@ -73,16 +73,10 @@ export const SHAgAI_SIDES: Record<ShagaiSide, ShagaiResult> = {
 
 export interface ShagaiDetectOptions {
   remapOnkh?: boolean;
-  /**
-   * Оньс дээр санамсаргүй хонь/ямаа — хуучин.
-   * false (анхдагч) = +z / -z талын аль нь дээшилснийг геометрээр ялгана.
-   */
   randomOnkh?: boolean;
 }
 
-export type ShagaiDetection = ShagaiSide;
-
-export function weightedTraditionalSide(): ShagaiSide {
+function weightedTraditionalSide(): ShagaiSide {
   const r = Math.random();
   if (r < 0.38) return "sheep"; // 38%
   if (r < 0.76) return "goat"; // 38%
@@ -98,7 +92,6 @@ export function biasSideForThrow(): ShagaiSide {
   return "camel";
 }
 
-/** Нисэх үеийн torque — biasSideForThrow-той ижил (морь/тэмээ гарна). */
 export function biasSideForAirTorque(): ShagaiSide {
   return biasSideForThrow();
 }
@@ -163,10 +156,7 @@ export function isShagaiOnkh(
   return (face === "+x" || face === "-x") && dot >= minTipUpDot;
 }
 
-/**
- * Оньс (хажуу тал дээш) — аль урт тал (+z эсвэл -z) илүү дээшилснийг шалгаж хонь/ямаа заана.
- */
-export function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
+function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
   const worldUp = new THREE.Vector3(0, 1, 0);
   const sheepTilt = new THREE.Vector3(0, 0, 1)
     .applyQuaternion(quat)
@@ -177,10 +167,6 @@ export function resolveSheepGoatFromOnkh(quat: THREE.Quaternion): ShagaiSide {
   return sheepTilt >= goatTilt ? "sheep" : "goat";
 }
 
-/**
- * Дээшээ хамгийн ойрхон «тал»-ыг сонгоно — SHAGAI_SIDE_UP_AXIS-аар дөрвөн талыг шууд харьцуулна.
- * Хуучин 6 талын хайрцаг (+y → тэмээ гэх мэт) нь муруй гадаргуу дээр ямаа/тэмээг алдаж байсан.
- */
 function detectShagaiDominantFourWay(quat: THREE.Quaternion): ShagaiSide {
   const worldUp = new THREE.Vector3(0, 1, 0);
   const order: ShagaiSide[] = ["horse", "camel", "sheep", "goat"];
@@ -196,7 +182,7 @@ function detectShagaiDominantFourWay(quat: THREE.Quaternion): ShagaiSide {
   return best;
 }
 
-export function detectShagaiFromQuaternion(
+function detectShagaiFromQuaternion(
   quat: THREE.Quaternion,
   options: ShagaiDetectOptions = {},
 ): ShagaiSide {
@@ -223,16 +209,4 @@ export function detectShagaiSideFromQuaternion(
   options: ShagaiDetectOptions = {},
 ): ShagaiSide {
   return detectShagaiFromQuaternion(quat, options);
-}
-
-export function detectShagaiSide(rotX: number, rotZ: number): ShagaiSide {
-  const euler = new THREE.Euler(rotX, 0, rotZ, "XYZ");
-  const quat = new THREE.Quaternion().setFromEuler(euler);
-  return detectShagaiSideFromQuaternion(quat);
-}
-
-export interface ThrowRecord {
-  side: ShagaiSide;
-  timestamp: Date;
-  throwNumber: number;
 }

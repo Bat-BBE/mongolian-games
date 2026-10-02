@@ -1,11 +1,11 @@
-export const POWERS = 4;
+const POWERS = 4;
 export const WIN_SCORE = 7;
 export const MAX_ENERGY = 6;
 export const ROUND_REGEN = 2;
 
 export type PowerId = 0 | 1 | 2 | 3;
 export type Seat4 = [number, number, number, number];
-export type EffectId = "tempo" | "drain" | "shield" | "recover";
+type EffectId = "tempo" | "drain" | "shield" | "recover";
 
 export type PowerSpec = {
   id: PowerId;
@@ -81,7 +81,7 @@ export function makeInitialRoundState(): RoundState {
   };
 }
 
-export function beats(a: number, b: number): boolean {
+function beats(a: number, b: number): boolean {
   return ((a + 1) | 0) % POWERS === (b | 0);
 }
 
@@ -180,7 +180,7 @@ export function resolveRoundWithEffects(
   };
 }
 
-export function addTotals(t: Seat4, d: Seat4): Seat4 {
+function addTotals(t: Seat4, d: Seat4): Seat4 {
   return [t[0] + d[0], t[1] + d[1], t[2] + d[2], t[3] + d[3]];
 }
 

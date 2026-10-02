@@ -17,14 +17,6 @@ export const GAME_MODAL_TITLE_IMMERSIVE_CLASS =
 export const GAME_PANEL_OVERLINE_CLASS =
   "block w-full truncate text-center font-[family-name:var(--font-inter)] text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-zinc-500";
 
-/** Панелийн гол нэр — том биш, дэлгэцэнд багтана */
-export const GAME_PANEL_TITLE_CLASS =
-  "block w-full truncate text-balance text-center font-[family-name:var(--font-inter)] font-semibold uppercase tracking-[0.1em] text-amber-200/92 text-[clamp(0.75rem,2.8vw,0.875rem)] leading-snug";
-
-/** Панел доторх том тоо (цаг, оноо г.м.) */
-export const GAME_PANEL_STAT_NUMBER_CLASS =
-  "font-[family-name:var(--font-inter)] font-bold tabular-nums text-[clamp(0.9rem,3.5vw,1.1rem)] leading-none tracking-tight text-stone-100";
-
 /** Sheet / дүрмийн гарчиг */
 export const GAME_SHEET_TITLE_CLASS =
   "min-w-0 flex-1 truncate pr-2 text-left font-[family-name:var(--font-inter)] text-xs font-bold uppercase tracking-[0.14em] text-[#c8a030] sm:text-[0.8125rem]";
@@ -68,10 +60,6 @@ export const GAME_PANEL_TEXT_COLOR = "rgba(228, 228, 231, 0.94)";
 export const GAME_TEXT_BODY =
   "font-[family-name:var(--font-inter)] text-xs leading-relaxed text-zinc-200/95 sm:text-[0.8125rem]";
 
-/** Гарчгийн доорх нэг мөр (subtitle) */
-export const GAME_TEXT_SUBTITLE =
-  "font-[family-name:var(--font-inter)] text-[0.6875rem] leading-snug text-zinc-500 sm:text-xs";
-
 /** Жижиг шошго, таблын толгой */
 export const GAME_TEXT_META =
   "font-[family-name:var(--font-inter)] text-[0.6875rem] font-medium leading-snug text-zinc-500 sm:text-xs";
@@ -99,10 +87,6 @@ export const GAME_TEXT_SECTION_LABEL =
 /** Дүрмийн жагсаалт (тоо) */
 export const GAME_RULES_OL_CLASS =
   "list-decimal space-y-1.5 pl-4 font-[family-name:var(--font-inter)] text-xs leading-relaxed text-zinc-300/95 sm:text-[0.8125rem]";
-
-/** Дүрмийн жагсаалт (цэг) — modal эсвэл sheet доторх `ul` */
-export const GAME_RULES_UL_CLASS =
-  "list-disc space-y-2.5 pl-4 font-[family-name:var(--font-inter)] text-sm leading-relaxed text-zinc-200/95";
 
 /** Дүрмийн sheet — гулгах бие + `ul`/`ol`-д нэгдсэн хэмжээ */
 export const GAME_RULES_SHEET_SCROLL_CLASS =

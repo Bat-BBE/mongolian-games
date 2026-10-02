@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import {
   LuRefreshCw as RefreshCw,
   LuPlus as Plus,
   LuPencil as Pencil,
-  LuTrash2 as Trash2,
 } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import {
 import { useAdminAuth } from "@/components/admin/AdminAuthContext";
 import {
   adminCreateGame,
-  adminDeleteGame,
+  // adminDeleteGame,
   adminListGames,
   adminUploadGameImage,
   adminUpdateGame,
@@ -133,7 +133,9 @@ export default function AdminGamesPage() {
     setMsg(null);
     try {
       const { game } = await adminUploadGameImage(t, editing.id, file);
-      setEditing((prev) => (prev ? { ...prev, image_url: game.image_url } : prev));
+      setEditing((prev) =>
+        prev ? { ...prev, image_url: game.image_url } : prev,
+      );
       await load();
       setMsg("Зураг шинэчлэгдлээ.");
     } catch (e) {
@@ -141,36 +143,27 @@ export default function AdminGamesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Устгах уу?")) return;
-    const t = token?.trim();
-    if (!t) return;
-    setMsg(null);
-    try {
-      await adminDeleteGame(t, id);
-      await load();
-      setMsg("Устгагдлаа.");
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Алдаа");
-    }
-  };
+  // const handleDelete = async (id: string) => {
+  //   if (!confirm("Устгах уу?")) return;
+  //   const t = token?.trim();
+  //   if (!t) return;
+  //   setMsg(null);
+  //   try {
+  //     await adminDeleteGame(t, id);
+  //     await load();
+  //     setMsg("Устгагдлаа.");
+  //   } catch (e) {
+  //     setMsg(e instanceof Error ? e.message : "Алдаа");
+  //   }
+  // };
 
   return (
     <div className="p-6 md:p-10 max-w-5xl mx-auto space-y-10 pb-24 text-[var(--admin-text)]">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          {/* <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--admin-subtle)] mb-1">
-            Тоглоом
-          </p> */}
           <h1 className="font-display text-2xl md:text-3xl tracking-wide">
             Тоглоомууд
           </h1>
-          {/* <p className="text-sm text-[var(--admin-muted)] mt-2 max-w-xl leading-relaxed">
-            Мэдээлэл нь PostgreSQL{" "}
-            <code className="text-xs text-[var(--admin-subtle)]">games</code>{" "}
-            хүснэгтэд хадгалагдана. Нүүр хуудсын «Тоглоомууд» хэсэг API-аас ижил
-            өгөгдлийг уншина.
-          </p> */}
         </div>
         <Button
           type="button"
@@ -201,7 +194,6 @@ export default function AdminGamesPage() {
                 <tr className="border-b border-[var(--admin-border)] text-[10px] uppercase tracking-wider text-[var(--admin-subtle)]">
                   <th className="p-3 font-medium">Түлхүүр</th>
                   <th className="p-3 font-medium">Нэр (MN/EN)</th>
-                  {/* <th className="p-3 font-medium w-24">Эрэмбэ</th> */}
                   <th className="p-3 font-medium w-28">Төлөв</th>
                   <th className="p-3 font-medium w-10 text-right">Засах</th>
                 </tr>
@@ -223,9 +215,6 @@ export default function AdminGamesPage() {
                         {g.name_en}
                       </div>
                     </td>
-                    {/* <td className="p-3 tabular-nums text-[var(--admin-muted)]">
-                      {g.sort_order}
-                    </td> */}
                     <td className="p-3">
                       <span
                         className={
@@ -361,9 +350,7 @@ export default function AdminGamesPage() {
                 setCreateForm((p) => ({ ...p, show_on_home: v === true }))
               }
             />
-            <Label htmlFor="c_home">
-              Нүүр хуудсанд харагдана (show_on_home)
-            </Label>
+            <Label htmlFor="c_home">Нүүр хуудсанд харагдана</Label>
           </div>
         </div>
         <Button
@@ -395,19 +382,6 @@ export default function AdminGamesPage() {
                   className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
                 />
               </div>
-              {/* <div className="space-y-1.5">
-                <Label>sort_order</Label>
-                <Input
-                  type="number"
-                  value={editing.sort_order}
-                  onChange={(e) =>
-                    setEditing((p) =>
-                      p ? { ...p, sort_order: Number(e.target.value) || 0 } : p,
-                    )
-                  }
-                  className="border-[var(--admin-border)] bg-[var(--admin-elevated)] text-[var(--admin-text)]"
-                />
-              </div> */}
               <div className="space-y-1.5">
                 <Label>Нэр МН</Label>
                 <Input
@@ -461,8 +435,11 @@ export default function AdminGamesPage() {
                 <Label>Зураг (Landing / Games)</Label>
                 {editing.image_url ? (
                   <div className="flex items-start gap-3">
-                    <img
+                    <Image
                       alt="game"
+                      width={112}
+                      height={64}
+                      unoptimized
                       className="h-16 w-28 rounded-md border border-[var(--admin-border)] object-cover bg-black/20"
                       src={
                         editing.image_url.startsWith("http")
@@ -478,7 +455,7 @@ export default function AdminGamesPage() {
                   </div>
                 ) : (
                   <div className="text-xs text-[var(--admin-muted)]">
-                    Зураг байхгүй (икон fallback-тай).
+                    Зураг байхгүй.
                   </div>
                 )}
                 <Input

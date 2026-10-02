@@ -1,9 +1,9 @@
-export const ONLINE_LOBBY_INTRO = {
+const ONLINE_LOBBY_INTRO = {
   mn: "Өрөөнд олон хүнтэй хамт тоглож болно. Өөр хүн ирэхийг эндээс хүлээнэ — зөвхөн та бол удахгүй автоматаар эхэлнэ (робот эсвэл ганцаараа).",
   en: "This is your online room — wait here for others to join. If you stay alone, the game will start on its own shortly (bots or solo, per game).",
 } as const;
 
-export const LOBBY_POSTGRES_ACCOUNT_REQUIRED = {
+const LOBBY_POSTGRES_ACCOUNT_REQUIRED = {
   mn: "Олон тоглогчтой холбогдож тоголохын тулд нэвтэрнэ үү.",
   en: "To use the shared online room sign in.",
 } as const;

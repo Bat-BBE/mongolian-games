@@ -1,6 +1,6 @@
 import type { HeroId } from "./hero-strings";
 
-export type HeroStats = { wisdom: number; strength: number; speed: number };
+type HeroStats = { wisdom: number; strength: number; speed: number };
 
 export interface Hero {
   id: HeroId;
@@ -91,7 +91,7 @@ export const HEROES: Hero[] = [
   },
 ];
 
-export const STORAGE_KEY = "mongol_game_player";
+const STORAGE_KEY = "mongol_game_player";
 
 export interface SavedPlayer {
   name: string;

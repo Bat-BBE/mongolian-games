@@ -13,8 +13,8 @@ export type SevenPhase =
 
 export const SEVEN_COUNT = 7;
 
-export const SEVEN_PATH_ANCHOR_EPS = 1.05;
-export const SEVEN_PATH_OBSTACLE_R = 0.5;
+const SEVEN_PATH_ANCHOR_EPS = 1.05;
+const SEVEN_PATH_OBSTACLE_R = 0.5;
 export const SEVEN_PATH_MIN_POINTS = 3;
 
 function dist2(ax: number, az: number, bx: number, bz: number): number {
@@ -99,7 +99,7 @@ export function validateSevenPairPath(
   return true;
 }
 
-export function canFormAnyPair(
+function canFormAnyPair(
   activeIds: number[],
   sides: (ShagaiSide | null)[],
 ): boolean {

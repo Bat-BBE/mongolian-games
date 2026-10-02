@@ -1,7 +1,7 @@
 import { MAX_STONES, WIN_SCORE } from "./stoneType";
 
-export type StoneGuessRuleStep = { n: string; t: string; d: string };
-export type StoneGuessScoreRow = { label: string; pts: string };
+type StoneGuessRuleStep = { n: string; t: string; d: string };
+type StoneGuessScoreRow = { label: string; pts: string };
 
 export type StoneGuessRulesStrings = {
   // howToSectionTitle: string;
