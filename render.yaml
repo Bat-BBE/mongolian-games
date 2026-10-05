@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: mongolian-games-server
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install && npm run build --workspace mongolian-games-server
+    startCommand: npm run start --workspace mongolian-games-server
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_DATABASE_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
