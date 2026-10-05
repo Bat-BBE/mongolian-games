@@ -14,6 +14,11 @@ import { LocalHero } from "@/components/map3d-r3f/controls/LocalHero";
 import { createHeroKinematic } from "@/components/map3d-r3f/controls/heroKinematic";
 import { RemotePeersLayer } from "@/components/map3d-r3f/hero/RemotePeersLayer";
 import { useMapPresence } from "@/hooks/useMapPresence";
+import { useArcheryDuel } from "@/components/map3d-r3f/duel/useArcheryDuel";
+import { createDuelDrawState } from "@/components/map3d-r3f/duel/duelDrawState";
+import { DuelChallengeTrigger } from "@/components/map3d-r3f/duel/DuelChallengeTrigger";
+import { ArcheryDuelHUD } from "@/components/map3d-r3f/duel/ArcheryDuelHUD";
+import { ArcheryDuelScene } from "@/components/map3d-r3f/duel/ArcheryDuelScene";
 import { STATION_CONFIGS, WORLD_SCALE, STATION_SPREAD } from "@/components/dashboard/mapConstants";
 import { terrainHeight } from "@/components/dashboard/sceneHelpers";
 import type { UrtuuStation } from "@/components/dashboard/UrtuuNode";
@@ -40,7 +45,7 @@ export default function MapR3FPreviewLivePage() {
 function MapR3FPreviewLive() {
   const stations = buildPreviewStations();
   const kinematicRef = useRef(createHeroKinematic());
-  const myIdRef = useRef(`tester-${Math.random().toString(36).slice(2, 8)}`);
+  const testNameRef = useRef(`tester-${Math.random().toString(36).slice(2, 8)}`);
 
   const ubCfg = STATION_CONFIGS.ulaanbaatar!;
   const startX = ubCfg.wx * WORLD_SCALE * STATION_SPREAD + 10;
@@ -54,14 +59,15 @@ function MapR3FPreviewLive() {
     theta: 0.15,
   };
 
-  const { remotePeersRef, publishPose } = useMapPresence({
-    displayName: myIdRef.current,
-    homeKey: "preview-live",
-    enabled: true,
-    heroModelPath: "/models/hero1.glb",
-    gerLevel: 1,
-    livestock: { sheep: 0, goat: 0, cow: 0, horse: 0, camel: 0 },
-  });
+  const { remotePeersRef, publishPose, myIdRef, sendChallenge, setOnPeerChallenged } =
+    useMapPresence({
+      displayName: testNameRef.current,
+      homeKey: "preview-live",
+      enabled: true,
+      heroModelPath: "/models/hero1.glb",
+      gerLevel: 1,
+      livestock: { sheep: 0, goat: 0, cow: 0, horse: 0, camel: 0 },
+    });
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -70,6 +76,13 @@ function MapR3FPreviewLive() {
     }, 180);
     return () => clearInterval(id);
   }, [publishPose]);
+
+  const duel = useArcheryDuel({
+    myDisplayName: testNameRef.current,
+    sendChallenge,
+    setOnPeerChallenged,
+  });
+  const myDrawRef = useRef(createDuelDrawState());
 
   return (
     <div style={{ width: "100vw", height: "100vh", background: "#111" }}>
@@ -86,8 +99,15 @@ function MapR3FPreviewLive() {
           padding: "4px 8px",
         }}
       >
-        LIVE multiplayer test — id: {myIdRef.current} — open this URL in a 2nd tab to test peer sync
+        LIVE multiplayer test — id: {myIdRef.current} — duel phase: {duel.phase} — open this URL in a 2nd tab to test peer sync
       </div>
+      <DuelChallengeTrigger
+        remotePeersRef={remotePeersRef}
+        heroKinematicRef={kinematicRef}
+        myIdRef={myIdRef}
+        duel={duel}
+      />
+      <ArcheryDuelHUD duel={duel} myDrawRef={myDrawRef} />
       <MapCanvas cameraFar={6000}>
         <SkyAndLighting />
         <Terrain />
@@ -97,6 +117,17 @@ function MapR3FPreviewLive() {
         <LocalHero modelPath="/models/hero1.glb" startPosition={startPosition} kinematicRef={kinematicRef} />
         <MapCameraRig initialTarget={initialTarget} heroKinematicRef={kinematicRef} />
         <RemotePeersLayer remotePeersRef={remotePeersRef} heroKinematicRef={kinematicRef} />
+        <ArcheryDuelScene
+          phase={duel.phase}
+          opponentPresenceId={duel.opponentPresenceId}
+          myShot={duel.myShot}
+          opponentShot={duel.opponentShot}
+          myHit={duel.result?.myHit ?? null}
+          opponentHit={duel.result?.opponentHit ?? null}
+          myDrawRef={myDrawRef}
+          heroKinematicRef={kinematicRef}
+          remotePeersRef={remotePeersRef}
+        />
         <DrawCallReadout />
       </MapCanvas>
     </div>

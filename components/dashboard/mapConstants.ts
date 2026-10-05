@@ -297,7 +297,8 @@ const PLAYER_HOME_MIN_CLEAR_FROM_STATION = 112;
 const PLAYER_HOME_MIN_CLEAR_FROM_STATION_SQ =
   PLAYER_HOME_MIN_CLEAR_FROM_STATION * PLAYER_HOME_MIN_CLEAR_FROM_STATION;
 
-function isPlayerHomeClearOfStations(x: number, z: number): boolean {
+/** Also reused by the landing-spot picker to reject drop points too close to a station. */
+export function isPlayerHomeClearOfStations(x: number, z: number): boolean {
   const stations = allStationWorldCenters();
   for (let i = 0; i < stations.length; i++) {
     const s = stations[i];

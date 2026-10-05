@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { LuX as X } from "react-icons/lu";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useApp } from "@/components/AppContext";
@@ -20,10 +21,15 @@ import { NameEntryScreen } from "@/components/hero-select/NameEntryScreen";
 import { HeroChooseScreen } from "@/components/hero-select/HeroChooseScreen";
 
 export default function HeroSelectPage() {
-  const { language, heroSelectOpen, setHeroSelectOpen } = useApp();
+  const router = useRouter();
+  const { language } = useApp();
   const lang = language as Lang;
   const t = HERO_STRINGS[lang];
 
+  // Unlike the global modal (components/hero-select/Hero-select-page.tsx, opened on demand
+  // from the landing page's CTA via the shared `heroSelectOpen` flag), this is a dedicated,
+  // directly-linkable page — it's always "open" for as long as the user is on /register.
+  const [open, setOpen] = useState(true);
   const [screen, setScreen] = useState<"name" | "hero">("name");
   const [playerName, setPlayerName] = useState("");
   const [selectedId, setSelectedId] = useState<HeroId>("shikhikhutag");
@@ -79,12 +85,8 @@ export default function HeroSelectPage() {
   const handlePlay = () => {
     if (!selectedHero.available) return;
     save(playerName, selectedId);
-    showToast(
-      t.toast(
-        playerName,
-        lang === "mn" ? selectedHero.nameMn : selectedHero.nameEn,
-      ),
-    );
+    setOpen(false);
+    router.push("/home");
   };
 
   const handleGuest = () => {
@@ -96,7 +98,13 @@ export default function HeroSelectPage() {
 
   return (
     <>
-      <Dialog open={heroSelectOpen} onOpenChange={setHeroSelectOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) router.push("/");
+        }}
+      >
         <DialogContent
           className="p-0 border-0 bg-transparent shadow-none max-w-lg w-full overflow-visible"
           style={{ background: "transparent" }}
@@ -133,7 +141,7 @@ export default function HeroSelectPage() {
             }}
           >
             <button
-              onClick={() => setHeroSelectOpen(false)}
+              onClick={() => router.push("/")}
               className="absolute top-4 right-4 z-10 p-1 rounded-full transition-colors duration-200"
               style={{ color: "rgba(255,255,255,0.3)" }}
               onMouseEnter={(e) =>

@@ -9,6 +9,8 @@ import {
   type DashStrings,
 } from "./dashboard-strings";
 import { MapArea } from "./MapArea";
+import { LandingSelectScreen } from "@/components/landing-select/LandingSelectScreen";
+import type { WorldPoint } from "@/components/landing-select/landingSpotGeometry";
 import { getUserByEmail } from "@/lib/firebase-auth";
 import { loadPlayer, HEROES } from "@/components/hero-select/hero-data";
 import { normalizeStationId } from "./mapConstants";
@@ -134,6 +136,9 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     onisogoSolvedSlugs?: string[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  /** This session's chosen landing point — gates `MapArea` until the player picks one via
+   * `LandingSelectScreen`, every time `/home` loads (see plan: "every session", not persisted). */
+  const [spawnPoint, setSpawnPoint] = useState<WorldPoint | null>(null);
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileReloadTick, setProfileReloadTick] = useState(0);
@@ -372,6 +377,10 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
     );
   }
 
+  if (!spawnPoint) {
+    return <LandingSelectScreen onConfirm={setSpawnPoint} />;
+  }
+
   const introMandatoryOpen = !introCompleted;
   const introTourOpen = introMandatoryOpen || introReplayOpen;
   const introTourAllowSkip = introReplayOpen && !introMandatoryOpen;
@@ -441,6 +450,7 @@ export function GameDashboard({ defaultLang = "en" }: GameDashboardProps) {
           lang={lang}
           userEmail={userEmail}
           playerDisplayName={playerNickname || player.name}
+          spawnOverride={spawnPoint}
           homeGerLevel={player.homeGerLevel ?? 1}
           homeLivestock={player.homeLivestock}
           currentStationId={player.currentStationId?.trim() || "home"}

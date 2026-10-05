@@ -38,6 +38,12 @@ export type MapChatLine = {
   sentAt: number;
 };
 
+export type MapPresenceChallenge = {
+  fromPeerId: string;
+  fromDisplayName: string;
+  code: string;
+};
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
@@ -139,6 +145,9 @@ export function useMapPresence(opts: {
   const lastEmoteAtRef = useRef(0);
   const mapChatLinesRef = useRef<MapChatLine[]>([]);
   const onMapChatLineRef = useRef<((line: MapChatLine) => void) | null>(null);
+  const onPeerChallengedRef = useRef<
+    ((challenge: MapPresenceChallenge) => void) | null
+  >(null);
 
   const publishPose = useCallback((x: number, z: number, ry: number) => {
     const w = wsRef.current;
@@ -168,6 +177,15 @@ export function useMapPresence(opts: {
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN) return;
     w.send(JSON.stringify({ type: "chat", text }));
+  }, []);
+
+  const sendChallenge = useCallback((targetId: string, code: string) => {
+    const id = targetId.trim();
+    const c = code.trim();
+    if (!id || !c) return;
+    const w = wsRef.current;
+    if (!w || w.readyState !== WebSocket.OPEN) return;
+    w.send(JSON.stringify({ type: "challenge", targetId: id, code: c }));
   }, []);
 
   const publishHelloNow = useCallback(() => {
@@ -332,6 +350,23 @@ export function useMapPresence(opts: {
             line,
           ];
           onMapChatLineRef.current?.(line);
+          return;
+        }
+
+        if (
+          ty === "peer_challenged" &&
+          typeof msg.from === "string" &&
+          typeof msg.code === "string"
+        ) {
+          onPeerChallengedRef.current?.({
+            fromPeerId: msg.from,
+            fromDisplayName:
+              typeof msg.fromDisplayName === "string" &&
+              msg.fromDisplayName.trim()
+                ? msg.fromDisplayName.trim()
+                : "Тоглогч",
+            code: msg.code,
+          });
         }
       };
     };
@@ -381,6 +416,13 @@ export function useMapPresence(opts: {
     [],
   );
 
+  const setOnPeerChallenged = useCallback(
+    (listener: ((challenge: MapPresenceChallenge) => void) | null) => {
+      onPeerChallengedRef.current = listener;
+    },
+    [],
+  );
+
   return {
     publishPose,
     publishMapEmote,
@@ -389,5 +431,8 @@ export function useMapPresence(opts: {
     mapChatLinesRef,
     setOnMapChatLine,
     publishHelloNow,
+    myIdRef,
+    sendChallenge,
+    setOnPeerChallenged,
   };
 }

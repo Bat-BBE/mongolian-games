@@ -87,6 +87,9 @@ interface MapAreaProps {
     quest_desc?: string | null;
   }[];
   heroModelPath?: string | null;
+  /** This session's chosen landing point from the pre-game landing-spot picker — see
+   * `useThreeScene`'s `spawnOverride` option for exactly what it does and doesn't affect. */
+  spawnOverride?: { x: number; z: number } | null;
   onGameCompleted?: () => void;
   onOpenHome?: () => void;
   /** Хаагдсаныг мэдэх — гэрт зогсож байхад дахиж автоматаар нээхгүй */
@@ -138,6 +141,7 @@ export function MapArea({
   stationGameVisits,
   stations: apiStations,
   heroModelPath,
+  spawnOverride = null,
   onGameCompleted,
   onOpenHome,
   homeModalOpen = false,
@@ -457,6 +461,7 @@ export function MapArea({
     homeLivestock,
     userEmail,
     playerHomeKey: playerHomeKeyRaw,
+    spawnOverride,
     onHeroAtStationChange,
     paused: !!selectedGame || docHidden,
     presencePublishRef,

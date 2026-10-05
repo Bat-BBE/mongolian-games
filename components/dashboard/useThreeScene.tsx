@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { SceneBuilder } from "./SceneBuilder";
+import { materialLibrary } from "./MaterialLibrary";
 import { AnimationController } from "./AnimationController";
 import type { LabelPos } from "./AnimationController";
 import type { UrtuuStation } from "./UrtuuNode";
@@ -70,6 +71,10 @@ interface UseThreeSceneOptions {
   onHeroAtStationChange?: (stationId: string | null) => void;
   userEmail?: string;
   playerHomeKey?: string;
+  /** This session's chosen landing point (from the pre-game landing-spot picker) — overrides
+   * only the INITIAL camera/hero spawn position, never the permanent home-ger/livestock anchor
+   * (which always stays at `playerHomeWorldAnchor(homeKey)`, untouched by this). */
+  spawnOverride?: { x: number; z: number } | null;
   paused?: boolean;
   presencePublishRef?: React.MutableRefObject<
     ((x: number, z: number, ry: number) => void) | null
@@ -201,6 +206,7 @@ export function useThreeScene({
   onHeroAtStationChange,
   userEmail = "",
   playerHomeKey = "",
+  spawnOverride = null,
   paused = false,
   presencePublishRef,
   remotePeersRef,
@@ -636,11 +642,21 @@ export function useThreeScene({
       terrainHeight(playerHomeX, playerHomeZ) + 2.5,
       playerHomeZ,
     );
-    const doorHome = builder.doorAnchors.get("home");
-    if (doorHome) {
-      const hx = doorHome.x;
-      const hz = doorHome.z;
-      homeLookAt.set(hx, terrainHeight(hx, hz) + 2.7, hz + 2.9);
+    if (spawnOverride) {
+      // Player chose a landing spot this session — start there, not at the door of
+      // their permanent home ger (which still exists, unmoved, elsewhere on the map).
+      homeLookAt.set(
+        spawnOverride.x,
+        terrainHeight(spawnOverride.x, spawnOverride.z) + 2.5,
+        spawnOverride.z,
+      );
+    } else {
+      const doorHome = builder.doorAnchors.get("home");
+      if (doorHome) {
+        const hx = doorHome.x;
+        const hz = doorHome.z;
+        homeLookAt.set(hx, terrainHeight(hx, hz) + 2.7, hz + 2.9);
+      }
     }
     const initTarget = buildHomeCameraTarget(homeLookAt);
     camera.position.set(
@@ -853,12 +869,17 @@ export function useThreeScene({
               onLocalMapEmoteRef.current?.(id);
             };
             setMapHeroEmoteIds([...emoteIds]);
-            const dh = builder.doorAnchors.get("home");
             let sx = playerHomeX;
             let sz = playerHomeZ + 4;
-            if (dh) {
-              sx = dh.x;
-              sz = dh.z + 3.4;
+            if (spawnOverride) {
+              sx = spawnOverride.x;
+              sz = spawnOverride.z;
+            } else {
+              const dh = builder.doorAnchors.get("home");
+              if (dh) {
+                sx = dh.x;
+                sz = dh.z + 3.4;
+              }
             }
             const sy = terrainHeightFeet(sx, sz, 0) + 0.02;
             root.position.set(sx, sy, sz);
@@ -1010,9 +1031,13 @@ export function useThreeScene({
       distVel: 0,
       isDragging: false,
       userInteracted: false,
-      introActive: false,
+      // This descent flourish (ease-out swoop from an elevated offset down to the resting
+      // orbit transform, see the onBeforeRender intro block below) already existed but was
+      // never activated anywhere — only turn it on for a chosen landing spot, so every other
+      // mount keeps today's exact behavior (camera simply starts at its resting transform).
+      introActive: Boolean(spawnOverride),
       introT: 0,
-      introDur: 0,
+      introDur: spawnOverride ? 2.2 : 0,
       lastX: 0,
       lastY: 0,
     };
@@ -1020,6 +1045,9 @@ export function useThreeScene({
     const followHeroUntilRef = { current: 0 };
     const heroCamPivotSmoothedRef = { current: null as THREE.Vector3 | null };
     const cameraFloorSmoothedRef = { current: null as number | null };
+    const landingFxRef = { current: null as THREE.Mesh | null };
+    const landingFxSpawnedRef = { current: false };
+    const landingFxStartRef = { current: 0 };
 
     const cancelIntro = () => {
       cameraState.userInteracted = true;
@@ -1482,6 +1510,34 @@ export function useThreeScene({
           if (cameraState.introT >= cameraState.introDur) {
             cameraState.introT = cameraState.introDur;
             cameraState.introActive = false;
+          }
+        }
+
+        // Landing-dust flourish: pops in right as the descent swoop (above) settles,
+        // then grows/fades out over half a second. Primitive geometry, no new assets —
+        // same disposable-emissive-mesh approach as the archery duel's impact effect.
+        if (spawnOverride && !landingFxSpawnedRef.current && elapsed >= cameraState.introDur) {
+          landingFxSpawnedRef.current = true;
+          landingFxStartRef.current = elapsed;
+          const fxMat = materialLibrary.getEmissiveMaterial(0xd9c48a, 1.1).clone();
+          fxMat.transparent = true;
+          const fx = new THREE.Mesh(new THREE.SphereGeometry(0.5, 10, 10), fxMat);
+          const fy = terrainHeight(spawnOverride.x, spawnOverride.z);
+          fx.position.set(spawnOverride.x, fy + 0.3, spawnOverride.z);
+          fx.castShadow = false;
+          scene.add(fx);
+          landingFxRef.current = fx;
+        }
+        if (landingFxRef.current) {
+          const fxT = Math.min(1, (elapsed - landingFxStartRef.current) / 0.6);
+          const fx = landingFxRef.current;
+          fx.scale.setScalar(0.4 + fxT * 2.2);
+          (fx.material as THREE.MeshStandardMaterial).opacity = 1 - fxT;
+          if (fxT >= 1) {
+            scene.remove(fx);
+            fx.geometry.dispose();
+            (fx.material as THREE.Material).dispose();
+            landingFxRef.current = null;
           }
         }
 
@@ -2175,6 +2231,12 @@ export function useThreeScene({
         void footstepAudioRef.current.ctx.close();
         footstepAudioRef.current = null;
       }
+      if (landingFxRef.current) {
+        scene.remove(landingFxRef.current);
+        landingFxRef.current.geometry.dispose();
+        (landingFxRef.current.material as THREE.Material).dispose();
+        landingFxRef.current = null;
+      }
       renderer.dispose();
       if (container.contains(renderer.domElement))
         container.removeChild(renderer.domElement);
@@ -2183,6 +2245,7 @@ export function useThreeScene({
     mapStationsRevision,
     userEmail,
     playerHomeKey,
+    spawnOverride ? `${spawnOverride.x},${spawnOverride.z}` : "",
     onisogoMarkers
       .map((m) => `${m.slug}:${m.wx}:${m.wz}`)
       .sort()

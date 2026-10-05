@@ -294,6 +294,26 @@ export class MapPresenceHub {
         for (const p of this.peers.values()) {
           if (p.ws.readyState === p.ws.OPEN) p.ws.send(payload);
         }
+        return;
+      }
+
+      if (t === "challenge") {
+        const targetId =
+          typeof body.targetId === "string" ? body.targetId.trim() : "";
+        const code =
+          typeof body.code === "string"
+            ? body.code.slice(0, 16).trim()
+            : "";
+        if (!targetId || !code || targetId === rec.id) return;
+        const target = this.peers.get(targetId);
+        if (!target) return;
+        send(target.ws, {
+          type: "peer_challenged",
+          from: rec.id,
+          fromDisplayName: rec.displayName,
+          code,
+        });
+        return;
       }
     });
 
