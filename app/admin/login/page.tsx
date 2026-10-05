@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
             </span>
           </div>
           <h1 className="mt-4 text-lg font-medium tracking-tight text-[var(--admin-text)]">
-            Админ нэвтрэлт
+            Админ нэвтрэх
           </h1>
           <p className="mt-1.5 max-w-[280px] text-xs leading-relaxed text-[var(--admin-muted)]">
             Зөвхөн урьдчилан тохируулсан эрхтэй хэрэглэгчид нэвтэрнэ.
@@ -104,7 +104,11 @@ export default function AdminLoginPage() {
               {err}
             </p>
           )}
-          <Button type="submit" className="w-full h-10 font-medium shadow-md" disabled={busy}>
+          <Button
+            type="submit"
+            className="w-full h-10 font-medium shadow-md"
+            disabled={busy}
+          >
             {busy ? "Нэвтэрч байна…" : "Нэвтрэх"}
           </Button>
         </form>

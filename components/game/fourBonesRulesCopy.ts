@@ -1,7 +1,7 @@
 import { TARGET_SCORE } from "./fourBonusType";
 
-export type FourBonesRuleStep = { n: string; t: string; d: string };
-export type FourBonesScoreRow = { label: string; pts: string };
+type FourBonesRuleStep = { n: string; t: string; d: string };
+type FourBonesScoreRow = { label: string; pts: string };
 
 export type FourBonesRulesStrings = {
   intro: string;

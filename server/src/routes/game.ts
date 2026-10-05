@@ -39,16 +39,13 @@ const onisogoSolveBody = z.object({
   lang: z.enum(["mn", "en"]).optional().default("mn"),
 });
 
-/** lib/homeEconomy.ts WEALTH_COINS_PER_GEM-тэй ижил байх ёстой */
 const GEMS_TO_COINS_EXCHANGE_RATE = 25;
 
 function normRiddleAnswer(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function readOnisogoSolvedSlugs(
-  progress: Record<string, unknown>,
-): string[] {
+function readOnisogoSolvedSlugs(progress: Record<string, unknown>): string[] {
   const raw = progress.onisogoSolvedSlugs;
   if (!Array.isArray(raw)) return [];
   return raw.map((x) => String(x)).filter((x) => x.length > 0);
@@ -451,14 +448,16 @@ gameRouter.post("/onisogo-solve", async (req, res) => {
       return;
     }
 
-    const expected =
-      lang === "mn" ? r.answer_correct_mn : r.answer_correct_en;
+    const expected = lang === "mn" ? r.answer_correct_mn : r.answer_correct_en;
     if (normRiddleAnswer(answer) !== normRiddleAnswer(expected)) {
       res.status(400).json({ error: "Wrong answer", correct: false });
       return;
     }
 
-    const reward = Math.max(1, Math.min(999, Math.floor(num(r.coin_reward, 18))));
+    const reward = Math.max(
+      1,
+      Math.min(999, Math.floor(num(r.coin_reward, 18))),
+    );
     const inv = isPlainRecord(profile.inventory)
       ? { ...(profile.inventory as Record<string, unknown>) }
       : {};

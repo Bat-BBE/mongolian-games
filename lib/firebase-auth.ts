@@ -34,9 +34,6 @@ function mergeProgress(raw: unknown): Record<string, unknown> {
   };
 }
 
-/**
- * Dashboard / hero flow: read PostgreSQL first; if missing or empty profile, use Realtime DB and backfill PG.
- */
 export async function getUserByEmail(email: string) {
   const trimmed = email.trim();
   try {
@@ -55,9 +52,7 @@ export async function getUserByEmail(email: string) {
         };
       }
     }
-  } catch {
-    /* API unavailable — try Firebase */
-  }
+  } catch {}
 
   const key = emailToKey(trimmed);
   const snapshot = await get(ref(db, `users/${key}`));
@@ -79,9 +74,7 @@ export async function getUserByEmail(email: string) {
       profile: p,
       progress: pr,
     });
-  } catch {
-    /* PG optional */
-  }
+  } catch {}
 
   return {
     profile: p,
@@ -131,15 +124,8 @@ export async function registerEmail(email: string, heroId: HeroId) {
       profile: profile as Record<string, unknown>,
       progress: progress as Record<string, unknown>,
     });
-  } catch {
-    /* PG optional */
-  }
+  } catch {}
 }
-
-/**
- * Баатар солих — PostgreSQL дээрх зоос/эрдэнэс/мал/гэр зэргийг хадгална.
- * Өмнө нь Firebase-ээс ирсэн хуучин профайл бүхэлд нь PG руу бичигдэж эдийн засаг устдаг байсан.
- */
 export async function updateHeroForEmail(email: string, heroId: HeroId) {
   const trimmed = email.trim();
   const hero = HEROES.find((h) => h.id === heroId);
@@ -217,14 +203,18 @@ export async function updateHeroForEmail(email: string, heroId: HeroId) {
 
   await syncAppUserSimple({
     email: trimmed,
-    displayName: typeof nextProfile.name === "string" ? String(nextProfile.name) : trimmed,
+    displayName:
+      typeof nextProfile.name === "string" ? String(nextProfile.name) : trimmed,
     heroId: hero.id,
     profile: nextProfile,
     progress,
   });
 }
 
-export async function updateNicknameForEmail(email: string, nicknameRaw: string) {
+export async function updateNicknameForEmail(
+  email: string,
+  nicknameRaw: string,
+) {
   const trimmed = email.trim();
   const nickname = nicknameRaw.trim();
   if (!nickname) throw new Error("Nickname хоосон байна");

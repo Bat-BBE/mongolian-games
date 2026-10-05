@@ -43,7 +43,7 @@ type PieceRuntime = {
   locked: boolean;
 };
 
-export function pieceLabel(def: PieceDef, lang: "mn" | "en") {
+function pieceLabel(def: PieceDef, lang: "mn" | "en") {
   return lang === "mn" ? def.labelMn : def.labelEn;
 }
 

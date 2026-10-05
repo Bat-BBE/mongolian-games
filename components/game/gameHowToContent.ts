@@ -14,11 +14,6 @@ const MAP_MN =
 const MAP_EN =
   "On the map, tap this game’s station marker to open it in the modal.";
 
-const AT_STATION_DEFAULT_MN =
-  "Та өртөөнд байна. Доорх «Тоглох» товчийг дарвал тоглоомын цонх нээгдэнэ.";
-const AT_STATION_DEFAULT_EN =
-  "You’re at this station on the map. Tap Play below to open the game.";
-
 const HOW: Record<string, HowToEntry> = {
   khorol: {
     mn: {
@@ -299,7 +294,7 @@ function entryFor(gameType: string): HowToEntry {
   return HOW[gameType] ?? HOW.default!;
 }
 
-export function getHowToSteps(gameType: string, isMn: boolean): string[] {
+function getHowToSteps(gameType: string, isMn: boolean): string[] {
   const e = entryFor(gameType);
   return isMn ? e.mn.steps : e.en.steps;
 }
@@ -315,11 +310,4 @@ export function getHowToMapHint(
   const e = entryFor(gameType);
   const h = isMn ? e.mn.mapHint : e.en.mapHint;
   return h?.trim() ? h : null;
-}
-
-export function getHowToAtStationHint(gameType: string, isMn: boolean): string {
-  const e = entryFor(gameType);
-  const custom = (isMn ? e.mn.atStationHint : e.en.atStationHint)?.trim();
-  if (custom) return custom;
-  return isMn ? AT_STATION_DEFAULT_MN : AT_STATION_DEFAULT_EN;
 }

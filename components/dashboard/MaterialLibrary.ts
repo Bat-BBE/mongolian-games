@@ -6,7 +6,7 @@ import { textureManager } from "./TextureManager";
  * Centralized management of materials for terrain, animals, and structures
  * Provides consistent styling and reuses materials for performance
  */
-export class MaterialLibrary {
+class MaterialLibrary {
   private materials = new Map<string, THREE.Material>();
   private textureManager: typeof textureManager;
 

@@ -1,10 +1,5 @@
-/** Серверийн match өрөөний кодтой ижил үсэг (matchRooms CODE_ALPHABET). */
 const ALPH = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/**
- * Ижил өртөө + ижил тоглоом → бүх клиентэд ижил 6 тэмдэгт (public өрөө).
- * Эхлэгч «Өрөө нээх» дарахад энэ кодыг ашиглана; хоёр дахь нь ижил кодоор нэгдэнэ.
- */
 export function deriveStationGameMatchCode(
   stationSlug: string,
   gameSlug: string,

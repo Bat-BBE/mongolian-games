@@ -30,7 +30,7 @@ export type PuzzleLevel = {
   pieces: PieceDef[];
 };
 
-export const LEVEL_ONE: PuzzleLevel = {
+const LEVEL_ONE: PuzzleLevel = {
   id: "lvl1",
   titleMn: "Модон оньс",
   titleEn: "Wooden interlock",

@@ -246,8 +246,8 @@ export function stationWorldXZ(
  * sukhbaatar: wx -45, wz -250 — түүнээс цааш хойд руу; ойрын өртөөнүүдээс (~100+ wx/wz нэгж) зайтай.
  * Бүх өртөөтэй ижил: wx/wz × WORLD_SCALE × STATION_SPREAD
  */
-export const PLAYER_HOME_WX = -130;
-export const PLAYER_HOME_WZ = -330;
+const PLAYER_HOME_WX = -130;
+const PLAYER_HOME_WZ = -330;
 export const PLAYER_HOME_X = PLAYER_HOME_WX * WORLD_SCALE * STATION_SPREAD;
 export const PLAYER_HOME_Z = PLAYER_HOME_WZ * WORLD_SCALE * STATION_SPREAD;
 
@@ -432,22 +432,12 @@ export const MAP_SCENE = {
   toneMappingExposure: 1.08,
 } as const;
 
-export const MAP_SCENE_CSS = {
-  sky: "#92c4e8",
-  fog: "#b8d0e8",
-} as const;
-/** Газрын 2D label overlay: React setState-ийг 60Hz бүр дуудахгүй. */
-export const MAP_LABEL_UI_MIN_INTERVAL_MS = 45;
-
 export function normalizeStationId(raw: string | undefined): string {
   let s = raw?.trim() || "ulaanbaatar";
   if (s === "orkhon") s = "orkhon_river";
   return s;
 }
 
-export function getStationJourneyIndex(stationId: string): number {
-  return JOURNEY_ORDER.indexOf(stationId);
-}
 export function isStationUnlockedInJourney(
   stationId: string,
   _currentStationId: string,
@@ -488,17 +478,4 @@ export function stationAllGamesWeeklyLocked(
   return slugs.every(
     (slug) => gameWeeklyPlaysRemaining(stationId, slug, stationGameVisits) <= 0,
   );
-}
-
-/** @deprecated Нэг тоглоом тутамд лимит рүү шилжсэн; зөвхөн хуучин өгөгдөлд зориулсан. */
-export function stationWeeklyPlaysRemaining(
-  stationId: string,
-  stationVisits: Record<string, number[]> | undefined,
-): number {
-  const windowMs = 7 * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-  const visits = (stationVisits?.[stationId] ?? [])
-    .map((x) => Number(x))
-    .filter((n) => Number.isFinite(n) && n >= now - windowMs);
-  return Math.max(0, STATION_GAME_WEEKLY_PLAY_CAP - visits.length);
 }

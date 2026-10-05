@@ -1,7 +1,5 @@
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import type { ServiceAccount } from "firebase-admin";
-import { getAuth } from "firebase-admin/auth";
-import { getDatabase } from "firebase-admin/database";
 import { env } from "./config.js";
 
 let app: App | null = null;
@@ -29,18 +27,4 @@ export function getFirebaseApp(): App | null {
     app = getApps()[0]!;
   }
   return app;
-}
-
-export function getFirebaseAuthOrThrow() {
-  const a = getFirebaseApp();
-  if (!a) {
-    throw new Error("Firebase Admin is not configured (set FIREBASE_SERVICE_ACCOUNT_JSON)");
-  }
-  return getAuth(a);
-}
-
-export function getFirebaseRtdbOrNull() {
-  const a = getFirebaseApp();
-  if (!a || !env.FIREBASE_DATABASE_URL) return null;
-  return getDatabase(a);
 }

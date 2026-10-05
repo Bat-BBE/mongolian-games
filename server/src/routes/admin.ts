@@ -147,7 +147,7 @@ adminRouter.post("/login", (req, res) => {
   if (!u || !p || !secret) {
     res.status(503).json({
       error:
-        "Admin login is not configured. Set ADMIN_USERNAME, ADMIN_PASSWORD, and JWT_SECRET (32+ chars) in server/.env",
+        "Admin login is not configured. Set ADMIN_USERNAME, ADMIN_PASSWORD, and JWT_SECRET environment variables.",
     });
     return;
   }

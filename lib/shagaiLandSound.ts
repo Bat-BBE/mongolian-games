@@ -1,11 +1,6 @@
-/**
- * Шагай газарт буух үеийн SFX (`public/sounds/shagai-throw.mp3.wav`).
- * Нэг шидэлтэнд олон шагай дараалан буухад давхцалгүйн тулд debounce.
- */
 const LAND_SOUND_SRC = "/sounds/shagai-throw.mp3.wav";
 
 let lastLandAt = 0;
-/** Олон шагай дараалан буухад давхцуулах — хэт урт байвал 2-р чимээ хоцорно. */
 const DEBOUNCE_MS = 420;
 
 const DEFAULT_PLAYBACK_RATE = 1;

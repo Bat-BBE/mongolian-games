@@ -30,10 +30,6 @@ export function GameModalSessionProvider({
   );
 }
 
-export function useGameModalSession(): GameModalSessionValue | null {
-  return useContext(GameModalSessionContext);
-}
-
 export function useMatchLobbyIntro(lang: LobbyIntroLang): string {
   const v = useContext(GameModalSessionContext);
   if (!v) {

@@ -1,6 +1,6 @@
 import type { HeroId } from "./hero-strings";
 
-export type HeroStats = { wisdom: number; strength: number; speed: number };
+type HeroStats = { wisdom: number; strength: number; speed: number };
 
 export interface Hero {
   id: HeroId;
@@ -47,7 +47,7 @@ export const HEROES: Hero[] = [
     titleMn: "Их бичгийн багш",
     titleEn: "The Master of the Great Script",
     imageUrl: "/images/tatatunga1.png",
-    modelPath: "/models/stading idle 01.fbx",
+    modelPath: "/models/standing idle 01.fbx",
     available: true,
     color: "#00A3E0",
     emissive: "#00c0ff",
@@ -91,7 +91,7 @@ export const HEROES: Hero[] = [
   },
 ];
 
-export const STORAGE_KEY = "mongol_game_player";
+const STORAGE_KEY = "mongol_game_player";
 
 export interface SavedPlayer {
   name: string;

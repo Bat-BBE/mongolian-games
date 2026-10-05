@@ -165,7 +165,7 @@ export type HomeLivestockForFence = {
   camel?: number;
 } | null;
 
-export function clampedHomeLivestockHeadCount(
+function clampedHomeLivestockHeadCount(
   ls: HomeLivestockForFence,
 ): number {
   if (!ls || typeof ls !== "object") return 0;

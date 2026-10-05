@@ -2,7 +2,7 @@ import { mulberry32 } from "./fourPowersType";
 
 export const ROUNDS_TO_WIN = 5;
 
-export function rollD6(rng: () => number): number {
+function rollD6(rng: () => number): number {
   return Math.min(6, Math.floor(rng() * 6) + 1);
 }
 

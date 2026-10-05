@@ -270,7 +270,7 @@ export default function AdminOnisogoPage() {
               checked={form.is_active}
               onChange={(e) => patchForm("is_active", e.target.checked)}
             />
-            Идэвхтэй (газрын зурагт харагдана)
+            Идэвхтэй
           </label>
 
           {(
@@ -291,8 +291,8 @@ export default function AdminOnisogoPage() {
 
           {(
             [
-              ["question_mn", "Асуулт / тогтоол MN"],
-              ["question_en", "Асуулт / тогтоол EN"],
+              ["question_mn", "Асуулт (MN)"],
+              ["question_en", "Асуулт (EN)"],
             ] as const
           ).map(([k, lab]) => (
             <label key={k} className="block text-xs font-medium">
@@ -311,14 +311,14 @@ export default function AdminOnisogoPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {(
               [
-                ["answer_correct_mn", "Зөв MN"],
-                ["answer_correct_en", "Зөв EN"],
-                ["wrong_1_mn", "Буруу 1 MN"],
-                ["wrong_1_en", "Буруу 1 EN"],
-                ["wrong_2_mn", "Буруу 2 MN"],
-                ["wrong_2_en", "Буруу 2 EN"],
-                ["wrong_3_mn", "Буруу 3 MN"],
-                ["wrong_3_en", "Буруу 3 EN"],
+                ["answer_correct_mn", "Зөв (MN)"],
+                ["answer_correct_en", "Зөв (EN)"],
+                ["wrong_1_mn", "Буруу 1 (MN)"],
+                ["wrong_1_en", "Буруу 1 (EN)"],
+                ["wrong_2_mn", "Буруу 2 (MN)"],
+                ["wrong_2_en", "Буруу 2 (EN)"],
+                ["wrong_3_mn", "Буруу 3 (MN)"],
+                ["wrong_3_en", "Буруу 3 (EN)"],
               ] as const
             ).map(([k, lab]) => (
               <label key={k} className="block text-xs font-medium">

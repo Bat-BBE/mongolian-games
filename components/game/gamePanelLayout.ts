@@ -31,7 +31,3 @@ export function gamePanelPlayNarrowBottom(): CSSProperties {
     overflowY: "auto",
   };
 }
-
-export function gamePanelRightDesktop(widthPx: number): CSSProperties {
-  return { ...abs, top: 24, right: 24, width: widthPx };
-}

@@ -1,7 +1,5 @@
 import type { ShagaiSide } from "./fourBonusType";
 
-export const GRID_SIZE = 16;
-export const PAIR_COUNT = 8;
 /** Seconds to find all pairs (45 seconds) */
 export const MATCH_TIME_LIMIT_SEC = 40;
 

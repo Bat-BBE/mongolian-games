@@ -50,7 +50,6 @@ function roomStatePayload(manager: MatchRoomManager, room: Room) {
   };
 }
 
-/** `noServer: true` — HTTP `upgrade`-ийг `index.ts` дээр нэг газраас дамжуулна. */
 export function createMatchWebSocketServer(
   manager: MatchRoomManager,
 ): WebSocketServer {
@@ -94,7 +93,10 @@ export function createMatchWebSocketServer(
         const gameType = typeof body.gameType === "string" ? body.gameType : "";
         const gameSlug = typeof body.gameSlug === "string" ? body.gameSlug : "";
         let maxPlayers = 20;
-        if (typeof body.maxPlayers === "number" && Number.isFinite(body.maxPlayers)) {
+        if (
+          typeof body.maxPlayers === "number" &&
+          Number.isFinite(body.maxPlayers)
+        ) {
           maxPlayers = Math.floor(body.maxPlayers);
         }
         if (!gameType.trim()) {
@@ -102,7 +104,9 @@ export function createMatchWebSocketServer(
           return;
         }
         const preferredCode =
-          typeof body.preferredCode === "string" ? body.preferredCode : undefined;
+          typeof body.preferredCode === "string"
+            ? body.preferredCode
+            : undefined;
         const created = manager.createRoom({
           hostId: meta.playerId,
           hostWs: ws,
@@ -140,7 +144,11 @@ export function createMatchWebSocketServer(
           return;
         }
         send(ws, roomStatePayload(manager, res.room));
-        broadcastRoom(res.room, roomStatePayload(manager, res.room), meta.playerId);
+        broadcastRoom(
+          res.room,
+          roomStatePayload(manager, res.room),
+          meta.playerId,
+        );
         return;
       }
 
@@ -206,12 +214,16 @@ export function createMatchWebSocketServer(
           send(ws, { type: "error", message: "relay_channel_required" });
           return;
         }
-        broadcastRoom(room, {
-          type: "peer_relay",
-          from: meta.playerId,
-          channel,
-          payload: body.payload ?? null,
-        }, meta.playerId);
+        broadcastRoom(
+          room,
+          {
+            type: "peer_relay",
+            from: meta.playerId,
+            channel,
+            payload: body.payload ?? null,
+          },
+          meta.playerId,
+        );
         return;
       }
 

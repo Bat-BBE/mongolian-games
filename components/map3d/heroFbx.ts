@@ -11,7 +11,6 @@ export type HeroModel = {
 };
 
 const gltfLoader = new GLTFLoader();
-const modelCache = new Map<string, Promise<THREE.Group>>();
 const heroModelCache = new Map<
   string,
   Promise<{ root: THREE.Group; clips: THREE.AnimationClip[] }>
@@ -62,7 +61,6 @@ function setDataTextureColorSpaces(
   }
 }
 
-/** Mixamo/FBX: өнгө ихэвчлэн `geometry.attributes.color`-д; материал дээр `vertexColors: true` заавал. */
 function enableVertexColorIfPresent(
   mat: THREE.Material & { vertexColors?: boolean; needsUpdate?: boolean },
   hasVertexColor: boolean,
@@ -72,7 +70,7 @@ function enableVertexColorIfPresent(
   mat.needsUpdate = true;
 }
 
-export function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
+function fixHeroMaterialsForDisplay(root: THREE.Object3D): void {
   const sRGB = THREE.SRGBColorSpace;
   const linear = THREE.NoColorSpace;
   root.traverse((o) => {
@@ -179,7 +177,7 @@ function extOf(path: string): string {
   return dot >= 0 ? clean.slice(dot + 1).toLowerCase() : "";
 }
 
-export function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
+function measureHeroBox(obj: THREE.Object3D): THREE.Box3 {
   obj.updateMatrixWorld(true);
   const box = new THREE.Box3();
   let foundSkin = false;
@@ -212,14 +210,6 @@ export function normalizeHeroHeight(
   obj.scale.multiplyScalar(s);
   const box2 = measureHeroBox(obj);
   return { scale: s, feetOffsetY: -box2.min.y };
-}
-
-export const MAP_HERO_HEIGHT_NORMAL = 200;
-export const MAP_HERO_WORLD_UNIT = 0.015;
-
-export function applyMapHeroWorldScale(root: THREE.Object3D): void {
-  normalizeHeroHeight(root, MAP_HERO_HEIGHT_NORMAL);
-  root.scale.multiplyScalar(MAP_HERO_WORLD_UNIT);
 }
 
 export function pickClip(
@@ -336,26 +326,7 @@ export async function loadHeroModel(modelPath: string): Promise<HeroModel> {
   return { root: clone, clips: base.clips };
 }
 
-export async function loadFbxModel(modelPath: string): Promise<THREE.Group> {
-  const key = modelPath.trim();
-  if (!key) throw new Error("Missing modelPath");
-  let p = modelCache.get(key);
-  if (!p) {
-    p = new Promise((resolve, reject) => {
-      createFbxLoaderForUrl(key).load(
-        key,
-        (obj) => resolve(obj),
-        undefined,
-        (err) => reject(err),
-      );
-    });
-    modelCache.set(key, p);
-  }
-  const base = await p;
-  return skelClone(base) as THREE.Group;
-}
-
-export async function loadFbxClip(path: string): Promise<THREE.AnimationClip> {
+async function loadFbxClip(path: string): Promise<THREE.AnimationClip> {
   const key = path.trim();
   if (!key) throw new Error("Missing clip path");
   let p = clipCache.get(key);

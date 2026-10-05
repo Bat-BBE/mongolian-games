@@ -1,12 +1,6 @@
 export type ShagaiSide = "horse" | "sheep" | "goat" | "camel";
 
-export interface ShagaiThrow {
-  id: number;
-  side: ShagaiSide;
-  settled: boolean;
-}
-
-export type RoundTurn = "player" | "robot";
+type RoundTurn = "player" | "robot";
 
 export interface RoundResult {
   turn: RoundTurn;
@@ -16,7 +10,7 @@ export interface RoundResult {
   throwNumber: number;
 }
 
-export type MatchPhase =
+type MatchPhase =
   | "idle"
   | "throwing"
   | "settling"
@@ -89,12 +83,6 @@ export function sideName(side: ShagaiSide, language: "mn" | "en"): string {
     : SHAGAI_INFO[side].nameMn;
 }
 
-import { detectShagaiSide, weightedTraditionalSide } from "./shagai";
-
-export function detectSide(rotX: number, rotZ: number): ShagaiSide {
-  return detectShagaiSide(rotX, rotZ);
-}
-
 export function isDorvenBerkh(sides: ShagaiSide[]): boolean {
   if (sides.length < 4) return false;
   const set = new Set(sides);
@@ -110,10 +98,6 @@ export function scoreRoll(sides: ShagaiSide[]): {
   if (unique === 3) return { points: 5, unique };
   if (unique === 2) return { points: 2, unique };
   return { points: 8, unique };
-}
-
-export function rollRobotSides(): ShagaiSide[] {
-  return [0, 1, 2, 3].map(() => weightedTraditionalSide() as ShagaiSide);
 }
 
 export const TARGET_SCORE = 30;

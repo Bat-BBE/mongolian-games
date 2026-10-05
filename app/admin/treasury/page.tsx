@@ -108,7 +108,7 @@ export default function AdminTreasuryPage() {
           value={s ? Number(s.camel_total).toLocaleString() : "—"}
         />
         <Card
-          label="Гэрийн түвшин (avg)"
+          label="Гэрийн түвшин"
           value={s ? Number(s.ger_level_avg).toFixed(1) : "—"}
         />
       </section>
@@ -187,9 +187,7 @@ export default function AdminTreasuryPage() {
                       variant="outline"
                       size="sm"
                       className="text-xs border-[var(--admin-border)]"
-                      onClick={() =>
-                        setEconomyUser(u)
-                      }
+                      onClick={() => setEconomyUser(u)}
                     >
                       Засах
                     </Button>

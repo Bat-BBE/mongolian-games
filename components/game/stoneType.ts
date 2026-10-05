@@ -1,6 +1,6 @@
-export type GamePhase =
-  | "pick" 
-  | "guess" 
+type GamePhase =
+  | "pick"
+  | "guess"
   | "result";
 
 export interface RoundResult {

@@ -4,7 +4,7 @@ import { randomInt, randomUUID } from "node:crypto";
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_TTL_MS = 45 * 60 * 1000;
 
-export type RoomPlayer = {
+type RoomPlayer = {
   id: string;
   displayName: string;
   ready: boolean;

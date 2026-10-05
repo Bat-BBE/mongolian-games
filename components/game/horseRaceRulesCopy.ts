@@ -1,7 +1,7 @@
 import { TRACK_LENGTH } from "./horseRaceType";
 
-export type HorseRaceRuleStep = { n: string; t: string; d: string };
-export type HorseRaceScoreRow = { label: string; pts: string };
+type HorseRaceRuleStep = { n: string; t: string; d: string };
+type HorseRaceScoreRow = { label: string; pts: string };
 
 export type HorseRaceRulesStrings = {
   intro: string;

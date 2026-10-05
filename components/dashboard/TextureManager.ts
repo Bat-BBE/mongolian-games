@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-export class TextureManager {
+class TextureManager {
   private textureCache = new Map<string, THREE.Texture>();
   private canvasCache = new Map<string, HTMLCanvasElement>();
 
