@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: singapore
-    buildCommand: npm install && npm run build --workspace mongolian-games-server
+    buildCommand: npm install --include=dev && npm run build --workspace mongolian-games-server
     startCommand: npm run start --workspace mongolian-games-server
     healthCheckPath: /health
     envVars:
